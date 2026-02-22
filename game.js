@@ -2,6 +2,7 @@
 
 const { fetchQuestions } = require('./questions');
 const { translateQuestions } = require('./translator');
+const { markQuestionsUsed } = require('./local-db');
 
 // Game states
 const STATE = {
@@ -32,6 +33,7 @@ class Game {
     this.currentIdx = -1;
     this.questionStartTime = null;
     this._timer = null;
+    this.seenQuestions = new Set(); // tracks question texts shown across rounds
   }
 
   // ─── Player management ─────────────────────────────────────────────────────
@@ -167,6 +169,8 @@ class Game {
       return;
     }
 
+    for (const q of this.questions) this.seenQuestions.add(q.question);
+    markQuestionsUsed(this.questions);
     this.currentIdx = -1;
     this._startCountdown();
   }
@@ -392,7 +396,7 @@ class Game {
     }
 
     try {
-      this.questions = await fetchQuestions(categories, questionCount, gameDifficulty);
+      this.questions = await fetchQuestions(categories, questionCount, gameDifficulty, this.seenQuestions);
     } catch (err) {
       console.error('Failed to fetch questions for continue:', err);
       this.state = STATE.GAME_OVER;
@@ -406,6 +410,8 @@ class Game {
       return;
     }
 
+    for (const q of this.questions) this.seenQuestions.add(q.question);
+    markQuestionsUsed(this.questions);
     this.currentIdx = -1;
     this._startCountdown();
   }

@@ -60,9 +60,9 @@ function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 // Fetch questions for given category IDs
 // totalCount = desired total number of questions across all categories (default 20)
 // Returns array of processed question objects ready for the game, trimmed to totalCount
-async function fetchQuestions(categoryIds, totalCount = 20, gameDifficulty = 'easy') {
+async function fetchQuestions(categoryIds, totalCount = 20, gameDifficulty = 'easy', seenQuestions = null) {
   // Try local DB first — instant, no rate limits
-  const local = getQuestionsFromLocalDB(categoryIds, totalCount, gameDifficulty);
+  const local = getQuestionsFromLocalDB(categoryIds, totalCount, gameDifficulty, seenQuestions);
   if (local !== null) {
     console.log(`Using local DB: ${local.length} questions [${gameDifficulty}]`);
     return local;

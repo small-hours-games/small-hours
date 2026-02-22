@@ -6,6 +6,7 @@ const https = require('https');
 
 const OPENTDB_BASE = 'https://opentdb.com';
 const DB_PATH = path.join(__dirname, 'questions-db.json');
+const USAGE_PATH = path.join(__dirname, 'question-usage.json');
 const RATE_LIMIT_DELAY = 5500; // ms between category requests
 
 // ── Shared fetch helper (duplicated here to avoid circular deps) ──────────────
@@ -60,6 +61,31 @@ function dbStatus() {
     categoryCount: db.categories.length,
     downloadedAt: db.downloadedAt,
   };
+}
+
+// ── Question usage tracking (LRU) ─────────────────────────────────────────
+
+// Returns map of { questionText → lastUsedTimestamp }
+function loadUsage() {
+  try {
+    if (fs.existsSync(USAGE_PATH)) return JSON.parse(fs.readFileSync(USAGE_PATH, 'utf8'));
+  } catch (e) {
+    console.warn('Could not read question usage:', e.message);
+  }
+  return {};
+}
+
+function saveUsage(usage) {
+  try { fs.writeFileSync(USAGE_PATH, JSON.stringify(usage)); }
+  catch (e) { console.warn('Could not save question usage:', e.message); }
+}
+
+// Call this after a round's questions are confirmed — records lastUsed = now
+function markQuestionsUsed(questions) {
+  const usage = loadUsage();
+  const now = Date.now();
+  for (const q of questions) usage[q.question] = now;
+  saveUsage(usage);
 }
 
 // ── Download all categories from opentdb ───────────────────────────────────
@@ -168,7 +194,7 @@ function processRaw(raw, gameDifficulty = 'easy') {
 
 // Returns processed questions from local DB for the given category IDs and count.
 // Returns null if local DB doesn't exist.
-function getQuestionsFromLocalDB(categoryIds, totalCount, gameDifficulty = 'easy') {
+function getQuestionsFromLocalDB(categoryIds, totalCount, gameDifficulty = 'easy', seenQuestions = null) {
   const db = loadDB();
   if (!db) return null;
 
@@ -184,8 +210,27 @@ function getQuestionsFromLocalDB(categoryIds, totalCount, gameDifficulty = 'easy
 
   if (pool.length === 0) return null;
 
-  shuffle(pool);
-  return pool.slice(0, totalCount).map(q => processRaw(q, gameDifficulty));
+  // Filter out already-seen questions for the current session
+  if (seenQuestions && seenQuestions.size > 0) {
+    const fresh = pool.filter(q => !seenQuestions.has(q.question));
+    if (fresh.length > 0) {
+      pool = fresh;
+    } else {
+      console.log('All local questions seen this session — cycling through again');
+    }
+  }
+
+  // LRU ordering: never-used questions first (shuffled for variety),
+  // then previously-used sorted oldest-first so the full category cycles
+  // before any question repeats.
+  const usage = loadUsage();
+  const neverUsed = pool.filter(q => !usage[q.question]);
+  const prevUsed  = pool.filter(q =>  usage[q.question]);
+  shuffle(neverUsed);
+  prevUsed.sort((a, b) => usage[a.question] - usage[b.question]);
+
+  const ordered = [...neverUsed, ...prevUsed];
+  return ordered.slice(0, totalCount).map(q => processRaw(q, gameDifficulty));
 }
 
-module.exports = { downloadDatabase, getState, dbStatus, getQuestionsFromLocalDB, DIFFICULTY_CONFIG };
+module.exports = { downloadDatabase, getState, dbStatus, getQuestionsFromLocalDB, markQuestionsUsed, DIFFICULTY_CONFIG };
