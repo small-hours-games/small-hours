@@ -352,6 +352,7 @@ class Game {
         prevRank: p.prevRank,
         streak: p.streak || 0,
         answerTime: p.lastAnswerTime,
+        answer: p.lastAnswer || null,
       }));
   }
 

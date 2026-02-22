@@ -812,6 +812,35 @@
       border-color: rgba(255,255,255,0.08);
       color: #444;
     }
+    /* Player answer badge */
+    .lb-answer-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 1.9rem; height: 1.9rem;
+      border-radius: 0.4rem;
+      font-size: 0.9rem;
+      font-weight: 900;
+      flex-shrink: 0;
+      border: 2px solid;
+    }
+    .badge-correct {
+      background: rgba(76, 222, 128, 0.18);
+      border-color: #4cde80;
+      color: #4cde80;
+      box-shadow: 0 0 8px rgba(76,222,128,0.4);
+    }
+    .badge-wrong {
+      background: rgba(226, 27, 60, 0.22);
+      border-color: #e21b3c;
+      color: #ff6b6b;
+      box-shadow: 0 0 8px rgba(226,27,60,0.4);
+    }
+    .badge-none {
+      background: rgba(255,255,255,0.04);
+      border-color: rgba(255,255,255,0.1);
+      color: #444;
+    }
     /* Gold — 1st place */
     #ov-total-rows .lb-total-row.rank-gold {
       background: rgba(255, 215, 0, 0.14);
@@ -1612,8 +1641,12 @@
         ? `⚡${s.answerTime}s`
         : '—';
       const timeClass = s.answerTime !== null && s.answerTime !== undefined ? '' : 'no-answer';
+      const isCorrect = s.answer === correctLetter;
+      const badgeClass = s.answer ? (isCorrect ? 'badge-correct' : 'badge-wrong') : 'badge-none';
+      const badgeLabel = s.answer || '—';
       return `<div class="lb-round-row">
         <span class="lb-round-medal">${roundMedals[i] || ''}</span>
+        <span class="lb-answer-badge ${badgeClass}">${badgeLabel}</span>
         <span class="lb-round-name">${esc(s.username)}${streakIcon}</span>
         <span class="lb-round-time ${timeClass}">${timeLabel}</span>
         <div class="lb-score-bar-wrap"><div class="lb-score-bar" style="width:${barWidth}%;background:${barColor};"></div></div>
