@@ -8,6 +8,12 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
+      - name: Connect to Headscale
+        uses: tailscale/github-action@v3
+        with:
+          authkey: ${{ secrets.HEADSCALE_AUTHKEY }}
+          login-server: https://hs.aldervall.se
+
       - name: Pull and restart
         uses: appleboy/ssh-action@v1.2.0
         with:
