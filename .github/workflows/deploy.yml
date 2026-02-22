@@ -1,0 +1,26 @@
+name: Deploy to server
+
+on:
+  push:
+    branches: [master]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Connect to Headscale
+        uses: tailscale/github-action@v3
+        with:
+          authkey: ${{ secrets.HEADSCALE_AUTHKEY }}
+          args: --login-server=https://hs.aldervall.se
+
+      - name: Pull and restart
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_KEY }}
+          script: |
+            cd /opt/Quiz-trivia
+            git pull
+            docker restart quiz-trivia-quiz-1

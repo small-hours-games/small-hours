@@ -5,7 +5,7 @@ const fs     = require('fs');
 const path   = require('path');
 const crypto = require('crypto');
 
-const CACHE_FILE = path.join(__dirname, 'translation-cache.json');
+const CACHE_FILE = path.join(__dirname, 'data', 'translation-cache.json');
 
 // Public LibreTranslate instances — tried in order until one succeeds
 const INSTANCES = [

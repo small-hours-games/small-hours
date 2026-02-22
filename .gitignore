@@ -1,6 +1,6 @@
 node_modules/
 .env
 certs/
-questions-db.json
-translation-cache.json
+data/
 .claude/
+CLAUDE.md
