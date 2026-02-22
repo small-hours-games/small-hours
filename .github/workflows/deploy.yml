@@ -14,6 +14,11 @@ jobs:
           authkey: ${{ secrets.HEADSCALE_AUTHKEY }}
           login-server: https://hs.aldervall.se
 
+      - name: Debug connectivity
+        run: |
+          tailscale status
+          ping -c 3 100.64.0.24 || echo "ping failed"
+
       - name: Pull and restart
         uses: appleboy/ssh-action@v1.2.0
         with:
