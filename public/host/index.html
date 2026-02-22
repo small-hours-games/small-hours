@@ -663,10 +663,10 @@
     /* ── Reveal overlay (floating popup) ── */
     #reveal-overlay {
       position: fixed;
-      bottom: 2rem;
+      top: 50%;
       left: 50%;
       width: 84%;
-      max-height: 52%;
+      max-height: 62%;
       background: rgba(10, 14, 38, 0.93);
       backdrop-filter: blur(20px);
       -webkit-backdrop-filter: blur(20px);
@@ -677,7 +677,7 @@
       flex-direction: column;
       gap: 0.5rem;
       overflow: hidden;
-      transform: translateX(-50%) translateY(calc(100% + 3rem));
+      transform: translate(-50%, calc(-50% + 60vh));
       transition: transform 0.6s cubic-bezier(0.34, 1.2, 0.64, 1);
       z-index: 50;
       box-shadow: 0 12px 48px rgba(0,0,0,0.75), 0 0 0 1px rgba(159,68,211,0.12), inset 0 1px 0 rgba(255,255,255,0.06);
@@ -690,7 +690,7 @@
       background: linear-gradient(90deg, transparent, rgba(159,68,211,0.9), rgba(76,222,128,0.7), transparent);
       pointer-events: none;
     }
-    #reveal-overlay.show { transform: translateX(-50%) translateY(0); }
+    #reveal-overlay.show { transform: translate(-50%, -50%); }
     #ov-header {
       display: flex;
       align-items: center;
