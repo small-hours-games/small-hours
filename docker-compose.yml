@@ -17,17 +17,21 @@ services:
         required: false
 
     volumes:
-      # Persist questions-db.json and translation-cache.json across restarts.
-      # On first run Docker copies the image's /app into this volume.
-      - quiz-data:/app
+      # Bind-mount source code — git pull on host = instant update, no rebuild needed
+      - ./:/app
 
-      # Bind-mount TLS certs (optional — server falls back to HTTP without them)
+      # Preserve node_modules from the image build (isolates from host directory)
+      - /app/node_modules
+
+      # Data files persisted on host at ./data/ — survives rebuilds and volume wipes
+      - ./data:/app/data
+
+      # TLS certs (optional — server falls back to HTTP without them)
       - ./certs:/app/certs:ro
 
-# ── To apply code changes after rebuild ────────────────────────────────────
-#   docker compose down
-#   docker volume rm quiz-trivia_quiz-data
-#   docker compose up --build
+# ── To apply code changes ────────────────────────────────────────────────────
+#   git pull && docker restart quiz-trivia-quiz-1
+#
+# ── To rebuild after package.json changes ───────────────────────────────────
+#   docker compose up --build -d
 # ────────────────────────────────────────────────────────────────────────────
-volumes:
-  quiz-data:

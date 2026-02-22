@@ -5,8 +5,8 @@ const path = require('path');
 const https = require('https');
 
 const OPENTDB_BASE = 'https://opentdb.com';
-const DB_PATH = path.join(__dirname, 'questions-db.json');
-const USAGE_PATH = path.join(__dirname, 'question-usage.json');
+const DB_PATH = path.join(__dirname, 'data', 'questions-db.json');
+const USAGE_PATH = path.join(__dirname, 'data', 'question-usage.json');
 const RATE_LIMIT_DELAY = 5500; // ms between category requests
 
 // ── Shared fetch helper (duplicated here to avoid circular deps) ──────────────

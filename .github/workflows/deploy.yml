@@ -8,9 +8,7 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Copy files and restart container
+      - name: Pull and restart
         uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ secrets.DEPLOY_HOST }}
@@ -19,10 +17,4 @@ jobs:
           script: |
             cd /opt/Quiz-trivia
             git pull
-            docker cp game.js quiz-trivia-quiz-1:/app/game.js
-            docker cp questions.js quiz-trivia-quiz-1:/app/questions.js
-            docker cp local-db.js quiz-trivia-quiz-1:/app/local-db.js
-            docker cp translator.js quiz-trivia-quiz-1:/app/translator.js
-            docker cp server.js quiz-trivia-quiz-1:/app/server.js
-            docker cp public quiz-trivia-quiz-1:/app/
             docker restart quiz-trivia-quiz-1
