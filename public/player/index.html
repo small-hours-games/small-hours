@@ -99,6 +99,25 @@
     /* ── QUESTION ── */
     #question { gap: 0.75rem; width: 100%; }
 
+    #pq-livescore {
+      display: none; /* shown after first reveal */
+      width: 100%;
+      align-items: center;
+      justify-content: space-between;
+      background: rgba(255,255,255,0.05);
+      border-radius: 0.5rem;
+      padding: 0.35rem 0.65rem;
+      font-size: 0.78rem;
+    }
+    #pq-score-val { color: var(--timer); font-weight: 800; }
+    #pq-rank-val  { color: #999; font-weight: 700; }
+    #pq-last-ans  {
+      padding: 0.15rem 0.55rem;
+      border-radius: 0.35rem;
+      font-weight: 900;
+      font-size: 0.85rem;
+    }
+
     #pq-header {
       display: flex;
       justify-content: space-between;
@@ -370,6 +389,11 @@
 
 <!-- QUESTION -->
 <div id="question" class="screen">
+  <div id="pq-livescore">
+    <span id="pq-score-val"></span>
+    <span id="pq-rank-val"></span>
+    <span id="pq-last-ans"></span>
+  </div>
   <div id="pq-header">
     <span id="pq-category"></span>
     <span id="pq-counter"></span>
@@ -494,6 +518,7 @@
   let myDelta = 0;
   let currentAnswers = {};  // id → text, populated on QUESTION
   let pqTimerTimeout = null;
+  let prevAnswer = null;    // answer from last round, shown in livescore strip
 
   function buildWsUrl(room) {
     const proto = location.protocol === 'https:' ? 'wss' : 'ws';
@@ -650,6 +675,29 @@
         myLastAnswer = null;
         currentAnswers = {};
 
+        // Live score strip (shown from 2nd question onwards)
+        const liveEl = document.getElementById('pq-livescore');
+        if (myScore > 0 || myRank) {
+          const rankMedals = ['🥇','🥈','🥉'];
+          document.getElementById('pq-score-val').textContent = myScore.toLocaleString() + ' pts';
+          document.getElementById('pq-rank-val').textContent =
+            myRank ? (myRank <= 3 ? rankMedals[myRank-1] + ` #${myRank}` : `#${myRank}`) : '';
+          const lastAnsEl = document.getElementById('pq-last-ans');
+          if (prevAnswer) {
+            const ansColors = { A: 'var(--red)', B: 'var(--blue)', C: 'var(--yellow)', D: 'var(--green)' };
+            const ansText   = { A: '#fff', B: '#fff', C: '#222', D: '#fff' };
+            lastAnsEl.textContent = prevAnswer;
+            lastAnsEl.style.background = ansColors[prevAnswer];
+            lastAnsEl.style.color = ansText[prevAnswer];
+            lastAnsEl.style.display = '';
+          } else {
+            lastAnsEl.style.display = 'none';
+          }
+          liveEl.style.display = 'flex';
+        } else {
+          liveEl.style.display = 'none';
+        }
+
         // Populate header
         document.getElementById('pq-category').textContent = msg.category || '';
         document.getElementById('pq-counter').textContent =
@@ -745,7 +793,7 @@
     if (document.getElementById('locked').classList.contains('active')) {
       const lockedAnswer = document.getElementById('locked-answer');
       lockedAnswer.classList.remove('flash-ok', 'flash-bad');
-      lockedAnswer.classList.add(wasCorrect ? 'flash-ok' : 'flash-bad');
+      if (wasCorrect) lockedAnswer.classList.add('flash-ok');
       setTimeout(() => {
         lockedAnswer.classList.remove('flash-ok', 'flash-bad');
         lockedAnswer.style.boxShadow = '';
@@ -772,11 +820,16 @@
       title.className = 'wrong';
     }
 
-    // Chosen answer badge (green if correct, red if wrong)
+    // Chosen answer badge — styled in the answer's own button colour
     const badgeEl = document.getElementById('chosen-answer-reveal');
     if (myLastAnswer) {
+      const ansColors = { A: 'var(--red)', B: 'var(--blue)', C: 'var(--yellow)', D: 'var(--green)' };
+      const ansText   = { A: '#fff', B: '#fff', C: '#222', D: '#fff' };
       badgeEl.style.display = '';
-      badgeEl.className = 'chosen-badge ' + (wasCorrect ? 'chosen-correct' : 'chosen-wrong');
+      badgeEl.className = 'chosen-badge';
+      badgeEl.style.background = ansColors[myLastAnswer] || 'rgba(255,255,255,0.1)';
+      badgeEl.style.color = ansText[myLastAnswer] || '#fff';
+      badgeEl.style.border = 'none';
       badgeEl.textContent = wasCorrect
         ? `${myLastAnswer} ✓  ${currentAnswers[myLastAnswer] || ''}`
         : `${myLastAnswer} ✗ · ${currentAnswers[myLastAnswer] || ''}  →  ${msg.correctAnswer}: ${msg.correctText || ''}`;
@@ -797,6 +850,7 @@
     document.getElementById('result-points').textContent = delta > 0 ? `+${delta.toLocaleString()}` : '';
     myScore = myEntry.score;
     myRank = myEntry.rank;
+    prevAnswer = myLastAnswer;
     document.getElementById('result-score').textContent = myScore.toLocaleString() + ' pts';
 
     // Rank with medals
@@ -828,7 +882,7 @@
     const revealEl = document.getElementById('reveal');
     revealEl.classList.remove('flash-correct', 'flash-wrong');
     void revealEl.offsetWidth;
-    revealEl.classList.add(wasCorrect ? 'flash-correct' : 'flash-wrong');
+    if (wasCorrect) revealEl.classList.add('flash-correct');
 
     // Flying points animation
     if (delta > 0) {
