@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Quiz Night — Player</title>
+  <style>
+    :root {
+      --red:    #e21b3c;
+      --blue:   #1368ce;
+      --yellow: #d89e00;
+      --green:  #26890c;
+      --bg:     #1a1a2e;
+      --card:   #16213e;
+      --text:   #eaeaea;
+      --accent: #9f44d3;
+      --timer:  #00c2ff;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    html, body {
+      height: 100%;
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      overscroll-behavior: none;
+    }
+    body {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 1.5rem;
+      gap: 1rem;
+      min-height: 100vh;
+    }
+
+    .screen { display: none; flex-direction: column; align-items: center; width: 100%; max-width: 420px; gap: 1rem; }
+    .screen.active { display: flex; }
+
+    /* ── JOIN ── */
+    #join h1 {
+      font-size: 2.2rem;
+      font-weight: 900;
+      background: linear-gradient(90deg, #9f44d3, #00c2ff);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    #join p { color: #aaa; font-size: 0.95rem; text-align: center; }
+
+    #username-input {
+      width: 100%;
+      padding: 1rem 1.25rem;
+      font-size: 1.3rem;
+      background: var(--card);
+      color: var(--text);
+      border: 2px solid rgba(255,255,255,0.15);
+      border-radius: 0.75rem;
+      outline: none;
+      transition: border-color 0.2s;
+      text-align: center;
+    }
+    #username-input:focus { border-color: var(--accent); }
+    #username-input::placeholder { color: #555; }
+
+    #join-btn {
+      width: 100%;
+      padding: 1rem;
+      font-size: 1.3rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, var(--accent), #4a90d9);
+      color: #fff;
+      border: none;
+      border-radius: 0.75rem;
+      cursor: pointer;
+      transition: transform 0.1s, opacity 0.2s;
+      letter-spacing: 0.04em;
+    }
+    #join-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    #join-btn:not(:disabled):active { transform: scale(0.96); }
+
+    #join-error { color: #ff6b6b; font-size: 0.9rem; text-align: center; }
+
+    /* ── WAITING ── */
+    #waiting { text-align: center; gap: 1.5rem; }
+    #waiting .big-emoji { font-size: 4rem; }
+    #waiting h2 { font-size: 1.5rem; font-weight: 700; }
+    #waiting p { color: #aaa; }
+    .pulse-dot {
+      display: inline-block;
+      width: 12px; height: 12px;
+      border-radius: 50%;
+      background: var(--accent);
+      animation: blink 1.4s ease-in-out infinite;
+    }
+    .pulse-dot:nth-child(2) { animation-delay: 0.2s; }
+    .pulse-dot:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes blink { 0%, 80%, 100% { opacity: 0.2; } 40% { opacity: 1; } }
+
+    /* ── QUESTION ── */
+    #question { gap: 1rem; width: 100%; }
+    #q-hint {
+      text-align: center;
+      color: #aaa;
+      font-size: 0.85rem;
+      padding-bottom: 0.25rem;
+    }
+    #answer-buttons {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.75rem;
+      width: 100%;
+    }
+    .ans-btn {
+      padding: 1.6rem 0.75rem;
+      border: none;
+      border-radius: 0.75rem;
+      font-size: 1.5rem;
+      font-weight: 900;
+      color: #fff;
+      cursor: pointer;
+      transition: transform 0.1s, filter 0.2s;
+      min-height: 100px;
+    }
+    .ans-btn:active { transform: scale(0.93); }
+    .ans-btn:disabled { cursor: not-allowed; filter: brightness(0.5); }
+    .btn-A { background: var(--red); }
+    .btn-B { background: var(--blue); }
+    .btn-C { background: var(--yellow); color: #222; }
+    .btn-D { background: var(--green); }
+
+    /* ── LOCKED ── */
+    #locked { text-align: center; gap: 1.5rem; }
+    #locked .lock-icon { font-size: 3.5rem; }
+    #locked h2 { font-size: 1.4rem; }
+    #locked .chosen-answer {
+      padding: 0.75rem 2rem;
+      border-radius: 0.75rem;
+      font-size: 1.2rem;
+      font-weight: 700;
+    }
+    #locked p { color: #aaa; font-size: 0.9rem; }
+
+    /* ── REVEAL ── */
+    #reveal { text-align: center; gap: 1.25rem; }
+    .result-icon { font-size: 4rem; }
+    #result-title { font-size: 1.8rem; font-weight: 900; }
+    #result-title.correct { color: #4cde80; }
+    #result-title.wrong { color: #ff6b6b; }
+    #result-detail { color: #aaa; font-size: 1rem; }
+    #result-points {
+      font-size: 2.5rem;
+      font-weight: 900;
+      color: var(--timer);
+    }
+    #result-score { color: #aaa; font-size: 0.95rem; }
+    #result-rank { font-size: 1.1rem; font-weight: 600; }
+
+    /* ── GAME OVER ── */
+    #gameover { text-align: center; gap: 1.5rem; }
+    #gameover .trophy { font-size: 5rem; }
+    #gameover h1 { font-size: 2rem; font-weight: 900; }
+    #gameover .final-rank { font-size: 3rem; font-weight: 900; color: var(--timer); }
+    #gameover .final-score { color: #aaa; font-size: 1.1rem; }
+
+    /* ── Player reveal enhancements ── */
+    #reveal.flash-correct { animation: flashGreen 0.7s ease forwards; }
+    #reveal.flash-wrong   { animation: flashRed   0.7s ease forwards; }
+    @keyframes flashGreen {
+      0%   { background: rgba(76, 222, 128, 0.35); }
+      100% { background: transparent; }
+    }
+    @keyframes flashWrong {
+      0%   { background: rgba(226, 27, 60, 0.35); }
+      100% { background: transparent; }
+    }
+    @keyframes flashRed {
+      0%   { background: rgba(226, 27, 60, 0.35); }
+      100% { background: transparent; }
+    }
+    /* Flying points */
+    #points-fly {
+      position: fixed;
+      top: 45%; left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 3.5rem;
+      font-weight: 900;
+      color: #4cde80;
+      pointer-events: none;
+      z-index: 200;
+      opacity: 0;
+    }
+    #points-fly.animate {
+      animation: pointsFlyUp 1.6s ease-out forwards;
+    }
+    @keyframes pointsFlyUp {
+      0%   { opacity: 1; transform: translate(-50%, -50%) scale(0.75); }
+      45%  { opacity: 1; transform: translate(-50%, -80%) scale(1.1); }
+      100% { opacity: 0; transform: translate(-50%, -120%) scale(0.9); }
+    }
+    /* Streak notification */
+    #streak-notification {
+      font-size: 1.3rem;
+      font-weight: 900;
+      text-align: center;
+      min-height: 1.8rem;
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+    #streak-notification.show {
+      opacity: 1;
+      animation: streakPop 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    @keyframes streakPop {
+      0%   { transform: scale(0.7); }
+      60%  { transform: scale(1.15); }
+      100% { transform: scale(1); }
+    }
+    /* Chosen answer badge shown on reveal screen */
+    .chosen-badge {
+      padding: 0.5rem 1.75rem;
+      border-radius: 0.75rem;
+      font-size: 1.3rem;
+      font-weight: 900;
+      text-align: center;
+    }
+    .chosen-badge.chosen-correct { background: rgba(76,222,128,0.18); border: 2px solid #4cde80; color: #4cde80; }
+    .chosen-badge.chosen-wrong   { background: rgba(226,27,60,0.18);  border: 2px solid var(--red); color: #ff6b6b; }
+    /* Locked screen flash */
+    #locked-answer.flash-ok  { box-shadow: 0 0 30px rgba(76,222,128,0.8);  transform: scale(1.08); transition: box-shadow 0.25s, transform 0.25s; }
+    #locked-answer.flash-bad { box-shadow: 0 0 30px rgba(226,27,60,0.8); transition: box-shadow 0.25s; }
+
+    /* ── Reconnecting ── */
+    #reconnecting {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.7);
+      display: flex; align-items: center; justify-content: center;
+      flex-direction: column; gap: 1rem; z-index: 100;
+      display: none;
+    }
+    #reconnecting.show { display: flex; }
+    #reconnecting p { color: #ccc; font-size: 1rem; }
+  </style>
+</head>
+<body>
+
+<div id="reconnecting">
+  <div class="spinner" style="width:50px;height:50px;border:5px solid rgba(255,255,255,0.1);border-top-color:#00c2ff;border-radius:50%;animation:spin 0.8s linear infinite;"></div>
+  <p>Reconnecting…</p>
+</div>
+<style> @keyframes spin { to { transform: rotate(360deg); } } </style>
+
+<!-- JOIN -->
+<div id="join" class="screen active">
+  <h1>🎮 Quiz Night</h1>
+  <p>Enter your name to join the game</p>
+  <input id="username-input" type="text" maxlength="20" placeholder="Your name" autocomplete="off" autocorrect="off" spellcheck="false">
+  <button id="join-btn">Join Game</button>
+  <div id="join-error"></div>
+</div>
+
+<!-- WAITING -->
+<div id="waiting" class="screen">
+  <div class="big-emoji">👋</div>
+  <h2 id="waiting-name">Hi there!</h2>
+  <p>Waiting for the host to start…</p>
+  <div>
+    <span class="pulse-dot"></span>
+    <span class="pulse-dot"></span>
+    <span class="pulse-dot"></span>
+  </div>
+  <p id="waiting-players" style="color:#666; font-size:0.85rem;"></p>
+</div>
+
+<!-- QUESTION -->
+<div id="question" class="screen">
+  <div id="q-hint">Look at the TV for the question!</div>
+  <div id="answer-buttons">
+    <button class="ans-btn btn-A" data-id="A">A</button>
+    <button class="ans-btn btn-B" data-id="B">B</button>
+    <button class="ans-btn btn-C" data-id="C">C</button>
+    <button class="ans-btn btn-D" data-id="D">D</button>
+  </div>
+</div>
+
+<!-- LOCKED -->
+<div id="locked" class="screen">
+  <div class="lock-icon">🔒</div>
+  <h2>Locked in!</h2>
+  <div id="locked-answer" class="chosen-answer"></div>
+  <p>Waiting for other players…</p>
+</div>
+
+<!-- REVEAL -->
+<div id="reveal" class="screen">
+  <div class="result-icon" id="result-icon"></div>
+  <div id="result-title"></div>
+  <div id="chosen-answer-reveal" class="chosen-badge" style="display:none;"></div>
+  <div id="result-detail"></div>
+  <div id="result-points"></div>
+  <div id="result-score"></div>
+  <div id="result-rank"></div>
+  <div id="streak-notification"></div>
+</div>
+
+<!-- Flying points (fixed overlay, outside screen flow) -->
+<div id="points-fly"></div>
+
+<!-- GAME OVER -->
+<div id="gameover" class="screen">
+  <div class="trophy">🏆</div>
+  <h1>Game Over!</h1>
+  <div class="final-rank" id="go-rank"></div>
+  <div class="final-score" id="go-score"></div>
+  <p style="color:#666; font-size:0.85rem;">Thanks for playing!</p>
+</div>
+
+<script>
+  // ── Player translations ───────────────────────────────────────────────────
+  const PT = {
+    en: { title:'🎮 Quiz Night', subtitle:'Enter your name to join the game', placeholder:'Your name', joinBtn:'Join Game', nameRequired:'Please enter a name.', hiName:n=>`Hi ${n}! 👋`, waitingHost:'Waiting for the host to start…', players:n=>`${n} player${n!==1?'s':''} in lobby`, loading:'Loading questions…', translating:'Translating questions…', getReady:'Get ready! 🎮', startingIn:n=>`Starting in ${n}…`, incoming:n=>`${n} questions incoming!`, lookTV:'Look at the TV for the question!', lockedIn:'Locked in!', waitingOthers:'Waiting for other players…', nextSoon:'Next question soon…', correct:'Correct!', wrong:'Wrong!', timesUp:"Time's up!", correctWas:x=>`Correct answer was ${x}`, total:n=>`Total: ${n.toLocaleString()} pts`, rank:n=>`Rank: #${n}`, gameOver:'Game Over!', thanksPlaying:'Thanks for playing!', points:n=>`${n.toLocaleString()} points`, reconnecting:'Reconnecting…' },
+    sv: { title:'🎮 Frågesport', subtitle:'Skriv in ditt namn för att gå med i spelet', placeholder:'Ditt namn', joinBtn:'Gå med', nameRequired:'Ange ett namn.', hiName:n=>`Hej ${n}! 👋`, waitingHost:'Väntar på att värden ska starta…', players:n=>`${n} spelare i lobbyn`, loading:'Laddar frågor…', translating:'Översätter frågor…', getReady:'Gör dig redo! 🎮', startingIn:n=>`Startar om ${n}…`, incoming:n=>`${n} frågor på väg!`, lookTV:'Titta på TV:n för frågan!', lockedIn:'Låst!', waitingOthers:'Väntar på andra spelare…', nextSoon:'Nästa fråga snart…', correct:'Rätt!', wrong:'Fel!', timesUp:'Tiden ute!', correctWas:x=>`Rätt svar var ${x}`, total:n=>`Totalt: ${n.toLocaleString()} poäng`, rank:n=>`Rang: #${n}`, gameOver:'Spelet slut!', thanksPlaying:'Tack för spelet!', points:n=>`${n.toLocaleString()} poäng`, reconnecting:'Återansluter…' },
+    de: { title:'🎮 Quiz-Nacht', subtitle:'Gib deinen Namen ein, um beizutreten', placeholder:'Dein Name', joinBtn:'Beitreten', nameRequired:'Bitte Namen eingeben.', hiName:n=>`Hallo ${n}! 👋`, waitingHost:'Warten auf den Host…', players:n=>`${n} Spieler in der Lobby`, loading:'Fragen laden…', translating:'Fragen werden übersetzt…', getReady:'Macht euch bereit! 🎮', startingIn:n=>`Startet in ${n}…`, incoming:n=>`${n} Fragen kommen!`, lookTV:'Schau auf den TV für die Frage!', lockedIn:'Eingesperrt!', waitingOthers:'Warten auf andere Spieler…', nextSoon:'Nächste Frage bald…', correct:'Richtig!', wrong:'Falsch!', timesUp:'Zeit abgelaufen!', correctWas:x=>`Richtige Antwort war ${x}`, total:n=>`Gesamt: ${n.toLocaleString()} Pkt.`, rank:n=>`Rang: #${n}`, gameOver:'Spiel vorbei!', thanksPlaying:'Danke fürs Spielen!', points:n=>`${n.toLocaleString()} Punkte`, reconnecting:'Verbindung wird hergestellt…' },
+    fr: { title:'🎮 Quiz Night', subtitle:'Entrez votre nom pour rejoindre', placeholder:'Votre nom', joinBtn:'Rejoindre', nameRequired:'Veuillez entrer un nom.', hiName:n=>`Bonjour ${n} ! 👋`, waitingHost:"En attente de l'hôte…", players:n=>`${n} joueur${n!==1?'s':''} dans le lobby`, loading:'Chargement des questions…', translating:'Traduction des questions…', getReady:'Préparez-vous ! 🎮', startingIn:n=>`Démarre dans ${n}…`, incoming:n=>`${n} questions arrivent !`, lookTV:'Regardez la TV pour la question !', lockedIn:'Verrouillé !', waitingOthers:'En attente des autres joueurs…', nextSoon:'Prochaine question bientôt…', correct:'Correct !', wrong:'Faux !', timesUp:'Temps écoulé !', correctWas:x=>`La bonne réponse était ${x}`, total:n=>`Total : ${n.toLocaleString()} pts`, rank:n=>`Rang : #${n}`, gameOver:'Fin du jeu !', thanksPlaying:"Merci d'avoir joué !", points:n=>`${n.toLocaleString()} points`, reconnecting:'Reconnexion…' },
+    es: { title:'🎮 Noche de Quiz', subtitle:'Escribe tu nombre para unirte', placeholder:'Tu nombre', joinBtn:'Unirse', nameRequired:'Por favor, introduce un nombre.', hiName:n=>`¡Hola ${n}! 👋`, waitingHost:'Esperando al anfitrión…', players:n=>`${n} jugador${n!==1?'es':''} en el lobby`, loading:'Cargando preguntas…', translating:'Traduciendo preguntas…', getReady:'¡Prepárate! 🎮', startingIn:n=>`Empieza en ${n}…`, incoming:n=>`¡${n} preguntas en camino!`, lookTV:'¡Mira la TV para la pregunta!', lockedIn:'¡Bloqueado!', waitingOthers:'Esperando a otros jugadores…', nextSoon:'Próxima pregunta pronto…', correct:'¡Correcto!', wrong:'¡Incorrecto!', timesUp:'¡Tiempo!', correctWas:x=>`La respuesta correcta era ${x}`, total:n=>`Total: ${n.toLocaleString()} ptos`, rank:n=>`Posición: #${n}`, gameOver:'¡Fin del juego!', thanksPlaying:'¡Gracias por jugar!', points:n=>`${n.toLocaleString()} puntos`, reconnecting:'Reconectando…' },
+    no: { title:'🎮 Quizkveld', subtitle:'Skriv inn navnet ditt for å bli med', placeholder:'Ditt navn', joinBtn:'Bli med', nameRequired:'Skriv inn et navn.', hiName:n=>`Hei ${n}! 👋`, waitingHost:'Venter på verten…', players:n=>`${n} spiller${n!==1?'e':''} i lobbyen`, loading:'Laster spørsmål…', translating:'Oversetter spørsmål…', getReady:'Gjør deg klar! 🎮', startingIn:n=>`Starter om ${n}…`, incoming:n=>`${n} spørsmål kommer!`, lookTV:'Se på TV-en for spørsmålet!', lockedIn:'Låst!', waitingOthers:'Venter på andre spillere…', nextSoon:'Neste spørsmål snart…', correct:'Riktig!', wrong:'Feil!', timesUp:'Tiden er ute!', correctWas:x=>`Riktig svar var ${x}`, total:n=>`Totalt: ${n.toLocaleString()} poeng`, rank:n=>`Rang: #${n}`, gameOver:'Spillet er over!', thanksPlaying:'Takk for spillet!', points:n=>`${n.toLocaleString()} poeng`, reconnecting:'Kobler til igjen…' },
+    da: { title:'🎮 Quizaften', subtitle:'Indtast dit navn for at deltage', placeholder:'Dit navn', joinBtn:'Deltag', nameRequired:'Indtast venligst et navn.', hiName:n=>`Hej ${n}! 👋`, waitingHost:'Venter på værten…', players:n=>`${n} spiller${n!==1?'e':''} i lobbyen`, loading:'Indlæser spørgsmål…', translating:'Oversætter spørgsmål…', getReady:'Gør dig klar! 🎮', startingIn:n=>`Starter om ${n}…`, incoming:n=>`${n} spørgsmål på vej!`, lookTV:"Se på TV'et for spørgsmålet!", lockedIn:'Låst!', waitingOthers:'Venter på andre spillere…', nextSoon:'Næste spørgsmål snart…', correct:'Rigtigt!', wrong:'Forkert!', timesUp:'Tiden er gået!', correctWas:x=>`Det rigtige svar var ${x}`, total:n=>`I alt: ${n.toLocaleString()} point`, rank:n=>`Placering: #${n}`, gameOver:'Spillet er slut!', thanksPlaying:'Tak for spillet!', points:n=>`${n.toLocaleString()} point`, reconnecting:'Genopretter forbindelsen…' },
+  };
+
+  const SUPPORTED_LANGS = Object.keys(PT);
+  const browserLang = navigator.language ? navigator.language.slice(0, 2) : 'en';
+  let playerLang = SUPPORTED_LANGS.includes(browserLang) ? browserLang : 'en';
+
+  function P(key, ...args) {
+    const t = PT[playerLang] || PT.en;
+    const val = Object.prototype.hasOwnProperty.call(t, key) ? t[key] : (PT.en[key] || key);
+    return typeof val === 'function' ? val(...args) : val;
+  }
+
+  function applyPlayerTranslations() {
+    document.querySelector('#join h1').textContent = P('title');
+    document.querySelector('#join p').textContent = P('subtitle');
+    document.getElementById('username-input').placeholder = P('placeholder');
+    document.getElementById('join-btn').textContent = P('joinBtn');
+    document.getElementById('q-hint').textContent = P('lookTV');
+    document.querySelector('#locked h2').textContent = P('lockedIn');
+    document.querySelector('#locked > p').textContent = P('waitingOthers');
+    document.querySelector('#gameover h1').textContent = P('gameOver');
+    document.querySelector('#gameover > p').textContent = P('thanksPlaying');
+    document.querySelector('#reconnecting p').textContent = P('reconnecting');
+  }
+
+  // Apply browser language on load
+  applyPlayerTranslations();
+
+  const WS_URL = `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/ws/player`;
+  let ws;
+  let myUsername = null;
+  let currentQuestionId = null;
+  let myLastAnswer = null;
+  let myScore = 0;
+  let myRank = null;
+  let myDelta = 0;
+
+  // ── Screens ───────────────────────────────────────────────────────────────
+  function show(id) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+  }
+
+  // ── WebSocket ─────────────────────────────────────────────────────────────
+  function connect() {
+    ws = new WebSocket(WS_URL);
+    document.getElementById('reconnecting').classList.remove('show');
+
+    ws.addEventListener('open', () => {
+      // If we already have a username, rejoin
+      if (myUsername) {
+        send({ type: 'JOIN', username: myUsername });
+      }
+    });
+
+    ws.addEventListener('message', (e) => handleMsg(JSON.parse(e.data)));
+
+    ws.addEventListener('close', () => {
+      if (myUsername) {
+        document.getElementById('reconnecting').classList.add('show');
+        setTimeout(connect, 2000);
+      }
+    });
+
+    ws.addEventListener('error', () => ws.close());
+  }
+
+  function send(msg) { if (ws && ws.readyState === 1) ws.send(JSON.stringify(msg)); }
+
+  // ── Join ──────────────────────────────────────────────────────────────────
+  const joinBtn = document.getElementById('join-btn');
+  const usernameInput = document.getElementById('username-input');
+  const joinError = document.getElementById('join-error');
+
+  joinBtn.addEventListener('click', doJoin);
+  usernameInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') doJoin(); });
+
+  function doJoin() {
+    const name = usernameInput.value.trim();
+    if (!name) { joinError.textContent = P('nameRequired'); return; }
+    joinError.textContent = '';
+    myUsername = name;
+    send({ type: 'JOIN', username: name });
+  }
+
+  // ── Answer buttons ────────────────────────────────────────────────────────
+  document.querySelectorAll('.ans-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const answerId = btn.dataset.id;
+      if (!currentQuestionId || myLastAnswer) return;
+      myLastAnswer = answerId;
+
+      // Disable all buttons
+      document.querySelectorAll('.ans-btn').forEach(b => b.disabled = true);
+
+      send({ type: 'ANSWER', questionId: currentQuestionId, answerId });
+
+      // Show locked screen
+      const colors = { A: 'var(--red)', B: 'var(--blue)', C: 'var(--yellow)', D: 'var(--green)' };
+      const textColors = { A: '#fff', B: '#fff', C: '#222', D: '#fff' };
+      const locked = document.getElementById('locked-answer');
+      locked.textContent = answerId;
+      locked.style.background = colors[answerId];
+      locked.style.color = textColors[answerId];
+      show('locked');
+    });
+  });
+
+  // ── Message handler ───────────────────────────────────────────────────────
+  function handleMsg(msg) {
+    switch (msg.type) {
+      case 'CONNECTED':
+        document.getElementById('reconnecting').classList.remove('show');
+        if (msg.lang && SUPPORTED_LANGS.includes(msg.lang)) {
+          playerLang = msg.lang;
+          applyPlayerTranslations();
+        }
+        break;
+
+      case 'JOIN_OK':
+        myUsername = msg.username;
+        document.getElementById('waiting-name').textContent = P('hiName', myUsername);
+        show('waiting');
+        break;
+
+      case 'PLAYER_JOINED':
+        document.getElementById('waiting-players').textContent = P('players', msg.playerCount);
+        break;
+
+      case 'GAME_FETCHING': {
+        const fromGameOver = document.getElementById('gameover').classList.contains('active');
+        show('waiting');
+        document.getElementById('waiting-name').textContent = fromGameOver ? '⚔️ New round!' : P('loading');
+        document.getElementById('waiting-players').textContent = fromGameOver ? 'Scores carry over — good luck!' : '';
+        break;
+      }
+
+      case 'GAME_TRANSLATING':
+        show('waiting');
+        document.getElementById('waiting-name').textContent = P('translating');
+        break;
+
+      case 'GAME_STARTING':
+        show('waiting');
+        document.getElementById('waiting-name').textContent = P('getReady');
+        document.getElementById('waiting-players').textContent = P('incoming', msg.totalQuestions);
+        break;
+
+      case 'COUNTDOWN_TICK':
+        document.getElementById('waiting-name').textContent = P('startingIn', msg.countdown);
+        break;
+
+      case 'LANGUAGE_SET':
+        if (SUPPORTED_LANGS.includes(msg.lang)) {
+          playerLang = msg.lang;
+          applyPlayerTranslations();
+        }
+        break;
+
+      case 'QUESTION':
+        currentQuestionId = msg.questionId;
+        myLastAnswer = null;
+        document.querySelectorAll('.ans-btn').forEach(b => b.disabled = false);
+        show('question');
+        break;
+
+      case 'ANSWER_CONFIRMED':
+        // Already shown locked screen via button click
+        break;
+
+      case 'REVEAL':
+        handleReveal(msg);
+        break;
+
+      case 'NEXT_QUESTION':
+        show('waiting');
+        document.getElementById('waiting-name').textContent = P('nextSoon');
+        document.getElementById('waiting-players').textContent = '';
+        break;
+
+      case 'GAME_OVER':
+        handleGameOver(msg);
+        break;
+
+      case 'RESTARTED':
+        myUsername = null;
+        myScore = 0;
+        myRank = null;
+        show('join');
+        usernameInput.value = '';
+        break;
+
+      case 'ERROR':
+        joinError.textContent = msg.message || 'Something went wrong.';
+        myUsername = null;
+        applyPlayerTranslations();
+        show('join');
+        break;
+    }
+  }
+
+  function handleReveal(msg) {
+    const myEntry = msg.scores.find(s => s.username === myUsername);
+    if (!myEntry) { show('reveal'); return; }
+
+    const wasCorrect = myLastAnswer && myLastAnswer === msg.correctAnswer;
+    const didAnswer = !!myLastAnswer;
+
+    // If player is on locked screen, briefly flash it before showing reveal
+    if (document.getElementById('locked').classList.contains('active')) {
+      const lockedAnswer = document.getElementById('locked-answer');
+      lockedAnswer.classList.remove('flash-ok', 'flash-bad');
+      lockedAnswer.classList.add(wasCorrect ? 'flash-ok' : 'flash-bad');
+      setTimeout(() => {
+        lockedAnswer.classList.remove('flash-ok', 'flash-bad');
+        lockedAnswer.style.boxShadow = '';
+        lockedAnswer.style.transform = '';
+        _showRevealScreen(msg, myEntry, wasCorrect, didAnswer);
+      }, 550);
+    } else {
+      _showRevealScreen(msg, myEntry, wasCorrect, didAnswer);
+    }
+  }
+
+  function _showRevealScreen(msg, myEntry, wasCorrect, didAnswer) {
+    // Result icon & title
+    document.getElementById('result-icon').textContent = wasCorrect ? '✅' : didAnswer ? '❌' : '⏱️';
+    const title = document.getElementById('result-title');
+    if (wasCorrect) {
+      title.textContent = P('correct');
+      title.className = 'correct';
+    } else if (!didAnswer) {
+      title.textContent = P('timesUp');
+      title.className = 'wrong';
+    } else {
+      title.textContent = P('wrong');
+      title.className = 'wrong';
+    }
+
+    // Chosen answer badge (green if correct, red if wrong)
+    const badgeEl = document.getElementById('chosen-answer-reveal');
+    if (myLastAnswer) {
+      badgeEl.style.display = '';
+      badgeEl.className = 'chosen-badge ' + (wasCorrect ? 'chosen-correct' : 'chosen-wrong');
+      badgeEl.textContent = wasCorrect
+        ? `${myLastAnswer} ✓`
+        : `${myLastAnswer} ✗ · Correct: ${msg.correctAnswer}${msg.correctText ? ' — ' + msg.correctText : ''}`;
+    } else {
+      badgeEl.style.display = 'none';
+    }
+
+    // Detail line (correct answer for wrong/missed)
+    const detail = document.getElementById('result-detail');
+    detail.textContent = (!wasCorrect && didAnswer && msg.correctText)
+      ? ''   // already shown in badge above
+      : (!wasCorrect && !didAnswer && msg.correctAnswer)
+        ? P('correctWas', msg.correctAnswer) + (msg.correctText ? ' — ' + msg.correctText : '')
+        : '';
+
+    // Points
+    const delta = myEntry.delta || 0;
+    document.getElementById('result-points').textContent = delta > 0 ? `+${delta}` : '';
+    myScore = myEntry.score;
+    myRank = myEntry.rank;
+    document.getElementById('result-score').textContent = P('total', myScore);
+
+    // Rank with medals
+    const rankMedals = ['🥇','🥈','🥉'];
+    document.getElementById('result-rank').textContent =
+      myRank <= 3 ? `${rankMedals[myRank-1]} #${myRank}` : P('rank', myRank);
+
+    // Streak notification
+    const streak = myEntry.streak || 0;
+    const streakEl = document.getElementById('streak-notification');
+    streakEl.classList.remove('show');
+    if (streak >= 3) {
+      const fire = streak >= 5 ? '🔥🔥' : '🔥';
+      streakEl.textContent = `${fire} ${streak} in a row!`;
+      void streakEl.offsetWidth; // reflow to restart animation
+      streakEl.classList.add('show');
+    } else {
+      streakEl.textContent = '';
+    }
+
+    // Show reveal screen
+    show('reveal');
+
+    // Flash background
+    const revealEl = document.getElementById('reveal');
+    revealEl.classList.remove('flash-correct', 'flash-wrong');
+    void revealEl.offsetWidth;
+    revealEl.classList.add(wasCorrect ? 'flash-correct' : 'flash-wrong');
+
+    // Flying points animation
+    if (delta > 0) {
+      const flyEl = document.getElementById('points-fly');
+      flyEl.textContent = `+${delta.toLocaleString()}`;
+      flyEl.style.color = wasCorrect ? '#4cde80' : '#aaa';
+      flyEl.classList.remove('animate');
+      void flyEl.offsetWidth;
+      flyEl.classList.add('animate');
+    }
+  }
+
+  function handleGameOver(msg) {
+    const myEntry = msg.finalScores.find(s => s.username === myUsername);
+    if (!myEntry) return;
+
+    const medals = ['🥇', '🥈', '🥉'];
+    const medal = medals[myEntry.rank - 1] || `#${myEntry.rank}`;
+    document.getElementById('go-rank').textContent = medal;
+    document.getElementById('go-score').textContent = P('points', myEntry.score);
+
+    show('gameover');
+  }
+
+  connect();
+</script>
+</body>
+</html>

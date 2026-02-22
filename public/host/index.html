@@ -1,0 +1,1545 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Quiz Night — Host</title>
+  <style>
+    :root {
+      --red:    #e21b3c;
+      --blue:   #1368ce;
+      --yellow: #d89e00;
+      --green:  #26890c;
+      --bg:     #1a1a2e;
+      --card:   #16213e;
+      --text:   #eaeaea;
+      --accent: #9f44d3;
+      --timer:  #00c2ff;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── Screens ── */
+    .screen { display: none; flex-direction: column; height: 100vh; padding: 2rem; }
+    .screen.active { display: flex; }
+
+    /* ── LOBBY ── */
+    #lobby {
+      grid-template-columns: auto 1fr;
+      grid-template-rows: auto auto 1fr auto auto;
+      gap: 1rem 1.5rem;
+    }
+    #lobby.active { display: grid; }
+    #lobby-header {
+      grid-column: 1 / -1;
+      grid-row: 1;
+      text-align: center;
+    }
+    #qr-panel     { grid-column: 1; grid-row: 2; }
+    #players-panel{ grid-column: 2; grid-row: 2; }
+    #category-panel { grid-column: 1 / -1; grid-row: 3; }
+    #lobby-controls { grid-column: 1 / -1; grid-row: 5; }
+    #lobby-header h1 {
+      font-size: clamp(2rem, 4vw, 3.5rem);
+      background: linear-gradient(90deg, #9f44d3, #00c2ff);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 0.25rem;
+    }
+    #lobby-header p { color: #aaa; font-size: 1.1rem; }
+
+    #qr-panel {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: var(--card);
+      border-radius: 1rem;
+      padding: 1.5rem;
+      gap: 0.75rem;
+    }
+    #qr-panel img { width: min(220px, 30vw); border-radius: 0.5rem; background: #fff; padding: 8px; }
+    #qr-url { font-size: 1.1rem; color: var(--timer); font-weight: 600; letter-spacing: 0.04em; }
+
+    #category-panel {
+      background: var(--card);
+      border-radius: 1rem;
+      padding: 1.5rem;
+      overflow-y: auto;
+    }
+    #category-panel h3 { margin-bottom: 0.75rem; color: #aaa; font-size: 1rem; text-transform: uppercase; letter-spacing: 0.1em; }
+    #category-list {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.4rem;
+    }
+    .cat-item {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.2rem 0.4rem;
+      border-radius: 0.4rem;
+      cursor: pointer;
+      transition: background 0.15s;
+      font-size: 0.8rem;
+    }
+    .cat-item:hover { background: rgba(255,255,255,0.06); }
+    .cat-item input[type=checkbox] { accent-color: var(--accent); width: 16px; height: 16px; cursor: pointer; }
+
+    #players-panel {
+      background: var(--card);
+      border-radius: 1rem;
+      padding: 1rem 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      min-height: 160px;
+    }
+    #players-panel h3 { color: #aaa; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.1em; }
+    #player-list { display: flex; flex-wrap: wrap; gap: 0.5rem; align-content: flex-start; }
+    .player-chip {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.45rem 1rem 0.45rem 0.5rem;
+      border-radius: 2rem;
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: #fff;
+      animation: playerPopIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    .player-avatar {
+      width: 30px; height: 30px;
+      border-radius: 50%;
+      background: rgba(0,0,0,0.3);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.8rem; font-weight: 900; color: #fff;
+      flex-shrink: 0;
+    }
+    @keyframes playerPopIn {
+      from { transform: scale(0.3) rotate(-12deg); opacity: 0; }
+      60%  { transform: scale(1.15) rotate(3deg); opacity: 1; }
+      to   { transform: scale(1) rotate(0deg); opacity: 1; }
+    }
+
+    .diff-btn {
+      padding: 0.55rem 1.1rem;
+      font-size: 0.95rem;
+      font-weight: 700;
+      background: rgba(255,255,255,0.08);
+      color: #aaa;
+      border: 2px solid transparent;
+      border-radius: 0.5rem;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s, border-color 0.15s;
+      letter-spacing: 0.03em;
+    }
+    .diff-btn:hover { background: rgba(255,255,255,0.14); color: #fff; }
+    .diff-btn[data-diff="easy"].active   { background: rgba(19,104,206,0.25); color: #6ab0ff; border-color: #1368ce; }
+    .diff-btn[data-diff="medium"].active { background: rgba(216,158,0,0.25);  color: #ffd166; border-color: #d89e00; }
+    .diff-btn[data-diff="hard"].active   { background: rgba(226,27,60,0.30);   color: #ff7c96; border-color: #e21b3c; }
+
+    .q-count-btn {
+      padding: 0.5rem 0.9rem;
+      font-size: 1rem;
+      font-weight: 700;
+      background: rgba(255,255,255,0.08);
+      color: #aaa;
+      border: 2px solid transparent;
+      border-radius: 0.5rem;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s, border-color 0.15s;
+    }
+    .q-count-btn:hover { background: rgba(255,255,255,0.14); color: #fff; }
+    .q-count-btn.active { background: rgba(159,68,211,0.25); color: #fff; border-color: var(--accent); }
+
+    #start-btn {
+      padding: 1rem 3rem;
+      font-size: 1.4rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, var(--accent), #4a90d9);
+      color: #fff;
+      border: none;
+      border-radius: 0.75rem;
+      cursor: pointer;
+      transition: transform 0.1s, opacity 0.2s;
+      letter-spacing: 0.05em;
+    }
+    #start-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+    #start-btn:not(:disabled):hover { transform: scale(1.04); }
+    #start-btn:not(:disabled):active { transform: scale(0.97); }
+
+    /* ── FETCHING ── */
+    #fetching {
+      align-items: center;
+      justify-content: center;
+      gap: 2rem;
+    }
+    .spinner {
+      width: 80px; height: 80px;
+      border: 6px solid rgba(255,255,255,0.1);
+      border-top-color: var(--timer);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    #fetching h2 { font-size: 2rem; color: #ccc; }
+
+    /* ── COUNTDOWN ── */
+    #countdown {
+      align-items: center;
+      justify-content: center;
+      gap: 1rem;
+    }
+    #countdown h2 { font-size: 2rem; color: #aaa; }
+    #countdown-number {
+      font-size: clamp(8rem, 20vw, 18rem);
+      font-weight: 900;
+      color: var(--timer);
+      line-height: 1;
+      animation: pulse 1s ease;
+    }
+    @keyframes pulse { from { transform: scale(1.4); opacity: 0.3; } to { transform: scale(1); opacity: 1; } }
+    #countdown-total { font-size: 1.2rem; color: #888; }
+
+    /* ── QUESTION ── */
+    #question-screen { gap: 1rem; }
+
+    #q-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-shrink: 0;
+    }
+    #q-category {
+      background: var(--accent);
+      padding: 0.3rem 0.9rem;
+      border-radius: 2rem;
+      font-size: 0.85rem;
+      font-weight: 600;
+    }
+    #q-counter { color: #aaa; font-size: 1rem; }
+    #q-answered { color: #aaa; font-size: 0.9rem; }
+
+    #timer-bar-wrap {
+      width: 100%;
+      height: 14px;
+      background: rgba(255,255,255,0.1);
+      border-radius: 7px;
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+    #timer-bar {
+      height: 100%;
+      background: linear-gradient(90deg, var(--timer), #8a2be2);
+      border-radius: 7px;
+      width: 100%;
+      transform-origin: left;
+      transition: none;
+    }
+
+    #q-text {
+      font-size: clamp(1.6rem, 4vw, 3.2rem);
+      font-weight: 700;
+      text-align: center;
+      line-height: 1.3;
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 1rem;
+    }
+
+    #answers-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+      flex-shrink: 0;
+    }
+    .answer-box {
+      display: flex;
+      align-items: center;
+      gap: 0.8rem;
+      padding: 1.1rem 1.4rem;
+      border-radius: 0.75rem;
+      font-size: clamp(1rem, 2.2vw, 1.5rem);
+      font-weight: 600;
+      transition: opacity 0.3s;
+    }
+    .answer-box .ans-letter {
+      width: 2.2rem; height: 2.2rem;
+      border-radius: 50%;
+      background: rgba(0,0,0,0.25);
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 900;
+      flex-shrink: 0;
+    }
+    .ans-A { background: var(--red); }
+    .ans-B { background: var(--blue); }
+    .ans-C { background: var(--yellow); color: #222; }
+    .ans-D { background: var(--green); }
+
+    /* ── REVEAL ── */
+    #reveal-screen {
+      grid-template-columns: 1fr 1fr;
+      grid-template-rows: auto auto 1fr auto;
+      gap: 0.75rem;
+      padding: 1.5rem;
+    }
+    #reveal-screen.active { display: grid; }
+
+    #reveal-question {
+      grid-column: 1 / -1;
+      text-align: center;
+      font-size: clamp(1rem, 2vw, 1.5rem);
+      color: #aaa;
+      font-weight: 500;
+      line-height: 1.3;
+    }
+
+    /* Big glowing correct answer box */
+    #reveal-correct-box {
+      grid-column: 1 / 2;
+      border-radius: 1rem;
+      padding: 1.2rem 1.5rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      text-align: center;
+      animation: correctPop 0.4s cubic-bezier(0.34,1.56,0.64,1);
+    }
+    @keyframes correctPop {
+      from { transform: scale(0.8); opacity: 0; }
+      to   { transform: scale(1);   opacity: 1; }
+    }
+    #reveal-correct-box .rc-label {
+      font-size: 0.85rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.15em;
+      color: rgba(255,255,255,0.7);
+    }
+    #reveal-correct-box .rc-letter {
+      font-size: 2.5rem;
+      font-weight: 900;
+      line-height: 1;
+    }
+    #reveal-correct-box .rc-text {
+      font-size: clamp(1.1rem, 2.5vw, 2rem);
+      font-weight: 800;
+      line-height: 1.2;
+    }
+
+    /* Answer distribution bars */
+    #reveal-bars {
+      grid-column: 1 / 2;
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+      background: var(--card);
+      border-radius: 0.75rem;
+      padding: 0.75rem 1rem;
+    }
+    .rbar-row {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      font-size: 0.85rem;
+    }
+    .rbar-letter {
+      width: 1.5rem; height: 1.5rem;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 900;
+      font-size: 0.75rem;
+      flex-shrink: 0;
+    }
+    .rbar-track { flex: 1; height: 10px; background: rgba(255,255,255,0.1); border-radius: 5px; overflow: hidden; }
+    .rbar-fill { height: 100%; border-radius: 5px; background: rgba(255,255,255,0.4); transition: width 0.6s ease; }
+    .rbar-fill.correct-bar { background: #4cde80; }
+    .rbar-pct { width: 2.5rem; text-align: right; color: #aaa; font-size: 0.8rem; }
+
+    /* Leaderboard panel */
+    #leaderboard {
+      grid-column: 2 / 3;
+      grid-row: 2 / 4;
+      background: var(--card);
+      border-radius: 1rem;
+      padding: 1rem 1.25rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      overflow-y: auto;
+    }
+
+    .lb-section-title {
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: #666;
+      padding-bottom: 0.3rem;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+    }
+
+    /* Round winner rows (sorted by delta) */
+    .lb-round-row {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      padding: 0.35rem 0;
+      font-size: 0.95rem;
+    }
+    .lb-round-medal { font-size: 1.3rem; width: 1.8rem; text-align: center; flex-shrink: 0; }
+    .lb-round-name { flex: 1; font-weight: 700; }
+    .lb-round-delta {
+      font-weight: 800;
+      font-size: 1rem;
+      color: #4cde80;
+      text-align: right;
+      min-width: 3.5rem;
+    }
+    .lb-round-delta.zero { color: #555; font-size: 0.85rem; }
+
+    /* Total score rows */
+    .lb-total-row {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.25rem 0;
+      font-size: 0.9rem;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+    }
+    .lb-total-row:last-child { border-bottom: none; }
+    .lb-total-rank { width: 1.5rem; font-weight: 700; color: #666; font-size: 0.8rem; }
+    .lb-total-rank.top { color: gold; }
+    .lb-total-name { flex: 1; font-weight: 600; }
+    .lb-total-score { font-weight: 700; color: var(--timer); font-size: 0.9rem; }
+
+    #skip-btn {
+      grid-column: 1 / -1;
+      justify-self: end;
+      padding: 0.5rem 1.4rem;
+      font-size: 0.9rem;
+      background: rgba(255,255,255,0.08);
+      color: #ccc;
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 0.5rem;
+      cursor: pointer;
+    }
+    #skip-btn:hover { background: rgba(255,255,255,0.14); }
+
+    /* ── GAME OVER ── */
+    #gameover {
+      align-items: center;
+      justify-content: flex-start;
+      gap: 1.25rem;
+      padding-top: 1.5rem;
+      padding-bottom: 11rem;  /* room for gameover-bottom bar */
+      overflow-y: auto;
+      position: relative;
+    }
+    #gameover h1 { font-size: clamp(2rem, 5vw, 4rem); font-weight: 900; text-align: center;
+      background: linear-gradient(90deg, gold, #ff6b6b, #9f44d3);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+
+    #podium {
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      gap: 1.5rem;
+    }
+    .podium-slot {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.4rem;
+    }
+    .podium-slot .medal { font-size: 2.5rem; }
+    .podium-slot .pd-name { font-size: 1.1rem; font-weight: 700; }
+    .podium-slot .pd-score { font-size: 0.9rem; color: #aaa; }
+    .podium-block {
+      background: var(--accent);
+      border-radius: 0.5rem 0.5rem 0 0;
+      width: 110px;
+    }
+    .podium-1 .podium-block { height: 100px; background: linear-gradient(135deg, gold, #d4a300); }
+    .podium-2 .podium-block { height: 70px;  background: linear-gradient(135deg, #c0c0c0, #888); }
+    .podium-3 .podium-block { height: 50px;  background: linear-gradient(135deg, #cd7f32, #8b4513); }
+
+    #final-scores {
+      background: var(--card);
+      border-radius: 1rem;
+      padding: 0.75rem 2rem;
+      min-width: 400px;
+      max-height: min(280px, 32vh);
+      overflow-y: auto;
+    }
+
+    /* ── Game over bottom bar (fixed, like reveal overlay) ── */
+    #gameover-bottom {
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      background: rgba(14, 18, 44, 0.97);
+      border-top: 2px solid rgba(159, 68, 211, 0.45);
+      border-radius: 1.25rem 1.25rem 0 0;
+      padding: 0.85rem 2rem 1rem;
+      display: none;
+      flex-direction: column;
+      gap: 0.6rem;
+      z-index: 20;
+    }
+    #gameover-bottom.show { display: flex; }
+    #gameover-bottom .go-bar-title {
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: #555;
+      text-align: center;
+    }
+    #continue-presets {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 0.5rem;
+    }
+    .cp-btn {
+      padding: 0.5rem 0.6rem;
+      border: 1.5px solid rgba(255,255,255,0.1);
+      border-radius: 0.6rem;
+      background: rgba(255,255,255,0.04);
+      color: #bbb;
+      cursor: pointer;
+      text-align: center;
+      font-size: 0.9rem;
+      font-weight: 700;
+      line-height: 1.3;
+      transition: background 0.15s, border-color 0.15s, color 0.15s;
+    }
+    .cp-btn .cp-desc { font-size: 0.62rem; font-weight: 400; opacity: 0.65; margin-top: 0.1rem; }
+    .cp-btn:hover { background: rgba(159,68,211,0.2); border-color: var(--accent); color: #fff; }
+    .cp-btn.active { background: rgba(159,68,211,0.28); border-color: var(--accent); color: #fff; }
+    #gameover-actions { display: flex; gap: 1rem; justify-content: center; }
+    #continue-btn {
+      padding: 0.75rem 2.5rem;
+      font-size: 1.15rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, var(--accent), #4a90d9);
+      color: #fff;
+      border: none;
+      border-radius: 0.75rem;
+      cursor: pointer;
+      transition: transform 0.1s;
+      letter-spacing: 0.03em;
+    }
+    #continue-btn:hover { transform: scale(1.04); }
+    #restart-btn {
+      padding: 0.75rem 2.5rem;
+      font-size: 1.15rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, #26890c, #00c2ff);
+      color: #fff;
+      border: none;
+      border-radius: 0.75rem;
+      cursor: pointer;
+      transition: transform 0.1s;
+    }
+    #restart-btn:hover { transform: scale(1.05); }
+
+    /* ── Language buttons ── */
+    .lang-btn {
+      padding: 0.3rem 0.6rem;
+      font-size: 0.82rem;
+      font-weight: 600;
+      background: rgba(255,255,255,0.07);
+      color: #aaa;
+      border: 1px solid transparent;
+      border-radius: 0.4rem;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s;
+    }
+    .lang-btn:hover { background: rgba(255,255,255,0.13); color: #fff; }
+    .lang-btn.active { background: rgba(159,68,211,0.25); color: #fff; border-color: var(--accent); }
+
+
+    /* ── In-place reveal animations ── */
+    .answer-box { position: relative; }
+    .answer-box.ans-correct-reveal {
+      box-shadow: 0 0 0 3px #4cde80, 0 0 32px rgba(76, 222, 128, 0.5);
+      animation: correctBounce 0.55s cubic-bezier(0.34, 1.56, 0.64, 1);
+      z-index: 2;
+    }
+    .answer-box.ans-wrong-reveal {
+      opacity: 0.28;
+      filter: grayscale(0.75);
+      transition: opacity 0.4s, filter 0.4s;
+    }
+    .answer-box.ans-correct-reveal::after {
+      content: '✓';
+      position: absolute;
+      right: 1rem;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 2rem;
+      font-weight: 900;
+      color: #4cde80;
+    }
+    .answer-box.ans-wrong-reveal::after {
+      content: '✗';
+      position: absolute;
+      right: 1rem;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 1.6rem;
+      font-weight: 900;
+      color: rgba(255,255,255,0.25);
+    }
+    @keyframes correctBounce {
+      0%   { transform: scale(1); }
+      40%  { transform: scale(1.06); }
+      70%  { transform: scale(0.97); }
+      100% { transform: scale(1.03); }
+    }
+
+    /* ── Reveal overlay (slides up from bottom) ── */
+    #reveal-overlay {
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      height: 58%;
+      background: rgba(14, 18, 44, 0.97);
+      border-top: 2px solid rgba(159, 68, 211, 0.5);
+      border-radius: 1.25rem 1.25rem 0 0;
+      padding: 0.9rem 1.5rem 0.75rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      overflow: hidden;
+      transform: translateY(100%);
+      transition: transform 0.55s cubic-bezier(0.34, 1.2, 0.64, 1);
+      z-index: 50;
+    }
+    #reveal-overlay.show { transform: translateY(0); }
+    #ov-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+    }
+    #ov-nobody {
+      display: none;
+      color: #ff8585;
+      font-size: 0.85rem;
+      font-weight: 700;
+    }
+    #ov-correct-pct { color: #4cde80; font-size: 0.85rem; font-weight: 700; }
+    #ov-cols { display: flex; gap: 1.5rem; flex: 1; overflow: hidden; }
+    #ov-cols > div { flex: 1; overflow: hidden; display: flex; flex-direction: column; gap: 0.35rem; }
+    .ov-section-title {
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: #555;
+      padding-bottom: 0.25rem;
+      border-bottom: 1px solid rgba(255,255,255,0.07);
+      flex-shrink: 0;
+    }
+    #ov-round-rows, #ov-total-rows { overflow: hidden; }
+
+    /* ── Overlay total-score rows: 2.0rem + medal colors ── */
+    #ov-total-rows .lb-total-row {
+      font-size: 2rem;
+      padding: 0.4rem 0.5rem;
+      border-radius: 0.5rem;
+      margin-bottom: 0.2rem;
+      border-bottom: none;
+    }
+    #ov-total-rows .lb-total-rank { font-size: 1.8rem; width: 3rem; }
+    #ov-total-rows .lb-rank-change { font-size: 0.85rem; width: 3rem; }
+    #ov-total-rows .lb-total-name { font-size: 1.9rem; font-weight: 700; }
+    #ov-total-rows .lb-total-score { font-size: 2rem; font-weight: 800; }
+    /* Answer time column in "This Round" */
+    .lb-round-time {
+      font-size: 0.85rem;
+      color: var(--timer);
+      white-space: nowrap;
+      width: 3.2rem;
+      text-align: right;
+      flex-shrink: 0;
+      font-weight: 700;
+    }
+    .lb-round-time.no-answer { color: #444; }
+    /* Gold — 1st place */
+    #ov-total-rows .lb-total-row.rank-gold {
+      background: rgba(255, 215, 0, 0.12);
+      border-left: 3px solid gold;
+    }
+    #ov-total-rows .lb-total-row.rank-gold .lb-total-rank,
+    #ov-total-rows .lb-total-row.rank-gold .lb-total-name,
+    #ov-total-rows .lb-total-row.rank-gold .lb-total-score { color: gold; }
+    /* Silver — 2nd place */
+    #ov-total-rows .lb-total-row.rank-silver {
+      background: rgba(192, 192, 192, 0.1);
+      border-left: 3px solid #c0c0c0;
+    }
+    #ov-total-rows .lb-total-row.rank-silver .lb-total-rank,
+    #ov-total-rows .lb-total-row.rank-silver .lb-total-name,
+    #ov-total-rows .lb-total-row.rank-silver .lb-total-score { color: #c8c8c8; }
+    /* Bronze — 3rd place */
+    #ov-total-rows .lb-total-row.rank-bronze {
+      background: rgba(205, 127, 50, 0.12);
+      border-left: 3px solid #cd7f32;
+    }
+    #ov-total-rows .lb-total-row.rank-bronze .lb-total-rank,
+    #ov-total-rows .lb-total-row.rank-bronze .lb-total-name,
+    #ov-total-rows .lb-total-row.rank-bronze .lb-total-score { color: #d4904a; }
+    /* Score bar in "This Round" */
+    .lb-score-bar-wrap { flex: 1; height: 7px; background: rgba(255,255,255,0.08); border-radius: 4px; overflow: hidden; margin: 0 0.4rem; }
+    .lb-score-bar { height: 100%; border-radius: 4px; transition: width 0.6s ease; }
+    /* Rank change arrow */
+    .lb-rank-change { font-size: 0.72rem; font-weight: 800; width: 2.2rem; text-align: right; flex-shrink: 0; }
+    .rank-up { color: #4cde80; }
+    .rank-down { color: #ff6b6b; }
+    .rank-same { color: #444; }
+    #ov-skip-btn {
+      align-self: flex-end;
+      flex-shrink: 0;
+      padding: 0.35rem 1rem;
+      font-size: 0.8rem;
+      background: rgba(255,255,255,0.07);
+      color: #aaa;
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 0.4rem;
+      cursor: pointer;
+    }
+    #ov-skip-btn:hover { background: rgba(255,255,255,0.13); }
+
+    /* ── Category presets ── */
+    .preset-btn {
+      padding: 0.28rem 0.65rem;
+      font-size: 0.76rem;
+      font-weight: 700;
+      background: rgba(159,68,211,0.12);
+      color: #bbb;
+      border: 1px solid rgba(159,68,211,0.3);
+      border-radius: 2rem;
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s, color 0.15s;
+      white-space: nowrap;
+    }
+    .preset-btn:hover { background: rgba(159,68,211,0.28); border-color: var(--accent); color: #fff; }
+
+    /* ── Difficulty sub-labels ── */
+    .diff-btn { line-height: 1.25; text-align: center; }
+    .diff-desc { font-size: 0.62rem; font-weight: 400; opacity: 0.65; margin-top: 0.1rem; white-space: nowrap; letter-spacing: 0; }
+
+    /* ── Category groups ── */
+    .cat-group-header {
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: #555;
+      padding: 0.5rem 0 0.2rem;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+      margin-top: 0.2rem;
+    }
+    .cat-group-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 0.25rem;
+      padding: 0.2rem 0;
+    }
+  </style>
+</head>
+<body>
+
+<!-- LOBBY -->
+<div id="lobby" class="screen active" style="position:relative;">
+  <div id="lobby-header">
+    <h1 data-i18n="title">🎮 Quiz Night</h1>
+    <p data-i18n="subtitle">Scan the QR code to join on your phone</p>
+  </div>
+
+  <div id="qr-panel">
+    <img id="qr-img" src="/api/qr" alt="QR Code">
+    <div id="qr-url">Loading...</div>
+  </div>
+
+  <div id="category-panel">
+    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:0.75rem;">
+      <h3 data-i18n="categories" style="margin:0;">Categories</h3>
+      <button id="cat-toggle-btn" style="padding:0.25rem 0.75rem; font-size:0.8rem; font-weight:600; background:rgba(255,255,255,0.08); color:#aaa; border:1px solid rgba(255,255,255,0.15); border-radius:0.4rem; cursor:pointer;">Uncheck All</button>
+    </div>
+    <div id="cat-presets" style="display:flex; flex-wrap:wrap; gap:0.35rem; margin-bottom:0.6rem;">
+      <button class="preset-btn" id="preset-party">🎉 Party Mix</button>
+      <button class="preset-btn" id="preset-nerd">🧪 Nerd Night</button>
+      <button class="preset-btn" id="preset-world">🌍 World Tour</button>
+      <button class="preset-btn" id="preset-pop">🎬 Pop Culture</button>
+    </div>
+    <div id="category-list">
+      <div style="color:#888; font-size:0.85rem;">Loading categories…</div>
+    </div>
+  </div>
+
+  <div id="db-panel" style="grid-column:1/-1; grid-row:4; background:var(--card); border-radius:1rem; padding:0.75rem 1.5rem; display:flex; align-items:center; gap:1rem; flex-wrap:wrap; min-height:52px;">
+    <span id="db-status-icon" style="font-size:1.3rem;">⏳</span>
+    <span id="db-status-text" style="flex:1; color:#aaa; font-size:0.9rem;">Checking local database…</span>
+    <div id="db-progress-wrap" style="display:none; flex:1; min-width:160px;">
+      <div style="height:6px; background:rgba(255,255,255,0.1); border-radius:3px; overflow:hidden;">
+        <div id="db-progress-bar" style="height:100%; background:var(--timer); border-radius:3px; width:0%; transition:width 0.4s;"></div>
+      </div>
+      <div id="db-progress-label" style="font-size:0.75rem; color:#888; margin-top:0.25rem;"></div>
+    </div>
+    <button id="db-download-btn" style="display:none; padding:0.4rem 1rem; font-size:0.85rem; font-weight:600; background:rgba(0,194,255,0.15); color:var(--timer); border:1px solid var(--timer); border-radius:0.5rem; cursor:pointer; white-space:nowrap;">Download DB</button>
+  </div>
+
+  <div id="players-panel">
+    <h3><span data-i18n="players">Players</span> (<span id="player-count">0</span>)</h3>
+    <div id="player-list">
+      <span style="color:#555; font-style:italic;">Waiting for players…</span>
+    </div>
+  </div>
+
+  <div id="lobby-controls" style="display:flex; align-items:center; justify-content:center; gap:1rem; flex-wrap:wrap;">
+    <div style="display:flex; align-items:center; gap:0.75rem;">
+      <span data-i18n="difficulty" style="color:#aaa; font-size:0.95rem; white-space:nowrap;">Difficulty:</span>
+      <div style="display:flex; gap:0.4rem;">
+        <button class="diff-btn active" data-diff="easy">Easy<div class="diff-desc">Easy Qs · 1× points</div></button>
+        <button class="diff-btn" data-diff="medium">Medium<div class="diff-desc">Medium Qs · 1.5× points</div></button>
+        <button class="diff-btn" data-diff="hard">Hard<div class="diff-desc">Hard Qs · 2× points</div></button>
+      </div>
+    </div>
+    <div style="display:flex; align-items:center; gap:0.75rem;">
+      <span data-i18n="questions" style="color:#aaa; font-size:0.95rem; white-space:nowrap;">Questions:</span>
+      <div style="display:flex; gap:0.4rem;" id="q-count-btns">
+        <button class="q-count-btn active" data-count="10">10</button>
+        <button class="q-count-btn" data-count="15">15</button>
+        <button class="q-count-btn" data-count="20">20</button>
+        <button class="q-count-btn" data-count="25">25</button>
+        <button class="q-count-btn" data-count="30">30</button>
+      </div>
+    </div>
+    <button id="start-btn" disabled data-i18n="startGame">Start Game</button>
+  </div>
+
+</div>
+
+<!-- FETCHING -->
+<div id="fetching" class="screen">
+  <div class="spinner"></div>
+  <h2 data-i18n="loadingQuestions">Loading questions…</h2>
+</div>
+
+<!-- COUNTDOWN -->
+<div id="countdown" class="screen">
+  <h2 data-i18n="getReady">Get Ready!</h2>
+  <div id="countdown-number">3</div>
+  <div id="countdown-total"></div>
+</div>
+
+<!-- QUESTION -->
+<div id="question-screen" class="screen">
+  <div id="q-header">
+    <span id="q-category"></span>
+    <span id="q-counter"></span>
+    <span id="q-answered"></span>
+  </div>
+  <div id="timer-bar-wrap"><div id="timer-bar"></div></div>
+  <div id="q-text"></div>
+  <div id="answers-grid">
+    <div class="answer-box ans-A"><span class="ans-letter">A</span><span id="ans-A-text"></span></div>
+    <div class="answer-box ans-B"><span class="ans-letter">B</span><span id="ans-B-text"></span></div>
+    <div class="answer-box ans-C"><span class="ans-letter" style="color:#222">C</span><span id="ans-C-text"></span></div>
+    <div class="answer-box ans-D"><span class="ans-letter">D</span><span id="ans-D-text"></span></div>
+  </div>
+</div>
+
+<!-- REVEAL -->
+<div id="reveal-screen" class="screen">
+  <!-- Question text -->
+  <div id="reveal-question"></div>
+
+  <!-- Big correct answer (left col) -->
+  <div id="reveal-correct-box">
+    <div class="rc-label" data-i18n="correctAnswer">✓ Correct Answer</div>
+    <div class="rc-letter" id="rc-letter"></div>
+    <div class="rc-text" id="rc-text"></div>
+  </div>
+
+  <!-- Leaderboard (right col, spans 2 rows) -->
+  <div id="leaderboard">
+    <div class="lb-section-title" data-i18n="thisRound">This Round</div>
+    <div id="lb-round-rows"></div>
+    <div class="lb-section-title" data-i18n="totalScores" style="margin-top:0.5rem;">Total Scores</div>
+    <div id="lb-total-rows"></div>
+  </div>
+
+  <!-- Answer distribution bars (left col) -->
+  <div id="reveal-bars">
+    <div class="rbar-row"><div class="rbar-letter ans-A">A</div><div class="rbar-track"><div class="rbar-fill" id="rbar-A" style="width:0%"></div></div><span class="rbar-pct" id="rbar-A-pct">0%</span></div>
+    <div class="rbar-row"><div class="rbar-letter ans-B">B</div><div class="rbar-track"><div class="rbar-fill" id="rbar-B" style="width:0%"></div></div><span class="rbar-pct" id="rbar-B-pct">0%</span></div>
+    <div class="rbar-row"><div class="rbar-letter ans-C" style="color:#222">C</div><div class="rbar-track"><div class="rbar-fill" id="rbar-C" style="width:0%"></div></div><span class="rbar-pct" id="rbar-C-pct">0%</span></div>
+    <div class="rbar-row"><div class="rbar-letter ans-D">D</div><div class="rbar-track"><div class="rbar-fill" id="rbar-D" style="width:0%"></div></div><span class="rbar-pct" id="rbar-D-pct">0%</span></div>
+  </div>
+
+  <button id="skip-btn" data-i18n="skip">Skip →</button>
+</div>
+
+<!-- GAME OVER -->
+<div id="gameover" class="screen">
+  <h1 data-i18n="gameOver">🏆 Game Over!</h1>
+  <div id="podium"></div>
+  <div id="final-scores"></div>
+</div>
+
+<!-- GAME OVER BOTTOM BAR — continue or restart -->
+<div id="gameover-bottom">
+  <div class="go-bar-title">⚔️ Continue the battle — pick new categories</div>
+  <div id="continue-presets">
+    <button class="cp-btn active" data-cats="9,11,12,14,21">
+      🎉 Party Mix<div class="cp-desc">General · Film · Music · TV · Sports</div>
+    </button>
+    <button class="cp-btn" data-cats="17,18,19,30">
+      🧪 Nerd Night<div class="cp-desc">Science · Computers · Math · Gadgets</div>
+    </button>
+    <button class="cp-btn" data-cats="22,20,23,24">
+      🌍 World Tour<div class="cp-desc">Geography · Mythology · History · Politics</div>
+    </button>
+    <button class="cp-btn" data-cats="11,14,12,31,29">
+      🎬 Pop Culture<div class="cp-desc">Film · TV · Music · Anime · Comics</div>
+    </button>
+  </div>
+  <div id="gameover-actions">
+    <button id="continue-btn">▶ Continue</button>
+    <button id="restart-btn" data-i18n="playAgain">↺ Fresh Start</button>
+  </div>
+</div>
+
+<!-- REVEAL OVERLAY (slides up from bottom during question reveal) -->
+<div id="reveal-overlay">
+  <div id="ov-header">
+    <div style="display:flex; align-items:center; gap:1rem;">
+      <span class="ov-section-title" style="border:none; padding:0; font-size:0.8rem;">RESULTS</span>
+      <span id="ov-correct-pct"></span>
+      <span id="ov-nobody">😱 Nobody got it right!</span>
+    </div>
+    <button id="ov-skip-btn">Skip →</button>
+  </div>
+  <div id="ov-cols">
+    <div>
+      <div class="ov-section-title">This Round</div>
+      <div id="ov-round-rows"></div>
+    </div>
+    <div>
+      <div class="ov-section-title">Total Scores</div>
+      <div id="ov-total-rows"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ── Translations ──────────────────────────────────────────────────────────
+  const TRANSLATIONS = {
+    en: { flag:'🇬🇧', label:'English', title:'🎮 Quiz Night', subtitle:'Scan the QR code to join on your phone', categories:'Categories', uncheckAll:'Uncheck All', checkAll:'Check All', language:'Language:', difficulty:'Difficulty:', diffNormal:'Normal', diffNightmare:'😰 Nightmare', diffHell:'🔥 Hell', questions:'Questions:', startGame:'Start Game', players:'Players', noPlayers:'No players yet…', loadingQuestions:'Loading questions…', translating:'Translating questions', getReady:'Get Ready!', countdownTotal:(n)=>`${n} questions`, answered:(a,t)=>`${a} / ${t} answered`, correctAnswer:'✓ Correct Answer', thisRound:'This Round', totalScores:'Total Scores', skip:'Skip →', gameOver:'🏆 Game Over!', playAgain:'Play Again', donate:'☕ Buy us a coffee', donateSwish:'Swish: +46 73 267 12 31' },
+    sv: { flag:'🇸🇪', label:'Svenska', title:'🎮 Frågesport', subtitle:'Skanna QR-koden för att gå med på telefonen', categories:'Kategorier', uncheckAll:'Avmarkera alla', checkAll:'Markera alla', language:'Språk:', difficulty:'Svårighetsgrad:', diffNormal:'Normal', diffNightmare:'😰 Mardröm', diffHell:'🔥 Helvete', questions:'Frågor:', startGame:'Starta spelet', players:'Spelare', noPlayers:'Inga spelare ännu…', loadingQuestions:'Laddar frågor…', translating:'Översätter frågor', getReady:'Gör dig redo!', countdownTotal:(n)=>`${n} frågor`, answered:(a,t)=>`${a} / ${t} svarat`, correctAnswer:'✓ Rätt svar', thisRound:'Denna runda', totalScores:'Totalpoäng', skip:'Hoppa →', gameOver:'🏆 Spelet slut!', playAgain:'Spela igen', donate:'☕ Bjud oss på kaffe', donateSwish:'Swish: +46 73 267 12 31' },
+    de: { flag:'🇩🇪', label:'Deutsch', title:'🎮 Quiz-Nacht', subtitle:'Scanne den QR-Code, um beizutreten', categories:'Kategorien', uncheckAll:'Alle abwählen', checkAll:'Alle wählen', language:'Sprache:', difficulty:'Schwierigkeit:', diffNormal:'Normal', diffNightmare:'😰 Albtraum', diffHell:'🔥 Hölle', questions:'Fragen:', startGame:'Spiel starten', players:'Spieler', noPlayers:'Noch keine Spieler…', loadingQuestions:'Fragen laden…', translating:'Fragen werden übersetzt', getReady:'Macht euch bereit!', countdownTotal:(n)=>`${n} Fragen`, answered:(a,t)=>`${a} / ${t} beantwortet`, correctAnswer:'✓ Richtige Antwort', thisRound:'Diese Runde', totalScores:'Gesamtpunkte', skip:'Überspringen →', gameOver:'🏆 Spiel vorbei!', playAgain:'Nochmal spielen', donate:'☕ Einen Kaffee spendieren', donateSwish:'Swish: +46 73 267 12 31' },
+    fr: { flag:'🇫🇷', label:'Français', title:'🎮 Quiz Night', subtitle:'Scannez le QR code pour rejoindre', categories:'Catégories', uncheckAll:'Tout décocher', checkAll:'Tout cocher', language:'Langue :', difficulty:'Difficulté :', diffNormal:'Normal', diffNightmare:'😰 Cauchemar', diffHell:'🔥 Enfer', questions:'Questions :', startGame:'Démarrer', players:'Joueurs', noPlayers:'Pas encore de joueurs…', loadingQuestions:'Chargement des questions…', translating:'Traduction des questions', getReady:'Préparez-vous !', countdownTotal:(n)=>`${n} questions`, answered:(a,t)=>`${a} / ${t} répondu`, correctAnswer:'✓ Bonne réponse', thisRound:'Ce tour', totalScores:'Score total', skip:'Passer →', gameOver:'🏆 Fin du jeu !', playAgain:'Rejouer', donate:'☕ Offrez-nous un café', donateSwish:'Swish: +46 73 267 12 31' },
+    es: { flag:'🇪🇸', label:'Español', title:'🎮 Noche de Quiz', subtitle:'Escanea el QR para unirte desde tu teléfono', categories:'Categorías', uncheckAll:'Desmarcar todo', checkAll:'Marcar todo', language:'Idioma:', difficulty:'Dificultad:', diffNormal:'Normal', diffNightmare:'😰 Pesadilla', diffHell:'🔥 Infierno', questions:'Preguntas:', startGame:'Empezar', players:'Jugadores', noPlayers:'Aún no hay jugadores…', loadingQuestions:'Cargando preguntas…', translating:'Traduciendo preguntas', getReady:'¡Prepárense!', countdownTotal:(n)=>`${n} preguntas`, answered:(a,t)=>`${a} / ${t} respondido`, correctAnswer:'✓ Respuesta correcta', thisRound:'Esta ronda', totalScores:'Puntuación total', skip:'Saltar →', gameOver:'🏆 ¡Fin del juego!', playAgain:'Volver a jugar', donate:'☕ Invítanos a un café', donateSwish:'Swish: +46 73 267 12 31' },
+    no: { flag:'🇳🇴', label:'Norsk', title:'🎮 Quizkveld', subtitle:'Skann QR-koden for å bli med på telefonen', categories:'Kategorier', uncheckAll:'Fjern alle', checkAll:'Velg alle', language:'Språk:', difficulty:'Vanskelighetsgrad:', diffNormal:'Normal', diffNightmare:'😰 Mareritt', diffHell:'🔥 Helvete', questions:'Spørsmål:', startGame:'Start spillet', players:'Spillere', noPlayers:'Ingen spillere ennå…', loadingQuestions:'Laster spørsmål…', translating:'Oversetter spørsmål', getReady:'Gjør deg klar!', countdownTotal:(n)=>`${n} spørsmål`, answered:(a,t)=>`${a} / ${t} svart`, correctAnswer:'✓ Riktig svar', thisRound:'Denne runden', totalScores:'Totalpoeng', skip:'Hopp →', gameOver:'🏆 Spillet er over!', playAgain:'Spill igjen', donate:'☕ Kjøp oss en kaffe', donateSwish:'Swish: +46 73 267 12 31' },
+    da: { flag:'🇩🇰', label:'Dansk', title:'🎮 Quizaften', subtitle:'Scan QR-koden for at deltage med din telefon', categories:'Kategorier', uncheckAll:'Fravælg alle', checkAll:'Vælg alle', language:'Sprog:', difficulty:'Sværhedsgrad:', diffNormal:'Normal', diffNightmare:'😰 Mareridt', diffHell:'🔥 Helvede', questions:'Spørgsmål:', startGame:'Start spillet', players:'Spillere', noPlayers:'Ingen spillere endnu…', loadingQuestions:'Indlæser spørgsmål…', translating:'Oversætter spørgsmål', getReady:'Gør dig klar!', countdownTotal:(n)=>`${n} spørgsmål`, answered:(a,t)=>`${a} / ${t} besvaret`, correctAnswer:'✓ Rigtigt svar', thisRound:'Denne runde', totalScores:'Samlet score', skip:'Spring over →', gameOver:'🏆 Spillet er slut!', playAgain:'Spil igen', donate:'☕ Køb os en kaffe', donateSwish:'Swish: +46 73 267 12 31' },
+  };
+
+  // ── Category metadata ─────────────────────────────────────────────────────
+  const CATEGORY_META = {
+    9:  { emoji:'🌐', group:'general' },
+    10: { emoji:'📚', group:'entertainment' },
+    11: { emoji:'🎬', group:'entertainment' },
+    12: { emoji:'🎵', group:'entertainment' },
+    13: { emoji:'🎭', group:'entertainment' },
+    14: { emoji:'📺', group:'entertainment' },
+    15: { emoji:'🎮', group:'entertainment' },
+    16: { emoji:'🎲', group:'entertainment' },
+    17: { emoji:'🔬', group:'science' },
+    18: { emoji:'💻', group:'science' },
+    19: { emoji:'🧮', group:'science' },
+    20: { emoji:'🏛️', group:'world' },
+    21: { emoji:'⚽', group:'sports' },
+    22: { emoji:'🌍', group:'world' },
+    23: { emoji:'📜', group:'world' },
+    24: { emoji:'🗳️', group:'world' },
+    25: { emoji:'🎨', group:'arts' },
+    26: { emoji:'⭐', group:'arts' },
+    27: { emoji:'🐾', group:'nature' },
+    28: { emoji:'🚗', group:'sports' },
+    29: { emoji:'💥', group:'entertainment' },
+    30: { emoji:'🔧', group:'science' },
+    31: { emoji:'🎌', group:'entertainment' },
+    32: { emoji:'🎠', group:'entertainment' },
+  };
+
+  const GROUP_ORDER = ['general','entertainment','science','world','sports','arts','nature'];
+
+  const GROUP_LABELS = {
+    en: { general:'🌐 General',          entertainment:'🎬 Entertainment', science:'🔬 Science & Tech',      world:'🌍 World & Society',    sports:'⚽ Sports',   arts:'🎨 Arts & Culture', nature:'🐾 Nature' },
+    sv: { general:'🌐 Allmänt',          entertainment:'🎬 Underhållning',  science:'🔬 Vetenskap & Teknik', world:'🌍 Världen & Samhälle', sports:'⚽ Sport',    arts:'🎨 Konst & Kultur', nature:'🐾 Natur' },
+    de: { general:'🌐 Allgemein',        entertainment:'🎬 Unterhaltung',   science:'🔬 Wissenschaft & Tech',world:'🌍 Welt & Gesellschaft', sports:'⚽ Sport',    arts:'🎨 Kunst & Kultur', nature:'🐾 Natur' },
+    fr: { general:'🌐 Général',          entertainment:'🎬 Divertissement', science:'🔬 Science & Tech',     world:'🌍 Monde & Société',    sports:'⚽ Sports',   arts:'🎨 Arts & Culture', nature:'🐾 Nature' },
+    es: { general:'🌐 General',          entertainment:'🎬 Entretenimiento',science:'🔬 Ciencia & Tecnología',world:'🌍 Mundo & Sociedad',  sports:'⚽ Deportes', arts:'🎨 Arte & Cultura', nature:'🐾 Naturaleza' },
+    no: { general:'🌐 Generelt',         entertainment:'🎬 Underholdning',  science:'🔬 Vitenskap & Tech',   world:'🌍 Verden & Samfunn',   sports:'⚽ Sport',    arts:'🎨 Kunst & Kultur', nature:'🐾 Natur' },
+    da: { general:'🌐 Generelt',         entertainment:'🎬 Underholdning',  science:'🔬 Videnskab & Tech',   world:'🌍 Verden & Samfund',   sports:'⚽ Sport',    arts:'🎨 Kunst & Kultur', nature:'🐾 Natur' },
+  };
+
+  // Translated category names (overrides the English API names)
+  const CAT_NAMES = {
+    sv: { 9:'Allmänbildning',10:'Böcker',11:'Film',12:'Musik',13:'Musikaler & Teater',14:'TV',15:'Videospel',16:'Sällskapsspel',17:'Vetenskap & Natur',18:'Datorer',19:'Matematik',20:'Mytologi',21:'Sport',22:'Geografi',23:'Historia',24:'Politik',25:'Konst',26:'Kändisar',27:'Djur',28:'Fordon',29:'Serier',30:'Prylar',31:'Anime & Manga',32:'Tecknade serier' },
+    de: { 9:'Allgemeinwissen',10:'Bücher',11:'Film',12:'Musik',13:'Musicals & Theater',14:'Fernsehen',15:'Videospiele',16:'Brettspiele',17:'Wissenschaft & Natur',18:'Computer',19:'Mathematik',20:'Mythologie',21:'Sport',22:'Geografie',23:'Geschichte',24:'Politik',25:'Kunst',26:'Prominente',27:'Tiere',28:'Fahrzeuge',29:'Comics',30:'Gadgets',31:'Anime & Manga',32:'Cartoons' },
+    fr: { 9:'Culture générale',10:'Livres',11:'Film',12:'Musique',13:'Comédies musicales',14:'Télévision',15:'Jeux vidéo',16:'Jeux de société',17:'Science & Nature',18:'Informatique',19:'Mathématiques',20:'Mythologie',21:'Sport',22:'Géographie',23:'Histoire',24:'Politique',25:'Art',26:'Célébrités',27:'Animaux',28:'Véhicules',29:'BD',30:'Gadgets',31:'Anime & Manga',32:'Dessins animés' },
+    es: { 9:'Conocimiento general',10:'Libros',11:'Cine',12:'Música',13:'Musicales & Teatro',14:'Televisión',15:'Videojuegos',16:'Juegos de mesa',17:'Ciencia & Naturaleza',18:'Informática',19:'Matemáticas',20:'Mitología',21:'Deportes',22:'Geografía',23:'Historia',24:'Política',25:'Arte',26:'Famosos',27:'Animales',28:'Vehículos',29:'Cómics',30:'Gadgets',31:'Anime & Manga',32:'Dibujos animados' },
+    no: { 9:'Generell kunnskap',10:'Bøker',11:'Film',12:'Musikk',13:'Musikaler & Teater',14:'TV',15:'Videospill',16:'Brettspill',17:'Vitenskap & Natur',18:'Datamaskiner',19:'Matematikk',20:'Mytologi',21:'Sport',22:'Geografi',23:'Historie',24:'Politikk',25:'Kunst',26:'Kjendiser',27:'Dyr',28:'Kjøretøy',29:'Tegneserier',30:'Gadgets',31:'Anime & Manga',32:'Tegnefilm' },
+    da: { 9:'Generel viden',10:'Bøger',11:'Film',12:'Musik',13:'Musicals & Teater',14:'TV',15:'Videospil',16:'Brætspil',17:'Videnskab & Natur',18:'Computere',19:'Matematik',20:'Mytologi',21:'Sport',22:'Geografi',23:'Historie',24:'Politik',25:'Kunst',26:'Kendte',27:'Dyr',28:'Køretøjer',29:'Tegneserier',30:'Gadgets',31:'Anime & Manga',32:'Tegnefilm' },
+  };
+
+  // ── Language state ────────────────────────────────────────────────────────
+  let selectedLang = 'en';
+
+  function T(key, ...args) {
+    const t = TRANSLATIONS[selectedLang] || TRANSLATIONS.en;
+    const val = Object.prototype.hasOwnProperty.call(t, key) ? t[key] : (TRANSLATIONS.en[key] || key);
+    return typeof val === 'function' ? val(...args) : val;
+  }
+
+  function applyTranslations() {
+    document.querySelectorAll('[data-i18n]').forEach(el => {
+      el.textContent = T(el.dataset.i18n);
+    });
+    const toggleBtn = document.getElementById('cat-toggle-btn');
+    if (toggleBtn) toggleBtn.textContent = allCatsChecked ? T('uncheckAll') : T('checkAll');
+    if (allCategories.length > 0) renderCategories(allCategories);
+  }
+
+  // ── Language picker ───────────────────────────────────────────────────────
+  document.querySelectorAll('.lang-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      selectedLang = btn.dataset.lang;
+      applyTranslations();
+      send({ type: 'SET_LANGUAGE', lang: selectedLang });
+    });
+  });
+
+  // ── WebSocket connection ──────────────────────────────────────────────────
+  const WS_URL = `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/ws/host`;
+  let ws;
+  let currentQuestion = null;
+  let timerBarTimeout = null;
+  let revealOverlayTimeout = null;
+
+  function connect() {
+    ws = new WebSocket(WS_URL);
+    ws.addEventListener('open', () => console.log('Host WS connected'));
+    ws.addEventListener('message', (e) => handleMsg(JSON.parse(e.data)));
+    ws.addEventListener('close', () => { setTimeout(connect, 2000); });
+    ws.addEventListener('error', () => ws.close());
+  }
+
+  function send(msg) { if (ws && ws.readyState === 1) ws.send(JSON.stringify(msg)); }
+
+  // ── Screen management ────────────────────────────────────────────────────
+  function showScreen(id) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+  }
+
+  // ── QR & URL ─────────────────────────────────────────────────────────────
+  (async () => {
+    try {
+      const res = await fetch('/api/qr');
+      const svg = await res.text();
+      const blob = new Blob([svg], { type: 'image/svg+xml' });
+      const url = URL.createObjectURL(blob);
+      document.getElementById('qr-img').src = url;
+    } catch (e) { console.warn('QR fetch failed', e); }
+  })();
+
+  document.getElementById('qr-url').textContent = `${location.protocol}//${location.hostname}:${location.port}/join`;
+
+  // ── Categories ───────────────────────────────────────────────────────────
+  let allCategories = [];
+  (async () => {
+    try {
+      const res = await fetch('/api/categories');
+      allCategories = await res.json();
+      renderCategories(allCategories);
+    } catch (e) { console.warn('Category fetch failed', e); }
+  })();
+
+  function renderCategories(cats) {
+    const list = document.getElementById('category-list');
+    // Preserve checked state across re-renders
+    const prevChecked = new Set(
+      [...document.querySelectorAll('#category-list input:checked')].map(cb => cb.value)
+    );
+    const isFirstRender = prevChecked.size === 0 && list.children.length === 0;
+
+    list.innerHTML = '';
+    list.style.display = 'block'; // override grid for grouped layout
+
+    // Group categories
+    const groups = {};
+    for (const cat of cats) {
+      const meta = CATEGORY_META[cat.id] || { emoji: '❓', group: 'general' };
+      if (!groups[meta.group]) groups[meta.group] = [];
+      groups[meta.group].push({ ...cat, emoji: meta.emoji });
+    }
+
+    const labels = GROUP_LABELS[selectedLang] || GROUP_LABELS.en;
+    const nameOverrides = CAT_NAMES[selectedLang] || {};
+
+    for (const groupKey of GROUP_ORDER) {
+      const groupCats = groups[groupKey];
+      if (!groupCats || groupCats.length === 0) continue;
+
+      const header = document.createElement('div');
+      header.className = 'cat-group-header';
+      header.textContent = labels[groupKey] || groupKey;
+      list.appendChild(header);
+
+      const grid = document.createElement('div');
+      grid.className = 'cat-group-grid';
+
+      for (const cat of groupCats) {
+        const displayName = nameOverrides[cat.id] || cat.name;
+        const label = document.createElement('label');
+        label.className = 'cat-item';
+        const cb = document.createElement('input');
+        cb.type = 'checkbox';
+        cb.value = cat.id;
+        // First render: all checked; re-renders: preserve state
+        cb.checked = isFirstRender ? true : (prevChecked.has(String(cat.id)) || allCatsChecked && prevChecked.size === 0);
+        label.appendChild(cb);
+        label.appendChild(document.createTextNode(` ${cat.emoji} ${displayName}`));
+        grid.appendChild(label);
+      }
+      list.appendChild(grid);
+    }
+  }
+
+  function getSelectedCategories() {
+    return [...document.querySelectorAll('#category-list input:checked')].map(cb => Number(cb.value));
+  }
+
+  // ── Category toggle ───────────────────────────────────────────────────────
+  let allCatsChecked = true;
+  document.getElementById('cat-toggle-btn').addEventListener('click', () => {
+    allCatsChecked = !allCatsChecked;
+    document.querySelectorAll('#category-list input[type=checkbox]').forEach(cb => {
+      cb.checked = allCatsChecked;
+    });
+    document.getElementById('cat-toggle-btn').textContent = allCatsChecked ? T('uncheckAll') : T('checkAll');
+  });
+
+  // ── Local DB status ───────────────────────────────────────────────────────
+  let dbPollInterval = null;
+
+  async function refreshDbStatus() {
+    try {
+      const s = await fetch('/api/db/status').then(r => r.json());
+      const icon = document.getElementById('db-status-icon');
+      const text = document.getElementById('db-status-text');
+      const progressWrap = document.getElementById('db-progress-wrap');
+      const progressBar = document.getElementById('db-progress-bar');
+      const progressLabel = document.getElementById('db-progress-label');
+      const btn = document.getElementById('db-download-btn');
+
+      if (s.downloading) {
+        icon.textContent = '⬇️';
+        const pct = s.dlTotal > 0 ? Math.round((s.dlProgress / s.dlTotal) * 100) : 0;
+        text.textContent = `Downloading… ${s.dlProgress}/${s.dlTotal} categories`;
+        progressWrap.style.display = 'block';
+        progressBar.style.width = pct + '%';
+        progressLabel.textContent = s.dlLabel || '';
+        btn.style.display = 'none';
+        if (!dbPollInterval) dbPollInterval = setInterval(refreshDbStatus, 1500);
+      } else {
+        if (dbPollInterval) { clearInterval(dbPollInterval); dbPollInterval = null; }
+        progressWrap.style.display = 'none';
+        if (s.exists) {
+          const date = new Date(s.downloadedAt).toLocaleDateString();
+          icon.textContent = '✅';
+          text.textContent = `Local DB: ${s.questionCount.toLocaleString()} questions across ${s.categoryCount} categories (${date}) — instant load`;
+          btn.textContent = 'Re-download';
+          btn.style.display = 'inline-block';
+        } else {
+          icon.textContent = '🌐';
+          text.textContent = 'No local DB — fetching from API each game (rate limited)';
+          btn.textContent = 'Download DB';
+          btn.style.display = 'inline-block';
+        }
+      }
+    } catch (e) { /* server not ready yet */ }
+  }
+
+  document.getElementById('db-download-btn').addEventListener('click', async () => {
+    document.getElementById('db-download-btn').style.display = 'none';
+    document.getElementById('db-status-text').textContent = 'Starting download…';
+    await fetch('/api/db/download', { method: 'POST' });
+    refreshDbStatus();
+    dbPollInterval = setInterval(refreshDbStatus, 1500);
+  });
+
+  refreshDbStatus();
+
+  // ── Difficulty picker ─────────────────────────────────────────────────────
+  let selectedDifficulty = 'easy';
+  document.querySelectorAll('.diff-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.diff-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      selectedDifficulty = btn.dataset.diff;
+    });
+  });
+
+  // ── Question count picker ─────────────────────────────────────────────────
+  let selectedQuestionCount = 10;
+  document.querySelectorAll('.q-count-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.q-count-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      selectedQuestionCount = Number(btn.dataset.count);
+    });
+  });
+
+  // ── Buttons ───────────────────────────────────────────────────────────────
+  document.getElementById('start-btn').addEventListener('click', () => {
+    const cats = getSelectedCategories();
+    if (cats.length === 0) { alert('Please select at least one category.'); return; }
+    send({ type: 'START_GAME', categories: cats, questionCount: selectedQuestionCount, gameDifficulty: selectedDifficulty });
+  });
+
+  document.getElementById('skip-btn').addEventListener('click', () => send({ type: 'SKIP' }));
+  document.getElementById('ov-skip-btn').addEventListener('click', () => send({ type: 'SKIP' }));
+  document.getElementById('restart-btn').addEventListener('click', () => send({ type: 'RESTART' }));
+
+  // ── Game over bottom bar ──────────────────────────────────────────────────
+  let selectedContinueCategories = [9, 11, 12, 14, 21]; // default: Party Mix
+
+  document.querySelectorAll('#continue-presets .cp-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('#continue-presets .cp-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      selectedContinueCategories = btn.dataset.cats.split(',').map(Number);
+    });
+  });
+
+  document.getElementById('continue-btn').addEventListener('click', () => {
+    send({
+      type: 'CONTINUE_GAME',
+      categories: selectedContinueCategories,
+      questionCount: selectedQuestionCount,
+      gameDifficulty: selectedDifficulty,
+    });
+    hideGameoverBottom();
+  });
+
+  function showGameoverBottom() { document.getElementById('gameover-bottom').classList.add('show'); }
+  function hideGameoverBottom() { document.getElementById('gameover-bottom').classList.remove('show'); }
+
+  // ── Category presets ──────────────────────────────────────────────────────
+  function applyPreset(categoryIds) {
+    document.querySelectorAll('#category-list input[type=checkbox]').forEach(cb => {
+      cb.checked = categoryIds.includes(Number(cb.value));
+    });
+    const anyUnchecked = document.querySelectorAll('#category-list input[type=checkbox]:not(:checked)').length > 0;
+    allCatsChecked = !anyUnchecked;
+    document.getElementById('cat-toggle-btn').textContent = allCatsChecked ? T('uncheckAll') : T('checkAll');
+  }
+  const PRESETS = {
+    'preset-party': [9, 11, 12, 14, 21],          // General, Film, Music, TV, Sports
+    'preset-nerd':  [17, 18, 19, 30],              // Science, Computers, Math, Gadgets
+    'preset-world': [22, 20, 23, 24],              // Geography, Mythology, History, Politics
+    'preset-pop':   [11, 14, 12, 31, 29],          // Film, TV, Music, Anime, Comics
+  };
+  for (const [id, cats] of Object.entries(PRESETS)) {
+    const btn = document.getElementById(id);
+    if (btn) btn.addEventListener('click', () => applyPreset(cats));
+  }
+
+  // ── Message handlers ──────────────────────────────────────────────────────
+  function handleMsg(msg) {
+    switch (msg.type) {
+      case 'HOST_CONNECTED':
+        break;
+
+      case 'PLAYER_JOINED':
+        updatePlayerList(msg.players, msg.playerCount);
+        break;
+
+      case 'GAME_FETCHING':
+        hideGameoverBottom();
+        showScreen('fetching');
+        document.querySelector('#fetching h2').textContent = T('loadingQuestions');
+        break;
+
+      case 'GAME_TRANSLATING':
+        showScreen('fetching');
+        document.querySelector('#fetching h2').textContent =
+          `${T('translating')} (${msg.current}/${msg.total})…`;
+        break;
+
+      case 'GAME_STARTING':
+        showScreen('countdown');
+        document.getElementById('countdown-number').textContent = msg.countdown;
+        document.getElementById('countdown-total').textContent = T('countdownTotal', msg.totalQuestions);
+        break;
+
+      case 'COUNTDOWN_TICK':
+        document.getElementById('countdown-number').style.animation = 'none';
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            document.getElementById('countdown-number').style.animation = 'pulse 1s ease';
+            document.getElementById('countdown-number').textContent = msg.countdown;
+          });
+        });
+        break;
+
+      case 'QUESTION':
+        showQuestion(msg);
+        break;
+
+      case 'ANSWER_COUNT':
+        document.getElementById('q-answered').textContent = T('answered', msg.answered, msg.total);
+        break;
+
+      case 'REVEAL':
+        showReveal(msg);
+        break;
+
+      case 'NEXT_QUESTION':
+        // Clear answer-box reveal state; overlay stays visible so players can see scores
+        for (const id of ['A','B','C','D']) {
+          const box = document.querySelector(`.answer-box.ans-${id}`);
+          if (box) box.classList.remove('ans-correct-reveal', 'ans-wrong-reveal');
+        }
+        document.getElementById('timer-bar').style.background = 'linear-gradient(90deg, var(--timer), #8a2be2)';
+        break;
+
+      case 'GAME_OVER':
+        showGameOver(msg);
+        break;
+
+      case 'RESTARTED':
+        hideGameoverBottom();
+        showScreen('lobby');
+        document.getElementById('player-list').innerHTML = `<span style="color:#555; font-style:italic;">Waiting for players…</span>`;
+        document.getElementById('player-count').textContent = '0';
+        document.getElementById('start-btn').disabled = true;
+        break;
+
+      case 'ERROR':
+        console.error('Server error:', msg.code, msg.message);
+        break;
+    }
+  }
+
+  // ── Player list ───────────────────────────────────────────────────────────
+  const CHIP_COLORS = ['#9f44d3','#26890c','#1368ce','#d89e00','#e21b3c','#00c2ff','#ff6b35','#7b61ff'];
+
+  function updatePlayerList(players, count) {
+    const list = document.getElementById('player-list');
+    document.getElementById('player-count').textContent = count;
+    list.innerHTML = '';
+    if (players.length === 0) {
+      list.innerHTML = `<span style="color:#555; font-style:italic;">Waiting for players…</span>`;
+    } else {
+      players.forEach((name, i) => {
+        const chip = document.createElement('div');
+        chip.className = 'player-chip';
+        chip.style.background = CHIP_COLORS[i % CHIP_COLORS.length];
+        chip.innerHTML = `<div class="player-avatar">${esc(name[0].toUpperCase())}</div><span>${esc(name)}</span>`;
+        list.appendChild(chip);
+      });
+    }
+    document.getElementById('start-btn').disabled = players.length < 1;
+  }
+
+  // ── Question display ──────────────────────────────────────────────────────
+  function showQuestion(q) {
+    hideRevealUI();
+    currentQuestion = q;
+    showScreen('question-screen');
+    document.getElementById('q-category').textContent = q.category;
+    document.getElementById('q-counter').textContent = `Q ${q.questionNumber} / ${q.totalQuestions}`;
+    document.getElementById('q-answered').textContent = T('answered', 0, '?');
+    document.getElementById('q-text').textContent = q.question;
+    for (const ans of q.answers) {
+      document.getElementById(`ans-${ans.id}-text`).textContent = ans.text;
+    }
+    clearTimerAnim();
+    const bar = document.getElementById('timer-bar');
+    bar.style.transition = 'none';
+    bar.style.width = '100%';
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        bar.style.transition = `width ${q.timeLimit}s linear`;
+        bar.style.width = '0%';
+      });
+    });
+    timerBarTimeout = setTimeout(() => { bar.style.width = '0%'; }, q.timeLimit * 1000);
+  }
+
+  function clearTimerAnim() {
+    if (timerBarTimeout) { clearTimeout(timerBarTimeout); timerBarTimeout = null; }
+  }
+
+  // ── Reveal: in-place animation ────────────────────────────────────────────
+  function hideRevealUI() {
+    if (revealOverlayTimeout) { clearTimeout(revealOverlayTimeout); revealOverlayTimeout = null; }
+    document.getElementById('reveal-overlay').classList.remove('show');
+    for (const id of ['A','B','C','D']) {
+      const box = document.querySelector(`.answer-box.ans-${id}`);
+      if (box) box.classList.remove('ans-correct-reveal', 'ans-wrong-reveal');
+    }
+    document.getElementById('timer-bar').style.background = 'linear-gradient(90deg, var(--timer), #8a2be2)';
+  }
+
+  function showReveal(msg) {
+    clearTimerAnim();
+    // Stay on question-screen — animate answer boxes in-place
+    if (!document.getElementById('question-screen').classList.contains('active')) {
+      showScreen('question-screen');
+    }
+
+    const correctLetter = msg.correctAnswer;
+
+    // Stop timer bar, turn it red
+    const bar = document.getElementById('timer-bar');
+    bar.style.transition = 'none';
+    bar.style.background = 'linear-gradient(90deg, #e21b3c, #ff7c3a)';
+
+    // Animate answer boxes
+    for (const id of ['A','B','C','D']) {
+      const box = document.querySelector(`.answer-box.ans-${id}`);
+      if (box) {
+        box.classList.remove('ans-correct-reveal', 'ans-wrong-reveal');
+        box.classList.add(id === correctLetter ? 'ans-correct-reveal' : 'ans-wrong-reveal');
+      }
+    }
+
+    // Populate overlay content
+    const correctPct = msg.answerBreakdown[correctLetter] || 0;
+    const nobodyEl = document.getElementById('ov-nobody');
+    const pctEl = document.getElementById('ov-correct-pct');
+    if (correctPct === 0) {
+      nobodyEl.style.display = 'inline';
+      pctEl.textContent = '';
+    } else {
+      nobodyEl.style.display = 'none';
+      pctEl.textContent = `✓ ${correctPct}% correct`;
+    }
+
+    const maxDelta = Math.max(...msg.scores.map(s => s.delta), 1);
+    const roundMedals = ['🥇','🥈','🥉'];
+    const roundSorted = [...msg.scores].sort((a, b) => b.delta - a.delta);
+
+    document.getElementById('ov-round-rows').innerHTML = roundSorted.map((s, i) => {
+      const streak = s.streak || 0;
+      const streakIcon = streak >= 5 ? ' 🔥🔥' : streak >= 3 ? ' 🔥' : '';
+      const barWidth = s.delta > 0 ? Math.round((s.delta / maxDelta) * 100) : 0;
+      const barColor = s.delta > 0 ? '#4cde80' : '#444';
+      const timeLabel = s.answerTime !== null && s.answerTime !== undefined
+        ? `⚡${s.answerTime}s`
+        : '—';
+      const timeClass = s.answerTime !== null && s.answerTime !== undefined ? '' : 'no-answer';
+      return `<div class="lb-round-row">
+        <span class="lb-round-medal">${roundMedals[i] || ''}</span>
+        <span class="lb-round-name">${esc(s.username)}${streakIcon}</span>
+        <span class="lb-round-time ${timeClass}">${timeLabel}</span>
+        <div class="lb-score-bar-wrap"><div class="lb-score-bar" style="width:${barWidth}%;background:${barColor};"></div></div>
+        <span class="lb-round-delta ${s.delta === 0 ? 'zero' : ''}">${s.delta > 0 ? '+' + s.delta.toLocaleString() : '—'}</span>
+      </div>`;
+    }).join('');
+
+    const totalSorted = [...msg.scores].sort((a, b) => b.score - a.score);
+    const medalEmoji = ['🥇', '🥈', '🥉'];
+    const medalClass = ['rank-gold', 'rank-silver', 'rank-bronze'];
+    document.getElementById('ov-total-rows').innerHTML = totalSorted.map((s, i) => {
+      const rankChange = (s.prevRank !== null && s.prevRank !== undefined) ? s.prevRank - s.rank : null;
+      let arrow = '', arrowClass = 'rank-same';
+      if (rankChange !== null) {
+        if (rankChange > 0)      { arrow = `↑${rankChange}`; arrowClass = 'rank-up'; }
+        else if (rankChange < 0) { arrow = `↓${Math.abs(rankChange)}`; arrowClass = 'rank-down'; }
+        else                     { arrow = '='; arrowClass = 'rank-same'; }
+      }
+      const streak = s.streak || 0;
+      const streakIcon = streak >= 5 ? ' 🔥🔥' : streak >= 3 ? ' 🔥' : '';
+      const rowClass = medalClass[i] || '';
+      const rankLabel = medalEmoji[i] || `${i + 1}.`;
+      return `<div class="lb-total-row ${rowClass}">
+        <span class="lb-total-rank">${rankLabel}</span>
+        <span class="lb-rank-change ${arrowClass}">${arrow}</span>
+        <span class="lb-total-name">${esc(s.username)}${streakIcon}</span>
+        <span class="lb-total-score">${s.score.toLocaleString()}</span>
+      </div>`;
+    }).join('');
+
+    // Slide overlay up after 1.5s
+    if (revealOverlayTimeout) clearTimeout(revealOverlayTimeout);
+    revealOverlayTimeout = setTimeout(() => {
+      document.getElementById('reveal-overlay').classList.add('show');
+      revealOverlayTimeout = null;
+    }, 1500);
+  }
+
+  // ── Game over ─────────────────────────────────────────────────────────────
+  function showGameOver(msg) {
+    hideRevealUI();
+    showScreen('gameover');
+    showGameoverBottom();
+    const top3 = msg.finalScores.slice(0, 3);
+    const medals = ['🥇','🥈','🥉'];
+    const order = [1, 0, 2];
+    const podium = document.getElementById('podium');
+    podium.innerHTML = '';
+    for (const pos of order) {
+      const p = top3[pos];
+      if (!p) continue;
+      const slot = document.createElement('div');
+      slot.className = `podium-slot podium-${pos + 1}`;
+      slot.innerHTML = `
+        <div class="medal">${medals[pos]}</div>
+        <div class="pd-name">${esc(p.username)}</div>
+        <div class="pd-score">${p.score.toLocaleString()} pts</div>
+        <div class="podium-block"></div>`;
+      podium.appendChild(slot);
+    }
+    document.getElementById('final-scores').innerHTML = msg.finalScores.map(s => `
+      <div class="lb-total-row">
+        <span class="lb-total-rank ${s.rank <= 3 ? 'top' : ''}">${s.rank}.</span>
+        <span class="lb-total-name">${esc(s.username)}</span>
+        <span class="lb-total-score">${s.score.toLocaleString()} pts</span>
+      </div>`).join('');
+  }
+
+  // ── Helpers ───────────────────────────────────────────────────────────────
+  function esc(str) {
+    const d = document.createElement('div');
+    d.textContent = str;
+    return d.innerHTML;
+  }
+
+  connect();
+</script>
+</body>
+</html>

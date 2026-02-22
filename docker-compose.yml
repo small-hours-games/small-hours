@@ -1,0 +1,33 @@
+name: quiz-trivia
+
+services:
+  quiz:
+    build: .
+    restart: unless-stopped
+
+    # host networking lets the server see your real LAN IP and
+    # generate the correct QR code / player URL automatically.
+    # (Linux only — on Mac/Windows remove this and add ports: ["3000:3000"]
+    #  then set DOMAIN=<your-ip>:3000 in .env instead)
+    network_mode: host
+
+    # Load optional env overrides (DOMAIN, PORT, etc.)
+    env_file:
+      - path: .env
+        required: false
+
+    volumes:
+      # Persist questions-db.json and translation-cache.json across restarts.
+      # On first run Docker copies the image's /app into this volume.
+      - quiz-data:/app
+
+      # Bind-mount TLS certs (optional — server falls back to HTTP without them)
+      - ./certs:/app/certs:ro
+
+# ── To apply code changes after rebuild ────────────────────────────────────
+#   docker compose down
+#   docker volume rm quiz-trivia_quiz-data
+#   docker compose up --build
+# ────────────────────────────────────────────────────────────────────────────
+volumes:
+  quiz-data:
