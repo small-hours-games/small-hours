@@ -43,9 +43,8 @@
       grid-row: 1;
       text-align: center;
     }
-    #category-panel { grid-column: 1; grid-row: 2 / 4; }
-    #qr-panel       { grid-column: 2; grid-row: 2; }
-    #players-panel  { grid-column: 2; grid-row: 3; }
+    #category-panel { grid-column: 1; grid-row: 2; }
+    #lobby-right    { grid-column: 2; grid-row: 2; display: flex; flex-direction: column; gap: 1rem; }
     #lobby-controls { grid-column: 1 / -1; grid-row: 4; }
     #lobby-header h1 {
       font-size: clamp(2rem, 4vw, 3.5rem);
@@ -90,7 +89,7 @@
       border-radius: 0.6rem;
       overflow: hidden;
     }
-    #qr-frame img { width: min(200px, 100%); border-radius: 0.4rem; background: #fff; padding: 8px; display: block; }
+    #qr-frame img { width: min(220px, 100%); border-radius: 0.4rem; background: #fff; padding: 8px; display: block; }
     /* Animated scan line */
     .qr-scan-line {
       position: absolute;
@@ -946,14 +945,23 @@
     <p data-i18n="subtitle">Scan the QR code to join on your phone</p>
   </div>
 
-  <div id="qr-panel">
-    <div id="qr-scan-label">📷 Scan to Join</div>
-    <div id="qr-frame">
-      <img id="qr-img" src="/api/qr" alt="QR Code">
-      <div class="qr-scan-line"></div>
+  <div id="lobby-right">
+    <div id="qr-panel">
+      <div id="qr-scan-label">📷 Scan to Join</div>
+      <div id="qr-frame">
+        <img id="qr-img" src="/api/qr" alt="QR Code">
+        <div class="qr-scan-line"></div>
+      </div>
+      <div id="qr-camera-hint">Point your phone camera at the code</div>
+      <div id="qr-url">Loading...</div>
     </div>
-    <div id="qr-camera-hint">Point your phone camera at the code</div>
-    <div id="qr-url">Loading...</div>
+
+    <div id="players-panel">
+      <h3><span data-i18n="players">Players</span> (<span id="player-count">0</span>)</h3>
+      <div id="player-list">
+        <span style="color:#555; font-style:italic;">Waiting for players…</span>
+      </div>
+    </div>
   </div>
 
   <div id="category-panel">
@@ -972,7 +980,7 @@
     </div>
   </div>
 
-  <div id="db-panel" style="grid-column:1/-1; grid-row:4; background:var(--card); border-radius:1rem; padding:0.75rem 1.5rem; display:flex; align-items:center; gap:1rem; flex-wrap:wrap; min-height:52px;">
+  <div id="db-panel" style="grid-column:1/-1; grid-row:3; background:var(--card); border-radius:1rem; padding:0.75rem 1.5rem; display:flex; align-items:center; gap:1rem; flex-wrap:wrap; min-height:52px;">
     <span id="db-status-icon" style="font-size:1.3rem;">⏳</span>
     <span id="db-status-text" style="flex:1; color:#aaa; font-size:0.9rem;">Checking local database…</span>
     <div id="db-progress-wrap" style="display:none; flex:1; min-width:160px;">
@@ -982,13 +990,6 @@
       <div id="db-progress-label" style="font-size:0.75rem; color:#888; margin-top:0.25rem;"></div>
     </div>
     <button id="db-download-btn" style="display:none; padding:0.4rem 1rem; font-size:0.85rem; font-weight:600; background:rgba(0,194,255,0.15); color:var(--timer); border:1px solid var(--timer); border-radius:0.5rem; cursor:pointer; white-space:nowrap;">Download DB</button>
-  </div>
-
-  <div id="players-panel">
-    <h3><span data-i18n="players">Players</span> (<span id="player-count">0</span>)</h3>
-    <div id="player-list">
-      <span style="color:#555; font-style:italic;">Waiting for players…</span>
-    </div>
   </div>
 
   <div id="lobby-controls" style="display:flex; align-items:center; justify-content:center; gap:1rem; flex-wrap:wrap;">
