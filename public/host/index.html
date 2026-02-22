@@ -1646,11 +1646,11 @@
       const badgeLabel = s.answer || '—';
       return `<div class="lb-round-row">
         <span class="lb-round-medal">${roundMedals[i] || ''}</span>
-        <span class="lb-answer-badge ${badgeClass}">${badgeLabel}</span>
         <span class="lb-round-name">${esc(s.username)}${streakIcon}</span>
         <span class="lb-round-time ${timeClass}">${timeLabel}</span>
         <div class="lb-score-bar-wrap"><div class="lb-score-bar" style="width:${barWidth}%;background:${barColor};"></div></div>
         <span class="lb-round-delta ${s.delta === 0 ? 'zero' : ''}">${s.delta > 0 ? '+' + s.delta.toLocaleString() : '—'}</span>
+        <span class="lb-answer-badge ${badgeClass}">${badgeLabel}</span>
       </div>`;
     }).join('');
 
