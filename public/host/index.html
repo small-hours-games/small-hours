@@ -449,7 +449,8 @@
       border-radius: 0.6rem;
       margin-bottom: 0.25rem;
     }
-    .lb-round-medal { font-size: 1.3rem; width: 1.8rem; text-align: center; flex-shrink: 0; }
+    .lb-round-pos { font-size: 0.75rem; font-weight: 700; color: #555; width: 1.2rem; text-align: right; flex-shrink: 0; }
+    .lb-round-medal { font-size: 1.3rem; width: 1.6rem; text-align: center; flex-shrink: 0; }
     .lb-round-name { flex: 1; font-weight: 700; }
     .lb-round-delta {
       font-weight: 800;
@@ -1645,6 +1646,7 @@
       const badgeClass = s.answer ? (isCorrect ? 'badge-correct' : 'badge-wrong') : 'badge-none';
       const badgeLabel = s.answer || '—';
       return `<div class="lb-round-row">
+        <span class="lb-round-pos">${i + 1}.</span>
         <span class="lb-round-medal">${roundMedals[i] || ''}</span>
         <span class="lb-round-name">${esc(s.username)}${streakIcon}</span>
         <span class="lb-round-time ${timeClass}">${timeLabel}</span>
