@@ -164,23 +164,44 @@
     #question { gap: 0.75rem; width: 100%; }
 
     #pq-livescore {
-      display: none; /* shown after first reveal */
+      display: flex;
       width: 100%;
-      align-items: center;
-      justify-content: space-between;
-      background: rgba(255,255,255,0.05);
-      border-radius: 0.5rem;
-      padding: 0.5rem 0.75rem;
-      font-size: 0.85rem;
+      align-items: stretch;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.11);
+      border-radius: 0.85rem;
+      overflow: hidden;
     }
-    #pq-score-val { color: var(--timer); font-weight: 800; }
-    #pq-rank-val  { color: #999; font-weight: 700; }
+    .ls-col {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 0.1rem;
+      flex: 1;
+      padding: 0.55rem 0.5rem;
+    }
+    .ls-col + .ls-col { border-left: 1px solid rgba(255,255,255,0.08); }
+    .ls-label {
+      font-size: 0.58rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: #555;
+    }
+    #pq-rank-val  { font-size: 1.05rem; font-weight: 800; color: gold; }
+    #pq-score-val { font-size: 1.3rem;  font-weight: 900; color: var(--timer); }
+    .ls-last-row  { display: flex; align-items: center; gap: 0.3rem; }
     #pq-last-ans  {
-      padding: 0.15rem 0.55rem;
+      padding: 0.15rem 0.5rem;
       border-radius: 0.35rem;
       font-weight: 900;
-      font-size: 0.85rem;
+      font-size: 0.95rem;
+      min-width: 1.8rem;
+      text-align: center;
     }
+    #pq-last-result { font-size: 0.9rem; font-weight: 800; }
+    #pq-last-time   { font-size: 0.72rem; font-weight: 700; color: #aaa; }
 
     #pq-header {
       display: flex;
@@ -471,9 +492,22 @@
 <!-- QUESTION -->
 <div id="question" class="screen">
   <div id="pq-livescore">
-    <span id="pq-score-val"></span>
-    <span id="pq-rank-val"></span>
-    <span id="pq-last-ans"></span>
+    <div class="ls-col">
+      <span class="ls-label">Rank</span>
+      <span id="pq-rank-val">—</span>
+    </div>
+    <div class="ls-col">
+      <span id="pq-score-val">0</span>
+      <span class="ls-label">Points</span>
+    </div>
+    <div class="ls-col">
+      <span class="ls-label">Last Answer</span>
+      <div class="ls-last-row">
+        <span id="pq-last-ans" style="display:none"></span>
+        <span id="pq-last-result">—</span>
+        <span id="pq-last-time"></span>
+      </div>
+    </div>
   </div>
   <div id="pq-header">
     <span id="pq-category"></span>
@@ -600,7 +634,9 @@
   let currentAnswers = {};  // id → text, populated on QUESTION
   let pqTimerTimeout = null;
   let pqLowTimeTimeout = null;
-  let prevAnswer = null;    // answer from last round, shown in livescore strip
+  let prevAnswer = null;        // answer letter from last round
+  let prevAnswerCorrect = null; // whether last answer was correct
+  let prevAnswerTime = null;    // seconds taken for last answer
   let hasVoted = false;
   let voteCategories = new Set();
 
@@ -840,27 +876,31 @@
         myLastAnswer = null;
         currentAnswers = {};
 
-        // Live score strip (shown from 2nd question onwards)
-        const liveEl = document.getElementById('pq-livescore');
-        if (myScore > 0 || myRank) {
+        // Live score strip — always visible during question phase
+        {
           const rankMedals = ['🥇','🥈','🥉'];
-          document.getElementById('pq-score-val').textContent = myScore.toLocaleString() + ' pts';
+          document.getElementById('pq-score-val').textContent = myScore.toLocaleString();
           document.getElementById('pq-rank-val').textContent =
-            myRank ? (myRank <= 3 ? rankMedals[myRank-1] + ` #${myRank}` : `#${myRank}`) : '';
-          const lastAnsEl = document.getElementById('pq-last-ans');
+            myRank ? (myRank <= 3 ? rankMedals[myRank-1] + ` #${myRank}` : `#${myRank}`) : '—';
+          const lastAnsEl    = document.getElementById('pq-last-ans');
+          const lastResultEl = document.getElementById('pq-last-result');
+          const lastTimeEl   = document.getElementById('pq-last-time');
           if (prevAnswer) {
             const ansColors = { A: 'var(--red)', B: 'var(--blue)', C: 'var(--yellow)', D: 'var(--green)' };
             const ansText   = { A: '#fff', B: '#fff', C: '#222', D: '#fff' };
-            lastAnsEl.textContent = prevAnswer;
-            lastAnsEl.style.background = ansColors[prevAnswer];
-            lastAnsEl.style.color = ansText[prevAnswer];
-            lastAnsEl.style.display = '';
+            lastAnsEl.textContent       = prevAnswer;
+            lastAnsEl.style.background  = ansColors[prevAnswer];
+            lastAnsEl.style.color       = ansText[prevAnswer];
+            lastAnsEl.style.display     = '';
+            lastResultEl.textContent    = prevAnswerCorrect ? '✓' : '✗';
+            lastResultEl.style.color    = prevAnswerCorrect ? '#4cde80' : '#ff6b6b';
+            lastTimeEl.textContent      = prevAnswerTime != null ? `⚡${prevAnswerTime}s` : '';
           } else {
-            lastAnsEl.style.display = 'none';
+            lastAnsEl.style.display  = 'none';
+            lastResultEl.textContent = '—';
+            lastResultEl.style.color = '#555';
+            lastTimeEl.textContent   = '';
           }
-          liveEl.style.display = 'flex';
-        } else {
-          liveEl.style.display = 'none';
         }
 
         // Populate header
@@ -944,6 +984,8 @@
         myScore = 0;
         myRank = null;
         prevAnswer = null;
+        prevAnswerCorrect = null;
+        prevAnswerTime = null;
         hasVoted = false;
         voteCategories.clear();
         if (myUsername) {
@@ -1037,6 +1079,8 @@
     myScore = myEntry.score;
     myRank = myEntry.rank;
     prevAnswer = myLastAnswer;
+    prevAnswerCorrect = wasCorrect;
+    prevAnswerTime = myEntry.answerTime != null ? myEntry.answerTime : null;
     document.getElementById('result-score').textContent = myScore.toLocaleString() + ' pts';
 
     // Rank with medals
