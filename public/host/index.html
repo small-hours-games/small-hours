@@ -769,218 +769,59 @@
       100% { transform: scale(1.02); }
     }
 
-    /* ── Reveal overlay (floating popup) ── */
-    #reveal-overlay {
-      position: fixed;
-      top: 50%;
-      left: 50%;
-      width: 84%;
-      max-height: 62%;
-      background: rgba(8, 12, 30, 0.52);
-      backdrop-filter: blur(28px);
-      -webkit-backdrop-filter: blur(28px);
-      border: 1px solid rgba(159, 68, 211, 0.6);
-      border-radius: 1.5rem;
-      padding: 0.85rem 1.5rem 1rem;
-      display: flex;
-      flex-direction: column;
-      gap: 0.5rem;
-      overflow: hidden;
-      transform: translate(-50%, calc(-50% + 60vh));
-      transition: transform 0.6s cubic-bezier(0.34, 1.2, 0.64, 1);
-      z-index: 50;
-      box-shadow:
-        0 8px 48px rgba(0,0,0,0.6),
-        0 0 64px rgba(159,68,211,0.18),
-        inset 0 1px 0 rgba(255,255,255,0.1);
-      animation: overlayGlow 3.5s ease-in-out infinite;
-    }
-    @keyframes overlayGlow {
-      0%, 100% {
-        border-color: rgba(159, 68, 211, 0.6);
-        box-shadow: 0 8px 48px rgba(0,0,0,0.6), 0 0 64px rgba(159,68,211,0.2), inset 0 1px 0 rgba(255,255,255,0.1);
-      }
-      50% {
-        border-color: rgba(0, 194, 255, 0.5);
-        box-shadow: 0 8px 48px rgba(0,0,0,0.6), 0 0 80px rgba(0,194,255,0.18), inset 0 1px 0 rgba(255,255,255,0.1);
-      }
-    }
-    /* Top gradient accent line */
-    #reveal-overlay::before {
-      content: '';
-      position: absolute;
-      top: 0; left: 8%; right: 8%;
-      height: 3px;
-      background: linear-gradient(90deg, transparent, #9f44d3, #00c2ff, #4cde80, transparent);
-      pointer-events: none;
-      border-radius: 2px;
-      animation: topBarPulse 3.5s ease-in-out infinite;
-    }
-    @keyframes topBarPulse {
-      0%, 100% { opacity: 0.75; }
-      50% { opacity: 1; }
-    }
-    /* Shimmer sweep */
-    #reveal-overlay::after {
-      content: '';
-      position: absolute;
-      top: 0; bottom: 0;
-      left: -80%;
-      width: 50%;
-      background: linear-gradient(105deg, transparent 35%, rgba(255,255,255,0.045) 50%, transparent 65%);
-      pointer-events: none;
-      animation: cardShimmer 5s ease-in-out infinite;
-    }
-    @keyframes cardShimmer {
-      0%       { left: -80%; }
-      40%, 100% { left: 160%; }
-    }
-    #reveal-overlay.show { transform: translate(-50%, -50%); }
-    #ov-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      flex-shrink: 0;
-    }
-    #ov-nobody {
-      display: none;
-      color: #ff8585;
-      font-size: 0.85rem;
-      font-weight: 700;
-    }
-    #ov-correct-pct { color: #4cde80; font-size: 0.85rem; font-weight: 700; }
-    #ov-cols { display: flex; gap: 1.5rem; flex: 1; overflow: hidden; }
-    #ov-cols > div { flex: 1; overflow: hidden; display: flex; flex-direction: column; gap: 0.35rem; }
-    .ov-section-title {
-      font-size: 0.68rem;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.16em;
-      color: rgba(159, 68, 211, 1);
-      text-shadow: 0 0 10px rgba(159,68,211,0.5);
-      padding-bottom: 0.25rem;
-      border-bottom: 1px solid rgba(159, 68, 211, 0.3);
-      flex-shrink: 0;
-    }
-    #ov-round-rows, #ov-total-rows { overflow: hidden; }
-
-    /* ── Overlay total-score rows ── */
-    #ov-total-rows .lb-total-row {
-      font-size: 1.5rem;
-      padding: 0.35rem 0.6rem;
-      border-radius: 0.55rem;
-      margin-bottom: 0.2rem;
-      border-bottom: none;
-      background: rgba(255,255,255,0.03);
-    }
-    #ov-total-rows .lb-total-rank { font-size: 1.4rem; width: 2.6rem; }
-    #ov-total-rows .lb-rank-change { font-size: 0.78rem; width: 2.4rem; }
-    #ov-total-rows .lb-total-name { font-size: 1.45rem; font-weight: 700; }
-    #ov-total-rows .lb-total-score { font-size: 1.5rem; font-weight: 800; }
-    /* Answer time badge in "This Round" */
+    /* Answer time badge */
     .lb-round-time {
-      font-size: 0.78rem;
-      color: #fff;
+      font-size: 0.75rem; color: #fff;
       background: rgba(255, 186, 8, 0.16);
       border: 1px solid rgba(255, 186, 8, 0.38);
-      border-radius: 0.4rem;
-      padding: 0.1rem 0.45rem;
-      white-space: nowrap;
-      min-width: 3.2rem;
-      text-align: center;
-      flex-shrink: 0;
-      font-weight: 700;
+      border-radius: 0.4rem; padding: 0.1rem 0.4rem;
+      white-space: nowrap; min-width: 2.8rem; text-align: center;
+      flex-shrink: 0; font-weight: 700;
     }
-    .lb-round-time.no-answer {
-      background: rgba(255,255,255,0.04);
-      border-color: rgba(255,255,255,0.08);
-      color: #444;
-    }
+    .lb-round-time.no-answer { background: rgba(255,255,255,0.04); border-color: rgba(255,255,255,0.08); color: #444; }
     /* Player answer badge */
     .lb-answer-badge {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      width: 1.9rem; height: 1.9rem;
-      border-radius: 0.4rem;
-      font-size: 0.9rem;
-      font-weight: 900;
-      flex-shrink: 0;
-      border: 2px solid;
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 1.7rem; height: 1.7rem; border-radius: 0.35rem;
+      font-size: 0.85rem; font-weight: 900; flex-shrink: 0; border: 2px solid;
     }
-    .badge-correct {
-      background: rgba(76, 222, 128, 0.18);
-      border-color: #4cde80;
-      color: #4cde80;
-      box-shadow: 0 0 8px rgba(76,222,128,0.4);
-    }
-    .badge-wrong {
-      background: rgba(226, 27, 60, 0.22);
-      border-color: #e21b3c;
-      color: #ff6b6b;
-      box-shadow: 0 0 8px rgba(226,27,60,0.4);
-    }
-    .badge-none {
-      background: rgba(255,255,255,0.04);
-      border-color: rgba(255,255,255,0.1);
-      color: #444;
-    }
-    /* Gold — 1st place */
-    #ov-total-rows .lb-total-row.rank-gold {
-      background: rgba(255, 215, 0, 0.14);
-      border: 1px solid rgba(255, 215, 0, 0.4);
-      box-shadow: 0 0 16px rgba(255,215,0,0.12), inset 0 0 12px rgba(255,215,0,0.06);
-    }
-    #ov-total-rows .lb-total-row.rank-gold .lb-total-rank,
-    #ov-total-rows .lb-total-row.rank-gold .lb-total-name,
-    #ov-total-rows .lb-total-row.rank-gold .lb-total-score {
-      color: gold;
-      text-shadow: 0 0 12px rgba(255,215,0,0.5);
-    }
-    /* Silver — 2nd place */
-    #ov-total-rows .lb-total-row.rank-silver {
-      background: rgba(192, 192, 192, 0.12);
-      border: 1px solid rgba(192, 192, 192, 0.35);
-      box-shadow: 0 0 14px rgba(192,192,192,0.1), inset 0 0 10px rgba(192,192,192,0.05);
-    }
-    #ov-total-rows .lb-total-row.rank-silver .lb-total-rank,
-    #ov-total-rows .lb-total-row.rank-silver .lb-total-name,
-    #ov-total-rows .lb-total-row.rank-silver .lb-total-score {
-      color: #d4d4d4;
-      text-shadow: 0 0 10px rgba(200,200,200,0.4);
-    }
-    /* Bronze — 3rd place */
-    #ov-total-rows .lb-total-row.rank-bronze {
-      background: rgba(205, 127, 50, 0.14);
-      border: 1px solid rgba(205, 127, 50, 0.38);
-      box-shadow: 0 0 14px rgba(205,127,50,0.1), inset 0 0 10px rgba(205,127,50,0.05);
-    }
-    #ov-total-rows .lb-total-row.rank-bronze .lb-total-rank,
-    #ov-total-rows .lb-total-row.rank-bronze .lb-total-name,
-    #ov-total-rows .lb-total-row.rank-bronze .lb-total-score {
-      color: #e0a060;
-      text-shadow: 0 0 10px rgba(205,127,50,0.4);
-    }
+    .badge-correct { background: rgba(76,222,128,0.18); border-color: #4cde80; color: #4cde80; box-shadow: 0 0 6px rgba(76,222,128,0.4); }
+    .badge-wrong   { background: rgba(226,27,60,0.22);  border-color: #e21b3c; color: #ff6b6b;  box-shadow: 0 0 6px rgba(226,27,60,0.4); }
+    .badge-none    { background: rgba(255,255,255,0.04); border-color: rgba(255,255,255,0.1); color: #444; }
     /* Score bar in "This Round" */
-    .lb-score-bar-wrap { flex: 1; height: 9px; background: rgba(255,255,255,0.07); border-radius: 6px; overflow: hidden; margin: 0 0.4rem; box-shadow: inset 0 1px 3px rgba(0,0,0,0.4); }
-    .lb-score-bar { height: 100%; border-radius: 6px; transition: width 0.7s ease; box-shadow: 0 0 8px currentColor; }
+    .lb-score-bar-wrap { flex: 1; height: 7px; background: rgba(255,255,255,0.07); border-radius: 4px; overflow: hidden; margin: 0 0.3rem; }
+    .lb-score-bar { height: 100%; border-radius: 4px; transition: width 0.6s ease; }
     /* Rank change arrow */
-    .lb-rank-change { font-size: 0.72rem; font-weight: 800; width: 2.2rem; text-align: right; flex-shrink: 0; }
-    .rank-up { color: #4cde80; }
-    .rank-down { color: #ff6b6b; }
-    .rank-same { color: #444; }
-    #ov-skip-btn {
-      align-self: flex-end;
-      flex-shrink: 0;
-      padding: 0.35rem 1rem;
-      font-size: 0.8rem;
-      background: rgba(255,255,255,0.07);
-      color: #aaa;
-      border: 1px solid rgba(255,255,255,0.12);
-      border-radius: 0.4rem;
-      cursor: pointer;
+    .lb-rank-change { font-size: 0.7rem; font-weight: 800; width: 2rem; text-align: right; flex-shrink: 0; }
+    .rank-up { color: #4cde80; } .rank-down { color: #ff6b6b; } .rank-same { color: #444; }
+    /* Medal row colours (sidebar) */
+    #q-live-lb .lb-total-row.rank-gold   { background: rgba(255,215,0,0.14);   border: 1px solid rgba(255,215,0,0.4);   box-shadow: 0 0 14px rgba(255,215,0,0.1); }
+    #q-live-lb .lb-total-row.rank-silver { background: rgba(192,192,192,0.1);  border: 1px solid rgba(192,192,192,0.3); }
+    #q-live-lb .lb-total-row.rank-bronze { background: rgba(205,127,50,0.12);  border: 1px solid rgba(205,127,50,0.35); }
+    #q-live-lb .lb-total-row.rank-gold   .lb-total-rank,
+    #q-live-lb .lb-total-row.rank-gold   .lb-total-name,
+    #q-live-lb .lb-total-row.rank-gold   .lb-total-score { color: gold;    text-shadow: 0 0 10px rgba(255,215,0,0.5); }
+    #q-live-lb .lb-total-row.rank-silver .lb-total-rank,
+    #q-live-lb .lb-total-row.rank-silver .lb-total-name,
+    #q-live-lb .lb-total-row.rank-silver .lb-total-score { color: #d4d4d4; }
+    #q-live-lb .lb-total-row.rank-bronze .lb-total-rank,
+    #q-live-lb .lb-total-row.rank-bronze .lb-total-name,
+    #q-live-lb .lb-total-row.rank-bronze .lb-total-score { color: #e0a060; }
+    /* Correct % + skip in sidebar reveal view */
+    .ql-reveal-header {
+      font-size: 0.85rem; font-weight: 700; text-align: center;
+      padding: 0.2rem 0 0.4rem; flex-shrink: 0;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
     }
-    #ov-skip-btn:hover { background: rgba(255,255,255,0.13); }
+    .ql-skip-btn {
+      margin-top: 0.4rem; padding: 0.38rem 1rem;
+      font-size: 0.82rem; font-weight: 700;
+      background: rgba(255,255,255,0.07); color: #aaa;
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 0.4rem; cursor: pointer;
+      align-self: flex-end; flex-shrink: 0;
+    }
+    .ql-skip-btn:hover { background: rgba(255,255,255,0.14); color: #fff; }
 
     /* ── Category presets ── */
     .preset-btn {
@@ -1170,9 +1011,8 @@
     <div class="answer-box ans-C"><span class="ans-letter" style="color:#222">C</span><span id="ans-C-text"></span></div>
     <div class="answer-box ans-D"><span class="ans-letter">D</span><span id="ans-D-text"></span></div>
   </div>
-  <!-- Live standings sidebar -->
+  <!-- Live standings / reveal sidebar -->
   <div id="q-live-lb">
-    <div class="q-lb-header">🏆 Standings</div>
     <div id="q-live-lb-rows">
       <div style="color:#555;font-size:0.82rem;text-align:center;padding:0.75rem 0;">Waiting for players…</div>
     </div>
@@ -1240,27 +1080,6 @@
   </div>
 </div>
 
-<!-- REVEAL OVERLAY (slides up from bottom during question reveal) -->
-<div id="reveal-overlay">
-  <div id="ov-header">
-    <div style="display:flex; align-items:center; gap:1rem;">
-      <span class="ov-section-title" style="border:none; padding:0; font-size:0.8rem;">RESULTS</span>
-      <span id="ov-correct-pct"></span>
-      <span id="ov-nobody">😱 Nobody got it right!</span>
-    </div>
-    <button id="ov-skip-btn">Skip →</button>
-  </div>
-  <div id="ov-cols">
-    <div>
-      <div class="ov-section-title">This Round</div>
-      <div id="ov-round-rows"></div>
-    </div>
-    <div>
-      <div class="ov-section-title">Total Scores</div>
-      <div id="ov-total-rows"></div>
-    </div>
-  </div>
-</div>
 
 <script>
   // ── Translations ──────────────────────────────────────────────────────────
@@ -1361,7 +1180,6 @@
   let ws;
   let currentQuestion = null;
   let timerBarTimeout = null;
-  let revealOverlayTimeout = null;
   let currentScores  = [];   // updated after each REVEAL, sorted by total score desc
   let currentPlayers = [];   // player names from PLAYER_JOINED
 
@@ -1562,7 +1380,6 @@
   });
 
   document.getElementById('skip-btn').addEventListener('click', () => send({ type: 'SKIP' }));
-  document.getElementById('ov-skip-btn').addEventListener('click', () => send({ type: 'SKIP' }));
   document.getElementById('restart-btn').addEventListener('click', () => send({ type: 'RESTART' }));
 
   // ── Game over bottom bar ──────────────────────────────────────────────────
@@ -1770,7 +1587,7 @@
     }
   }
 
-  // ── Live standings sidebar ────────────────────────────────────────────────
+  // ── Live standings sidebar (question phase) ──────────────────────────────
   function updateQLiveLb() {
     const rows = document.getElementById('q-live-lb-rows');
     if (!rows) return;
@@ -1783,19 +1600,85 @@
     }
     const medals = ['🥇','🥈','🥉'];
     const rankClasses = ['rank-gold','rank-silver','rank-bronze'];
-    rows.innerHTML = display.map((s, i) => {
-      const rankLabel = medals[i] || `${i + 1}.`;
-      const rowClass  = rankClasses[i] || (i < 3 ? 'top3' : '');
-      const deltaHtml = s.delta > 0
-        ? `<span class="q-lb-delta">+${s.delta.toLocaleString()}</span>`
-        : '';
-      return `<div class="q-lb-row ${rowClass}">
-        <span class="q-lb-rank">${rankLabel}</span>
-        <span class="q-lb-name">${esc(s.username)}</span>
-        ${deltaHtml}
-        <span class="q-lb-score">${s.score.toLocaleString()}</span>
+    rows.innerHTML =
+      `<div class="q-lb-header">🏆 Standings</div>` +
+      display.map((s, i) => {
+        const rankLabel = medals[i] || `${i + 1}.`;
+        const rowClass  = rankClasses[i] || '';
+        const deltaHtml = s.delta > 0
+          ? `<span class="q-lb-delta">+${s.delta.toLocaleString()}</span>`
+          : '';
+        return `<div class="q-lb-row ${rowClass}">
+          <span class="q-lb-rank">${rankLabel}</span>
+          <span class="q-lb-name">${esc(s.username)}</span>
+          ${deltaHtml}
+          <span class="q-lb-score">${s.score.toLocaleString()}</span>
+        </div>`;
+      }).join('');
+  }
+
+  // ── Reveal sidebar (replaces the old floating overlay) ───────────────────
+  function showRevealInSidebar(msg, correctLetter) {
+    const rows = document.getElementById('q-live-lb-rows');
+    if (!rows) return;
+
+    const correctPct = msg.answerBreakdown[correctLetter] || 0;
+    const pctHtml = correctPct === 0
+      ? `<span style="color:#ff8585">😱 Nobody got it!</span>`
+      : `<span style="color:#4cde80">✓ ${correctPct}% correct</span>`;
+
+    const medals = ['🥇','🥈','🥉'];
+    const medalClass = ['rank-gold','rank-silver','rank-bronze'];
+    const maxDelta = Math.max(...msg.scores.map(s => s.delta), 1);
+    const roundSorted = [...msg.scores].sort((a, b) => b.delta - a.delta);
+    const totalSorted = [...msg.scores].sort((a, b) => b.score - a.score);
+
+    const roundRowsHtml = roundSorted.map((s, i) => {
+      const isCorrect = s.answer === correctLetter;
+      const badgeClass = s.answer ? (isCorrect ? 'badge-correct' : 'badge-wrong') : 'badge-none';
+      const timeLabel  = s.answerTime != null ? `⚡${s.answerTime}s` : '—';
+      const timeClass  = s.answerTime != null ? '' : 'no-answer';
+      const barWidth   = s.delta > 0 ? Math.round((s.delta / maxDelta) * 100) : 0;
+      const barColor   = s.delta > 0 ? '#4cde80' : '#444';
+      const streak     = s.streak || 0;
+      const streakIcon = streak >= 5 ? ' 🔥🔥' : streak >= 3 ? ' 🔥' : '';
+      return `<div class="lb-round-row">
+        <span class="lb-round-medal">${medals[i] || ''}</span>
+        <span class="lb-round-name">${esc(s.username)}${streakIcon}</span>
+        <span class="lb-round-time ${timeClass}">${timeLabel}</span>
+        <div class="lb-score-bar-wrap"><div class="lb-score-bar" style="width:${barWidth}%;background:${barColor};"></div></div>
+        <span class="lb-round-delta ${s.delta === 0 ? 'zero' : ''}">${s.delta > 0 ? '+' + s.delta.toLocaleString() : '—'}</span>
+        <span class="lb-answer-badge ${badgeClass}">${s.answer || '—'}</span>
       </div>`;
     }).join('');
+
+    const totalRowsHtml = totalSorted.map((s, i) => {
+      const rankChange = (s.prevRank != null) ? s.prevRank - s.rank : null;
+      let arrow = '', arrowClass = 'rank-same';
+      if (rankChange !== null) {
+        if (rankChange > 0)      { arrow = `↑${rankChange}`;            arrowClass = 'rank-up'; }
+        else if (rankChange < 0) { arrow = `↓${Math.abs(rankChange)}`; arrowClass = 'rank-down'; }
+        else                     { arrow = '='; }
+      }
+      const streak     = s.streak || 0;
+      const streakIcon = streak >= 5 ? ' 🔥🔥' : streak >= 3 ? ' 🔥' : '';
+      return `<div class="lb-total-row ${medalClass[i] || ''}">
+        <span class="lb-total-rank">${medals[i] || `${i + 1}.`}</span>
+        <span class="lb-rank-change ${arrowClass}">${arrow}</span>
+        <span class="lb-total-name">${esc(s.username)}${streakIcon}</span>
+        <span class="lb-total-score">${s.score.toLocaleString()}</span>
+      </div>`;
+    }).join('');
+
+    rows.innerHTML = `
+      <div class="ql-reveal-header">${pctHtml}</div>
+      <div class="q-lb-header" style="margin-top:0.3rem">This Round</div>
+      ${roundRowsHtml}
+      <div class="q-lb-header" style="margin-top:0.5rem">Total Scores</div>
+      ${totalRowsHtml}
+      <button class="ql-skip-btn" id="ql-skip-inner">Skip →</button>
+    `;
+    document.getElementById('ql-skip-inner').addEventListener('click', () => send({ type: 'SKIP' }));
   }
 
   // ── Player list ───────────────────────────────────────────────────────────
@@ -1860,8 +1743,6 @@
 
   // ── Reveal: in-place animation ────────────────────────────────────────────
   function hideRevealUI() {
-    if (revealOverlayTimeout) { clearTimeout(revealOverlayTimeout); revealOverlayTimeout = null; }
-    document.getElementById('reveal-overlay').classList.remove('show');
     for (const id of ['A','B','C','D']) {
       const box = document.querySelector(`.answer-box.ans-${id}`);
       if (box) box.classList.remove('ans-correct-reveal', 'ans-wrong-reveal');
@@ -1892,76 +1773,9 @@
       }
     }
 
-    // Populate overlay content
-    const correctPct = msg.answerBreakdown[correctLetter] || 0;
-    const nobodyEl = document.getElementById('ov-nobody');
-    const pctEl = document.getElementById('ov-correct-pct');
-    if (correctPct === 0) {
-      nobodyEl.style.display = 'inline';
-      pctEl.textContent = '';
-    } else {
-      nobodyEl.style.display = 'none';
-      pctEl.textContent = `✓ ${correctPct}% correct`;
-    }
-
-    const maxDelta = Math.max(...msg.scores.map(s => s.delta), 1);
-    const roundMedals = ['🥇','🥈','🥉'];
-    const roundSorted = [...msg.scores].sort((a, b) => b.delta - a.delta);
-
-    document.getElementById('ov-round-rows').innerHTML = roundSorted.map((s, i) => {
-      const streak = s.streak || 0;
-      const streakIcon = streak >= 5 ? ' 🔥🔥' : streak >= 3 ? ' 🔥' : '';
-      const barWidth = s.delta > 0 ? Math.round((s.delta / maxDelta) * 100) : 0;
-      const barColor = s.delta > 0 ? '#4cde80' : '#444';
-      const timeLabel = s.answerTime !== null && s.answerTime !== undefined
-        ? `⚡${s.answerTime}s`
-        : '—';
-      const timeClass = s.answerTime !== null && s.answerTime !== undefined ? '' : 'no-answer';
-      const isCorrect = s.answer === correctLetter;
-      const badgeClass = s.answer ? (isCorrect ? 'badge-correct' : 'badge-wrong') : 'badge-none';
-      const badgeLabel = s.answer || '—';
-      return `<div class="lb-round-row">
-        <span class="lb-round-pos">${i + 1}.</span>
-        <span class="lb-round-medal">${roundMedals[i] || ''}</span>
-        <span class="lb-round-name">${esc(s.username)}${streakIcon}</span>
-        <span class="lb-round-time ${timeClass}">${timeLabel}</span>
-        <div class="lb-score-bar-wrap"><div class="lb-score-bar" style="width:${barWidth}%;background:${barColor};"></div></div>
-        <span class="lb-round-delta ${s.delta === 0 ? 'zero' : ''}">${s.delta > 0 ? '+' + s.delta.toLocaleString() : '—'}</span>
-        <span class="lb-answer-badge ${badgeClass}">${badgeLabel}</span>
-      </div>`;
-    }).join('');
-
-    const totalSorted = [...msg.scores].sort((a, b) => b.score - a.score);
-    currentScores = totalSorted;
-    updateQLiveLb();
-    const medalEmoji = ['🥇', '🥈', '🥉'];
-    const medalClass = ['rank-gold', 'rank-silver', 'rank-bronze'];
-    document.getElementById('ov-total-rows').innerHTML = totalSorted.map((s, i) => {
-      const rankChange = (s.prevRank !== null && s.prevRank !== undefined) ? s.prevRank - s.rank : null;
-      let arrow = '', arrowClass = 'rank-same';
-      if (rankChange !== null) {
-        if (rankChange > 0)      { arrow = `↑${rankChange}`; arrowClass = 'rank-up'; }
-        else if (rankChange < 0) { arrow = `↓${Math.abs(rankChange)}`; arrowClass = 'rank-down'; }
-        else                     { arrow = '='; arrowClass = 'rank-same'; }
-      }
-      const streak = s.streak || 0;
-      const streakIcon = streak >= 5 ? ' 🔥🔥' : streak >= 3 ? ' 🔥' : '';
-      const rowClass = medalClass[i] || '';
-      const rankLabel = medalEmoji[i] || `${i + 1}.`;
-      return `<div class="lb-total-row ${rowClass}">
-        <span class="lb-total-rank">${rankLabel}</span>
-        <span class="lb-rank-change ${arrowClass}">${arrow}</span>
-        <span class="lb-total-name">${esc(s.username)}${streakIcon}</span>
-        <span class="lb-total-score">${s.score.toLocaleString()}</span>
-      </div>`;
-    }).join('');
-
-    // Slide overlay up after 1.5s
-    if (revealOverlayTimeout) clearTimeout(revealOverlayTimeout);
-    revealOverlayTimeout = setTimeout(() => {
-      document.getElementById('reveal-overlay').classList.add('show');
-      revealOverlayTimeout = null;
-    }, 1500);
+    // Update sidebar with reveal data
+    currentScores = [...msg.scores].sort((a, b) => b.score - a.score);
+    showRevealInSidebar(msg, correctLetter);
   }
 
   // ── Game over ─────────────────────────────────────────────────────────────
