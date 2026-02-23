@@ -1161,9 +1161,6 @@
     document.querySelectorAll('[data-i18n]').forEach(el => {
       el.textContent = T(el.dataset.i18n);
     });
-    const toggleBtn = document.getElementById('cat-toggle-btn');
-    if (toggleBtn) toggleBtn.textContent = allCatsChecked ? T('uncheckAll') : T('checkAll');
-    if (allCategories.length > 0) renderCategories(allCategories);
   }
 
   // ── Language picker ───────────────────────────────────────────────────────
@@ -1221,90 +1218,19 @@
     } catch (e) { console.warn('QR fetch failed', e); }
   }
 
-  // ── Categories ───────────────────────────────────────────────────────────
+  // ── Categories — fetched so we can pass all IDs to START_GAME ────────────
   let allCategories = [];
   (async () => {
     try {
       const res = await fetch('/api/categories');
       allCategories = await res.json();
-      renderCategories(allCategories);
     } catch (e) { console.warn('Category fetch failed', e); }
   })();
 
-  function renderCategories(cats) {
-    const list = document.getElementById('category-list');
-    // Preserve checked state across re-renders
-    const prevChecked = new Set(
-      [...document.querySelectorAll('#category-list input:checked')].map(cb => cb.value)
-    );
-    const isFirstRender = prevChecked.size === 0 && list.children.length === 0;
-
-    list.innerHTML = '';
-    list.style.display = 'block'; // override grid for grouped layout
-
-    // Group categories
-    const groups = {};
-    for (const cat of cats) {
-      const meta = CATEGORY_META[cat.id] || { emoji: '❓', group: 'general' };
-      if (!groups[meta.group]) groups[meta.group] = [];
-      groups[meta.group].push({ ...cat, emoji: meta.emoji });
-    }
-
-    const labels = GROUP_LABELS[selectedLang] || GROUP_LABELS.en;
-    const nameOverrides = CAT_NAMES[selectedLang] || {};
-
-    for (const groupKey of GROUP_ORDER) {
-      const groupCats = groups[groupKey];
-      if (!groupCats || groupCats.length === 0) continue;
-
-      const header = document.createElement('div');
-      header.className = 'cat-group-header';
-      header.textContent = labels[groupKey] || groupKey;
-      list.appendChild(header);
-
-      const grid = document.createElement('div');
-      grid.className = 'cat-group-grid';
-
-      for (const cat of groupCats) {
-        const displayName = nameOverrides[cat.id] || cat.name;
-        const label = document.createElement('label');
-        label.className = 'cat-item';
-        const cb = document.createElement('input');
-        cb.type = 'checkbox';
-        cb.value = cat.id;
-        // First render: all checked; re-renders: preserve state
-        cb.checked = isFirstRender ? true : (prevChecked.has(String(cat.id)) || allCatsChecked && prevChecked.size === 0);
-        if (cb.checked) label.classList.add('selected');
-        cb.addEventListener('change', () => label.classList.toggle('selected', cb.checked));
-        label.appendChild(cb);
-        label.appendChild(document.createTextNode(` ${cat.emoji} ${displayName}`));
-        // Vote badge (hidden until votes arrive)
-        const badge = document.createElement('span');
-        badge.className = 'cat-vote-badge';
-        badge.id = `cat-votes-${cat.id}`;
-        badge.style.display = 'none';
-        label.appendChild(badge);
-        grid.appendChild(label);
-      }
-      list.appendChild(grid);
-    }
-    // Re-apply any cached vote counts after DOM rebuild
-    applyVoteBadges();
-  }
-
   function getSelectedCategories() {
-    return [...document.querySelectorAll('#category-list input:checked')].map(cb => Number(cb.value));
+    // Categories are chosen by player vote — pass all available IDs to the server
+    return allCategories.map(c => c.id);
   }
-
-  // ── Category toggle ───────────────────────────────────────────────────────
-  let allCatsChecked = true;
-  document.getElementById('cat-toggle-btn').addEventListener('click', () => {
-    allCatsChecked = !allCatsChecked;
-    document.querySelectorAll('#category-list input[type=checkbox]').forEach(cb => {
-      cb.checked = allCatsChecked;
-    });
-    document.getElementById('cat-toggle-btn').textContent = allCatsChecked ? T('uncheckAll') : T('checkAll');
-  });
 
   // ── Local DB status ───────────────────────────────────────────────────────
   let dbPollInterval = null;
@@ -1379,9 +1305,7 @@
 
   // ── Buttons ───────────────────────────────────────────────────────────────
   document.getElementById('start-btn').addEventListener('click', () => {
-    const cats = getSelectedCategories();
-    if (cats.length === 0) { alert('Please select at least one category.'); return; }
-    send({ type: 'START_GAME', categories: cats, questionCount: selectedQuestionCount, gameDifficulty: selectedDifficulty });
+    send({ type: 'START_GAME', categories: getSelectedCategories(), questionCount: selectedQuestionCount, gameDifficulty: selectedDifficulty });
   });
 
   document.getElementById('skip-btn').addEventListener('click', () => send({ type: 'SKIP' }));
@@ -1411,26 +1335,6 @@
   function showGameoverBottom() { document.getElementById('gameover-bottom').classList.add('show'); }
   function hideGameoverBottom() { document.getElementById('gameover-bottom').classList.remove('show'); }
 
-  // ── Category presets ──────────────────────────────────────────────────────
-  function applyPreset(categoryIds) {
-    document.querySelectorAll('#category-list input[type=checkbox]').forEach(cb => {
-      cb.checked = categoryIds.includes(Number(cb.value));
-    });
-    const anyUnchecked = document.querySelectorAll('#category-list input[type=checkbox]:not(:checked)').length > 0;
-    allCatsChecked = !anyUnchecked;
-    document.getElementById('cat-toggle-btn').textContent = allCatsChecked ? T('uncheckAll') : T('checkAll');
-  }
-  const PRESETS = {
-    'preset-party': [9, 11, 12, 14, 21],          // General, Film, Music, TV, Sports
-    'preset-nerd':  [17, 18, 19, 30],              // Science, Computers, Math, Gadgets
-    'preset-world': [22, 20, 23, 24],              // Geography, Mythology, History, Politics
-    'preset-pop':   [11, 14, 12, 31, 29],          // Film, TV, Music, Anime, Comics
-  };
-  for (const [id, cats] of Object.entries(PRESETS)) {
-    const btn = document.getElementById(id);
-    if (btn) btn.addEventListener('click', () => applyPreset(cats));
-  }
-
   // ── Vote tracking ─────────────────────────────────────────────────────────
   let currentVoteData = null;
   let currentPlayerCount = 0;
@@ -1440,27 +1344,9 @@
     document.getElementById('start-btn').disabled = !(currentPlayerCount > 0 && allVotedState);
   }
 
-  function applyVoteBadges() {
-    // Hide all first
-    document.querySelectorAll('.cat-vote-badge').forEach(el => {
-      el.style.display = 'none';
-      el.textContent = '';
-    });
-    if (!currentVoteData) return;
-    for (const [catId, count] of Object.entries(currentVoteData.votes)) {
-      if (count <= 0) continue;
-      const badge = document.getElementById(`cat-votes-${catId}`);
-      if (badge) {
-        badge.textContent = `${count} ✓`;
-        badge.style.display = 'inline';
-      }
-    }
-  }
-
   function handleVoteUpdate(msg) {
     currentVoteData = msg;
     allVotedState = msg.allVoted;
-    applyVoteBadges();
     updateStartBtn();
 
     const statusEl = document.getElementById('vote-status');
@@ -1468,16 +1354,8 @@
       statusEl.textContent = '';
       statusEl.className = '';
     } else if (msg.allVoted) {
-      statusEl.textContent = `✅ All ${msg.totalPlayers} players voted — categories auto-selected`;
+      statusEl.textContent = `✅ All ${msg.totalPlayers} players voted`;
       statusEl.className = 'all-voted';
-      // Auto-select top-voted categories in the host panel
-      if (Object.keys(msg.votes).length > 0) {
-        const topCats = Object.entries(msg.votes)
-          .sort(([, a], [, b]) => b - a)
-          .slice(0, 5)
-          .map(([id]) => Number(id));
-        applyPreset(topCats);
-      }
     } else {
       statusEl.textContent = `🗳️ ${msg.voted.length} / ${msg.totalPlayers} players voted — waiting before start`;
       statusEl.className = '';
@@ -1582,7 +1460,6 @@
         allVotedState = false;
         document.getElementById('vote-status').textContent = '';
         document.getElementById('vote-status').className = '';
-        applyVoteBadges();
         updateStartBtn();
         break;
 
