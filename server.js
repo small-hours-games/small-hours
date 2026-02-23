@@ -181,6 +181,24 @@ function createRoomBroadcast(roomCode) {
 
 // ─── WebSocket connection handler ────────────────────────────────────────────
 
+function broadcastVoteUpdate(room) {
+  const tally = {};
+  for (const cats of room.categoryVotes.values()) {
+    for (const c of cats) tally[c] = (tally[c] || 0) + 1;
+  }
+  const totalPlayers = room.game.playerCount;
+  const allVoted = totalPlayers > 0 && room.categoryVotes.size >= totalPlayers;
+  createRoomBroadcast(room.code)({
+    type: 'VOTE_UPDATE',
+    votes: tally,
+    voted: [...room.categoryVotes.keys()],
+    totalPlayers,
+    allVoted,
+  });
+}
+
+// ─── WebSocket connection handler ────────────────────────────────────────────
+
 wss.on('connection', (ws, req) => {
   const url = new URL(req.url, 'http://localhost');
   const isHost = url.pathname === '/ws/host';
@@ -198,12 +216,15 @@ wss.on('connection', (ws, req) => {
         hostSockets: new Set(),
         playerSockets: new Set(),
         language: 'en',
+        categoryVotes: new Map(), // username → [catId, ...]
       });
     }
     const room = rooms.get(roomCode);
     room.hostSockets.add(ws);
     wsToRoom.set(ws, roomCode);
     ws.send(JSON.stringify({ type: 'HOST_CONNECTED', roomCode, playerCount: room.game.playerCount }));
+    // Send current vote state so host sees any votes already cast
+    if (room.game.playerCount > 0) broadcastVoteUpdate(room);
 
   } else if (isPlayer) {
     if (!roomCode || !rooms.has(roomCode)) {
@@ -243,7 +264,15 @@ wss.on('connection', (ws, req) => {
       room.hostSockets.delete(ws);
     } else {
       room.playerSockets.delete(ws);
+      const wasLobby = room.game.state === 'LOBBY';
+      // Remove this player's vote before removing them (so we know who they are)
+      if (wasLobby) {
+        for (const [username, p] of room.game.players.entries()) {
+          if (p.ws === ws) { room.categoryVotes.delete(username); break; }
+        }
+      }
       room.game.removePlayer(ws);
+      if (wasLobby) broadcastVoteUpdate(room);
     }
     // Clean up idle rooms with no connected sockets
     const totalSockets = room.hostSockets.size + room.playerSockets.size;
@@ -266,6 +295,16 @@ function handleMessage(ws, isHost, msg, room) {
   if (isHost) {
     switch (type) {
       case 'START_GAME': {
+        // Block start if any player hasn't voted yet
+        const totalPlayers = room.game.playerCount;
+        if (totalPlayers > 0 && room.categoryVotes.size < totalPlayers) {
+          ws.send(JSON.stringify({
+            type: 'ERROR',
+            code: 'NOT_ALL_VOTED',
+            message: `Waiting for all players to vote (${room.categoryVotes.size}/${totalPlayers} voted).`,
+          }));
+          break;
+        }
         const categories = Array.isArray(msg.categories) && msg.categories.length > 0
           ? msg.categories
           : [9];
@@ -283,6 +322,7 @@ function handleMessage(ws, isHost, msg, room) {
         break;
       case 'RESTART':
         room.game.restart();
+        room.categoryVotes.clear();
         break;
       case 'CONTINUE_GAME': {
         const categories = Array.isArray(msg.categories) && msg.categories.length > 0
@@ -319,7 +359,26 @@ function handleMessage(ws, isHost, msg, room) {
       if (!result.ok) {
         // If game rejected after we sent JOIN_OK, correct it with an error
         ws.send(JSON.stringify({ type: 'ERROR', code: result.code, message: result.message }));
+      } else if (room.game.state === 'LOBBY') {
+        // Broadcast current vote state so new player and host see accurate counts
+        broadcastVoteUpdate(room);
       }
+      break;
+    }
+    case 'CATEGORY_VOTE': {
+      if (room.game.state !== 'LOBBY') break;
+      // Find the player's username
+      let voterName = null;
+      for (const [name, p] of room.game.players.entries()) {
+        if (p.ws === ws) { voterName = name; break; }
+      }
+      if (!voterName) break;
+      const cats = Array.isArray(msg.categories)
+        ? msg.categories.slice(0, 3).map(Number).filter(n => Number.isInteger(n) && n > 0)
+        : [];
+      if (cats.length === 0) break;
+      room.categoryVotes.set(voterName, cats);
+      broadcastVoteUpdate(room);
       break;
     }
     case 'ANSWER': {

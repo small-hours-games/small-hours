@@ -80,6 +80,57 @@
 
     #join-error { color: #ff6b6b; font-size: 0.9rem; text-align: center; }
 
+    /* ── VOTE ── */
+    #vote { gap: 0.65rem; width: 100%; }
+    #vote h2 { font-size: 1.3rem; font-weight: 900; text-align: center; }
+    #vote p  { color: #aaa; font-size: 0.85rem; text-align: center; }
+    #vote-counter {
+      font-size: 1.1rem; font-weight: 800; text-align: center;
+      color: var(--accent);
+    }
+    #vote-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.4rem;
+      width: 100%;
+      max-height: 48vh;
+      overflow-y: auto;
+    }
+    .vote-cat-btn {
+      padding: 0.55rem 0.6rem;
+      border: 2px solid rgba(255,255,255,0.1);
+      border-radius: 0.55rem;
+      background: rgba(255,255,255,0.05);
+      color: #ccc;
+      font-size: 0.82rem;
+      font-weight: 600;
+      text-align: left;
+      cursor: pointer;
+      transition: background 0.12s, border-color 0.12s, color 0.12s;
+      line-height: 1.25;
+    }
+    .vote-cat-btn.selected {
+      background: rgba(159,68,211,0.25);
+      border-color: var(--accent);
+      color: #fff;
+    }
+    .vote-cat-btn:disabled:not(.selected) { opacity: 0.35; cursor: not-allowed; }
+    #vote-submit-btn {
+      width: 100%;
+      padding: 0.9rem;
+      font-size: 1.1rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, var(--accent), #4a90d9);
+      color: #fff;
+      border: none;
+      border-radius: 0.75rem;
+      cursor: pointer;
+      transition: opacity 0.2s, transform 0.1s;
+      letter-spacing: 0.03em;
+    }
+    #vote-submit-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+    #vote-submit-btn:not(:disabled):active { transform: scale(0.97); }
+
     /* ── WAITING ── */
     #waiting { text-align: center; gap: 1.5rem; }
     #waiting .big-emoji { font-size: 4rem; }
@@ -374,6 +425,15 @@
   <div id="join-error"></div>
 </div>
 
+<!-- VOTE -->
+<div id="vote" class="screen">
+  <h2>🗳️ Vote for Categories</h2>
+  <p id="vote-subtitle">Pick exactly 3 categories to play</p>
+  <div id="vote-counter">0 / 3</div>
+  <div id="vote-grid"></div>
+  <button id="vote-submit-btn" disabled>Lock in Vote</button>
+</div>
+
 <!-- WAITING -->
 <div id="waiting" class="screen">
   <div class="big-emoji">👋</div>
@@ -519,6 +579,76 @@
   let currentAnswers = {};  // id → text, populated on QUESTION
   let pqTimerTimeout = null;
   let prevAnswer = null;    // answer from last round, shown in livescore strip
+  let hasVoted = false;
+  let voteCategories = new Set();
+
+  // Category emoji lookup for the vote screen
+  const VOTE_EMOJI = {
+    9:'🌐',10:'📚',11:'🎬',12:'🎵',13:'🎭',14:'📺',15:'🎮',16:'🎲',
+    17:'🔬',18:'💻',19:'🧮',20:'🏛️',21:'⚽',22:'🌍',23:'📜',24:'🗳️',
+    25:'🎨',26:'⭐',27:'🐾',28:'🚗',29:'💥',30:'🔧',31:'🎌',32:'🎠',
+  };
+
+  async function initVoteScreen() {
+    hasVoted = false;
+    voteCategories.clear();
+    updateVoteUI();
+    document.getElementById('vote-grid').innerHTML =
+      '<div style="color:#666;text-align:center;grid-column:1/-1;padding:1rem;">Loading…</div>';
+    show('vote');
+    try {
+      const res = await fetch('/api/categories');
+      const cats = await res.json();
+      renderVoteGrid(cats);
+    } catch (e) {
+      document.getElementById('vote-grid').innerHTML =
+        '<div style="color:#ff6b6b;text-align:center;grid-column:1/-1;">Could not load categories.</div>';
+    }
+  }
+
+  function renderVoteGrid(cats) {
+    const grid = document.getElementById('vote-grid');
+    grid.innerHTML = '';
+    for (const cat of cats) {
+      const btn = document.createElement('button');
+      btn.className = 'vote-cat-btn';
+      btn.dataset.id = cat.id;
+      btn.textContent = `${VOTE_EMOJI[cat.id] || '❓'} ${cat.name}`;
+      btn.addEventListener('click', () => {
+        const id = Number(btn.dataset.id);
+        if (voteCategories.has(id)) {
+          voteCategories.delete(id);
+          btn.classList.remove('selected');
+        } else {
+          if (voteCategories.size >= 3) return;
+          voteCategories.add(id);
+          btn.classList.add('selected');
+        }
+        updateVoteUI();
+      });
+      grid.appendChild(btn);
+    }
+    updateVoteUI();
+  }
+
+  function updateVoteUI() {
+    const n = voteCategories.size;
+    document.getElementById('vote-counter').textContent = `${n} / 3`;
+    document.getElementById('vote-submit-btn').disabled = n !== 3;
+    document.querySelectorAll('.vote-cat-btn').forEach(btn => {
+      const id = Number(btn.dataset.id);
+      btn.disabled = !voteCategories.has(id) && n >= 3;
+    });
+  }
+
+  document.getElementById('vote-submit-btn').addEventListener('click', () => {
+    if (voteCategories.size !== 3 || hasVoted) return;
+    hasVoted = true;
+    send({ type: 'CATEGORY_VOTE', categories: [...voteCategories] });
+    show('waiting');
+    document.getElementById('waiting-name').textContent = `${myUsername} 👋`;
+    document.getElementById('waiting-players').textContent = 'Voted! Waiting for others…';
+  });
 
   function buildWsUrl(room) {
     const proto = location.protocol === 'https:' ? 'wss' : 'ws';
@@ -633,7 +763,7 @@
       case 'JOIN_OK':
         myUsername = msg.username;
         document.getElementById('waiting-name').textContent = P('hiName', myUsername);
-        show('waiting');
+        initVoteScreen();
         break;
 
       case 'PLAYER_JOINED':
@@ -661,6 +791,19 @@
 
       case 'COUNTDOWN_TICK':
         document.getElementById('waiting-name').textContent = P('startingIn', msg.countdown);
+        break;
+
+      case 'VOTE_UPDATE':
+        if (hasVoted) {
+          document.getElementById('waiting-players').textContent = msg.allVoted
+            ? '✅ Everyone voted! Waiting for host…'
+            : `${msg.voted.length} / ${msg.totalPlayers} voted — waiting for others…`;
+        } else {
+          document.getElementById('vote-subtitle').textContent =
+            msg.voted.length > 0
+              ? `${msg.voted.length} / ${msg.totalPlayers} already voted — pick your 3`
+              : 'Pick exactly 3 categories to play';
+        }
         break;
 
       case 'LANGUAGE_SET':
@@ -760,6 +903,9 @@
       case 'RESTARTED':
         myScore = 0;
         myRank = null;
+        prevAnswer = null;
+        hasVoted = false;
+        voteCategories.clear();
         if (myUsername) {
           usernameInput.value = myUsername;
         }

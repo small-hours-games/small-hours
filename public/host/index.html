@@ -33,7 +33,7 @@
 
     /* ── LOBBY ── */
     #lobby {
-      grid-template-columns: 1fr 280px;
+      grid-template-columns: 1fr 320px;
       grid-template-rows: auto 1fr auto auto;
       gap: 1rem 1.5rem;
     }
@@ -75,7 +75,7 @@
     /* QR frame with CSS corner brackets */
     #qr-frame {
       position: relative;
-      width: 210px;
+      width: 260px;
       --cb: rgba(159, 68, 211, 0.85);
       background:
         linear-gradient(var(--cb), var(--cb)) top    left  / 3px 22px no-repeat,
@@ -927,6 +927,42 @@
       -webkit-background-clip: text; -webkit-text-fill-color: transparent;
     }
 
+    /* ── Vote badges on category items ── */
+    .cat-vote-badge {
+      margin-left: auto;
+      padding: 0.1rem 0.5rem;
+      border-radius: 1rem;
+      background: rgba(159,68,211,0.22);
+      border: 1px solid rgba(159,68,211,0.5);
+      color: var(--accent);
+      font-size: 0.7rem;
+      font-weight: 800;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    /* ── Vote status chip ── */
+    #vote-status {
+      font-size: 0.85rem;
+      color: #888;
+      text-align: center;
+    }
+    #vote-status.all-voted { color: #4cde80; font-weight: 700; }
+
+    /* ── Share / copy button ── */
+    #copy-link-btn {
+      padding: 0.2rem 0.6rem;
+      font-size: 0.8rem;
+      background: rgba(255,255,255,0.08);
+      color: #aaa;
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 0.4rem;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s;
+      white-space: nowrap;
+    }
+    #copy-link-btn:hover { background: rgba(255,255,255,0.15); color: #fff; }
+
     /* ── Category groups ── */
     .cat-group-header {
       font-size: 1rem;
@@ -967,7 +1003,10 @@
         <div class="qr-scan-line"></div>
       </div>
       <div id="qr-camera-hint">Point your phone camera at the code</div>
-      <div id="qr-url">Loading...</div>
+      <div style="display:flex; align-items:center; gap:0.5rem;">
+        <div id="qr-url">Loading...</div>
+        <button id="copy-link-btn" title="Copy join link">📋 Copy</button>
+      </div>
     </div>
 
     <div id="players-panel">
@@ -1025,7 +1064,10 @@
         <button class="q-count-btn" data-count="30">30</button>
       </div>
     </div>
-    <button id="start-btn" disabled data-i18n="startGame">Start Game</button>
+    <div style="display:flex; flex-direction:column; align-items:center; gap:0.4rem;">
+      <div id="vote-status"></div>
+      <button id="start-btn" disabled data-i18n="startGame">Start Game</button>
+    </div>
   </div>
 
 </div>
@@ -1334,10 +1376,18 @@
         cb.addEventListener('change', () => label.classList.toggle('selected', cb.checked));
         label.appendChild(cb);
         label.appendChild(document.createTextNode(` ${cat.emoji} ${displayName}`));
+        // Vote badge (hidden until votes arrive)
+        const badge = document.createElement('span');
+        badge.className = 'cat-vote-badge';
+        badge.id = `cat-votes-${cat.id}`;
+        badge.style.display = 'none';
+        label.appendChild(badge);
         grid.appendChild(label);
       }
       list.appendChild(grid);
     }
+    // Re-apply any cached vote counts after DOM rebuild
+    applyVoteBadges();
   }
 
   function getSelectedCategories() {
@@ -1480,6 +1530,70 @@
     if (btn) btn.addEventListener('click', () => applyPreset(cats));
   }
 
+  // ── Vote tracking ─────────────────────────────────────────────────────────
+  let currentVoteData = null;
+  let currentPlayerCount = 0;
+  let allVotedState = false;
+
+  function updateStartBtn() {
+    document.getElementById('start-btn').disabled = !(currentPlayerCount > 0 && allVotedState);
+  }
+
+  function applyVoteBadges() {
+    // Hide all first
+    document.querySelectorAll('.cat-vote-badge').forEach(el => {
+      el.style.display = 'none';
+      el.textContent = '';
+    });
+    if (!currentVoteData) return;
+    for (const [catId, count] of Object.entries(currentVoteData.votes)) {
+      if (count <= 0) continue;
+      const badge = document.getElementById(`cat-votes-${catId}`);
+      if (badge) {
+        badge.textContent = `${count} ✓`;
+        badge.style.display = 'inline';
+      }
+    }
+  }
+
+  function handleVoteUpdate(msg) {
+    currentVoteData = msg;
+    allVotedState = msg.allVoted;
+    applyVoteBadges();
+    updateStartBtn();
+
+    const statusEl = document.getElementById('vote-status');
+    if (msg.totalPlayers === 0) {
+      statusEl.textContent = '';
+      statusEl.className = '';
+    } else if (msg.allVoted) {
+      statusEl.textContent = `✅ All ${msg.totalPlayers} players voted — categories auto-selected`;
+      statusEl.className = 'all-voted';
+      // Auto-select top-voted categories in the host panel
+      if (Object.keys(msg.votes).length > 0) {
+        const topCats = Object.entries(msg.votes)
+          .sort(([, a], [, b]) => b - a)
+          .slice(0, 5)
+          .map(([id]) => Number(id));
+        applyPreset(topCats);
+      }
+    } else {
+      statusEl.textContent = `🗳️ ${msg.voted.length} / ${msg.totalPlayers} players voted — waiting before start`;
+      statusEl.className = '';
+    }
+  }
+
+  // Copy join link
+  document.getElementById('copy-link-btn').addEventListener('click', async () => {
+    const url = document.getElementById('qr-url').textContent;
+    try {
+      await navigator.clipboard.writeText(url);
+      const btn = document.getElementById('copy-link-btn');
+      btn.textContent = '✅ Copied!';
+      setTimeout(() => { btn.textContent = '📋 Copy'; }, 2000);
+    } catch (e) { /* clipboard unavailable */ }
+  });
+
   // ── Message handlers ──────────────────────────────────────────────────────
   function handleMsg(msg) {
     switch (msg.type) {
@@ -1496,6 +1610,10 @@
 
       case 'PLAYER_JOINED':
         updatePlayerList(msg.players, msg.playerCount);
+        break;
+
+      case 'VOTE_UPDATE':
+        handleVoteUpdate(msg);
         break;
 
       case 'GAME_FETCHING':
@@ -1556,7 +1674,13 @@
         showScreen('lobby');
         document.getElementById('player-list').innerHTML = `<span style="color:#555; font-style:italic;">Waiting for players…</span>`;
         document.getElementById('player-count').textContent = '0';
-        document.getElementById('start-btn').disabled = true;
+        currentPlayerCount = 0;
+        currentVoteData = null;
+        allVotedState = false;
+        document.getElementById('vote-status').textContent = '';
+        document.getElementById('vote-status').className = '';
+        applyVoteBadges();
+        updateStartBtn();
         break;
 
       case 'ERROR':
@@ -1576,6 +1700,7 @@
   }
 
   function updatePlayerList(players, count) {
+    currentPlayerCount = count;
     const list = document.getElementById('player-list');
     document.getElementById('player-count').textContent = count;
     list.innerHTML = '';
@@ -1590,7 +1715,7 @@
         list.appendChild(chip);
       });
     }
-    document.getElementById('start-btn').disabled = players.length < 1;
+    updateStartBtn();
   }
 
   // ── Question display ──────────────────────────────────────────────────────
