@@ -294,6 +294,53 @@
 
     /* ── QUESTION ── */
     #question-screen { gap: 1rem; }
+    #question-screen.active {
+      display: grid;
+      grid-template-columns: 1fr 280px;
+      grid-template-rows: auto auto 1fr auto;
+      gap: 1rem;
+    }
+    #question-screen > #q-header      { grid-column: 1; grid-row: 1; }
+    #question-screen > #timer-bar-wrap { grid-column: 1; grid-row: 2; }
+    #question-screen > #q-text        { grid-column: 1; grid-row: 3; flex: unset; min-height: 0; }
+    #question-screen > #answers-grid  { grid-column: 1; grid-row: 4; }
+    #q-live-lb {
+      grid-column: 2; grid-row: 1 / 5;
+      background: var(--card);
+      border-radius: 1rem;
+      padding: 0.85rem 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+      overflow-y: auto;
+      min-height: 0;
+    }
+    .q-lb-header {
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: #666;
+      padding-bottom: 0.35rem;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+      flex-shrink: 0;
+    }
+    .q-lb-row {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.35rem 0.5rem;
+      border-radius: 0.55rem;
+      font-size: 0.92rem;
+    }
+    .q-lb-row.top3 { background: rgba(255,255,255,0.04); }
+    .q-lb-row.rank-gold   { background: rgba(255,215,0,0.1);  border: 1px solid rgba(255,215,0,0.28); }
+    .q-lb-row.rank-silver { background: rgba(192,192,192,0.08); border: 1px solid rgba(192,192,192,0.22); }
+    .q-lb-row.rank-bronze { background: rgba(205,127,50,0.1); border: 1px solid rgba(205,127,50,0.25); }
+    .q-lb-rank  { width: 2rem; font-size: 1rem; flex-shrink: 0; text-align: center; }
+    .q-lb-name  { flex: 1; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .q-lb-score { font-weight: 800; color: var(--timer); font-size: 0.88rem; flex-shrink: 0; }
+    .q-lb-delta { font-size: 0.78rem; font-weight: 700; color: #4cde80; flex-shrink: 0; min-width: 2.8rem; text-align: right; }
 
     #q-header {
       display: flex;
@@ -1123,6 +1170,13 @@
     <div class="answer-box ans-C"><span class="ans-letter" style="color:#222">C</span><span id="ans-C-text"></span></div>
     <div class="answer-box ans-D"><span class="ans-letter">D</span><span id="ans-D-text"></span></div>
   </div>
+  <!-- Live standings sidebar -->
+  <div id="q-live-lb">
+    <div class="q-lb-header">🏆 Standings</div>
+    <div id="q-live-lb-rows">
+      <div style="color:#555;font-size:0.82rem;text-align:center;padding:0.75rem 0;">Waiting for players…</div>
+    </div>
+  </div>
 </div>
 
 <!-- REVEAL -->
@@ -1308,6 +1362,8 @@
   let currentQuestion = null;
   let timerBarTimeout = null;
   let revealOverlayTimeout = null;
+  let currentScores  = [];   // updated after each REVEAL, sorted by total score desc
+  let currentPlayers = [];   // player names from PLAYER_JOINED
 
   function buildHostWsUrl() {
     const proto = location.protocol === 'https:' ? 'wss' : 'ws';
@@ -1698,6 +1754,8 @@
         document.getElementById('player-list').innerHTML = `<span style="color:#555; font-style:italic;">Waiting for players…</span>`;
         document.getElementById('player-count').textContent = '0';
         currentPlayerCount = 0;
+        currentScores = [];
+        currentPlayers = [];
         currentVoteData = null;
         allVotedState = false;
         document.getElementById('vote-status').textContent = '';
@@ -1712,6 +1770,34 @@
     }
   }
 
+  // ── Live standings sidebar ────────────────────────────────────────────────
+  function updateQLiveLb() {
+    const rows = document.getElementById('q-live-lb-rows');
+    if (!rows) return;
+    const display = currentScores.length > 0
+      ? currentScores
+      : currentPlayers.map(name => ({ username: name, score: 0, delta: null }));
+    if (display.length === 0) {
+      rows.innerHTML = '<div style="color:#555;font-size:0.82rem;text-align:center;padding:0.75rem 0;">Waiting for players…</div>';
+      return;
+    }
+    const medals = ['🥇','🥈','🥉'];
+    const rankClasses = ['rank-gold','rank-silver','rank-bronze'];
+    rows.innerHTML = display.map((s, i) => {
+      const rankLabel = medals[i] || `${i + 1}.`;
+      const rowClass  = rankClasses[i] || (i < 3 ? 'top3' : '');
+      const deltaHtml = s.delta > 0
+        ? `<span class="q-lb-delta">+${s.delta.toLocaleString()}</span>`
+        : '';
+      return `<div class="q-lb-row ${rowClass}">
+        <span class="q-lb-rank">${rankLabel}</span>
+        <span class="q-lb-name">${esc(s.username)}</span>
+        ${deltaHtml}
+        <span class="q-lb-score">${s.score.toLocaleString()}</span>
+      </div>`;
+    }).join('');
+  }
+
   // ── Player list ───────────────────────────────────────────────────────────
   const CHIP_COLORS = ['#9f44d3','#26890c','#1368ce','#d89e00','#e21b3c','#00c2ff','#ff6b35','#7b61ff'];
   const AVATARS = ['🦊','🐸','🐼','🦁','🐯','🦋','🐨','🐧','🦄','🐙','🦖','🐻','🦀','🦩','🐬','🦝','🦔','🦦','🦜','🐳','🐺','🦘','🦚','🐡'];
@@ -1724,6 +1810,7 @@
 
   function updatePlayerList(players, count) {
     currentPlayerCount = count;
+    currentPlayers = players;
     const list = document.getElementById('player-list');
     document.getElementById('player-count').textContent = count;
     list.innerHTML = '';
@@ -1746,6 +1833,7 @@
     hideRevealUI();
     currentQuestion = q;
     showScreen('question-screen');
+    updateQLiveLb();
     document.getElementById('q-category').textContent = q.category;
     document.getElementById('q-counter').textContent = `Q ${q.questionNumber} / ${q.totalQuestions}`;
     document.getElementById('q-answered').textContent = T('answered', 0, '?');
@@ -1844,6 +1932,8 @@
     }).join('');
 
     const totalSorted = [...msg.scores].sort((a, b) => b.score - a.score);
+    currentScores = totalSorted;
+    updateQLiveLb();
     const medalEmoji = ['🥇', '🥈', '🥉'];
     const medalClass = ['rank-gold', 'rank-silver', 'rank-bronze'];
     document.getElementById('ov-total-rows').innerHTML = totalSorted.map((s, i) => {
