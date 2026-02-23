@@ -38,49 +38,55 @@ function getLocalIP() {
 const HOST_IP = getLocalIP();
 const SCHEME = USE_HTTPS ? 'https' : 'http';
 
-// If DOMAIN is set in .env, use it for QR codes and printed URLs.
-// The server still binds to the local IP — the domain must point here.
 const DOMAIN = process.env.DOMAIN ? process.env.DOMAIN.trim() : null;
 const PUBLIC_HOST = DOMAIN || `${HOST_IP}:${PORT}`;
-const PUBLIC_SCHEME = DOMAIN ? 'https' : SCHEME; // assume domain always uses HTTPS
-
-const PLAYER_URL = `${PUBLIC_SCHEME}://${PUBLIC_HOST}/join`;
-const HOST_URL   = `${PUBLIC_SCHEME}://${PUBLIC_HOST}/host/`;
+const PUBLIC_SCHEME = DOMAIN ? 'https' : SCHEME;
 
 // ─── Express app ────────────────────────────────────────────────────────────
 
 const app = express();
+app.use(express.json());
+
+// ─── New routes (before static) ─────────────────────────────────────────────
+
+function serveFile(rel) {
+  return (_req, res) => res.sendFile(path.join(__dirname, rel));
+}
+
+app.get('/group/:code',          serveFile('public/group/index.html'));
+app.get('/group/:code/display',  serveFile('public/group/display.html'));
+app.get('/group/:code/quiz',     serveFile('public/games/quiz/index.html'));
+app.get('/group/:code/shithead', serveFile('public/games/shithead/index.html'));
+
+// Compat redirects
+app.get('/host/', (req, res) => res.redirect('/'));
+app.get('/host',  (req, res) => res.redirect('/'));
+app.get('/join',  (req, res) => {
+  const r = (req.query.room || '').toUpperCase();
+  res.redirect(r ? `/group/${r}` : '/');
+});
+
+// Room API
+app.post('/api/rooms', (req, res) => {
+  const code = generateRoomCode();
+  createRoom(code);
+  res.json({ code });
+});
+
+app.get('/api/rooms/:code', (req, res) => {
+  res.json({ exists: rooms.has(req.params.code.toUpperCase()) });
+});
+
+// Static files (serves public/index.html for /, etc.)
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Root → simple landing page with links to host and player views
-app.get('/', (req, res) => {
-  res.send(`<!DOCTYPE html><html><head><meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Quiz Night</title>
-<style>body{font-family:system-ui,sans-serif;background:#1a1a2e;color:#eaeaea;display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;gap:1.5rem;margin:0}
-h1{font-size:2.5rem;background:linear-gradient(90deg,#9f44d3,#00c2ff);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
-a{display:block;padding:1rem 2.5rem;border-radius:.75rem;font-size:1.2rem;font-weight:700;text-decoration:none;text-align:center}
-.host{background:linear-gradient(135deg,#9f44d3,#4a90d9);color:#fff}
-.join{background:linear-gradient(135deg,#26890c,#00c2ff);color:#fff}</style></head>
-<body><h1>🎮 Quiz Night</h1>
-<a class="host" href="/host/">Host View (TV)</a>
-<a class="join" href="/join">Join Game (Phone)</a>
-</body></html>`);
-});
-
-// Redirect /join → /player/index.html (preserves ?room= query param)
-app.get('/join', (req, res) => {
-  const room = req.query.room ? `?room=${req.query.room}` : '';
-  res.redirect('/player/index.html' + room);
-});
-
-// QR code endpoint (SVG) — accepts optional ?room=XXXX
+// QR code endpoint — encodes /group/:code URL
 app.get('/api/qr', async (req, res) => {
   try {
     const roomCode = req.query.room;
     const joinUrl = roomCode
-      ? `${PUBLIC_SCHEME}://${PUBLIC_HOST}/join?room=${roomCode}`
-      : PLAYER_URL;
+      ? `${PUBLIC_SCHEME}://${PUBLIC_HOST}/group/${roomCode}`
+      : `${PUBLIC_SCHEME}://${PUBLIC_HOST}`;
     const svg = await QRCode.toString(joinUrl, { type: 'svg', margin: 1 });
     res.setHeader('Content-Type', 'image/svg+xml');
     res.send(svg);
@@ -89,10 +95,10 @@ app.get('/api/qr', async (req, res) => {
   }
 });
 
-// Donate QR code (Swish +46 73 267 12 31)
+// Donate QR code (Swish)
 app.get('/api/donate-qr', async (req, res) => {
   try {
-    const swishUrl = JSON.stringify({ version: 1, payee: { value: '0732671231', editable: false }, amount: { editable: true }, message: { value: 'Quiz Night', editable: true } });
+    const swishUrl = JSON.stringify({ version: 1, payee: { value: '0732671231', editable: false }, amount: { editable: true }, message: { value: 'Game Night', editable: true } });
     const svg = await QRCode.toString(`swish://payment?data=${encodeURIComponent(swishUrl)}`, {
       type: 'svg', margin: 1, color: { dark: '#000000', light: '#ffffff' },
     });
@@ -123,7 +129,7 @@ app.get('/api/db/status', (req, res) => {
 app.post('/api/db/download', (req, res) => {
   const dl = getDbState();
   if (dl.active) return res.json({ ok: false, message: 'Already downloading.' });
-  downloadDatabase().catch(console.error); // runs in background
+  downloadDatabase().catch(console.error);
   res.json({ ok: true, message: 'Download started.' });
 });
 
@@ -132,15 +138,21 @@ app.post('/api/db/download', (req, res) => {
 const server = USE_HTTPS
   ? https.createServer({ cert: fs.readFileSync(CERT_PATH), key: fs.readFileSync(KEY_PATH) }, app)
   : http.createServer(app);
-// No path filter — req.url routing is done inside the connection handler
+
 const wss = new WebSocketServer({ noServer: true });
 
 server.on('upgrade', (req, socket, head) => {
-  const pathname = new URL(req.url, 'http://localhost').pathname;
-  if (pathname === '/ws/host' || pathname === '/ws/player') {
-    wss.handleUpgrade(req, socket, head, (ws) => {
-      wss.emit('connection', ws, req);
-    });
+  const p = new URL(req.url, 'http://x').pathname;
+  if (p === '/ws') {
+    wss.handleUpgrade(req, socket, head, ws => wss.emit('connection', ws, req));
+  } else if (p === '/ws/host') {
+    // Compat: old host page → display role
+    req._compatRole = 'display';
+    wss.handleUpgrade(req, socket, head, ws => wss.emit('connection', ws, req));
+  } else if (p === '/ws/player') {
+    // Compat: old player page → player role
+    req._compatRole = 'player';
+    wss.handleUpgrade(req, socket, head, ws => wss.emit('connection', ws, req));
   } else {
     socket.destroy();
   }
@@ -148,13 +160,19 @@ server.on('upgrade', (req, socket, head) => {
 
 // ─── Room registry ───────────────────────────────────────────────────────────
 
-// roomCode → { code, game, hostSockets, playerSockets, language }
 const rooms = new Map();
-// WebSocket → roomCode
-const wsToRoom = new Map();
+
+const AVATARS = ['🦊','🐸','🐼','🦁','🐯','🦋','🐨','🐧','🦄','🐙',
+                 '🦖','🐻','🦀','🦩','🐬','🦝','🦔','🦦','🦜','🐳'];
+
+function nameToAvatar(name) {
+  let h = 0;
+  for (const ch of name) h = (h * 31 + ch.charCodeAt(0)) & 0xffff;
+  return AVATARS[h % AVATARS.length];
+}
 
 function generateRoomCode() {
-  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ'; // excludes I, O (visually ambiguous)
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
   let code;
   do {
     code = Array.from({ length: 4 }, () =>
@@ -173,22 +191,92 @@ function createRoomBroadcast(roomCode) {
     }
     const room = rooms.get(roomCode);
     if (!room) return;
-    for (const ws of [...room.hostSockets, ...room.playerSockets]) {
+    for (const ws of [...room.playerSockets, ...room.displaySockets]) {
       if (ws.readyState === 1) ws.send(str);
     }
   };
 }
 
-// ─── WebSocket connection handler ────────────────────────────────────────────
+function createRoom(code) {
+  const broadcast = createRoomBroadcast(code);
+  rooms.set(code, {
+    code,
+    adminUsername: null,
+    activeMiniGame: 'lobby',
+    game: null,                        // lazy-created on first JOIN_LOBBY
+    playerSockets: new Set(),
+    displaySockets: new Set(),
+    wsToUsername: new Map(),           // ws → username
+    players: new Map(),                // username → { ws, isReady, avatar }
+    gameSuggestions: new Map(),        // username → gameType
+    readyPlayers: new Set(),
+    language: 'en',
+    categoryVotes: new Map(),          // username → [catId, ...]
+    createdAt: Date.now(),
+    _broadcast: broadcast,
+  });
+  return rooms.get(code);
+}
+
+// ─── Lobby helpers ────────────────────────────────────────────────────────────
+
+function buildLobbyState(room) {
+  const players = [];
+  for (const [username, p] of room.players.entries()) {
+    players.push({
+      username,
+      avatar: p.avatar,
+      isReady: room.readyPlayers.has(username),
+      isAdmin: username === room.adminUsername,
+    });
+  }
+
+  // Tally game suggestions
+  const gameSuggestions = {};
+  for (const gameType of room.gameSuggestions.values()) {
+    gameSuggestions[gameType] = (gameSuggestions[gameType] || 0) + 1;
+  }
+
+  const readyCount   = room.readyPlayers.size;
+  const totalCount   = room.players.size;
+  const allReady     = totalCount > 0 && readyCount >= totalCount;
+
+  // Category vote tallying
+  const voteTally = {};
+  for (const cats of room.categoryVotes.values()) {
+    for (const c of cats) voteTally[c] = (voteTally[c] || 0) + 1;
+  }
+  const allVoted = totalCount > 0 && room.categoryVotes.size >= totalCount;
+
+  return {
+    players,
+    admin: room.adminUsername,
+    gameSuggestions,
+    readyCount,
+    totalCount,
+    allReady,
+    allVoted,
+    votedCount: room.categoryVotes.size,
+    categoryVotes: voteTally,
+    votedPlayers: [...room.categoryVotes.keys()],
+    activeMiniGame: room.activeMiniGame,
+    language: room.language,
+  };
+}
+
+function broadcastLobbyUpdate(room) {
+  broadcastAll(room, { type: 'LOBBY_UPDATE', ...buildLobbyState(room) });
+}
 
 function broadcastVoteUpdate(room) {
+  // Also emit legacy VOTE_UPDATE for old player/host pages
   const tally = {};
   for (const cats of room.categoryVotes.values()) {
     for (const c of cats) tally[c] = (tally[c] || 0) + 1;
   }
-  const totalPlayers = room.game.playerCount;
+  const totalPlayers = room.players.size;
   const allVoted = totalPlayers > 0 && room.categoryVotes.size >= totalPlayers;
-  createRoomBroadcast(room.code)({
+  broadcastAll(room, {
     type: 'VOTE_UPDATE',
     votes: tally,
     voted: [...room.categoryVotes.keys()],
@@ -197,192 +285,376 @@ function broadcastVoteUpdate(room) {
   });
 }
 
+function broadcastAll(room, msg) {
+  const s = JSON.stringify(msg);
+  for (const ws of [...room.playerSockets, ...room.displaySockets]) {
+    if (ws.readyState === 1) ws.send(s);
+  }
+}
+
+function broadcastToDisplays(room, msg) {
+  const s = JSON.stringify(msg);
+  for (const ws of room.displaySockets) {
+    if (ws.readyState === 1) ws.send(s);
+  }
+}
+
+function sendTo(ws, msg) {
+  if (ws && ws.readyState === 1) ws.send(JSON.stringify(msg));
+}
+
 // ─── WebSocket connection handler ────────────────────────────────────────────
 
 wss.on('connection', (ws, req) => {
-  const url = new URL(req.url, 'http://localhost');
-  const isHost = url.pathname === '/ws/host';
-  const isPlayer = url.pathname === '/ws/player';
+  const url      = new URL(req.url, 'http://localhost');
+  // Role comes from query param (?role=player|display) or compat shim
+  const compatRole = req._compatRole || null;
+  const role = compatRole || url.searchParams.get('role') || 'player';
+  const isDisplay = role === 'display';
+  const isPlayer  = role === 'player';
+
   let roomCode = (url.searchParams.get('room') || '').toUpperCase() || null;
 
-  if (isHost) {
-    // Create a new room if no code provided or the code is unknown
+  // ── Display (TV) connection ───────────────────────────────────────────────
+  if (isDisplay) {
     if (!roomCode || !rooms.has(roomCode)) {
-      roomCode = generateRoomCode();
-      const broadcast = createRoomBroadcast(roomCode);
-      rooms.set(roomCode, {
-        code: roomCode,
-        game: new Game(broadcast),
-        hostSockets: new Set(),
-        playerSockets: new Set(),
-        language: 'en',
-        categoryVotes: new Map(), // username → [catId, ...]
-      });
+      // Compat: old host page creates room if none
+      if (compatRole === 'display') {
+        if (!roomCode || !rooms.has(roomCode)) {
+          roomCode = generateRoomCode();
+          createRoom(roomCode);
+        }
+      } else {
+        sendTo(ws, { type: 'ERROR', code: 'ROOM_NOT_FOUND', message: 'Room not found.' });
+        ws.close();
+        return;
+      }
     }
     const room = rooms.get(roomCode);
-    room.hostSockets.add(ws);
-    wsToRoom.set(ws, roomCode);
-    ws.send(JSON.stringify({ type: 'HOST_CONNECTED', roomCode, playerCount: room.game.playerCount }));
-    // Send current vote state so host sees any votes already cast
-    if (room.game.playerCount > 0) broadcastVoteUpdate(room);
+    room.displaySockets.add(ws);
 
-  } else if (isPlayer) {
+    const lobbyState = buildLobbyState(room);
+    sendTo(ws, { type: 'DISPLAY_OK', roomCode, state: lobbyState });
+    // Compat for old host page
+    sendTo(ws, { type: 'HOST_CONNECTED', roomCode, playerCount: room.players.size });
+    if (room.players.size > 0) broadcastVoteUpdate(room);
+
+    ws.on('message', (raw) => {
+      let msg;
+      try { msg = JSON.parse(raw); } catch { return; }
+      handleMessage(ws, 'display', msg, room);
+    });
+
+    ws.on('close', () => {
+      room.displaySockets.delete(ws);
+      maybeCleanupRoom(room);
+    });
+
+    ws.on('error', (err) => console.error('Display WS error:', err.message));
+    return;
+  }
+
+  // ── Player connection ─────────────────────────────────────────────────────
+  if (isPlayer) {
     if (!roomCode || !rooms.has(roomCode)) {
-      ws.send(JSON.stringify({ type: 'ERROR', code: 'ROOM_NOT_FOUND', message: 'Room not found. Check the room code.' }));
+      sendTo(ws, { type: 'ERROR', code: 'ROOM_NOT_FOUND', message: 'Room not found. Check the room code.' });
       ws.close();
       return;
     }
     const room = rooms.get(roomCode);
     room.playerSockets.add(ws);
-    wsToRoom.set(ws, roomCode);
-    ws.send(JSON.stringify({ type: 'CONNECTED', lang: room.language }));
+    sendTo(ws, { type: 'CONNECTED', lang: room.language });
 
-  } else {
-    ws.close(4000, 'Invalid path');
+    ws.on('message', (raw) => {
+      let msg;
+      try { msg = JSON.parse(raw); } catch { return; }
+      handleMessage(ws, 'player', msg, room);
+    });
+
+    ws.on('close', () => {
+      room.playerSockets.delete(ws);
+      handlePlayerDisconnect(ws, room);
+    });
+
+    ws.on('error', (err) => console.error('Player WS error:', err.message));
     return;
   }
 
-  ws.on('message', (raw) => {
-    let msg;
-    try {
-      msg = JSON.parse(raw);
-    } catch {
-      return;
-    }
-    const code = wsToRoom.get(ws);
-    const room = rooms.get(code);
-    if (!room) return;
-    handleMessage(ws, isHost, msg, room);
-  });
-
-  ws.on('close', () => {
-    const code = wsToRoom.get(ws);
-    const room = rooms.get(code);
-    wsToRoom.delete(ws);
-    if (!room) return;
-    if (isHost) {
-      room.hostSockets.delete(ws);
-    } else {
-      room.playerSockets.delete(ws);
-      const wasLobby = room.game.state === 'LOBBY';
-      // Remove this player's vote before removing them (so we know who they are)
-      if (wasLobby) {
-        for (const [username, p] of room.game.players.entries()) {
-          if (p.ws === ws) { room.categoryVotes.delete(username); break; }
-        }
-      }
-      room.game.removePlayer(ws);
-      if (wasLobby) broadcastVoteUpdate(room);
-    }
-    // Clean up idle rooms with no connected sockets
-    const totalSockets = room.hostSockets.size + room.playerSockets.size;
-    const idleState = room.game.state === 'LOBBY' || room.game.state === 'GAME_OVER';
-    if (totalSockets === 0 && idleState) {
-      rooms.delete(code);
-    }
-  });
-
-  ws.on('error', (err) => {
-    console.error('WebSocket error:', err.message);
-  });
+  ws.close(4000, 'Invalid role');
 });
 
-// ─── Message handler ─────────────────────────────────────────────────────────
+// ─── Disconnect handler ───────────────────────────────────────────────────────
 
-function handleMessage(ws, isHost, msg, room) {
+function handlePlayerDisconnect(ws, room) {
+  const username = room.wsToUsername.get(ws);
+  room.wsToUsername.delete(ws);
+
+  if (!username) {
+    maybeCleanupRoom(room);
+    return;
+  }
+
+  const wasLobby = room.activeMiniGame === 'lobby';
+
+  if (wasLobby) {
+    // In lobby: fully remove the player
+    room.players.delete(username);
+    room.readyPlayers.delete(username);
+    room.gameSuggestions.delete(username);
+    room.categoryVotes.delete(username);
+
+    // Hand off admin if needed
+    if (username === room.adminUsername) {
+      room.adminUsername = null;
+      for (const [name] of room.players.entries()) {
+        room.adminUsername = name;
+        break;
+      }
+      if (room.adminUsername) {
+        broadcastAll(room, { type: 'ADMIN_CHANGED', newAdmin: room.adminUsername });
+      }
+    }
+
+    if (room.game) room.game.removePlayer(ws);
+    broadcastLobbyUpdate(room);
+    broadcastVoteUpdate(room);
+  } else {
+    // In game: null ws, keep score (existing Game behaviour)
+    if (room.game) room.game.removePlayer(ws);
+  }
+
+  maybeCleanupRoom(room);
+}
+
+function maybeCleanupRoom(room) {
+  const totalSockets = room.playerSockets.size + room.displaySockets.size;
+  const idle = room.activeMiniGame === 'lobby' || (room.game && room.game.state === 'GAME_OVER');
+  if (totalSockets === 0 && idle) {
+    rooms.delete(room.code);
+  }
+}
+
+// ─── Message handler ──────────────────────────────────────────────────────────
+
+function handleMessage(ws, role, msg, room) {
   const { type } = msg;
 
-  if (isHost) {
+  // ── Display (TV / host compat) ───────────────────────────────────────────
+  if (role === 'display') {
     switch (type) {
       case 'START_GAME': {
-        // Block start if any player hasn't voted yet
-        const totalPlayers = room.game.playerCount;
+        // Compat: old host page sends START_GAME
+        const username = room.adminUsername;
+        const totalPlayers = room.players.size;
         if (totalPlayers > 0 && room.categoryVotes.size < totalPlayers) {
-          ws.send(JSON.stringify({
-            type: 'ERROR',
-            code: 'NOT_ALL_VOTED',
-            message: `Waiting for all players to vote (${room.categoryVotes.size}/${totalPlayers} voted).`,
-          }));
+          sendTo(ws, { type: 'ERROR', code: 'NOT_ALL_VOTED', message: `Waiting for votes (${room.categoryVotes.size}/${totalPlayers}).` });
           break;
         }
-        const categories = Array.isArray(msg.categories) && msg.categories.length > 0
-          ? msg.categories
-          : [9];
-        const questionCount = Number.isInteger(msg.questionCount) && msg.questionCount > 0
-          ? Math.min(msg.questionCount, 50)
-          : 20;
-        const gameDifficulty = ['easy', 'medium', 'hard'].includes(msg.gameDifficulty)
-          ? msg.gameDifficulty
-          : 'easy';
+        const categories = Array.isArray(msg.categories) && msg.categories.length > 0 ? msg.categories : [9];
+        const questionCount = Number.isInteger(msg.questionCount) && msg.questionCount > 0 ? Math.min(msg.questionCount, 50) : 20;
+        const gameDifficulty = ['easy', 'medium', 'hard'].includes(msg.gameDifficulty) ? msg.gameDifficulty : 'easy';
+        if (!room.game) room.game = new Game(room._broadcast);
+        room.activeMiniGame = 'quiz';
         room.game.startGame(categories, questionCount, gameDifficulty, room.language).catch(console.error);
         break;
       }
       case 'SKIP':
-        room.game.skipReveal();
+        if (room.game) room.game.skipReveal();
         break;
       case 'RESTART':
-        room.game.restart();
+        if (room.game) room.game.restart();
         room.categoryVotes.clear();
+        room.readyPlayers.clear();
+        room.gameSuggestions.clear();
+        room.activeMiniGame = 'lobby';
+        broadcastLobbyUpdate(room);
         break;
       case 'CONTINUE_GAME': {
-        const categories = Array.isArray(msg.categories) && msg.categories.length > 0
-          ? msg.categories : [9];
-        const questionCount = Number.isInteger(msg.questionCount) && msg.questionCount > 0
-          ? Math.min(msg.questionCount, 50) : 20;
-        const gameDifficulty = ['easy', 'medium', 'hard'].includes(msg.gameDifficulty)
-          ? msg.gameDifficulty : 'easy';
-        room.game.continueGame(categories, questionCount, gameDifficulty).catch(console.error);
+        const categories = Array.isArray(msg.categories) && msg.categories.length > 0 ? msg.categories : [9];
+        const questionCount = Number.isInteger(msg.questionCount) && msg.questionCount > 0 ? Math.min(msg.questionCount, 50) : 20;
+        const gameDifficulty = ['easy', 'medium', 'hard'].includes(msg.gameDifficulty) ? msg.gameDifficulty : 'easy';
+        if (room.game) room.game.continueGame(categories, questionCount, gameDifficulty).catch(console.error);
         break;
       }
       case 'SET_LANGUAGE':
         if (typeof msg.lang === 'string' && /^[a-z]{2}$/.test(msg.lang)) {
           room.language = msg.lang;
-          createRoomBroadcast(room.code)({ type: 'LANGUAGE_SET', lang: room.language });
+          broadcastAll(room, { type: 'LANGUAGE_SET', lang: room.language });
         }
         break;
     }
     return;
   }
 
-  // Player messages
+  // ── Player messages ───────────────────────────────────────────────────────
   switch (type) {
+
+    case 'JOIN_LOBBY':
     case 'JOIN': {
       const username = (msg.username || '').trim().slice(0, 20);
-      // Send JOIN_OK first so client can identify itself before receiving resync messages
-      const preCheck = !username ? { ok: false, code: 'INVALID_USERNAME', message: 'Username required.' } : null;
-      if (preCheck) {
-        ws.send(JSON.stringify({ type: 'ERROR', code: preCheck.code, message: preCheck.message }));
+      if (!username) {
+        sendTo(ws, { type: 'ERROR', code: 'INVALID_USERNAME', message: 'Username required.' });
         break;
       }
-      ws.send(JSON.stringify({ type: 'JOIN_OK', username }));
+
+      // Assign admin if first player
+      if (room.players.size === 0) {
+        room.adminUsername = username;
+      }
+
+      const avatar = nameToAvatar(username);
+      room.players.set(username, { ws, isReady: false, avatar });
+      room.wsToUsername.set(ws, username);
+
+      // Lazy-create game instance
+      if (!room.game) {
+        room.game = new Game(room._broadcast);
+      }
       const result = room.game.addPlayer(ws, username);
+
+      const isAdmin = username === room.adminUsername;
+      sendTo(ws, { type: 'JOIN_OK', username, isAdmin, roomCode: room.code, avatar, lang: room.language });
+
       if (!result.ok) {
-        // If game rejected after we sent JOIN_OK, correct it with an error
-        ws.send(JSON.stringify({ type: 'ERROR', code: result.code, message: result.message }));
-      } else if (room.game.state === 'LOBBY') {
-        // Broadcast current vote state so new player and host see accurate counts
-        broadcastVoteUpdate(room);
+        sendTo(ws, { type: 'ERROR', code: result.code, message: result.message });
+      }
+
+      broadcastLobbyUpdate(room);
+      broadcastVoteUpdate(room);
+
+      // Legacy PLAYER_JOINED for old host display
+      const playerNames = [...room.players.keys()];
+      broadcastToDisplays(room, { type: 'PLAYER_JOINED', players: playerNames, playerCount: room.players.size });
+      break;
+    }
+
+    case 'SET_READY': {
+      const username = room.wsToUsername.get(ws);
+      if (!username) break;
+      if (msg.ready) {
+        room.readyPlayers.add(username);
+      } else {
+        room.readyPlayers.delete(username);
+      }
+      broadcastLobbyUpdate(room);
+      break;
+    }
+
+    case 'SUGGEST_GAME': {
+      const username = room.wsToUsername.get(ws);
+      if (!username) break;
+      const gameType = msg.gameType;
+      if (!['quiz', 'shithead'].includes(gameType)) break;
+      room.gameSuggestions.set(username, gameType);
+      broadcastLobbyUpdate(room);
+      break;
+    }
+
+    case 'START_MINI_GAME': {
+      const username = room.wsToUsername.get(ws);
+      if (username !== room.adminUsername) {
+        sendTo(ws, { type: 'ERROR', code: 'NOT_ADMIN', message: 'Only admin can start the game.' });
+        break;
+      }
+      // For quiz: require all players voted
+      const gameType = msg.gameType || 'quiz';
+      if (gameType === 'quiz') {
+        const totalPlayers = room.players.size;
+        if (totalPlayers > 0 && room.categoryVotes.size < totalPlayers) {
+          sendTo(ws, { type: 'ERROR', code: 'NOT_ALL_VOTED', message: `Waiting for all players to vote (${room.categoryVotes.size}/${totalPlayers} voted).` });
+          break;
+        }
+      }
+      const categories = Array.isArray(msg.categories) && msg.categories.length > 0 ? msg.categories : [9];
+      const questionCount = Number.isInteger(msg.questionCount) && msg.questionCount > 0 ? Math.min(msg.questionCount, 50) : 20;
+      const gameDifficulty = ['easy', 'medium', 'hard'].includes(msg.gameDifficulty) ? msg.gameDifficulty : 'easy';
+
+      room.activeMiniGame = gameType;
+      const gameUrl = `${PUBLIC_SCHEME}://${PUBLIC_HOST}/group/${room.code}/${gameType}`;
+      broadcastAll(room, { type: 'MINI_GAME_STARTING', gameType, url: `/group/${room.code}/${gameType}` });
+
+      if (gameType === 'quiz') {
+        if (!room.game) room.game = new Game(room._broadcast);
+        room.game.startGame(categories, questionCount, gameDifficulty, room.language).catch(console.error);
       }
       break;
     }
-    case 'CATEGORY_VOTE': {
-      if (room.game.state !== 'LOBBY') break;
-      // Find the player's username
-      let voterName = null;
-      for (const [name, p] of room.game.players.entries()) {
-        if (p.ws === ws) { voterName = name; break; }
+
+    case 'REMOVE_PLAYER': {
+      const requester = room.wsToUsername.get(ws);
+      if (requester !== room.adminUsername) {
+        sendTo(ws, { type: 'ERROR', code: 'NOT_ADMIN', message: 'Only admin can remove players.' });
+        break;
       }
-      if (!voterName) break;
+      const target = msg.username;
+      const targetPlayer = room.players.get(target);
+      if (targetPlayer && targetPlayer.ws) {
+        sendTo(targetPlayer.ws, { type: 'PLAYER_REMOVED', username: target });
+        targetPlayer.ws.close();
+      }
+      break;
+    }
+
+    case 'RETURN_TO_LOBBY':
+    case 'RESTART': {
+      const username = room.wsToUsername.get(ws);
+      if (username !== room.adminUsername) {
+        sendTo(ws, { type: 'ERROR', code: 'NOT_ADMIN', message: 'Only admin can return to lobby.' });
+        break;
+      }
+      if (room.game) room.game.restart();
+      room.categoryVotes.clear();
+      room.readyPlayers.clear();
+      room.gameSuggestions.clear();
+      room.activeMiniGame = 'lobby';
+      broadcastLobbyUpdate(room);
+      // Legacy RESTARTED for old player page
+      broadcastAll(room, { type: 'RESTARTED' });
+      break;
+    }
+
+    case 'CATEGORY_VOTE': {
+      if (room.activeMiniGame !== 'lobby') break;
+      const username = room.wsToUsername.get(ws);
+      if (!username) break;
       const cats = Array.isArray(msg.categories)
         ? msg.categories.slice(0, 3).map(Number).filter(n => Number.isInteger(n) && n > 0)
         : [];
       if (cats.length === 0) break;
-      room.categoryVotes.set(voterName, cats);
+      room.categoryVotes.set(username, cats);
+      broadcastLobbyUpdate(room);
       broadcastVoteUpdate(room);
       break;
     }
-    case 'ANSWER': {
-      room.game.receiveAnswer(ws, msg.questionId, msg.answerId);
+
+    case 'ANSWER':
+      if (room.game) room.game.receiveAnswer(ws, msg.questionId, msg.answerId);
+      break;
+
+    case 'SKIP': {
+      const username = room.wsToUsername.get(ws);
+      if (username !== room.adminUsername) break;
+      if (room.game) room.game.skipReveal();
+      break;
+    }
+
+    case 'CONTINUE_GAME': {
+      const username = room.wsToUsername.get(ws);
+      if (username !== room.adminUsername) break;
+      const categories = Array.isArray(msg.categories) && msg.categories.length > 0 ? msg.categories : [9];
+      const questionCount = Number.isInteger(msg.questionCount) && msg.questionCount > 0 ? Math.min(msg.questionCount, 50) : 20;
+      const gameDifficulty = ['easy', 'medium', 'hard'].includes(msg.gameDifficulty) ? msg.gameDifficulty : 'easy';
+      if (room.game) room.game.continueGame(categories, questionCount, gameDifficulty).catch(console.error);
+      break;
+    }
+
+    case 'SET_LANGUAGE': {
+      const username = room.wsToUsername.get(ws);
+      if (username !== room.adminUsername) break;
+      if (typeof msg.lang === 'string' && /^[a-z]{2}$/.test(msg.lang)) {
+        room.language = msg.lang;
+        broadcastAll(room, { type: 'LANGUAGE_SET', lang: room.language });
+      }
       break;
     }
   }
@@ -391,12 +663,11 @@ function handleMessage(ws, isHost, msg, room) {
 // ─── Start server ─────────────────────────────────────────────────────────────
 
 server.listen(PORT, '0.0.0.0', () => {
-  console.log('\n🎮 Quiz server running!\n');
-  console.log(`  TV Host URL:  ${HOST_URL}`);
-  console.log(`  Player URL:   ${PLAYER_URL}\n`);
+  console.log('\n🎮 Game Night server running!\n');
+  console.log(`  Landing page: ${PUBLIC_SCHEME}://${PUBLIC_HOST}/`);
+  console.log(`  Join a room:  ${PUBLIC_SCHEME}://${PUBLIC_HOST}/group/XXXX\n`);
   if (USE_HTTPS) {
     console.log('  ⚠️  First visit: Safari will warn about the self-signed cert.');
     console.log('     Tap "Show Details" → "visit this website" → confirm.\n');
   }
-  console.log('Open the TV Host URL in Chromium (F11 for fullscreen).\n');
 });

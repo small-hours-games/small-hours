@@ -1,0 +1,768 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Game Night — Lobby</title>
+  <style>
+    :root {
+      --red:    #e21b3c;
+      --blue:   #1368ce;
+      --yellow: #d89e00;
+      --green:  #26890c;
+      --bg:     #1a1a2e;
+      --card:   #16213e;
+      --text:   #eaeaea;
+      --accent: #9f44d3;
+      --timer:  #00c2ff;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    html, body {
+      height: 100%;
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      overscroll-behavior: none;
+    }
+    body {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 1rem 1rem 6rem;
+      gap: 0.85rem;
+      min-height: 100vh;
+    }
+
+    /* ── Name overlay ── */
+    #name-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.75);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      padding: 1.5rem;
+    }
+    #name-overlay.hidden { display: none; }
+    .name-card {
+      background: var(--card);
+      border: 1px solid rgba(159,68,211,0.3);
+      border-radius: 1.25rem;
+      padding: 2rem 1.5rem;
+      width: min(380px, 100%);
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      align-items: center;
+    }
+    .name-card h2 {
+      font-size: 1.5rem;
+      font-weight: 900;
+      background: linear-gradient(90deg, #9f44d3, #00c2ff);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .name-card p { color: #aaa; font-size: 0.9rem; text-align: center; }
+    #name-input {
+      width: 100%;
+      padding: 1rem 1.25rem;
+      font-size: 1.2rem;
+      background: rgba(255,255,255,0.06);
+      color: var(--text);
+      border: 2px solid rgba(255,255,255,0.14);
+      border-radius: 0.75rem;
+      outline: none;
+      transition: border-color 0.2s;
+      text-align: center;
+    }
+    #name-input:focus { border-color: var(--accent); }
+    #name-input::placeholder { color: #444; }
+    #name-submit-btn {
+      width: 100%;
+      padding: 1rem;
+      font-size: 1.1rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, var(--accent), #4a90d9);
+      color: #fff;
+      border: none;
+      border-radius: 0.75rem;
+      cursor: pointer;
+      transition: opacity 0.2s, transform 0.1s;
+    }
+    #name-submit-btn:active { transform: scale(0.97); }
+    #name-error { color: #ff6b6b; font-size: 0.85rem; min-height: 1em; }
+
+    /* ── Header ── */
+    #header {
+      width: 100%;
+      max-width: 460px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.25rem 0;
+    }
+    .header-title {
+      font-size: 1.2rem;
+      font-weight: 900;
+      background: linear-gradient(90deg, #9f44d3, #00c2ff);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .room-chip {
+      background: rgba(159,68,211,0.18);
+      border: 1px solid rgba(159,68,211,0.4);
+      border-radius: 0.5rem;
+      padding: 0.3rem 0.75rem;
+      font-size: 1.1rem;
+      font-weight: 900;
+      letter-spacing: 0.2em;
+      color: #cc88ff;
+    }
+
+    /* ── Card container ── */
+    .panel {
+      width: 100%;
+      max-width: 460px;
+      background: var(--card);
+      border-radius: 1rem;
+      padding: 1rem 1.1rem;
+    }
+    .panel-title {
+      font-size: 0.72rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: #666;
+      margin-bottom: 0.6rem;
+    }
+
+    /* ── Players ── */
+    #player-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.45rem;
+    }
+    .player-chip {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.35rem 0.7rem 0.35rem 0.4rem;
+      border-radius: 2rem;
+      background: rgba(255,255,255,0.07);
+      border: 1px solid rgba(255,255,255,0.1);
+      font-size: 0.9rem;
+      font-weight: 700;
+      animation: chipIn 0.35s cubic-bezier(0.34,1.56,0.64,1);
+      position: relative;
+    }
+    @keyframes chipIn {
+      from { transform: scale(0.4); opacity: 0; }
+      to   { transform: scale(1);   opacity: 1; }
+    }
+    .player-chip.me { border-color: rgba(159,68,211,0.5); background: rgba(159,68,211,0.15); }
+    .player-chip.admin-chip { border-color: rgba(255,215,0,0.5); background: rgba(255,215,0,0.1); }
+    .pc-avatar { font-size: 1.1rem; }
+    .pc-name   { max-width: 7rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .pc-crown  { font-size: 0.85rem; }
+    .pc-ready  { font-size: 0.9rem; margin-left: 0.15rem; }
+    .pc-remove {
+      margin-left: 0.15rem;
+      background: none;
+      border: none;
+      color: #ff6b6b;
+      cursor: pointer;
+      font-size: 0.85rem;
+      padding: 0 0.1rem;
+      opacity: 0.6;
+      display: none;
+    }
+    .pc-remove:hover { opacity: 1; }
+    .pc-remove.visible { display: inline; }
+
+    /* ── Game grid ── */
+    #game-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.65rem;
+    }
+    .game-tile {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 0.3rem;
+      padding: 1rem 0.75rem;
+      background: rgba(255,255,255,0.04);
+      border: 2px solid rgba(255,255,255,0.1);
+      border-radius: 0.85rem;
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s, transform 0.1s;
+      text-align: center;
+      min-height: 80px;
+    }
+    .game-tile:hover { background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.2); }
+    .game-tile:active { transform: scale(0.96); }
+    .game-tile.my-vote {
+      background: rgba(159,68,211,0.2);
+      border-color: rgba(159,68,211,0.6);
+    }
+    .game-tile.available { border-color: rgba(0,194,255,0.25); }
+    .tile-emoji { font-size: 1.8rem; }
+    .tile-label { font-size: 0.9rem; font-weight: 700; }
+    .tile-coming { font-size: 0.65rem; color: #666; }
+    .tile-votes {
+      display: flex;
+      align-items: center;
+      gap: 0.2rem;
+      background: rgba(159,68,211,0.25);
+      border: 1px solid rgba(159,68,211,0.45);
+      border-radius: 1rem;
+      padding: 0.1rem 0.5rem;
+      font-size: 0.72rem;
+      font-weight: 800;
+      color: #cc88ff;
+    }
+
+    /* ── Vote section ── */
+    #vote-section { width: 100%; max-width: 460px; }
+    #vote-status-msg {
+      font-size: 0.82rem;
+      color: #888;
+      text-align: center;
+      padding: 0.25rem 0;
+    }
+    #vote-status-msg.all-voted { color: #4cde80; font-weight: 700; }
+
+    /* ── Action buttons ── */
+    #actions {
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      background: rgba(14,18,44,0.97);
+      border-top: 1px solid rgba(159,68,211,0.25);
+      padding: 0.75rem 1rem 1rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.6rem;
+    }
+    .ready-btn {
+      width: min(440px, 100%);
+      padding: 0.85rem;
+      font-size: 1.1rem;
+      font-weight: 700;
+      background: rgba(255,255,255,0.07);
+      color: #aaa;
+      border: 2px solid rgba(255,255,255,0.15);
+      border-radius: 0.75rem;
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s, color 0.15s, transform 0.1s;
+      letter-spacing: 0.03em;
+    }
+    .ready-btn.ready {
+      background: rgba(76,222,128,0.15);
+      border-color: #4cde80;
+      color: #4cde80;
+    }
+    .ready-btn:active { transform: scale(0.97); }
+
+    #start-section {
+      width: min(440px, 100%);
+      display: none;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+    #start-section.visible { display: flex; }
+
+    /* Settings row */
+    .settings-row {
+      display: flex;
+      gap: 0.4rem;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .settings-label { font-size: 0.78rem; color: #888; white-space: nowrap; }
+    .setting-btn {
+      padding: 0.3rem 0.65rem;
+      font-size: 0.82rem;
+      font-weight: 700;
+      background: rgba(255,255,255,0.07);
+      color: #aaa;
+      border: 1.5px solid rgba(255,255,255,0.12);
+      border-radius: 0.45rem;
+      cursor: pointer;
+      transition: background 0.12s, border-color 0.12s, color 0.12s;
+    }
+    .setting-btn:hover { background: rgba(255,255,255,0.13); color: #fff; }
+    .setting-btn.active { background: rgba(159,68,211,0.25); border-color: var(--accent); color: #fff; }
+    .diff-btn[data-diff="easy"].active   { background: rgba(19,104,206,0.25); color: #6ab0ff; border-color: #1368ce; }
+    .diff-btn[data-diff="medium"].active { background: rgba(216,158,0,0.25);  color: #ffd166; border-color: #d89e00; }
+    .diff-btn[data-diff="hard"].active   { background: rgba(226,27,60,0.30);  color: #ff7c96; border-color: #e21b3c; }
+
+    .start-btn {
+      width: 100%;
+      padding: 0.9rem;
+      font-size: 1.15rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, var(--accent), #4a90d9);
+      color: #fff;
+      border: none;
+      border-radius: 0.75rem;
+      cursor: pointer;
+      transition: opacity 0.2s, transform 0.1s;
+      letter-spacing: 0.04em;
+    }
+    .start-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .start-btn:not(:disabled):active { transform: scale(0.97); }
+
+    /* ── QR strip ── */
+    #qr-strip {
+      width: 100%;
+      max-width: 460px;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      background: rgba(159,68,211,0.08);
+      border: 1px solid rgba(159,68,211,0.25);
+      border-radius: 0.85rem;
+      padding: 0.6rem 0.85rem;
+    }
+    #qr-strip img {
+      width: 64px; height: 64px;
+      border-radius: 0.4rem;
+      background: #fff;
+      padding: 3px;
+      flex-shrink: 0;
+    }
+    #qr-join-url {
+      flex: 1;
+      min-width: 0;
+      font-size: 0.75rem;
+      font-weight: 700;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      background: linear-gradient(90deg, #9f44d3, #00c2ff);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    #copy-qr-btn {
+      flex-shrink: 0;
+      padding: 0.25rem 0.65rem;
+      font-size: 0.78rem;
+      font-weight: 700;
+      background: rgba(159,68,211,0.2);
+      color: #cc88ff;
+      border: 1px solid rgba(159,68,211,0.4);
+      border-radius: 0.4rem;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background 0.15s;
+    }
+    #copy-qr-btn:hover { background: rgba(159,68,211,0.4); color: #fff; }
+
+    /* ── Reconnecting overlay ── */
+    #reconnecting {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.7);
+      display: none; align-items: center; justify-content: center;
+      flex-direction: column; gap: 1rem; z-index: 99;
+    }
+    #reconnecting.show { display: flex; }
+    .spinner {
+      width: 48px; height: 48px;
+      border: 5px solid rgba(255,255,255,0.1);
+      border-top-color: var(--timer);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    #reconnecting p { color: #ccc; }
+  </style>
+</head>
+<body>
+
+<!-- Name overlay -->
+<div id="name-overlay">
+  <div class="name-card">
+    <h2>🎮 Game Night</h2>
+    <p>Enter your name to join the lobby</p>
+    <input id="name-input" type="text" maxlength="20" placeholder="Your name"
+      autocomplete="off" autocorrect="off" spellcheck="false">
+    <button id="name-submit-btn">Join Lobby</button>
+    <div id="name-error"></div>
+  </div>
+</div>
+
+<!-- Reconnecting overlay -->
+<div id="reconnecting">
+  <div class="spinner"></div>
+  <p>Reconnecting…</p>
+</div>
+
+<!-- Header -->
+<div id="header">
+  <div class="header-title">🎮 Game Night</div>
+  <div class="room-chip" id="room-chip">····</div>
+</div>
+
+<!-- Players panel -->
+<div class="panel" id="players-panel">
+  <div class="panel-title">Players (<span id="player-count">0</span>)</div>
+  <div id="player-list">
+    <span style="color:#555;font-style:italic;font-size:0.85rem;">Waiting for players…</span>
+  </div>
+</div>
+
+<!-- Game grid -->
+<div class="panel" id="game-panel">
+  <div class="panel-title">Pick a Game</div>
+  <div id="game-grid"></div>
+</div>
+
+<!-- Vote status -->
+<div id="vote-section">
+  <div id="vote-status-msg"></div>
+</div>
+
+<!-- QR strip -->
+<div id="qr-strip">
+  <img id="qr-img" src="" alt="QR">
+  <div id="qr-join-url">Loading…</div>
+  <button id="copy-qr-btn">📋 Copy</button>
+</div>
+
+<!-- Fixed bottom actions -->
+<div id="actions">
+  <button class="ready-btn" id="ready-btn">✅ I'm Ready</button>
+  <div id="start-section">
+    <div class="settings-row">
+      <span class="settings-label">Difficulty:</span>
+      <button class="setting-btn diff-btn active" data-diff="easy">Easy</button>
+      <button class="setting-btn diff-btn" data-diff="medium">Medium</button>
+      <button class="setting-btn diff-btn" data-diff="hard">Hard</button>
+    </div>
+    <div class="settings-row">
+      <span class="settings-label">Questions:</span>
+      <button class="setting-btn q-btn active" data-count="10">10</button>
+      <button class="setting-btn q-btn" data-count="15">15</button>
+      <button class="setting-btn q-btn" data-count="20">20</button>
+      <button class="setting-btn q-btn" data-count="25">25</button>
+    </div>
+    <button class="start-btn" id="start-btn" disabled>🚀 Start Game</button>
+  </div>
+</div>
+
+<script>
+  const GAME_TILES = [
+    { type: 'quiz',     emoji: '🧠', label: 'Quiz',     available: true },
+    { type: 'shithead', emoji: '🃏', label: 'Shithead', available: false },
+  ];
+
+  const roomCode    = location.pathname.split('/')[2]?.toUpperCase();
+  const storageKey  = `gn-username-${roomCode}`;
+  let myUsername    = sessionStorage.getItem(storageKey) || null;
+  let isAdmin       = false;
+  let isReady       = false;
+  let myVote        = null;      // gameType I voted for
+  let lobbyState    = null;      // last LOBBY_UPDATE
+  let ws, connectGen = 0;
+  let selectedDifficulty   = 'easy';
+  let selectedQuestionCount = 10;
+
+  document.getElementById('room-chip').textContent = roomCode || '????';
+
+  // ── Name overlay ──────────────────────────────────────────────────────────
+  if (myUsername) {
+    document.getElementById('name-overlay').classList.add('hidden');
+    connect();
+  }
+
+  document.getElementById('name-submit-btn').addEventListener('click', submitName);
+  document.getElementById('name-input').addEventListener('keydown', e => { if (e.key === 'Enter') submitName(); });
+
+  function submitName() {
+    const val = document.getElementById('name-input').value.trim();
+    if (!val) { document.getElementById('name-error').textContent = 'Please enter a name.'; return; }
+    myUsername = val;
+    sessionStorage.setItem(storageKey, myUsername);
+    document.getElementById('name-overlay').classList.add('hidden');
+    connect();
+  }
+
+  // ── WebSocket ─────────────────────────────────────────────────────────────
+  function buildWsUrl() {
+    const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+    return `${proto}://${location.host}/ws?room=${roomCode}&role=player`;
+  }
+
+  function connect() {
+    const gen = ++connectGen;
+    ws = new WebSocket(buildWsUrl());
+    document.getElementById('reconnecting').classList.remove('show');
+
+    ws.addEventListener('open', () => {
+      if (gen !== connectGen) return;
+      send({ type: 'JOIN_LOBBY', username: myUsername });
+    });
+
+    ws.addEventListener('message', e => {
+      if (gen !== connectGen) return;
+      handleMsg(JSON.parse(e.data));
+    });
+
+    ws.addEventListener('close', () => {
+      if (gen !== connectGen) return;
+      if (myUsername) {
+        document.getElementById('reconnecting').classList.add('show');
+        setTimeout(connect, 2000);
+      }
+    });
+
+    ws.addEventListener('error', () => ws.close());
+  }
+
+  function send(msg) { if (ws && ws.readyState === 1) ws.send(JSON.stringify(msg)); }
+
+  // ── Message handler ───────────────────────────────────────────────────────
+  function handleMsg(msg) {
+    switch (msg.type) {
+
+      case 'CONNECTED':
+        document.getElementById('reconnecting').classList.remove('show');
+        break;
+
+      case 'JOIN_OK':
+        myUsername  = msg.username;
+        isAdmin     = msg.isAdmin;
+        sessionStorage.setItem(storageKey, myUsername);
+        loadQR();
+        updateJoinUrl();
+        break;
+
+      case 'LOBBY_UPDATE':
+        lobbyState = msg;
+        renderPlayers(msg);
+        renderGameGrid(msg);
+        renderVoteStatus(msg);
+        updateStartSection(msg);
+        break;
+
+      case 'ADMIN_CHANGED':
+        isAdmin = (msg.newAdmin === myUsername);
+        updateStartSection(lobbyState);
+        break;
+
+      case 'MINI_GAME_STARTING':
+        window.location.href = msg.url;
+        break;
+
+      case 'PLAYER_REMOVED':
+        if (msg.username === myUsername) {
+          sessionStorage.removeItem(storageKey);
+          window.location.href = '/?removed=1';
+        }
+        break;
+
+      case 'ERROR':
+        if (msg.code === 'ROOM_NOT_FOUND') {
+          window.location.href = '/';
+        } else {
+          console.error('Server error:', msg.code, msg.message);
+        }
+        break;
+
+      case 'RESTARTED':
+        // Admin sent return to lobby — already here, just reset ready state
+        isReady = false;
+        renderReadyBtn();
+        break;
+    }
+  }
+
+  // ── Render players ────────────────────────────────────────────────────────
+  function renderPlayers(state) {
+    const list = document.getElementById('player-list');
+    document.getElementById('player-count').textContent = state.totalCount;
+
+    if (state.players.length === 0) {
+      list.innerHTML = '<span style="color:#555;font-style:italic;font-size:0.85rem;">Waiting for players…</span>';
+      return;
+    }
+
+    list.innerHTML = '';
+    for (const p of state.players) {
+      const chip = document.createElement('div');
+      chip.className = 'player-chip' +
+        (p.username === myUsername ? ' me' : '') +
+        (p.isAdmin ? ' admin-chip' : '');
+      chip.innerHTML =
+        `<span class="pc-avatar">${esc(p.avatar || '🙂')}</span>` +
+        `<span class="pc-name">${esc(p.username)}</span>` +
+        (p.isAdmin ? `<span class="pc-crown">👑</span>` : '') +
+        `<span class="pc-ready">${p.isReady ? '✅' : '🟡'}</span>` +
+        `<button class="pc-remove${isAdmin && p.username !== myUsername ? ' visible' : ''}"
+          data-name="${esc(p.username)}" title="Remove">✕</button>`;
+      list.appendChild(chip);
+    }
+
+    list.querySelectorAll('.pc-remove').forEach(btn => {
+      btn.addEventListener('click', () => {
+        send({ type: 'REMOVE_PLAYER', username: btn.dataset.name });
+      });
+    });
+  }
+
+  // ── Render game grid ──────────────────────────────────────────────────────
+  function renderGameGrid(state) {
+    const grid = document.getElementById('game-grid');
+    grid.innerHTML = '';
+
+    for (const tile of GAME_TILES) {
+      const votes = state.gameSuggestions[tile.type] || 0;
+      const isMine = myVote === tile.type;
+
+      const div = document.createElement('div');
+      div.className = 'game-tile' +
+        (isMine ? ' my-vote' : '') +
+        (tile.available ? ' available' : '');
+
+      div.innerHTML =
+        `<span class="tile-emoji">${tile.emoji}</span>` +
+        `<span class="tile-label">${tile.label}</span>` +
+        (tile.available ? '' : `<span class="tile-coming">Coming soon</span>`) +
+        (votes > 0 ? `<span class="tile-votes">▲ ${votes}</span>` : '');
+
+      if (tile.available) {
+        div.addEventListener('click', () => {
+          myVote = tile.type;
+          send({ type: 'SUGGEST_GAME', gameType: tile.type });
+          renderGameGrid(lobbyState || state);
+          updateStartSection(lobbyState || state);
+        });
+      }
+
+      grid.appendChild(div);
+    }
+  }
+
+  // ── Render vote status ────────────────────────────────────────────────────
+  function renderVoteStatus(state) {
+    const el = document.getElementById('vote-status-msg');
+    if (state.totalCount === 0) { el.textContent = ''; return; }
+
+    if (state.allVoted) {
+      el.textContent = `✅ All ${state.totalCount} players voted on categories`;
+      el.className = 'all-voted';
+    } else if (state.votedCount > 0) {
+      el.textContent = `🗳️ ${state.votedCount} / ${state.totalCount} voted on categories`;
+      el.className = '';
+    } else {
+      el.textContent = '';
+      el.className = '';
+    }
+  }
+
+  // ── Ready button ──────────────────────────────────────────────────────────
+  const readyBtn = document.getElementById('ready-btn');
+  readyBtn.addEventListener('click', () => {
+    isReady = !isReady;
+    send({ type: 'SET_READY', ready: isReady });
+    renderReadyBtn();
+  });
+
+  function renderReadyBtn() {
+    readyBtn.textContent = isReady ? '✅ Ready!' : "✅ I'm Ready";
+    readyBtn.classList.toggle('ready', isReady);
+  }
+
+  // ── Start section (admin only) ────────────────────────────────────────────
+  function updateStartSection(state) {
+    if (!state) return;
+    const section = document.getElementById('start-section');
+    if (!isAdmin) { section.classList.remove('visible'); return; }
+    section.classList.add('visible');
+
+    // Start btn enabled when all players ready + someone voted a game + all category-voted
+    const hasGame   = !!myVote;
+    const allReady  = state.allReady;
+    const allVoted  = state.allVoted || state.totalCount === 0;
+    const canStart  = state.totalCount > 0 && allReady && hasGame && allVoted;
+    document.getElementById('start-btn').disabled = !canStart;
+  }
+
+  // ── Settings pickers ──────────────────────────────────────────────────────
+  document.querySelectorAll('.diff-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.diff-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      selectedDifficulty = btn.dataset.diff;
+    });
+  });
+  document.querySelectorAll('.q-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.q-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      selectedQuestionCount = Number(btn.dataset.count);
+    });
+  });
+
+  // ── Start button ──────────────────────────────────────────────────────────
+  document.getElementById('start-btn').addEventListener('click', () => {
+    if (!myVote) return;
+    // For quiz, gather all category IDs
+    fetch('/api/categories').then(r => r.json()).then(cats => {
+      send({
+        type: 'START_MINI_GAME',
+        gameType: myVote,
+        categories: cats.map(c => c.id),
+        questionCount: selectedQuestionCount,
+        gameDifficulty: selectedDifficulty,
+      });
+    }).catch(() => {
+      send({
+        type: 'START_MINI_GAME',
+        gameType: myVote,
+        categories: [9],
+        questionCount: selectedQuestionCount,
+        gameDifficulty: selectedDifficulty,
+      });
+    });
+  });
+
+  // ── QR / Join URL ─────────────────────────────────────────────────────────
+  async function loadQR() {
+    try {
+      const res  = await fetch(`/api/qr?room=${roomCode}`);
+      const svg  = await res.text();
+      const blob = new Blob([svg], { type: 'image/svg+xml' });
+      document.getElementById('qr-img').src = URL.createObjectURL(blob);
+    } catch (e) { console.warn('QR failed', e); }
+  }
+
+  function updateJoinUrl() {
+    const url = `${location.protocol}//${location.hostname}${location.port ? ':' + location.port : ''}/group/${roomCode}`;
+    document.getElementById('qr-join-url').textContent = url;
+  }
+
+  document.getElementById('copy-qr-btn').addEventListener('click', async () => {
+    const url = document.getElementById('qr-join-url').textContent;
+    try {
+      await navigator.clipboard.writeText(url);
+      const btn = document.getElementById('copy-qr-btn');
+      btn.textContent = '✅ Copied!';
+      setTimeout(() => { btn.textContent = '📋 Copy'; }, 2000);
+    } catch (e) { /* unavailable */ }
+  });
+
+  // ── Helpers ───────────────────────────────────────────────────────────────
+  function esc(str) {
+    const d = document.createElement('div');
+    d.textContent = str;
+    return d.innerHTML;
+  }
+
+  updateJoinUrl();
+</script>
+</body>
+</html>

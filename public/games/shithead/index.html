@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Game Night — Shithead</title>
+  <style>
+    body { font-family: system-ui, sans-serif; background: #1a1a2e; color: #eaeaea; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; gap: 1.5rem; margin: 0; text-align: center; }
+    h1 { font-size: 2.5rem; }
+    p  { color: #aaa; }
+    #rc { color: #9f44d3; }
+    button { padding: 0.85rem 2rem; font-size: 1rem; font-weight: 700; background: linear-gradient(135deg, #26890c, #00c2ff); color: #fff; border: none; border-radius: 0.75rem; cursor: pointer; }
+    button:hover { opacity: 0.88; }
+  </style>
+</head>
+<body>
+  <h1>🃏 Shithead</h1>
+  <p>🚧 Coming Soon</p>
+  <p>Room: <strong id="rc"></strong></p>
+  <button id="back-btn">↩ Back to Lobby</button>
+  <script>
+    const rc = location.pathname.split('/')[2]?.toUpperCase() || '';
+    document.getElementById('rc').textContent = rc;
+    document.getElementById('back-btn').addEventListener('click', () => {
+      window.location.href = rc ? `/group/${rc}` : '/';
+    });
+  </script>
+</body>
+</html>
