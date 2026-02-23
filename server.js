@@ -405,14 +405,14 @@ function handlePlayerDisconnect(ws, room) {
 
     // Hand off admin if needed
     if (username === room.adminUsername) {
-      room.adminUsername = null;
-      for (const [name] of room.players.entries()) {
-        room.adminUsername = name;
-        break;
+      const nextAdmin = [...room.players.keys()][0];
+      if (nextAdmin) {
+        // Another player is present — hand off immediately
+        room.adminUsername = nextAdmin;
+        broadcastAll(room, { type: 'ADMIN_CHANGED', newAdmin: nextAdmin });
       }
-      if (room.adminUsername) {
-        broadcastAll(room, { type: 'ADMIN_CHANGED', newAdmin: room.adminUsername });
-      }
+      // If no players remain (everyone in transit between pages), keep
+      // adminUsername so the original admin recovers on reconnect
     }
 
     if (room.game) room.game.removePlayer(ws);
