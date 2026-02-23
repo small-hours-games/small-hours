@@ -403,16 +403,14 @@ function handlePlayerDisconnect(ws, room) {
     room.gameSuggestions.delete(username);
     room.categoryVotes.delete(username);
 
-    // Hand off admin if needed
-    if (username === room.adminUsername) {
+    // Hand off admin if needed — but NOT during a game→lobby transition,
+    // where players are temporarily navigating and will reconnect shortly.
+    if (username === room.adminUsername && !room._returningFromGame) {
       const nextAdmin = [...room.players.keys()][0];
       if (nextAdmin) {
-        // Another player is present — hand off immediately
         room.adminUsername = nextAdmin;
         broadcastAll(room, { type: 'ADMIN_CHANGED', newAdmin: nextAdmin });
       }
-      // If no players remain (everyone in transit between pages), keep
-      // adminUsername so the original admin recovers on reconnect
     }
 
     if (room.game) room.game.removePlayer(ws);
@@ -503,6 +501,10 @@ function handleMessage(ws, role, msg, room) {
     case 'JOIN': {
       // Player reconnected — cancel any pending room cleanup
       clearTimeout(room._cleanupTimer);
+      // If the original admin is reconnecting, clear the returning flag
+      if ((msg.username || '').trim() === room.adminUsername) {
+        room._returningFromGame = false;
+      }
       const username = (msg.username || '').trim().slice(0, 20);
       if (!username) {
         sendTo(ws, { type: 'ERROR', code: 'INVALID_USERNAME', message: 'Username required.' });
@@ -611,6 +613,8 @@ function handleMessage(ws, role, msg, room) {
       room.readyPlayers.clear();
       room.gameSuggestions.clear();
       room.activeMiniGame = 'lobby';
+      // Flag: suppress admin handoff while players navigate back to lobby
+      room._returningFromGame = true;
       broadcastLobbyUpdate(room);
       // Legacy RESTARTED for old player page
       broadcastAll(room, { type: 'RESTARTED' });
