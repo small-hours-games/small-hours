@@ -394,6 +394,14 @@ function handlePlayerDisconnect(ws, room) {
     return;
   }
 
+  // If the player already reconnected with a new WS (e.g. navigating between
+  // pages), ignore this stale close so we don't delete them or hand off admin.
+  const currentEntry = room.players.get(username);
+  if (currentEntry && currentEntry.ws !== ws) {
+    maybeCleanupRoom(room);
+    return;
+  }
+
   const wasLobby = room.activeMiniGame === 'lobby';
 
   if (wasLobby) {
