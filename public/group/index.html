@@ -436,13 +436,13 @@
 <div id="actions">
   <button class="ready-btn" id="ready-btn">✅ I'm Ready</button>
   <div id="start-section">
-    <div class="settings-row">
+    <div class="settings-row" id="difficulty-row">
       <span class="settings-label">Difficulty:</span>
       <button class="setting-btn diff-btn active" data-diff="easy">Easy</button>
       <button class="setting-btn diff-btn" data-diff="medium">Medium</button>
       <button class="setting-btn diff-btn" data-diff="hard">Hard</button>
     </div>
-    <div class="settings-row">
+    <div class="settings-row" id="questions-row">
       <span class="settings-label">Questions:</span>
       <button class="setting-btn q-btn active" data-count="10">10</button>
       <button class="setting-btn q-btn" data-count="15">15</button>
@@ -684,10 +684,15 @@
     if (!isAdmin) { section.classList.remove('visible'); return; }
     section.classList.add('visible');
 
+    // Show difficulty/question count only for quiz
+    const isQuiz = myVote === 'quiz';
+    document.getElementById('difficulty-row').style.display = isQuiz ? '' : 'none';
+    document.getElementById('questions-row').style.display  = isQuiz ? '' : 'none';
+
     // Start btn enabled when all players ready + someone voted a game
-    const hasGame   = !!myVote;
-    const allReady  = state.allReady;
-    const canStart  = state.totalCount > 0 && allReady && hasGame;
+    const hasGame  = !!myVote;
+    const allReady = state.allReady;
+    const canStart = state.totalCount > 0 && allReady && hasGame;
     document.getElementById('start-btn').disabled = !canStart;
   }
 
