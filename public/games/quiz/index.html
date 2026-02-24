@@ -383,6 +383,7 @@
   function show(id) {
     document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
     document.getElementById(id).classList.add('active');
+    console.log('[SCREEN] show(' + id + ') url=' + location.href);
   }
 
   function updateAdminControls() {
@@ -392,6 +393,7 @@
   }
 
   function handleMsg(msg) {
+    console.log('[WS] ' + msg.type + (msg.type==='QUESTION' ? ' q#'+msg.questionNumber : '') + (msg.type==='COUNTDOWN_TICK'?' cnt='+msg.countdown:''));
     switch (msg.type) {
 
       case 'CONNECTED':
