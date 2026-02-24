@@ -105,36 +105,66 @@ async function downloadDatabase() {
     for (let i = 0; i < categories.length; i++) {
       const cat = categories[i];
       state.current = i;
-      state.label = cat.name;
 
       if (i > 0) await sleep(RATE_LIMIT_DELAY);
 
-      const url = `${OPENTDB_BASE}/api.php?amount=50&category=${cat.id}&type=multiple&encode=url3986`;
+      const questions = [];
+
+      // ── Multiple-choice ──────────────────────────────────────────────────
+      state.label = `${cat.name} (multiple choice)`;
+      const urlM = `${OPENTDB_BASE}/api.php?amount=50&category=${cat.id}&type=multiple&encode=url3986`;
       try {
-        let data = await fetchJSON(url);
-
+        let data = await fetchJSON(urlM);
         if (data.response_code === 5) {
-          console.warn(`Rate limited on "${cat.name}", retrying after 6s…`);
+          console.warn(`Rate limited on "${cat.name}" (multiple), retrying after 6s…`);
           await sleep(6000);
-          data = await fetchJSON(url);
+          data = await fetchJSON(urlM);
         }
-
         if (data.response_code === 0 && data.results.length > 0) {
-          // Decode all strings now, store decoded
-          const questions = data.results.map(raw => ({
+          questions.push(...data.results.map(raw => ({
             category: cat.name,
             difficulty: raw.difficulty,
             question: decodeURIComponent(raw.question),
             correct_answer: decodeURIComponent(raw.correct_answer),
             incorrect_answers: raw.incorrect_answers.map(a => decodeURIComponent(a)),
-          }));
-          db.categories.push({ id: cat.id, name: cat.name, questions });
-          console.log(`  ✓ ${cat.name} — ${questions.length} questions`);
+          })));
         } else {
-          console.warn(`  ✗ ${cat.name} — response_code ${data.response_code}`);
+          console.warn(`  ✗ ${cat.name} (multiple) — response_code ${data.response_code}`);
         }
       } catch (err) {
-        console.warn(`  ✗ ${cat.name} — ${err.message}`);
+        console.warn(`  ✗ ${cat.name} (multiple) — ${err.message}`);
+      }
+
+      // ── True/False ───────────────────────────────────────────────────────
+      await sleep(RATE_LIMIT_DELAY);
+      state.label = `${cat.name} (true/false)`;
+      const urlB = `${OPENTDB_BASE}/api.php?amount=50&category=${cat.id}&type=boolean&encode=url3986`;
+      try {
+        let data = await fetchJSON(urlB);
+        if (data.response_code === 5) {
+          console.warn(`Rate limited on "${cat.name}" (boolean), retrying after 6s…`);
+          await sleep(6000);
+          data = await fetchJSON(urlB);
+        }
+        if (data.response_code === 0 && data.results.length > 0) {
+          questions.push(...data.results.map(raw => ({
+            category: cat.name,
+            difficulty: raw.difficulty,
+            question: decodeURIComponent(raw.question),
+            correct_answer: decodeURIComponent(raw.correct_answer),
+            incorrect_answers: raw.incorrect_answers.map(a => decodeURIComponent(a)),
+          })));
+        }
+        // not all categories have T/F questions — silence response_code != 0
+      } catch (err) {
+        console.warn(`  ✗ ${cat.name} (boolean) — ${err.message}`);
+      }
+
+      if (questions.length > 0) {
+        db.categories.push({ id: cat.id, name: cat.name, questions });
+        console.log(`  ✓ ${cat.name} — ${questions.length} questions`);
+      } else {
+        console.warn(`  ✗ ${cat.name} — no questions fetched`);
       }
     }
 
@@ -177,7 +207,8 @@ function processRaw(raw, gameDifficulty = 'easy') {
   const correctId = answers.find(a => a.text === raw.correct_answer).id;
 
   const cfg = DIFFICULTY_CONFIG[gameDifficulty] || DIFFICULTY_CONFIG.easy;
-  const baseTime = raw.difficulty === 'hard' ? 25 : raw.difficulty === 'medium' ? 20 : 15;
+  const isTF = raw.incorrect_answers.length === 1;
+  const baseTime = isTF ? 10 : (raw.difficulty === 'hard' ? 25 : raw.difficulty === 'medium' ? 20 : 15);
   const timeLimit = Math.max(5, Math.round(baseTime * cfg.timeMult));
 
   return {

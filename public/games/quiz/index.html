@@ -597,6 +597,12 @@
       if (el) el.textContent = ans.text;
     }
 
+    // True/False questions have only 2 answers — hide C and D
+    const isTF = msg.answers.length === 2;
+    document.querySelector('.btn-C').style.display = isTF ? 'none' : '';
+    document.querySelector('.btn-D').style.display = isTF ? 'none' : '';
+    document.getElementById('answer-buttons').style.gridTemplateColumns = isTF ? '1fr' : '';
+
     if (pqTimerTimeout) clearTimeout(pqTimerTimeout);
     {
       const bar       = document.getElementById('pq-timer-bar');

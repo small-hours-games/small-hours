@@ -86,6 +86,8 @@ async function fetchQuestions(categoryIds, totalCount = 20, gameDifficulty = 'ea
   for (let i = 0; i < catsToFetch.length; i++) {
     if (i > 0) await sleep(5500); // respect opentdb 5s rate limit
     const catId = catsToFetch[i];
+
+    // ── Multiple-choice ────────────────────────────────────────────────────
     const url = `${OPENTDB_BASE}/api.php?amount=${perCat}&category=${catId}&type=multiple&encode=url3986&token=${token}${diffParam}`;
     try {
       const data = await fetchJSON(url);
@@ -108,6 +110,18 @@ async function fetchQuestions(categoryIds, totalCount = 20, gameDifficulty = 'ea
     } catch (err) {
       console.warn(`Failed to fetch questions for category ${catId}:`, err.message);
     }
+
+    // ── True/False ─────────────────────────────────────────────────────────
+    await sleep(5500);
+    const urlBool = `${OPENTDB_BASE}/api.php?amount=10&category=${catId}&type=boolean&encode=url3986&token=${token}${diffParam}`;
+    try {
+      const data = await fetchJSON(urlBool);
+      if (data.response_code === 0 && data.results.length > 0) {
+        allQuestions.push(...processQuestions(data.results, gameDifficulty));
+      }
+    } catch (err) {
+      console.warn(`Failed to fetch T/F questions for category ${catId}:`, err.message);
+    }
   }
 
   shuffle(allQuestions);
@@ -129,7 +143,8 @@ function processQuestions(results, gameDifficulty = 'easy') {
     const answers = pool.map((text, i) => ({ id: ANSWER_IDS[i], text }));
     const correctId = answers.find(a => a.text === correct).id;
 
-    const baseTime = difficulty === 'hard' ? 25 : difficulty === 'medium' ? 20 : 15;
+    const isTF = incorrect.length === 1;
+    const baseTime = isTF ? 10 : (difficulty === 'hard' ? 25 : difficulty === 'medium' ? 20 : 15);
     const timeLimit = Math.max(5, Math.round(baseTime * cfg.timeMult));
 
     return {
