@@ -1,0 +1,50 @@
+name: Feature Request
+description: Suggest a new feature or improvement for Quiz-trivia
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for suggesting an improvement! Please describe your idea clearly.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem or motivation
+      description: What problem does this feature solve, or what improvement does it provide?
+      placeholder: "Example: It's hard to run the game without an internet connection because there's no offline question pack."
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed solution
+      description: Describe the feature or change you'd like to see.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Have you considered any other approaches or workarounds?
+    validations:
+      required: false
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area of the codebase
+      description: Which part of the project does this affect?
+      options:
+        - Game logic (game.js)
+        - Server / API (server.js)
+        - Question fetching / local DB (questions.js / local-db.js)
+        - Host UI (public/host/)
+        - Player UI (public/player/)
+        - Docker / deployment
+        - Documentation
+        - Other
+    validations:
+      required: false
