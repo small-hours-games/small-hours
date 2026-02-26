@@ -47,16 +47,38 @@ const PUBLIC_SCHEME = DOMAIN ? 'https' : SCHEME;
 const app = express();
 app.use(express.json());
 
+// ─── Simple in-memory rate limiter ──────────────────────────────────────────
+
+const rateLimitMap = new Map();
+function rateLimit(maxReq, windowMs) {
+  return (req, res, next) => {
+    const key = req.ip;
+    const now = Date.now();
+    const entry = rateLimitMap.get(key) || { count: 0, start: now };
+    if (now - entry.start > windowMs) {
+      entry.count = 0;
+      entry.start = now;
+    }
+    entry.count += 1;
+    rateLimitMap.set(key, entry);
+    if (entry.count > maxReq) {
+      return res.status(429).send('Too Many Requests');
+    }
+    next();
+  };
+}
+const pageRateLimit = rateLimit(120, 60 * 1000);
+
 // ─── New routes (before static) ─────────────────────────────────────────────
 
 function serveFile(rel) {
   return (_req, res) => res.sendFile(path.join(__dirname, rel));
 }
 
-app.get('/group/:code',          serveFile('public/group/index.html'));
-app.get('/group/:code/display',  serveFile('public/group/display.html'));
-app.get('/group/:code/quiz',     serveFile('public/games/quiz/index.html'));
-app.get('/group/:code/shithead', serveFile('public/games/shithead/index.html'));
+app.get('/group/:code',          pageRateLimit, serveFile('public/group/index.html'));
+app.get('/group/:code/display',  pageRateLimit, serveFile('public/group/display.html'));
+app.get('/group/:code/quiz',     pageRateLimit, serveFile('public/games/quiz/index.html'));
+app.get('/group/:code/shithead', pageRateLimit, serveFile('public/games/shithead/index.html'));
 
 // Compat redirects
 app.get('/host/', (req, res) => res.redirect('/'));
