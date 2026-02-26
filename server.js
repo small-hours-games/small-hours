@@ -11,6 +11,7 @@ const os = require('os');
 const { WebSocketServer } = require('ws');
 const QRCode = require('qrcode');
 const { Game } = require('./game');
+const { ShitheadGame } = require('./shithead-game');
 const { fetchCategories } = require('./questions');
 const { downloadDatabase, getState: getDbState, dbStatus } = require('./local-db');
 
@@ -56,21 +57,43 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.get('/', (req, res) => {
   res.send(`<!DOCTYPE html><html><head><meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Quiz Night</title>
-<style>body{font-family:system-ui,sans-serif;background:#1a1a2e;color:#eaeaea;display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;gap:1.5rem;margin:0}
-h1{font-size:2.5rem;background:linear-gradient(90deg,#9f44d3,#00c2ff);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
-a{display:block;padding:1rem 2.5rem;border-radius:.75rem;font-size:1.2rem;font-weight:700;text-decoration:none;text-align:center}
-.host{background:linear-gradient(135deg,#9f44d3,#4a90d9);color:#fff}
-.join{background:linear-gradient(135deg,#26890c,#00c2ff);color:#fff}</style></head>
-<body><h1>🎮 Quiz Night</h1>
-<a class="host" href="/host/">Host View (TV)</a>
-<a class="join" href="/join">Join Game (Phone)</a>
+<title>Spelkväll</title>
+<style>
+body{font-family:system-ui,sans-serif;background:#1a1a2e;color:#eaeaea;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;gap:1.5rem;margin:0;padding:2rem}
+h1{font-size:2.5rem;background:linear-gradient(90deg,#9f44d3,#00c2ff);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin:0}
+.section{display:flex;flex-direction:column;align-items:center;gap:.75rem;width:100%;max-width:360px}
+.section h2{font-size:1.1rem;color:#aaa;margin:0}
+a{display:block;padding:.9rem 2rem;border-radius:.75rem;font-size:1.1rem;font-weight:700;text-decoration:none;text-align:center;width:100%}
+.quiz-host{background:linear-gradient(135deg,#9f44d3,#4a90d9);color:#fff}
+.quiz-join{background:linear-gradient(135deg,#26890c,#00c2ff);color:#fff}
+.sh-host{background:linear-gradient(135deg,#b5451b,#d4a017);color:#fff}
+.sh-join{background:linear-gradient(135deg,#1b6cb5,#17a0d4);color:#fff}
+hr{width:100%;border:none;border-top:1px solid rgba(255,255,255,.1)}
+</style></head>
+<body>
+<h1>🎮 Spelkväll</h1>
+<div class="section">
+  <h2>🧠 Quiz Night (Frågesport)</h2>
+  <a class="quiz-host" href="/host/">Host View (TV)</a>
+  <a class="quiz-join" href="/join">Gå med i Quiz (Telefon)</a>
+</div>
+<hr>
+<div class="section">
+  <h2>🃏 Vänd Tia (Shithead)</h2>
+  <a class="sh-host" href="/shithead/host/">Host View (TV)</a>
+  <a class="sh-join" href="/shithead/join">Gå med i Vänd Tia (Telefon)</a>
+</div>
 </body></html>`);
 });
 
 // Redirect /join → /player/index.html
 app.get('/join', (req, res) => {
   res.redirect('/player/index.html');
+});
+
+// Shithead routes
+app.get('/shithead/join', (req, res) => {
+  res.redirect('/shithead/player/index.html');
 });
 
 // QR code endpoint (SVG)
@@ -131,7 +154,8 @@ const server = USE_HTTPS
 const wss = new WebSocketServer({ noServer: true });
 
 server.on('upgrade', (req, socket, head) => {
-  if (req.url === '/ws/host' || req.url === '/ws/player') {
+  if (req.url === '/ws/host' || req.url === '/ws/player' ||
+      req.url === '/ws/shithead-host' || req.url === '/ws/shithead-player') {
     wss.handleUpgrade(req, socket, head, (ws) => {
       wss.emit('connection', ws, req);
     });
@@ -145,6 +169,10 @@ server.on('upgrade', (req, socket, head) => {
 // All connected host and player sockets
 const hostSockets = new Set();
 const playerSockets = new Set();
+
+// Shithead game sockets
+const shitheadHostSockets = new Set();
+const shitheadPlayerSockets = new Set();
 
 function broadcastAll(msg, targetWs) {
   const str = JSON.stringify(msg);
@@ -164,16 +192,62 @@ function broadcastHosts(msg) {
   }
 }
 
+function shitheadBroadcastAll(msg, targetWs) {
+  const str = JSON.stringify(msg);
+  if (targetWs) {
+    if (targetWs.readyState === 1) targetWs.send(str);
+    return;
+  }
+  for (const ws of [...shitheadHostSockets, ...shitheadPlayerSockets]) {
+    if (ws.readyState === 1) ws.send(str);
+  }
+}
+
 // ─── Game instance ───────────────────────────────────────────────────────────
 
 const game = new Game(broadcastAll);
 let currentLanguage = 'en';
+
+const shitheadGame = new ShitheadGame(shitheadBroadcastAll);
 
 // ─── WebSocket connection handler ────────────────────────────────────────────
 
 wss.on('connection', (ws, req) => {
   const isHost = req.url === '/ws/host';
   const isPlayer = req.url === '/ws/player';
+  const isShitheadHost = req.url === '/ws/shithead-host';
+  const isShitheadPlayer = req.url === '/ws/shithead-player';
+
+  if (isShitheadHost) {
+    shitheadHostSockets.add(ws);
+    ws.send(JSON.stringify({ type: 'SHITHEAD_HOST_CONNECTED', playerCount: shitheadGame.playerCount }));
+
+    ws.on('message', (raw) => {
+      let msg;
+      try { msg = JSON.parse(raw); } catch { return; }
+      handleShitheadMessage(ws, true, msg);
+    });
+    ws.on('close', () => shitheadHostSockets.delete(ws));
+    ws.on('error', (err) => console.error('Shithead host WS error:', err.message));
+    return;
+  }
+
+  if (isShitheadPlayer) {
+    shitheadPlayerSockets.add(ws);
+    ws.send(JSON.stringify({ type: 'SHITHEAD_CONNECTED' }));
+
+    ws.on('message', (raw) => {
+      let msg;
+      try { msg = JSON.parse(raw); } catch { return; }
+      handleShitheadMessage(ws, false, msg);
+    });
+    ws.on('close', () => {
+      shitheadPlayerSockets.delete(ws);
+      shitheadGame.removePlayer(ws);
+    });
+    ws.on('error', (err) => console.error('Shithead player WS error:', err.message));
+    return;
+  }
 
   if (isHost) {
     hostSockets.add(ws);
@@ -211,6 +285,62 @@ wss.on('connection', (ws, req) => {
     console.error('WebSocket error:', err.message);
   });
 });
+
+// ─── Shithead message handler ────────────────────────────────────────────────
+
+function handleShitheadMessage(ws, isHost, msg) {
+  const { type } = msg;
+
+  if (isHost) {
+    switch (type) {
+      case 'SHITHEAD_START':
+        {
+          const result = shitheadGame.startGame();
+          if (!result.ok) {
+            ws.send(JSON.stringify({ type: 'SHITHEAD_ERROR', message: result.message || 'Kunde inte starta spelet.' }));
+          }
+        }
+        break;
+      case 'SHITHEAD_RESTART':
+        shitheadGame.restart();
+        break;
+    }
+    return;
+  }
+
+  // Player messages
+  switch (type) {
+    case 'SHITHEAD_JOIN':
+      {
+        const username = (msg.username || '').trim().slice(0, 20);
+        if (!username) {
+          ws.send(JSON.stringify({ type: 'SHITHEAD_ERROR', message: 'Ange ett namn.' }));
+          break;
+        }
+        ws.send(JSON.stringify({ type: 'SHITHEAD_JOIN_OK', username }));
+        const result = shitheadGame.addPlayer(ws, username);
+        if (!result.ok) {
+          ws.send(JSON.stringify({ type: 'SHITHEAD_ERROR', code: result.code, message: result.message }));
+        }
+      }
+      break;
+    case 'SHITHEAD_SWAP_CARD':
+      shitheadGame.swapCard(ws, msg.handCardId, msg.faceUpCardId);
+      break;
+    case 'SHITHEAD_CONFIRM_SWAP':
+      shitheadGame.confirmSwap(ws);
+      break;
+    case 'SHITHEAD_PLAY_CARDS':
+      shitheadGame.playCards(ws, msg.cardIds);
+      break;
+    case 'SHITHEAD_PLAY_FACEDOWN':
+      shitheadGame.playFaceDown(ws, msg.cardId);
+      break;
+    case 'SHITHEAD_PICK_UP_PILE':
+      shitheadGame.pickUpPile(ws);
+      break;
+  }
+}
 
 // ─── Message handler ─────────────────────────────────────────────────────────
 

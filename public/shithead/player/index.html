@@ -1,0 +1,867 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Vänd Tia — Spelare</title>
+  <style>
+    :root {
+      --bg:     #1a1a2e;
+      --card:   #16213e;
+      --text:   #eaeaea;
+      --accent: #b5451b;
+      --gold:   #d4a017;
+      --timer:  #00c2ff;
+      --green:  #26890c;
+      --red:    #e21b3c;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    html, body {
+      height: 100%;
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      overscroll-behavior: none;
+    }
+    body {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      padding: 1.25rem;
+      gap: 0.75rem;
+      min-height: 100vh;
+    }
+
+    .screen { display: none; flex-direction: column; align-items: center; width: 100%; max-width: 460px; gap: 0.75rem; }
+    .screen.active { display: flex; }
+
+    /* ── JOIN ── */
+    #join h1 {
+      font-size: 2rem;
+      font-weight: 900;
+      background: linear-gradient(90deg, var(--accent), var(--gold));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    #join p { color: #aaa; font-size: 0.9rem; text-align: center; }
+    #username-input {
+      width: 100%;
+      padding: 0.9rem 1.1rem;
+      font-size: 1.2rem;
+      background: var(--card);
+      color: var(--text);
+      border: 2px solid rgba(255,255,255,0.15);
+      border-radius: 0.75rem;
+      outline: none;
+      text-align: center;
+      transition: border-color 0.2s;
+    }
+    #username-input:focus { border-color: var(--accent); }
+    #join-btn {
+      width: 100%;
+      padding: 0.9rem;
+      font-size: 1.2rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, var(--accent), var(--gold));
+      color: #fff;
+      border: none;
+      border-radius: 0.75rem;
+      cursor: pointer;
+      transition: transform 0.1s, opacity 0.2s;
+    }
+    #join-btn:active { transform: scale(0.96); }
+    #join-error { color: #ff6b6b; font-size: 0.85rem; text-align: center; }
+
+    /* ── WAITING ── */
+    #waiting { text-align: center; gap: 1.25rem; }
+    #waiting .big-emoji { font-size: 3.5rem; }
+    #waiting h2 { font-size: 1.4rem; font-weight: 700; }
+    #waiting p { color: #aaa; }
+    .pulse-dot {
+      display: inline-block; width: 10px; height: 10px;
+      border-radius: 50%; background: var(--accent);
+      animation: blink 1.4s ease-in-out infinite;
+    }
+    .pulse-dot:nth-child(2) { animation-delay: 0.2s; }
+    .pulse-dot:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes blink { 0%,80%,100% { opacity:0.2; } 40% { opacity:1; } }
+
+    /* ── SWAP ── */
+    #swap { gap: 0.75rem; }
+    #swap h2 { font-size: 1.4rem; font-weight: 700; color: var(--gold); }
+    #swap p { color: #aaa; font-size: 0.85rem; text-align: center; }
+    .swap-instruction {
+      background: var(--card);
+      border-radius: 0.75rem;
+      padding: 0.75rem 1rem;
+      font-size: 0.85rem;
+      color: #bbb;
+      text-align: center;
+      line-height: 1.5;
+    }
+    #confirm-swap-btn {
+      width: 100%;
+      padding: 0.85rem;
+      font-size: 1.1rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, var(--green), #00c2ff);
+      color: #fff;
+      border: none;
+      border-radius: 0.75rem;
+      cursor: pointer;
+      transition: transform 0.1s, opacity 0.2s;
+    }
+    #confirm-swap-btn:active { transform: scale(0.96); }
+    #confirm-swap-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    /* ── PLAYING ── */
+    #playing { gap: 0.6rem; }
+
+    .pile-info {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 1rem;
+      background: var(--card);
+      border-radius: 0.75rem;
+      padding: 0.6rem 1rem;
+      width: 100%;
+    }
+    .pile-label { font-size: 0.75rem; color: #aaa; text-transform: uppercase; letter-spacing: 0.08em; }
+    .pile-top-card {
+      width: 52px; height: 72px;
+      background: #fff;
+      border-radius: 7px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-size: 1rem;
+      font-weight: 900;
+      line-height: 1.1;
+      border: 2px solid rgba(255,255,255,0.2);
+    }
+    .pile-top-card.red-card { color: #c00; }
+    .pile-top-card.black-card { color: #111; }
+    .pile-top-card.empty {
+      background: rgba(255,255,255,0.05);
+      border: 2px dashed rgba(255,255,255,0.2);
+      color: #555;
+      font-size: 0.75rem;
+    }
+    .pile-stats { font-size: 0.85rem; color: #aaa; text-align: center; }
+    .seven-warn {
+      background: rgba(212,160,23,0.15);
+      border: 1px solid var(--gold);
+      border-radius: 0.5rem;
+      padding: 0.4rem 0.75rem;
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--gold);
+      text-align: center;
+      width: 100%;
+    }
+
+    .turn-banner {
+      width: 100%;
+      text-align: center;
+      padding: 0.5rem;
+      border-radius: 0.5rem;
+      font-size: 0.95rem;
+      font-weight: 700;
+    }
+    .turn-banner.my-turn {
+      background: linear-gradient(135deg, var(--accent), var(--gold));
+      color: #fff;
+      animation: pulseBanner 1.5s ease-in-out infinite;
+    }
+    .turn-banner.other-turn {
+      background: rgba(255,255,255,0.06);
+      color: #aaa;
+    }
+    @keyframes pulseBanner {
+      0%,100% { opacity: 1; }
+      50% { opacity: 0.75; }
+    }
+
+    .zone-label {
+      font-size: 0.75rem;
+      color: #aaa;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      align-self: flex-start;
+      margin-top: 0.25rem;
+    }
+
+    /* Card grid */
+    .cards-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+      justify-content: center;
+      width: 100%;
+    }
+    .play-card {
+      width: 56px; height: 80px;
+      background: #fff;
+      border-radius: 8px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-size: 1rem;
+      font-weight: 900;
+      line-height: 1.1;
+      cursor: pointer;
+      border: 3px solid transparent;
+      transition: transform 0.15s, border-color 0.15s;
+      user-select: none;
+    }
+    .play-card.red-card { color: #c00; }
+    .play-card.black-card { color: #111; }
+    .play-card.selected {
+      border-color: var(--gold);
+      transform: translateY(-8px);
+      box-shadow: 0 4px 20px rgba(212,160,23,0.5);
+    }
+    .play-card.not-my-turn { cursor: default; opacity: 0.7; }
+    .play-card.unplayable {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+    .face-down-card {
+      width: 56px; height: 80px;
+      background: linear-gradient(135deg, #1e3a5f, #0a1628);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+      cursor: pointer;
+      border: 3px solid transparent;
+      transition: transform 0.15s, border-color 0.15s;
+    }
+    .face-down-card.selected {
+      border-color: var(--gold);
+      transform: translateY(-8px);
+    }
+    .face-down-card.not-my-turn { cursor: default; opacity: 0.7; }
+
+    .action-btns {
+      display: flex;
+      gap: 0.5rem;
+      width: 100%;
+    }
+    #play-btn {
+      flex: 2;
+      padding: 0.85rem;
+      font-size: 1.1rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, var(--green), #00c2ff);
+      color: #fff;
+      border: none;
+      border-radius: 0.75rem;
+      cursor: pointer;
+      transition: transform 0.1s, opacity 0.2s;
+    }
+    #play-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+    #play-btn:not(:disabled):active { transform: scale(0.96); }
+    #pickup-btn {
+      flex: 1;
+      padding: 0.85rem;
+      font-size: 1rem;
+      font-weight: 700;
+      background: rgba(226,27,60,0.2);
+      color: var(--red);
+      border: 1px solid var(--red);
+      border-radius: 0.75rem;
+      cursor: pointer;
+      transition: transform 0.1s, opacity 0.2s;
+    }
+    #pickup-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+    #pickup-btn:not(:disabled):active { transform: scale(0.96); }
+
+    /* ── GAME OVER ── */
+    #gameover { text-align: center; gap: 1.25rem; }
+    #gameover .trophy { font-size: 5rem; }
+    #gameover h1 { font-size: 2rem; font-weight: 900; }
+    .final-rank { font-size: 3rem; font-weight: 900; color: var(--timer); }
+    .final-detail { color: #aaa; font-size: 1rem; }
+
+    /* Reconnecting overlay */
+    #reconnecting {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.7);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 1rem;
+      z-index: 100;
+    }
+    #reconnecting.show { display: flex; }
+    .spinner {
+      width: 50px; height: 50px;
+      border: 5px solid rgba(255,255,255,0.1);
+      border-top-color: var(--timer);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Toast */
+    #toast {
+      position: fixed;
+      top: 1rem; left: 50%;
+      transform: translateX(-50%) translateY(-4rem);
+      background: rgba(30,30,50,0.95);
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 0.75rem;
+      padding: 0.6rem 1.25rem;
+      font-size: 1rem;
+      font-weight: 600;
+      color: #fff;
+      z-index: 200;
+      transition: transform 0.3s;
+      pointer-events: none;
+      white-space: nowrap;
+    }
+    #toast.show { transform: translateX(-50%) translateY(0); }
+  </style>
+</head>
+<body>
+
+<div id="reconnecting">
+  <div class="spinner"></div>
+  <p style="color:#ccc;">Återansluter…</p>
+</div>
+
+<!-- JOIN -->
+<div id="join" class="screen active">
+  <h1>🃏 Vänd Tia</h1>
+  <p>Ange ditt namn för att gå med i spelet</p>
+  <input id="username-input" type="text" maxlength="20" placeholder="Ditt namn" autocomplete="off" autocorrect="off" spellcheck="false">
+  <button id="join-btn">Gå med</button>
+  <div id="join-error"></div>
+</div>
+
+<!-- WAITING -->
+<div id="waiting" class="screen">
+  <div class="big-emoji">👋</div>
+  <h2 id="waiting-name">Hej!</h2>
+  <p id="waiting-sub">Väntar på att värden ska starta…</p>
+  <div>
+    <span class="pulse-dot"></span>
+    <span class="pulse-dot"></span>
+    <span class="pulse-dot"></span>
+  </div>
+  <p id="waiting-players" style="color:#666;font-size:.8rem;"></p>
+</div>
+
+<!-- SWAP -->
+<div id="swap" class="screen">
+  <h2>🔄 Byt-fas</h2>
+  <p>Tryck på ett handkort och sedan ett synligt bordskort för att byta dem</p>
+  <div class="swap-instruction">
+    Välj vilka kort du vill ha synliga (face-up). Dessa spelas sist — välj bra!
+  </div>
+
+  <div class="zone-label">Handkort (klicka för att byta)</div>
+  <div class="cards-grid" id="swap-hand"></div>
+
+  <div class="zone-label">Synliga bordskort (klicka för att byta)</div>
+  <div class="cards-grid" id="swap-faceup"></div>
+
+  <button id="confirm-swap-btn">✅ Klar, starta!</button>
+  <p id="swap-ready-info" style="color:#aaa;font-size:.8rem;"></p>
+</div>
+
+<!-- PLAYING -->
+<div id="playing" class="screen">
+  <!-- Pile info -->
+  <div class="pile-info">
+    <div>
+      <div class="pile-label">Hög</div>
+      <div class="pile-top-card empty" id="pile-display">Tom</div>
+    </div>
+    <div class="pile-stats">
+      <div id="pile-count-label">0 kort i högen</div>
+      <div id="deck-count-label" style="margin-top:.25rem;">– i leken</div>
+    </div>
+  </div>
+
+  <div class="seven-warn" id="seven-warn" style="display:none;">⚠️ Spela 7 eller lägre!</div>
+  <div class="turn-banner other-turn" id="turn-banner">Väntar…</div>
+
+  <div class="zone-label" id="zone-hint">Handkort</div>
+  <div class="cards-grid" id="hand-cards"></div>
+
+  <div class="zone-label" id="faceup-label" style="display:none;">Synliga kort</div>
+  <div class="cards-grid" id="faceup-cards"></div>
+
+  <div class="zone-label" id="facedown-label" style="display:none;">Dolda kort (välj ett att spela)</div>
+  <div class="cards-grid" id="facedown-cards"></div>
+
+  <div class="action-btns">
+    <button id="play-btn" disabled>Spela</button>
+    <button id="pickup-btn" disabled>Ta högen</button>
+  </div>
+</div>
+
+<!-- GAME OVER -->
+<div id="gameover" class="screen">
+  <div class="trophy" id="go-trophy">🏆</div>
+  <h1>Spelet slut!</h1>
+  <div class="final-rank" id="go-rank"></div>
+  <div class="final-detail" id="go-detail"></div>
+  <p style="color:#666;font-size:.85rem;margin-top:.5rem;">Väntar på nytt spel…</p>
+</div>
+
+<div id="toast"></div>
+
+<script>
+  const WS_URL = `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/ws/shithead-player`;
+  let ws;
+  let myUsername = null;
+  let gameState = null;   // latest SHITHEAD_GAME_STATE
+  let myState   = null;   // latest SHITHEAD_YOUR_STATE
+  let turnInfo  = null;   // latest SHITHEAD_YOUR_TURN
+  let swapSelected = { hand: null, faceUp: null };
+  let selectedCardIds = new Set();
+
+  // ── Connect ────────────────────────────────────────────────────────────────
+  function connect() {
+    ws = new WebSocket(WS_URL);
+    document.getElementById('reconnecting').classList.remove('show');
+
+    ws.addEventListener('open', () => {
+      document.getElementById('reconnecting').classList.remove('show');
+      if (myUsername) send({ type: 'SHITHEAD_JOIN', username: myUsername });
+    });
+    ws.addEventListener('message', (e) => handleMsg(JSON.parse(e.data)));
+    ws.addEventListener('close', () => {
+      if (myUsername) {
+        document.getElementById('reconnecting').classList.add('show');
+        setTimeout(connect, 2000);
+      }
+    });
+    ws.addEventListener('error', () => ws.close());
+  }
+  function send(msg) { if (ws && ws.readyState === 1) ws.send(JSON.stringify(msg)); }
+
+  // ── Screens ────────────────────────────────────────────────────────────────
+  function show(id) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+  }
+
+  // ── Toast ──────────────────────────────────────────────────────────────────
+  let toastTimer;
+  function showToast(msg, duration = 3000) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => t.classList.remove('show'), duration);
+  }
+
+  // ── Join ───────────────────────────────────────────────────────────────────
+  document.getElementById('join-btn').addEventListener('click', doJoin);
+  document.getElementById('username-input').addEventListener('keydown', e => { if (e.key === 'Enter') doJoin(); });
+
+  function doJoin() {
+    const name = document.getElementById('username-input').value.trim();
+    if (!name) { document.getElementById('join-error').textContent = 'Ange ett namn.'; return; }
+    document.getElementById('join-error').textContent = '';
+    myUsername = name;
+    send({ type: 'SHITHEAD_JOIN', username: name });
+  }
+
+  // ── Swap phase ─────────────────────────────────────────────────────────────
+  document.getElementById('confirm-swap-btn').addEventListener('click', () => {
+    send({ type: 'SHITHEAD_CONFIRM_SWAP' });
+    document.getElementById('confirm-swap-btn').disabled = true;
+    document.getElementById('confirm-swap-btn').textContent = '⏳ Väntar…';
+  });
+
+  function renderSwap() {
+    if (!myState) return;
+    swapSelected = { hand: null, faceUp: null };
+
+    const handEl = document.getElementById('swap-hand');
+    const faceUpEl = document.getElementById('swap-faceup');
+
+    handEl.innerHTML = myState.hand.map(c =>
+      `<div class="play-card ${isRed(c) ? 'red-card' : 'black-card'}" data-id="${c.id}" data-zone="hand">
+        <span>${c.name}</span><span>${c.suit}</span>
+      </div>`
+    ).join('');
+
+    faceUpEl.innerHTML = myState.faceUp.map(c =>
+      `<div class="play-card ${isRed(c) ? 'red-card' : 'black-card'}" data-id="${c.id}" data-zone="faceup">
+        <span>${c.name}</span><span>${c.suit}</span>
+      </div>`
+    ).join('');
+
+    // Click handlers for swap
+    handEl.querySelectorAll('.play-card').forEach(el => {
+      el.addEventListener('click', () => onSwapClick('hand', el));
+    });
+    faceUpEl.querySelectorAll('.play-card').forEach(el => {
+      el.addEventListener('click', () => onSwapClick('faceup', el));
+    });
+  }
+
+  function onSwapClick(zone, el) {
+    const id = el.dataset.id;
+    if (zone === 'hand') {
+      document.querySelectorAll('#swap-hand .play-card').forEach(e => e.classList.remove('selected'));
+      if (swapSelected.hand === id) { swapSelected.hand = null; return; }
+      swapSelected.hand = id;
+      el.classList.add('selected');
+    } else {
+      document.querySelectorAll('#swap-faceup .play-card').forEach(e => e.classList.remove('selected'));
+      if (swapSelected.faceUp === id) { swapSelected.faceUp = null; return; }
+      swapSelected.faceUp = id;
+      el.classList.add('selected');
+    }
+    // If both selected, do the swap
+    if (swapSelected.hand && swapSelected.faceUp) {
+      send({ type: 'SHITHEAD_SWAP_CARD', handCardId: swapSelected.hand, faceUpCardId: swapSelected.faceUp });
+      swapSelected = { hand: null, faceUp: null };
+    }
+  }
+
+  // ── Playing phase ──────────────────────────────────────────────────────────
+  const isRed = c => c.suit === '♥' || c.suit === '♦';
+
+  function isMyTurn() {
+    return turnInfo && turnInfo.currentPlayer === myUsername;
+  }
+
+  function renderPlaying() {
+    if (!myState || !gameState) return;
+
+    const myTurn = isMyTurn();
+
+    // Pile display
+    const pile = document.getElementById('pile-display');
+    const pt = turnInfo ? turnInfo.pileTop : null;
+    if (pt) {
+      pile.className = `pile-top-card ${isRed(pt) ? 'red-card' : 'black-card'}`;
+      pile.innerHTML = `<span>${pt.name}</span><span>${pt.suit}</span>`;
+    } else {
+      pile.className = 'pile-top-card empty';
+      pile.innerHTML = 'Tom';
+    }
+
+    const sevenActive = turnInfo ? turnInfo.sevenActive : false;
+    document.getElementById('seven-warn').style.display = sevenActive ? '' : 'none';
+    document.getElementById('pile-count-label').textContent =
+      (gameState.pileSize || 0) + ' kort i högen';
+    document.getElementById('deck-count-label').textContent =
+      (gameState.deckSize || 0) + ' kort i leken';
+
+    // Turn banner
+    const banner = document.getElementById('turn-banner');
+    if (myTurn) {
+      banner.textContent = '🎯 Din tur!';
+      banner.className = 'turn-banner my-turn';
+    } else {
+      const cur = gameState.currentPlayer || '…';
+      banner.textContent = `Väntar på ${cur}…`;
+      banner.className = 'turn-banner other-turn';
+    }
+
+    // Determine active zone
+    const hasHand    = myState.hand.length > 0;
+    const hasFaceUp  = myState.faceUp.length > 0;
+    const hasFaceDown = (myState.faceDownIds || []).length > 0;
+
+    selectedCardIds.clear();
+
+    // Hand cards
+    const handEl = document.getElementById('hand-cards');
+    const zoneHint = document.getElementById('zone-hint');
+    const faceUpLabel = document.getElementById('faceup-label');
+    const faceDownLabel = document.getElementById('facedown-label');
+    const faceUpEl = document.getElementById('faceup-cards');
+    const faceDownEl = document.getElementById('facedown-cards');
+
+    if (hasHand) {
+      zoneHint.textContent = 'Handkort';
+      zoneHint.style.display = '';
+      handEl.innerHTML = myState.hand.map(c => {
+        const playable = myTurn && canPlayCard(c.rank, sevenActive, pt);
+        return `<div class="play-card ${isRed(c) ? 'red-card' : 'black-card'} ${!myTurn ? 'not-my-turn' : (!playable ? 'unplayable' : '')}"
+          data-id="${c.id}" data-zone="hand">
+          <span>${c.name}</span><span>${c.suit}</span>
+        </div>`;
+      }).join('');
+      faceUpLabel.style.display = 'none';
+      faceUpEl.innerHTML = '';
+      faceDownLabel.style.display = 'none';
+      faceDownEl.innerHTML = '';
+    } else if (hasFaceUp) {
+      zoneHint.style.display = 'none';
+      handEl.innerHTML = '';
+      faceUpLabel.style.display = '';
+      faceUpEl.innerHTML = myState.faceUp.map(c => {
+        const playable = myTurn && canPlayCard(c.rank, sevenActive, pt);
+        return `<div class="play-card ${isRed(c) ? 'red-card' : 'black-card'} ${!myTurn ? 'not-my-turn' : (!playable ? 'unplayable' : '')}"
+          data-id="${c.id}" data-zone="faceup">
+          <span>${c.name}</span><span>${c.suit}</span>
+        </div>`;
+      }).join('');
+      faceDownLabel.style.display = 'none';
+      faceDownEl.innerHTML = '';
+    } else if (hasFaceDown) {
+      zoneHint.style.display = 'none';
+      handEl.innerHTML = '';
+      faceUpLabel.style.display = 'none';
+      faceUpEl.innerHTML = '';
+      faceDownLabel.style.display = '';
+      const fdIds = myState.faceDownIds || [];
+      faceDownEl.innerHTML = fdIds.map(id =>
+        `<div class="face-down-card ${!myTurn ? 'not-my-turn' : ''}" data-id="${id}">🂠</div>`
+      ).join('');
+    } else {
+      zoneHint.style.display = 'none';
+      handEl.innerHTML = '';
+      faceUpLabel.style.display = 'none';
+      faceUpEl.innerHTML = '';
+      faceDownLabel.style.display = 'none';
+      faceDownEl.innerHTML = '';
+    }
+
+    // Attach card click handlers
+    if (myTurn) {
+      document.querySelectorAll('#hand-cards .play-card, #faceup-cards .play-card').forEach(el => {
+        el.addEventListener('click', () => onPlayCardClick(el));
+      });
+      document.querySelectorAll('#facedown-cards .face-down-card').forEach(el => {
+        el.addEventListener('click', () => onFaceDownClick(el));
+      });
+    }
+
+    updateActionButtons();
+  }
+
+  function canPlayCard(rank, sevenActive, pileTop) {
+    if (rank === 2 || rank === 10) return true;
+    const top = pileTop ? effectiveTopRank(pileTop) : 0;
+    if (top === 0) return true;
+    if (sevenActive) return rank <= 7;
+    return rank >= top;
+  }
+
+  // effectiveTopRank mirrors server logic
+  function effectiveTopRank(pileTop) {
+    // pileTop is the top card. For client we just get the single top card,
+    // so treat rank 3 as "transparent" — but we only have one card here.
+    // The server sends effectiveTopRank in SHITHEAD_YOUR_TURN.
+    if (!turnInfo) return pileTop ? pileTop.rank : 0;
+    return turnInfo.effectiveTopRank !== undefined ? turnInfo.effectiveTopRank : (pileTop ? pileTop.rank : 0);
+  }
+
+  function onPlayCardClick(el) {
+    const id = el.dataset.id;
+    if (el.classList.contains('unplayable')) return;
+
+    if (el.classList.contains('selected')) {
+      el.classList.remove('selected');
+      selectedCardIds.delete(id);
+    } else {
+      // Can only select cards of the same rank
+      const allCards = [...document.querySelectorAll('#hand-cards .play-card, #faceup-cards .play-card')];
+      // Determine rank of this card
+      const sevenActive = turnInfo ? turnInfo.sevenActive : false;
+      const pileTop = turnInfo ? turnInfo.pileTop : null;
+
+      // Find rank from myState
+      const allMyCards = [...(myState.hand || []), ...(myState.faceUp || [])];
+      const clickedCard = allMyCards.find(c => c.id === id);
+      if (!clickedCard) return;
+
+      // If something is already selected, it must be the same rank
+      if (selectedCardIds.size > 0) {
+        const firstId = [...selectedCardIds][0];
+        const firstCard = allMyCards.find(c => c.id === firstId);
+        if (firstCard && firstCard.rank !== clickedCard.rank) return;
+      }
+
+      el.classList.add('selected');
+      selectedCardIds.add(id);
+    }
+    updateActionButtons();
+  }
+
+  function onFaceDownClick(el) {
+    // Send the card ID for the face-down card (IDs are known, rank/suit are not)
+    const cardId = el.dataset.id;
+    send({ type: 'SHITHEAD_PLAY_FACEDOWN', cardId });
+  }
+
+  function updateActionButtons() {
+    const myTurn = isMyTurn();
+    const hasHand    = myState && myState.hand.length > 0;
+    const hasFaceUp  = myState && myState.faceUp.length > 0;
+    const hasFaceDown = myState && (myState.faceDownIds || []).length > 0;
+    const pileSize = gameState ? (gameState.pileSize || 0) : 0;
+
+    document.getElementById('play-btn').disabled = !myTurn || selectedCardIds.size === 0;
+    document.getElementById('pickup-btn').disabled = !myTurn || pileSize === 0 || (hasFaceDown && !hasHand && !hasFaceUp);
+  }
+
+  document.getElementById('play-btn').addEventListener('click', () => {
+    if (selectedCardIds.size === 0) return;
+    send({ type: 'SHITHEAD_PLAY_CARDS', cardIds: [...selectedCardIds] });
+    selectedCardIds.clear();
+    document.getElementById('play-btn').disabled = true;
+  });
+
+  document.getElementById('pickup-btn').addEventListener('click', () => {
+    send({ type: 'SHITHEAD_PICK_UP_PILE' });
+    document.getElementById('pickup-btn').disabled = true;
+  });
+
+  // ── Message handler ────────────────────────────────────────────────────────
+  function handleMsg(msg) {
+    switch (msg.type) {
+      case 'SHITHEAD_CONNECTED':
+        document.getElementById('reconnecting').classList.remove('show');
+        break;
+
+      case 'SHITHEAD_JOIN_OK':
+        myUsername = msg.username;
+        document.getElementById('waiting-name').textContent = `Hej ${myUsername}! 👋`;
+        show('waiting');
+        break;
+
+      case 'SHITHEAD_PLAYERS':
+        document.getElementById('waiting-players').textContent =
+          `${msg.playerCount} spelare i lobbyn`;
+        break;
+
+      case 'SHITHEAD_SWAP_PHASE':
+        document.getElementById('confirm-swap-btn').disabled = false;
+        document.getElementById('confirm-swap-btn').textContent = '✅ Klar, starta!';
+        document.getElementById('swap-ready-info').textContent = '';
+        show('swap');
+        if (myState) renderSwap();
+        break;
+
+      case 'SHITHEAD_YOUR_STATE':
+        myState = msg;
+        // Re-render current screen
+        if (document.getElementById('swap').classList.contains('active')) {
+          renderSwap();
+        } else if (document.getElementById('playing').classList.contains('active')) {
+          renderPlaying();
+        } else if (msg.hand && msg.hand.length > 0 && gameState && gameState.state === 'SWAP') {
+          show('swap');
+          renderSwap();
+        }
+        break;
+
+      case 'SHITHEAD_GAME_STATE':
+        gameState = msg;
+        if (msg.state === 'PLAYING') {
+          if (!document.getElementById('playing').classList.contains('active') &&
+              myUsername) {
+            show('playing');
+          }
+          renderPlaying();
+        }
+        break;
+
+      case 'SHITHEAD_YOUR_TURN':
+        turnInfo = msg;
+        if (myUsername) {
+          if (!document.getElementById('playing').classList.contains('active')) {
+            show('playing');
+          }
+          renderPlaying();
+          if (msg.currentPlayer === myUsername) {
+            showToast('🎯 Din tur!', 2000);
+          }
+        }
+        break;
+
+      case 'SHITHEAD_SWAP_READY':
+        document.getElementById('swap-ready-info').textContent =
+          `${msg.readyCount} av ${msg.total} är klara…`;
+        break;
+
+      case 'SHITHEAD_PILE_BURNED':
+        showToast('🔥 Högen brändes! Spela igen!', 2500);
+        break;
+
+      case 'SHITHEAD_PILE_PICKED_UP':
+        if (msg.username === myUsername) {
+          showToast(`😬 Du tar upp högen (${msg.handCount} kort)`, 2500);
+        } else {
+          showToast(`😅 ${msg.username} tar upp högen`, 2000);
+        }
+        break;
+
+      case 'SHITHEAD_REVEAL_FACEDOWN':
+        if (msg.username === myUsername) {
+          showToast(`🎲 Du vänder: ${msg.card.name}${msg.card.suit}`, 2000);
+        } else {
+          showToast(`🎲 ${msg.username} vänder ett dolt kort`, 1500);
+        }
+        break;
+
+      case 'SHITHEAD_PLAYER_FINISHED':
+        {
+          const medals = ['🥇','🥈','🥉','4️⃣','5️⃣'];
+          if (msg.username === myUsername) {
+            showToast(`${medals[msg.position-1]||'✅'} Du är klar! Plats ${msg.position}!`, 3000);
+          } else {
+            showToast(`${medals[msg.position-1]||'✅'} ${msg.username} är klar (plats ${msg.position})`, 2000);
+          }
+        }
+        break;
+
+      case 'SHITHEAD_GAME_OVER':
+        handleGameOver(msg);
+        break;
+
+      case 'SHITHEAD_RESTARTED':
+        myUsername = null;
+        myState = null;
+        gameState = null;
+        turnInfo = null;
+        document.getElementById('username-input').value = '';
+        show('join');
+        break;
+
+      case 'SHITHEAD_ERROR':
+        document.getElementById('join-error').textContent = msg.message || 'Något gick fel.';
+        if (!myUsername) show('join');
+        break;
+    }
+  }
+
+  function handleGameOver(msg) {
+    const medals = ['🥇','🥈','🥉','4️⃣','5️⃣'];
+    const pos = msg.finishOrder.indexOf(myUsername);
+    const isShithead = msg.shithead === myUsername;
+
+    document.getElementById('go-trophy').textContent = isShithead ? '💩' : (medals[pos] || '🏅');
+    document.getElementById('go-rank').textContent = isShithead
+      ? 'Du är Skiten!'
+      : pos >= 0 ? `Plats ${pos + 1}` : '';
+    document.getElementById('go-detail').textContent = isShithead
+      ? 'Bättre lycka nästa gång…'
+      : pos === 0 ? 'Bra jobbat! 🎉' : 'Tack för spelet!';
+
+    show('gameover');
+  }
+
+  connect();
+</script>
+</body>
+</html>
