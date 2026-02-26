@@ -1,0 +1,683 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Game Night — Display</title>
+  <style>
+    :root {
+      --red:    #e21b3c;
+      --blue:   #1368ce;
+      --yellow: #d89e00;
+      --green:  #26890c;
+      --bg:     #1a1a2e;
+      --card:   #16213e;
+      --text:   #eaeaea;
+      --accent: #9f44d3;
+      --timer:  #00c2ff;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── Screens ── */
+    .screen { display: none; flex-direction: column; height: 100vh; padding: 2rem; }
+    .screen.active { display: flex; }
+
+    /* ── LOBBY DISPLAY ── */
+    #lobby-display {
+      flex-direction: row;
+      gap: 2rem;
+      align-items: stretch;
+    }
+    #lobby-left {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 1.25rem;
+      width: 320px;
+      flex-shrink: 0;
+    }
+    .lobby-title {
+      font-size: clamp(2rem, 3.5vw, 3rem);
+      font-weight: 900;
+      background: linear-gradient(90deg, #9f44d3, #00c2ff);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      text-align: center;
+    }
+    #ld-room-code {
+      font-size: 3rem;
+      font-weight: 900;
+      letter-spacing: 0.35em;
+      background: linear-gradient(90deg, #9f44d3, #00c2ff);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    #ld-qr-frame {
+      position: relative;
+      width: 260px;
+      --cb: rgba(159,68,211,0.85);
+      background:
+        linear-gradient(var(--cb),var(--cb)) top    left  /3px 22px no-repeat,
+        linear-gradient(var(--cb),var(--cb)) top    left  /22px 3px no-repeat,
+        linear-gradient(var(--cb),var(--cb)) top    right /3px 22px no-repeat,
+        linear-gradient(var(--cb),var(--cb)) top    right /22px 3px no-repeat,
+        linear-gradient(var(--cb),var(--cb)) bottom left  /3px 22px no-repeat,
+        linear-gradient(var(--cb),var(--cb)) bottom left  /22px 3px no-repeat,
+        linear-gradient(var(--cb),var(--cb)) bottom right /3px 22px no-repeat,
+        linear-gradient(var(--cb),var(--cb)) bottom right /22px 3px no-repeat;
+      padding: 6px;
+      border-radius: 0.6rem;
+      overflow: hidden;
+    }
+    #ld-qr-frame img { width: 100%; border-radius: 0.4rem; background: #fff; padding: 8px; display: block; }
+    .qr-scan-line {
+      position: absolute; left: 6px; right: 6px; height: 2px;
+      background: linear-gradient(90deg, transparent 5%, rgba(159,68,211,0.85) 50%, transparent 95%);
+      animation: qrScan 2.6s ease-in-out infinite; pointer-events: none; z-index: 2;
+    }
+    @keyframes qrScan {
+      0%   { top: 10px; opacity: 0; } 8%   { opacity: 1; } 92%  { opacity: 1; }
+      100% { top: calc(100% - 10px); opacity: 0; }
+    }
+    #ld-url {
+      font-size: 0.85rem; font-weight: 700;
+      background: linear-gradient(90deg, #9f44d3, #00c2ff);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      text-align: center;
+    }
+    #ld-scan-hint { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.12em; color: var(--accent); }
+
+    #lobby-right {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 1rem;
+    }
+    #ld-players-title {
+      font-size: 1rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.1em; color: #888;
+    }
+    #ld-player-list {
+      display: flex; flex-wrap: wrap; gap: 0.65rem;
+    }
+    .ld-player-chip {
+      display: flex; align-items: center; gap: 0.5rem;
+      padding: 0.5rem 1rem 0.5rem 0.6rem;
+      border-radius: 2rem;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.1);
+      font-size: 1.1rem; font-weight: 700;
+      animation: chipIn 0.35s cubic-bezier(0.34,1.56,0.64,1);
+    }
+    .ld-player-chip.admin-chip { border-color: rgba(255,215,0,0.5); background: rgba(255,215,0,0.1); }
+    @keyframes chipIn { from { transform: scale(0.4); opacity:0; } to { transform: scale(1); opacity:1; } }
+    .ldc-avatar { font-size: 1.3rem; }
+    .ldc-crown  { font-size: 0.9rem; }
+    .ldc-ready  { font-size: 1rem; }
+
+    /* ── GAME SCREEN (mirrors host/index.html) ── */
+    #question-screen { gap: 0.75rem; }
+
+    #q-header {
+      display: flex; justify-content: space-between; align-items: center; flex-shrink: 0;
+    }
+    #q-category {
+      background: var(--accent); padding: 0.3rem 0.9rem;
+      border-radius: 2rem; font-size: 0.85rem; font-weight: 600;
+    }
+    #q-counter { color: #aaa; font-size: 1rem; }
+    #q-answered { color: #aaa; font-size: 0.9rem; }
+
+    #timer-bar-wrap {
+      width: 100%; height: 14px; background: rgba(255,255,255,0.1);
+      border-radius: 7px; overflow: hidden; flex-shrink: 0;
+    }
+    #timer-bar {
+      height: 100%; background: linear-gradient(90deg, var(--timer), #8a2be2);
+      border-radius: 7px; width: 100%; transform-origin: left; transition: none;
+    }
+
+    #q-text {
+      font-size: clamp(1.6rem, 4vw, 3.2rem); font-weight: 700;
+      text-align: center; line-height: 1.3;
+      flex: 1; display: flex; align-items: center; justify-content: center; padding: 0 1rem;
+    }
+
+    #answers-grid {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; flex-shrink: 0;
+    }
+    .answer-box {
+      display: flex; align-items: center; gap: 0.8rem;
+      padding: 1.1rem 1.4rem; border-radius: 0.75rem;
+      font-size: clamp(1rem, 2.2vw, 1.5rem); font-weight: 600; transition: opacity 0.3s;
+    }
+    .answer-box .ans-letter {
+      width: 2.2rem; height: 2.2rem; border-radius: 50%;
+      background: rgba(0,0,0,0.25);
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 900; flex-shrink: 0;
+    }
+    .ans-A { background: var(--red); }
+    .ans-B { background: var(--blue); }
+    .ans-C { background: var(--yellow); color: #222; }
+    .ans-D { background: var(--green); }
+
+    /* In-place reveal animation */
+    .answer-box { position: relative; }
+    .answer-box.ans-correct-reveal {
+      box-shadow: 0 0 0 3px #4cde80, 0 0 40px rgba(76,222,128,0.75), 0 0 90px rgba(76,222,128,0.4);
+      animation: correctBounce 0.6s cubic-bezier(0.34,1.56,0.64,1), correctGlow 1.6s ease-in-out 0.6s infinite;
+      z-index: 2;
+    }
+    @keyframes correctGlow {
+      0%,100% { box-shadow: 0 0 0 3px #4cde80, 0 0 40px rgba(76,222,128,0.7), 0 0 80px rgba(76,222,128,0.35); }
+      50%      { box-shadow: 0 0 0 4px #4cde80, 0 0 65px rgba(76,222,128,1),   0 0 130px rgba(76,222,128,0.55); }
+    }
+    .answer-box.ans-wrong-reveal {
+      opacity: 0.2; filter: grayscale(0.85) brightness(0.6); transition: opacity 0.5s, filter 0.5s;
+    }
+    .answer-box.ans-correct-reveal::after {
+      content: '✓'; position: absolute; right: 1rem; top: 50%; font-size: 2.4rem;
+      font-weight: 900; color: #4cde80; text-shadow: 0 0 18px rgba(76,222,128,0.9);
+      animation: checkPop 0.45s 0.35s cubic-bezier(0.34,1.56,0.64,1) both;
+    }
+    @keyframes checkPop { from { transform: translateY(-50%) scale(0.2); opacity:0; } to { transform: translateY(-50%) scale(1); opacity:1; } }
+    .answer-box.ans-wrong-reveal::after {
+      content: '✗'; position: absolute; right: 1rem; top: 50%; transform: translateY(-50%);
+      font-size: 1.6rem; font-weight: 900; color: rgba(255,255,255,0.2);
+    }
+    @keyframes correctBounce {
+      0%  { transform: scale(1); } 30% { transform: scale(1.09); }
+      60% { transform: scale(0.96); } 80% { transform: scale(1.04); } 100% { transform: scale(1.02); }
+    }
+
+    /* Scoreboard strip */
+    #q-live-lb {
+      order: -1; width: 100%;
+      background: linear-gradient(135deg, rgba(22,33,62,0.97), rgba(20,20,40,0.95));
+      border: 1px solid rgba(159,68,211,0.22); border-radius: 1rem;
+      padding: 0.6rem 1rem; display: flex; flex-direction: column; gap: 0.35rem;
+      flex-shrink: 0; box-shadow: 0 4px 24px rgba(0,0,0,0.4);
+    }
+    .ql-strip-row { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; min-height: 3rem; }
+    .ql-strip-label {
+      font-size: 0.7rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.12em;
+      color: #666; flex-shrink: 0; white-space: nowrap;
+      padding-right: 0.6rem; border-right: 1px solid rgba(255,255,255,0.1); margin-right: 0.1rem;
+      align-self: stretch; display: flex; align-items: center;
+    }
+    .ql-player-chip {
+      display: flex; align-items: center; gap: 0.45rem; padding: 0.45rem 0.9rem;
+      border-radius: 0.65rem; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.09);
+      min-height: 52px; font-size: 1rem; white-space: nowrap; transition: box-shadow 0.3s;
+    }
+    .ql-player-chip.gold   { background: linear-gradient(135deg,rgba(255,215,0,0.2),rgba(255,165,0,0.1)); border: 1px solid rgba(255,215,0,0.55); box-shadow: 0 0 20px rgba(255,215,0,0.18); }
+    .ql-player-chip.silver { background: rgba(192,192,192,0.12); border: 1px solid rgba(192,192,192,0.4); }
+    .ql-player-chip.bronze { background: rgba(205,127,50,0.15); border: 1px solid rgba(205,127,50,0.45); }
+    .ql-player-chip.gold   .ql-chip-name, .ql-player-chip.gold   .ql-chip-score { color: gold; text-shadow: 0 0 10px rgba(255,215,0,0.5); }
+    .ql-player-chip.silver .ql-chip-name, .ql-player-chip.silver .ql-chip-score { color: #d8d8d8; }
+    .ql-player-chip.bronze .ql-chip-name, .ql-player-chip.bronze .ql-chip-score { color: #e8a870; }
+    .ql-chip-rank  { font-size: 1.5rem; line-height: 1; flex-shrink: 0; }
+    .ql-chip-name  { font-weight: 700; font-size: 1.05rem; }
+    .ql-chip-score { color: var(--timer); font-weight: 800; font-size: 1.05rem; margin-left: 0.2rem; }
+    .ql-chip-delta { color: #4cde80; font-size: 0.82rem; font-weight: 700; }
+    .ql-chip-time  { font-size: 0.78rem; color: #aaa; }
+    .lb-answer-badge {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 1.7rem; height: 1.7rem; border-radius: 0.35rem;
+      font-size: 0.85rem; font-weight: 900; flex-shrink: 0; border: 2px solid;
+    }
+    .badge-correct { background: rgba(76,222,128,0.18); border-color: #4cde80; color: #4cde80; box-shadow: 0 0 6px rgba(76,222,128,0.4); }
+    .badge-wrong   { background: rgba(226,27,60,0.22);  border-color: #e21b3c; color: #ff6b6b; }
+    .badge-none    { background: rgba(255,255,255,0.04); border-color: rgba(255,255,255,0.1); color: #444; }
+
+    /* FETCHING / COUNTDOWN */
+    #fetching { align-items: center; justify-content: center; gap: 2rem; }
+    .spinner { width: 80px; height: 80px; border: 6px solid rgba(255,255,255,0.1); border-top-color: var(--timer); border-radius: 50%; animation: spin 0.8s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    #fetching h2 { font-size: 2rem; color: #ccc; }
+    #countdown { align-items: center; justify-content: center; gap: 1rem; }
+    #countdown h2 { font-size: 2rem; color: #aaa; }
+    #countdown-number { font-size: clamp(8rem,20vw,18rem); font-weight: 900; color: var(--timer); line-height: 1; animation: pulse 1s ease; }
+    @keyframes pulse { from { transform: scale(1.4); opacity: 0.3; } to { transform: scale(1); opacity: 1; } }
+    #countdown-total { font-size: 1.2rem; color: #888; }
+
+    /* GAME OVER */
+    #gameover { align-items: center; justify-content: flex-start; gap: 1.25rem; padding-top: 1.5rem; overflow-y: auto; }
+    #gameover h1 { font-size: clamp(2rem,5vw,4rem); font-weight: 900; text-align: center;
+      background: linear-gradient(90deg,gold,#ff6b6b,#9f44d3); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    #podium { display: flex; align-items: flex-end; justify-content: center; gap: 1.5rem; }
+    .podium-slot { display: flex; flex-direction: column; align-items: center; gap: 0.4rem; }
+    .podium-slot .medal { font-size: 2.5rem; }
+    .podium-slot .pd-name { font-size: 1.1rem; font-weight: 700; }
+    .podium-slot .pd-score { font-size: 0.9rem; color: #aaa; }
+    .podium-block { background: var(--accent); border-radius: 0.5rem 0.5rem 0 0; width: 110px; }
+    .podium-1 .podium-block { height: 100px; background: linear-gradient(135deg,gold,#d4a300); }
+    .podium-2 .podium-block { height: 70px;  background: linear-gradient(135deg,#c0c0c0,#888); }
+    .podium-3 .podium-block { height: 50px;  background: linear-gradient(135deg,#cd7f32,#8b4513); }
+    #final-scores { background: var(--card); border-radius: 1rem; padding: 0.75rem 2rem; min-width: 400px; max-height: min(280px,32vh); overflow-y: auto; }
+    .lb-total-row { display: flex; align-items: center; gap: 0.5rem; padding: 0.25rem 0; font-size: 0.9rem; border-bottom: 1px solid rgba(255,255,255,0.05); }
+    .lb-total-row:last-child { border-bottom: none; }
+    .lb-total-rank { width: 1.5rem; font-weight: 700; color: #666; font-size: 0.8rem; }
+    .lb-total-rank.top { color: gold; }
+    .lb-total-name { flex: 1; font-weight: 600; }
+    .lb-total-score { font-weight: 700; color: var(--timer); font-size: 0.9rem; }
+  </style>
+</head>
+<body>
+
+<!-- LOBBY DISPLAY -->
+<div id="lobby-display" class="screen active">
+  <div id="lobby-left">
+    <div class="lobby-title">🎮 Game Night</div>
+    <div id="ld-room-code">····</div>
+    <span id="ld-scan-hint">📷 Scan to Join</span>
+    <div id="ld-qr-frame">
+      <img id="ld-qr-img" src="" alt="QR">
+      <div class="qr-scan-line"></div>
+    </div>
+    <div id="ld-url" style="color:#888;font-size:0.82rem;">Loading…</div>
+  </div>
+  <div id="lobby-right">
+    <div id="ld-players-title">Players (<span id="ld-player-count">0</span>)</div>
+    <div id="ld-player-list">
+      <span style="color:#555;font-style:italic;">Waiting for players…</span>
+    </div>
+  </div>
+</div>
+
+<!-- FETCHING -->
+<div id="fetching" class="screen">
+  <div class="spinner"></div>
+  <h2>Loading questions…</h2>
+</div>
+
+<!-- COUNTDOWN -->
+<div id="countdown" class="screen">
+  <h2>Get Ready!</h2>
+  <div id="countdown-number">3</div>
+  <div id="countdown-total"></div>
+</div>
+
+<!-- QUESTION -->
+<div id="question-screen" class="screen">
+  <div id="q-header">
+    <span id="q-category"></span>
+    <span id="q-counter"></span>
+    <span id="q-answered"></span>
+  </div>
+  <div id="timer-bar-wrap"><div id="timer-bar"></div></div>
+  <div id="q-text"></div>
+  <div id="answers-grid">
+    <div class="answer-box ans-A"><span class="ans-letter">A</span><span id="ans-A-text"></span></div>
+    <div class="answer-box ans-B"><span class="ans-letter">B</span><span id="ans-B-text"></span></div>
+    <div class="answer-box ans-C"><span class="ans-letter" style="color:#222">C</span><span id="ans-C-text"></span></div>
+    <div class="answer-box ans-D"><span class="ans-letter">D</span><span id="ans-D-text"></span></div>
+  </div>
+  <div id="q-live-lb">
+    <div id="q-live-lb-rows">
+      <div style="color:#555;font-size:0.82rem;text-align:center;padding:0.75rem 0;">Waiting for players…</div>
+    </div>
+  </div>
+</div>
+
+<!-- GAME OVER -->
+<div id="gameover" class="screen">
+  <h1>🏆 Game Over!</h1>
+  <div id="podium"></div>
+  <div id="final-scores"></div>
+</div>
+
+<script>
+  const roomCode = location.pathname.split('/')[2]?.toUpperCase();
+
+  let ws, connectGen = 0;
+  let currentQuestion  = null;
+  let timerBarTimeout  = null;
+  let currentScores    = [];
+  let currentPlayers   = [];
+  let activeMiniGame   = 'lobby';
+
+  // ── Init ──────────────────────────────────────────────────────────────────
+  if (roomCode) {
+    document.getElementById('ld-room-code').textContent = roomCode;
+    loadQR(roomCode);
+    updateJoinUrl(roomCode);
+    connect();
+  }
+
+  // ── WebSocket ─────────────────────────────────────────────────────────────
+  function buildWsUrl() {
+    const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+    return `${proto}://${location.host}/ws?room=${roomCode}&role=display`;
+  }
+
+  function connect() {
+    const gen = ++connectGen;
+    ws = new WebSocket(buildWsUrl());
+
+    ws.addEventListener('open', () => console.log('Display WS connected'));
+    ws.addEventListener('message', e => { if (gen === connectGen) handleMsg(JSON.parse(e.data)); });
+    ws.addEventListener('close', () => { setTimeout(connect, 2000); });
+    ws.addEventListener('error', () => ws.close());
+  }
+
+  // ── Message handler ───────────────────────────────────────────────────────
+  function handleMsg(msg) {
+    switch (msg.type) {
+
+      case 'DISPLAY_OK':
+        roomCode && updateJoinUrl(roomCode);
+        if (msg.state) {
+          activeMiniGame = msg.state.activeMiniGame || 'lobby';
+          renderLobby(msg.state);
+        }
+        break;
+
+      case 'HOST_CONNECTED':
+        // Compat: sent alongside DISPLAY_OK
+        break;
+
+      case 'LOBBY_UPDATE':
+        activeMiniGame = msg.activeMiniGame || 'lobby';
+        if (activeMiniGame === 'lobby') renderLobby(msg);
+        break;
+
+      case 'PLAYER_JOINED':
+        // Legacy compat update for lobby
+        updateLobbyPlayers(msg.players, msg.playerCount);
+        break;
+
+      case 'MINI_GAME_STARTING':
+        activeMiniGame = msg.gameType;
+        // Do NOT redirect — stay here and show the game display
+        break;
+
+      case 'GAME_FETCHING':
+        showScreen('fetching');
+        document.querySelector('#fetching h2').textContent = 'Loading questions…';
+        break;
+
+      case 'GAME_TRANSLATING':
+        showScreen('fetching');
+        document.querySelector('#fetching h2').textContent = `Translating questions (${msg.current}/${msg.total})…`;
+        break;
+
+      case 'GAME_STARTING':
+        showScreen('countdown');
+        document.getElementById('countdown-number').textContent = msg.countdown;
+        document.getElementById('countdown-total').textContent = `${msg.totalQuestions} questions`;
+        break;
+
+      case 'COUNTDOWN_TICK':
+        document.getElementById('countdown-number').style.animation = 'none';
+        requestAnimationFrame(() => requestAnimationFrame(() => {
+          document.getElementById('countdown-number').style.animation = 'pulse 1s ease';
+          document.getElementById('countdown-number').textContent = msg.countdown;
+        }));
+        break;
+
+      case 'QUESTION':
+        showQuestion(msg);
+        break;
+
+      case 'ANSWER_COUNT':
+        document.getElementById('q-answered').textContent = `${msg.answered} / ${msg.total} answered`;
+        break;
+
+      case 'REVEAL':
+        showReveal(msg);
+        break;
+
+      case 'NEXT_QUESTION':
+        for (const id of ['A','B','C','D']) {
+          const box = document.querySelector(`.answer-box.ans-${id}`);
+          if (box) box.classList.remove('ans-correct-reveal','ans-wrong-reveal');
+        }
+        document.getElementById('timer-bar').style.background = 'linear-gradient(90deg, var(--timer), #8a2be2)';
+        break;
+
+      case 'GAME_OVER':
+        showGameOver(msg);
+        break;
+
+      case 'RESTARTED':
+        activeMiniGame = 'lobby';
+        currentScores  = [];
+        currentPlayers = [];
+        showScreen('lobby-display');
+        break;
+    }
+  }
+
+  // ── Lobby rendering ───────────────────────────────────────────────────────
+  function renderLobby(state) {
+    showScreen('lobby-display');
+    updateLobbyPlayers(state.players || [], state.totalCount || 0);
+  }
+
+  function updateLobbyPlayers(players, count) {
+    currentPlayers = Array.isArray(players) ? players.map(p => typeof p === 'string' ? p : p.username) : [];
+    document.getElementById('ld-player-count').textContent = currentPlayers.length || count || 0;
+    const list = document.getElementById('ld-player-list');
+
+    if (currentPlayers.length === 0) {
+      list.innerHTML = '<span style="color:#555;font-style:italic;">Waiting for players…</span>';
+      return;
+    }
+
+    list.innerHTML = '';
+    const playersArr = Array.isArray(players) && typeof players[0] === 'object' ? players : currentPlayers.map(n => ({ username: n }));
+    for (const p of playersArr) {
+      const name   = typeof p === 'string' ? p : p.username;
+      const avatar = (typeof p === 'object' && p.avatar) ? p.avatar : nameToAvatar(name);
+      const admin  = typeof p === 'object' && p.isAdmin;
+      const ready  = typeof p === 'object' && p.isReady;
+      const chip   = document.createElement('div');
+      chip.className = 'ld-player-chip' + (admin ? ' admin-chip' : '');
+      chip.innerHTML =
+        `<span class="ldc-avatar">${esc(avatar)}</span>` +
+        `<span style="font-weight:700">${esc(name)}</span>` +
+        (admin ? `<span class="ldc-crown">👑</span>` : '') +
+        `<span class="ldc-ready">${ready ? '✅' : '🟡'}</span>`;
+      list.appendChild(chip);
+    }
+  }
+
+  // ── Game display (mirrors host page logic) ────────────────────────────────
+  function showScreen(id) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+  }
+
+  function updateQLiveLb() {
+    const el = document.getElementById('q-live-lb-rows');
+    if (!el) return;
+    const display = currentScores.length > 0
+      ? currentScores
+      : currentPlayers.map(name => ({ username: name, score: 0 }));
+    if (display.length === 0) {
+      el.innerHTML = '<div style="color:#555;font-size:0.82rem;padding:0.3rem 0;">Waiting for players…</div>';
+      return;
+    }
+    const medals = ['🥇','🥈','🥉'];
+    const cc     = ['gold','silver','bronze'];
+    const chips  = display.map((s, i) => {
+      const delta = s.delta > 0 ? `<span class="ql-chip-delta">+${s.delta.toLocaleString()}</span>` : '';
+      return `<div class="ql-player-chip ${cc[i]||''}">
+        <span class="ql-chip-rank">${medals[i]||`${i+1}.`}</span>
+        <span class="ql-chip-name">${esc(s.username)}</span>
+        ${delta}<span class="ql-chip-score">${s.score.toLocaleString()}</span>
+      </div>`;
+    }).join('');
+    el.innerHTML = `<div class="ql-strip-row"><span class="ql-strip-label">🏆 Standings</span>${chips}</div>`;
+  }
+
+  function showRevealInSidebar(msg, correctLetter) {
+    const el = document.getElementById('q-live-lb-rows');
+    if (!el) return;
+    const correctPct = msg.answerBreakdown[correctLetter] || 0;
+    const pctLabel   = correctPct === 0 ? '😱 Nobody!' : `✓ ${correctPct}%`;
+    const pctColor   = correctPct === 0 ? '#ff8585' : '#4cde80';
+    const medals     = ['🥇','🥈','🥉'];
+    const cc         = ['gold','silver','bronze'];
+    const roundSorted = [...msg.scores].sort((a,b) => b.delta - a.delta);
+    const totalSorted = [...msg.scores].sort((a,b) => b.score - a.score);
+
+    const roundChips = roundSorted.map((s, i) => {
+      const isCorrect  = s.answer === correctLetter;
+      const badgeClass = s.answer ? (isCorrect ? 'badge-correct' : 'badge-wrong') : 'badge-none';
+      const streak     = s.streak || 0;
+      const fire       = streak >= 5 ? '🔥🔥' : streak >= 3 ? '🔥' : '';
+      const timeHtml   = s.answerTime != null ? `<span class="ql-chip-time">⚡${s.answerTime}s</span>` : '';
+      const deltaHtml  = s.delta > 0 ? `<span class="ql-chip-delta">+${s.delta.toLocaleString()}</span>` : '';
+      return `<div class="ql-player-chip">
+        <span class="ql-chip-rank">${medals[i]||`${i+1}.`}</span>
+        <span class="ql-chip-name">${esc(s.username)}${fire}</span>
+        ${timeHtml}<span class="lb-answer-badge ${badgeClass}">${s.answer||'—'}</span>
+        ${deltaHtml}
+      </div>`;
+    }).join('');
+
+    const totalChips = totalSorted.map((s, i) => {
+      const streak = s.streak || 0;
+      const fire   = streak >= 5 ? '🔥🔥' : streak >= 3 ? '🔥' : '';
+      return `<div class="ql-player-chip ${cc[i]||''}">
+        <span class="ql-chip-rank">${medals[i]||`${i+1}.`}</span>
+        <span class="ql-chip-name">${esc(s.username)}${fire}</span>
+        <span class="ql-chip-score">${s.score.toLocaleString()}</span>
+      </div>`;
+    }).join('');
+
+    el.innerHTML = `
+      <div class="ql-strip-row">
+        <span class="ql-strip-label" style="color:${pctColor}">${pctLabel}</span>
+        <span class="ql-strip-label">This Round</span>
+        ${roundChips}
+      </div>
+      <div class="ql-strip-row">
+        <span class="ql-strip-label">Total</span>
+        ${totalChips}
+      </div>`;
+  }
+
+  function showQuestion(q) {
+    hideRevealUI();
+    currentQuestion = q;
+    showScreen('question-screen');
+    updateQLiveLb();
+    document.getElementById('q-category').textContent = q.category;
+    document.getElementById('q-counter').textContent  = `Q ${q.questionNumber} / ${q.totalQuestions}`;
+    document.getElementById('q-answered').textContent = `0 / ? answered`;
+    document.getElementById('q-text').textContent = q.question;
+    for (const ans of q.answers) {
+      document.getElementById(`ans-${ans.id}-text`).textContent = ans.text;
+    }
+    clearTimerAnim();
+    const bar = document.getElementById('timer-bar');
+    bar.style.transition = 'none';
+    bar.style.width = '100%';
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      bar.style.transition = `width ${q.timeLimit}s linear`;
+      bar.style.width = '0%';
+    }));
+    timerBarTimeout = setTimeout(() => { bar.style.width = '0%'; }, q.timeLimit * 1000);
+  }
+
+  function hideRevealUI() {
+    for (const id of ['A','B','C','D']) {
+      const box = document.querySelector(`.answer-box.ans-${id}`);
+      if (box) box.classList.remove('ans-correct-reveal','ans-wrong-reveal');
+    }
+    document.getElementById('timer-bar').style.background = 'linear-gradient(90deg, var(--timer), #8a2be2)';
+  }
+
+  function showReveal(msg) {
+    clearTimerAnim();
+    if (!document.getElementById('question-screen').classList.contains('active')) {
+      showScreen('question-screen');
+    }
+    const correctLetter = msg.correctAnswer;
+    const bar = document.getElementById('timer-bar');
+    bar.style.transition = 'none';
+    bar.style.background = 'linear-gradient(90deg, #e21b3c, #ff7c3a)';
+    for (const id of ['A','B','C','D']) {
+      const box = document.querySelector(`.answer-box.ans-${id}`);
+      if (box) {
+        box.classList.remove('ans-correct-reveal','ans-wrong-reveal');
+        box.classList.add(id === correctLetter ? 'ans-correct-reveal' : 'ans-wrong-reveal');
+      }
+    }
+    currentScores = [...msg.scores].sort((a,b) => b.score - a.score);
+    showRevealInSidebar(msg, correctLetter);
+  }
+
+  function clearTimerAnim() {
+    if (timerBarTimeout) { clearTimeout(timerBarTimeout); timerBarTimeout = null; }
+  }
+
+  function showGameOver(msg) {
+    hideRevealUI();
+    showScreen('gameover');
+    const top3   = msg.finalScores.slice(0, 3);
+    const medals = ['🥇','🥈','🥉'];
+    const order  = [1, 0, 2];
+    const podium = document.getElementById('podium');
+    podium.innerHTML = '';
+    for (const pos of order) {
+      const p = top3[pos]; if (!p) continue;
+      const slot = document.createElement('div');
+      slot.className = `podium-slot podium-${pos + 1}`;
+      slot.innerHTML = `
+        <div class="medal">${medals[pos]}</div>
+        <div class="pd-name">${esc(p.username)}</div>
+        <div class="pd-score">${p.score.toLocaleString()} pts</div>
+        <div class="podium-block"></div>`;
+      podium.appendChild(slot);
+    }
+    document.getElementById('final-scores').innerHTML = msg.finalScores.map(s => `
+      <div class="lb-total-row">
+        <span class="lb-total-rank ${s.rank<=3?'top':''}">${s.rank}.</span>
+        <span class="lb-total-name">${esc(s.username)}</span>
+        <span class="lb-total-score">${s.score.toLocaleString()} pts</span>
+      </div>`).join('');
+  }
+
+  // ── QR + URL ──────────────────────────────────────────────────────────────
+  async function loadQR(code) {
+    try {
+      const res  = await fetch(`/api/qr?room=${code}`);
+      const svg  = await res.text();
+      const blob = new Blob([svg], { type: 'image/svg+xml' });
+      document.getElementById('ld-qr-img').src = URL.createObjectURL(blob);
+    } catch (e) { console.warn('QR failed', e); }
+  }
+
+  function updateJoinUrl(code) {
+    const url = `${location.protocol}//${location.hostname}${location.port ? ':'+location.port : ''}/group/${code}`;
+    document.getElementById('ld-url').textContent = url;
+  }
+
+  const AVATARS = ['🦊','🐸','🐼','🦁','🐯','🦋','🐨','🐧','🦄','🐙','🦖','🐻','🦀','🦩','🐬','🦝','🦔','🦦','🦜','🐳'];
+  function nameToAvatar(name) {
+    let h = 0; for (const ch of name) h = (h * 31 + ch.charCodeAt(0)) & 0xffff;
+    return AVATARS[h % AVATARS.length];
+  }
+
+  function esc(str) {
+    const d = document.createElement('div'); d.textContent = str; return d.innerHTML;
+  }
+</script>
+</body>
+</html>

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Quiz Night — Player</title>
+  <title>Game Night — Player</title>
   <style>
     :root {
       --red:    #e21b3c;
@@ -35,7 +35,11 @@
     }
 
     .screen { display: none; flex-direction: column; align-items: center; width: 100%; max-width: 420px; gap: 1rem; }
-    .screen.active { display: flex; }
+    .screen.active { display: flex; animation: screenFadeIn 0.22s ease-out both; }
+    @keyframes screenFadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
 
     /* ── JOIN ── */
     #join h1 {
@@ -77,8 +81,68 @@
     }
     #join-btn:disabled { opacity: 0.4; cursor: not-allowed; }
     #join-btn:not(:disabled):active { transform: scale(0.96); }
+    #join-btn:not(:disabled):hover { opacity: 0.88; }
 
     #join-error { color: #ff6b6b; font-size: 0.9rem; text-align: center; }
+
+    /* ── VOTE ── */
+    #vote { gap: 0.75rem; width: 100%; }
+    #vote h2 { font-size: 1.3rem; font-weight: 900; text-align: center; }
+    #vote p  { color: #aaa; font-size: 0.85rem; text-align: center; }
+    #vote-counter {
+      font-size: 1.1rem; font-weight: 800; text-align: center;
+      color: var(--accent);
+    }
+    #vote-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.5rem;
+      width: 100%;
+      max-height: 48vh;
+      overflow-y: auto;
+    }
+    .vote-cat-btn {
+      padding: 0.7rem 0.75rem;
+      border: 2px solid rgba(255,255,255,0.1);
+      border-radius: 0.55rem;
+      background: rgba(255,255,255,0.05);
+      color: #ccc;
+      font-size: 0.88rem;
+      font-weight: 600;
+      text-align: left;
+      cursor: pointer;
+      transition: background 0.12s, border-color 0.12s, color 0.12s;
+      line-height: 1.25;
+      min-height: 44px;
+    }
+    .vote-cat-btn.selected {
+      background: rgba(159,68,211,0.3);
+      border-color: var(--accent);
+      color: #fff;
+      box-shadow: 0 0 0 1px var(--accent);
+    }
+    .vote-cat-btn:disabled:not(.selected) { opacity: 0.35; cursor: not-allowed; }
+    .vote-cat-btn:not(:disabled):not(.selected):hover {
+      background: rgba(255,255,255,0.1);
+      border-color: rgba(255,255,255,0.25);
+      color: #fff;
+    }
+    #vote-submit-btn {
+      width: 100%;
+      padding: 0.9rem;
+      font-size: 1.1rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, var(--accent), #4a90d9);
+      color: #fff;
+      border: none;
+      border-radius: 0.75rem;
+      cursor: pointer;
+      transition: opacity 0.2s, transform 0.1s;
+      letter-spacing: 0.03em;
+    }
+    #vote-submit-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+    #vote-submit-btn:not(:disabled):active { transform: scale(0.97); }
+    #vote-submit-btn:not(:disabled):hover { opacity: 0.88; }
 
     /* ── WAITING ── */
     #waiting { text-align: center; gap: 1.5rem; }
@@ -97,13 +161,92 @@
     @keyframes blink { 0%, 80%, 100% { opacity: 0.2; } 40% { opacity: 1; } }
 
     /* ── QUESTION ── */
-    #question { gap: 1rem; width: 100%; }
-    #q-hint {
-      text-align: center;
-      color: #aaa;
-      font-size: 0.85rem;
-      padding-bottom: 0.25rem;
+    #question { gap: 0.75rem; width: 100%; }
+
+    #pq-livescore {
+      display: flex;
+      width: 100%;
+      align-items: stretch;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.11);
+      border-radius: 0.85rem;
+      overflow: hidden;
     }
+    .ls-col {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 0.1rem;
+      flex: 1;
+      padding: 0.55rem 0.5rem;
+    }
+    .ls-col + .ls-col { border-left: 1px solid rgba(255,255,255,0.08); }
+    .ls-label {
+      font-size: 0.58rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: #555;
+    }
+    #pq-rank-val  { font-size: 1.05rem; font-weight: 800; color: gold; }
+    #pq-score-val { font-size: 1.3rem;  font-weight: 900; color: var(--timer); }
+    .ls-last-row  { display: flex; align-items: center; gap: 0.3rem; }
+    #pq-last-ans  {
+      padding: 0.15rem 0.5rem;
+      border-radius: 0.35rem;
+      font-weight: 900;
+      font-size: 0.95rem;
+      min-width: 1.8rem;
+      text-align: center;
+    }
+    #pq-last-result { font-size: 0.9rem; font-weight: 800; }
+    #pq-last-time   { font-size: 0.72rem; font-weight: 700; color: #aaa; }
+
+    #pq-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      width: 100%;
+    }
+    #pq-category {
+      background: var(--accent);
+      padding: 0.2rem 0.7rem;
+      border-radius: 2rem;
+      font-size: 0.8rem;
+      font-weight: 600;
+    }
+    #pq-counter { color: #666; font-size: 0.85rem; }
+
+    #pq-timer-wrap {
+      width: 100%; height: 8px;
+      background: rgba(255,255,255,0.1);
+      border-radius: 4px; overflow: hidden;
+      flex-shrink: 0;
+    }
+    #pq-timer-bar {
+      height: 100%;
+      background: linear-gradient(90deg, var(--timer), #8a2be2);
+      border-radius: 4px; width: 100%;
+      transition: none;
+    }
+    #pq-timer-bar.low-time {
+      animation: timerPulse 0.5s ease-in-out infinite;
+    }
+    @keyframes timerPulse {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: 0.45; }
+    }
+
+    #pq-text {
+      font-size: clamp(1.5rem, 6vw, 2.2rem);
+      font-weight: 700;
+      text-align: center;
+      line-height: 1.35;
+      width: 100%;
+      padding: 0.25rem 0;
+    }
+
     #answer-buttons {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -111,18 +254,34 @@
       width: 100%;
     }
     .ans-btn {
-      padding: 1.6rem 0.75rem;
+      padding: 0.85rem 0.75rem;
+      min-height: 70px;
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      text-align: left;
       border: none;
       border-radius: 0.75rem;
-      font-size: 1.5rem;
-      font-weight: 900;
       color: #fff;
       cursor: pointer;
       transition: transform 0.1s, filter 0.2s;
-      min-height: 100px;
     }
     .ans-btn:active { transform: scale(0.93); }
     .ans-btn:disabled { cursor: not-allowed; filter: brightness(0.5); }
+    .ans-btn:not(:disabled):hover { filter: brightness(1.12); }
+    .ans-btn-letter {
+      font-size: 1.3rem;
+      font-weight: 900;
+      flex-shrink: 0;
+      width: 1.8rem;
+      text-align: center;
+    }
+    .ans-btn-text {
+      font-size: 0.95rem;
+      font-weight: 600;
+      line-height: 1.25;
+      flex: 1;
+    }
     .btn-A { background: var(--red); }
     .btn-B { background: var(--blue); }
     .btn-C { background: var(--yellow); color: #222; }
@@ -141,19 +300,66 @@
     #locked p { color: #aaa; font-size: 0.9rem; }
 
     /* ── REVEAL ── */
-    #reveal { text-align: center; gap: 1.25rem; }
-    .result-icon { font-size: 4rem; }
-    #result-title { font-size: 1.8rem; font-weight: 900; }
+    #reveal { text-align: center; gap: 0.9rem; }
+    #result-icon-wrap { display: flex; flex-direction: column; align-items: center; gap: 0.2rem; }
+    .result-icon {
+      font-size: 4.5rem;
+      animation: iconPop 0.42s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    @keyframes iconPop {
+      0%   { transform: scale(0.3); opacity: 0; }
+      100% { transform: scale(1);   opacity: 1; }
+    }
+    #result-title { font-size: 2rem; font-weight: 900; }
     #result-title.correct { color: #4cde80; }
     #result-title.wrong { color: #ff6b6b; }
-    #result-detail { color: #aaa; font-size: 1rem; }
+    #result-detail { color: #aaa; font-size: 0.9rem; }
     #result-points {
-      font-size: 2.5rem;
+      font-size: 3rem;
       font-weight: 900;
-      color: var(--timer);
+      color: #4cde80;
+      text-shadow: 0 0 28px rgba(76, 222, 128, 0.55);
+      min-height: 1em;
     }
-    #result-score { color: #aaa; font-size: 0.95rem; }
-    #result-rank { font-size: 1.1rem; font-weight: 600; }
+    /* Stat card row: rank + time side by side */
+    #result-stats-row {
+      display: flex;
+      gap: 0.75rem;
+      width: 100%;
+    }
+    .result-stat-card {
+      flex: 1;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.09);
+      border-radius: 0.75rem;
+      padding: 0.6rem 0.5rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.15rem;
+    }
+    .stat-label {
+      font-size: 0.6rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: #666;
+    }
+    .stat-value { font-size: 1.45rem; font-weight: 800; }
+    #result-stats-row .result-stat-card:first-child .stat-value { color: gold; }
+    #result-stats-row .result-stat-card:last-child  .stat-value { color: var(--timer); }
+    /* Total score card */
+    #result-score-card {
+      width: 100%;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.07);
+      border-radius: 0.75rem;
+      padding: 0.6rem 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    #result-score { font-size: 1.3rem; font-weight: 800; color: var(--timer); }
 
     /* ── GAME OVER ── */
     #gameover { text-align: center; gap: 1.5rem; }
@@ -251,11 +457,23 @@
 
 <!-- JOIN -->
 <div id="join" class="screen active">
-  <h1>🎮 Quiz Night</h1>
+  <h1>🎮 Game Night</h1>
   <p>Enter your name to join the game</p>
+  <input id="room-input" type="text" maxlength="4" placeholder="Room code (e.g. ABCD)"
+    autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false"
+    style="width:100%;padding:1rem 1.25rem;font-size:1.3rem;background:var(--card);color:var(--text);border:2px solid rgba(255,255,255,0.15);border-radius:0.75rem;outline:none;transition:border-color 0.2s;text-align:center;text-transform:uppercase;letter-spacing:0.2em;">
   <input id="username-input" type="text" maxlength="20" placeholder="Your name" autocomplete="off" autocorrect="off" spellcheck="false">
   <button id="join-btn">Join Game</button>
   <div id="join-error"></div>
+</div>
+
+<!-- VOTE -->
+<div id="vote" class="screen">
+  <h2>🗳️ Vote for Categories</h2>
+  <p id="vote-subtitle">Pick exactly 3 categories to play</p>
+  <div id="vote-counter">0 / 3</div>
+  <div id="vote-grid"></div>
+  <button id="vote-submit-btn" disabled>Lock in Vote</button>
 </div>
 
 <!-- WAITING -->
@@ -273,12 +491,47 @@
 
 <!-- QUESTION -->
 <div id="question" class="screen">
-  <div id="q-hint">Look at the TV for the question!</div>
+  <div id="pq-livescore">
+    <div class="ls-col">
+      <span class="ls-label">Rank</span>
+      <span id="pq-rank-val">—</span>
+    </div>
+    <div class="ls-col">
+      <span id="pq-score-val">0</span>
+      <span class="ls-label">Points</span>
+    </div>
+    <div class="ls-col">
+      <span class="ls-label">Last Answer</span>
+      <div class="ls-last-row">
+        <span id="pq-last-ans" style="display:none"></span>
+        <span id="pq-last-result">—</span>
+        <span id="pq-last-time"></span>
+      </div>
+    </div>
+  </div>
+  <div id="pq-header">
+    <span id="pq-category"></span>
+    <span id="pq-counter"></span>
+  </div>
+  <div id="pq-timer-wrap"><div id="pq-timer-bar"></div></div>
+  <div id="pq-text"></div>
   <div id="answer-buttons">
-    <button class="ans-btn btn-A" data-id="A">A</button>
-    <button class="ans-btn btn-B" data-id="B">B</button>
-    <button class="ans-btn btn-C" data-id="C">C</button>
-    <button class="ans-btn btn-D" data-id="D">D</button>
+    <button class="ans-btn btn-A" data-id="A">
+      <span class="ans-btn-letter">A</span>
+      <span class="ans-btn-text" id="ans-btn-A-text"></span>
+    </button>
+    <button class="ans-btn btn-B" data-id="B">
+      <span class="ans-btn-letter">B</span>
+      <span class="ans-btn-text" id="ans-btn-B-text"></span>
+    </button>
+    <button class="ans-btn btn-C" data-id="C">
+      <span class="ans-btn-letter">C</span>
+      <span class="ans-btn-text" id="ans-btn-C-text"></span>
+    </button>
+    <button class="ans-btn btn-D" data-id="D">
+      <span class="ans-btn-letter">D</span>
+      <span class="ans-btn-text" id="ans-btn-D-text"></span>
+    </button>
   </div>
 </div>
 
@@ -287,18 +540,33 @@
   <div class="lock-icon">🔒</div>
   <h2>Locked in!</h2>
   <div id="locked-answer" class="chosen-answer"></div>
+  <div id="locked-answer-text" style="color:#aaa; font-size:0.95rem; text-align:center;"></div>
   <p>Waiting for other players…</p>
 </div>
 
 <!-- REVEAL -->
 <div id="reveal" class="screen">
-  <div class="result-icon" id="result-icon"></div>
-  <div id="result-title"></div>
+  <div id="result-icon-wrap">
+    <div class="result-icon" id="result-icon"></div>
+    <div id="result-title"></div>
+  </div>
   <div id="chosen-answer-reveal" class="chosen-badge" style="display:none;"></div>
   <div id="result-detail"></div>
   <div id="result-points"></div>
-  <div id="result-score"></div>
-  <div id="result-rank"></div>
+  <div id="result-stats-row">
+    <div class="result-stat-card">
+      <span class="stat-label">Rank</span>
+      <span class="stat-value" id="result-rank"></span>
+    </div>
+    <div class="result-stat-card">
+      <span class="stat-label">Time</span>
+      <span class="stat-value" id="result-time">—</span>
+    </div>
+  </div>
+  <div id="result-score-card">
+    <span class="stat-label">Total Score</span>
+    <span id="result-score"></span>
+  </div>
   <div id="streak-notification"></div>
 </div>
 
@@ -341,7 +609,6 @@
     document.querySelector('#join p').textContent = P('subtitle');
     document.getElementById('username-input').placeholder = P('placeholder');
     document.getElementById('join-btn').textContent = P('joinBtn');
-    document.getElementById('q-hint').textContent = P('lookTV');
     document.querySelector('#locked h2').textContent = P('lockedIn');
     document.querySelector('#locked > p').textContent = P('waitingOthers');
     document.querySelector('#gameover h1').textContent = P('gameOver');
@@ -352,14 +619,99 @@
   // Apply browser language on load
   applyPlayerTranslations();
 
-  const WS_URL = `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/ws/player`;
+  // Parse room code from URL (?room=XXXX from QR scan or manual entry)
+  const _urlParams = new URLSearchParams(window.location.search);
+  let roomCode = (_urlParams.get('room') || '').toUpperCase() || null;
+
   let ws;
+  let connectGen = 0; // incremented each time connect() is called; guards stale WS events
   let myUsername = null;
   let currentQuestionId = null;
   let myLastAnswer = null;
   let myScore = 0;
   let myRank = null;
   let myDelta = 0;
+  let currentAnswers = {};  // id → text, populated on QUESTION
+  let pqTimerTimeout = null;
+  let pqLowTimeTimeout = null;
+  let prevAnswer = null;        // answer letter from last round
+  let prevAnswerCorrect = null; // whether last answer was correct
+  let prevAnswerTime = null;    // seconds taken for last answer
+  let hasVoted = false;
+  let voteCategories = new Set();
+
+  // Category emoji lookup for the vote screen
+  const VOTE_EMOJI = {
+    9:'🌐',10:'📚',11:'🎬',12:'🎵',13:'🎭',14:'📺',15:'🎮',16:'🎲',
+    17:'🔬',18:'💻',19:'🧮',20:'🏛️',21:'⚽',22:'🌍',23:'📜',24:'🗳️',
+    25:'🎨',26:'⭐',27:'🐾',28:'🚗',29:'💥',30:'🔧',31:'🎌',32:'🎠',
+  };
+
+  async function initVoteScreen() {
+    hasVoted = false;
+    voteCategories.clear();
+    updateVoteUI();
+    document.getElementById('vote-grid').innerHTML =
+      '<div style="color:#666;text-align:center;grid-column:1/-1;padding:1rem;">Loading…</div>';
+    show('vote');
+    try {
+      const res = await fetch('/api/categories');
+      const cats = await res.json();
+      renderVoteGrid(cats);
+    } catch (e) {
+      document.getElementById('vote-grid').innerHTML =
+        '<div style="color:#ff6b6b;text-align:center;grid-column:1/-1;">Could not load categories.</div>';
+    }
+  }
+
+  function renderVoteGrid(cats) {
+    const grid = document.getElementById('vote-grid');
+    grid.innerHTML = '';
+    for (const cat of cats) {
+      const btn = document.createElement('button');
+      btn.className = 'vote-cat-btn';
+      btn.dataset.id = cat.id;
+      btn.textContent = `${VOTE_EMOJI[cat.id] || '❓'} ${cat.name}`;
+      btn.addEventListener('click', () => {
+        const id = Number(btn.dataset.id);
+        if (voteCategories.has(id)) {
+          voteCategories.delete(id);
+          btn.classList.remove('selected');
+        } else {
+          if (voteCategories.size >= 3) return;
+          voteCategories.add(id);
+          btn.classList.add('selected');
+        }
+        updateVoteUI();
+      });
+      grid.appendChild(btn);
+    }
+    updateVoteUI();
+  }
+
+  function updateVoteUI() {
+    const n = voteCategories.size;
+    document.getElementById('vote-counter').textContent = `${n} / 3`;
+    document.getElementById('vote-submit-btn').disabled = n !== 3;
+    document.querySelectorAll('.vote-cat-btn').forEach(btn => {
+      const id = Number(btn.dataset.id);
+      btn.disabled = !voteCategories.has(id) && n >= 3;
+    });
+  }
+
+  document.getElementById('vote-submit-btn').addEventListener('click', () => {
+    if (voteCategories.size !== 3 || hasVoted) return;
+    hasVoted = true;
+    send({ type: 'CATEGORY_VOTE', categories: [...voteCategories] });
+    show('waiting');
+    document.getElementById('waiting-name').textContent = `${myUsername} 👋`;
+    document.getElementById('waiting-players').textContent = 'Voted! Waiting for others…';
+  });
+
+  function buildWsUrl(room) {
+    const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+    return `${proto}://${location.host}/ws/player?room=${room}`;
+  }
 
   // ── Screens ───────────────────────────────────────────────────────────────
   function show(id) {
@@ -369,19 +721,22 @@
 
   // ── WebSocket ─────────────────────────────────────────────────────────────
   function connect() {
-    ws = new WebSocket(WS_URL);
+    const gen = ++connectGen;
+    ws = new WebSocket(buildWsUrl(roomCode));
     document.getElementById('reconnecting').classList.remove('show');
 
     ws.addEventListener('open', () => {
-      // If we already have a username, rejoin
-      if (myUsername) {
-        send({ type: 'JOIN', username: myUsername });
-      }
+      if (gen !== connectGen) return; // stale
+      if (myUsername) send({ type: 'JOIN', username: myUsername });
     });
 
-    ws.addEventListener('message', (e) => handleMsg(JSON.parse(e.data)));
+    ws.addEventListener('message', (e) => {
+      if (gen !== connectGen) return; // stale
+      handleMsg(JSON.parse(e.data));
+    });
 
     ws.addEventListener('close', () => {
+      if (gen !== connectGen) return; // stale — a newer connection already exists
       if (myUsername) {
         document.getElementById('reconnecting').classList.add('show');
         setTimeout(connect, 2000);
@@ -395,18 +750,37 @@
 
   // ── Join ──────────────────────────────────────────────────────────────────
   const joinBtn = document.getElementById('join-btn');
+  const roomInput = document.getElementById('room-input');
   const usernameInput = document.getElementById('username-input');
   const joinError = document.getElementById('join-error');
 
+  // Pre-fill room code from URL and lock it if provided via QR scan
+  if (roomCode) {
+    roomInput.value = roomCode;
+    roomInput.readOnly = true;
+    roomInput.style.opacity = '0.7';
+  }
+
   joinBtn.addEventListener('click', doJoin);
   usernameInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') doJoin(); });
+  roomInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') usernameInput.focus(); });
+
+  // Force uppercase as user types
+  roomInput.addEventListener('input', () => {
+    const pos = roomInput.selectionStart;
+    roomInput.value = roomInput.value.toUpperCase();
+    roomInput.setSelectionRange(pos, pos);
+  });
 
   function doJoin() {
+    const room = roomInput.value.trim().toUpperCase();
     const name = usernameInput.value.trim();
+    if (!room || room.length !== 4) { joinError.textContent = 'Enter a 4-letter room code.'; return; }
     if (!name) { joinError.textContent = P('nameRequired'); return; }
     joinError.textContent = '';
+    roomCode = room;
     myUsername = name;
-    send({ type: 'JOIN', username: name });
+    connect(); // creates new WS; connectGen guards old WS events
   }
 
   // ── Answer buttons ────────────────────────────────────────────────────────
@@ -428,6 +802,7 @@
       locked.textContent = answerId;
       locked.style.background = colors[answerId];
       locked.style.color = textColors[answerId];
+      document.getElementById('locked-answer-text').textContent = currentAnswers[answerId] || '';
       show('locked');
     });
   });
@@ -446,7 +821,7 @@
       case 'JOIN_OK':
         myUsername = msg.username;
         document.getElementById('waiting-name').textContent = P('hiName', myUsername);
-        show('waiting');
+        initVoteScreen();
         break;
 
       case 'PLAYER_JOINED':
@@ -476,6 +851,19 @@
         document.getElementById('waiting-name').textContent = P('startingIn', msg.countdown);
         break;
 
+      case 'VOTE_UPDATE':
+        if (hasVoted) {
+          document.getElementById('waiting-players').textContent = msg.allVoted
+            ? '✅ Everyone voted! Waiting for host…'
+            : `${msg.voted.length} / ${msg.totalPlayers} voted — waiting for others…`;
+        } else {
+          document.getElementById('vote-subtitle').textContent =
+            msg.voted.length > 0
+              ? `${msg.voted.length} / ${msg.totalPlayers} already voted — pick your 3`
+              : 'Pick exactly 3 categories to play';
+        }
+        break;
+
       case 'LANGUAGE_SET':
         if (SUPPORTED_LANGS.includes(msg.lang)) {
           playerLang = msg.lang;
@@ -486,6 +874,84 @@
       case 'QUESTION':
         currentQuestionId = msg.questionId;
         myLastAnswer = null;
+        currentAnswers = {};
+
+        // Live score strip — always visible during question phase
+        {
+          const rankMedals = ['🥇','🥈','🥉'];
+          document.getElementById('pq-score-val').textContent = myScore.toLocaleString();
+          document.getElementById('pq-rank-val').textContent =
+            myRank ? (myRank <= 3 ? rankMedals[myRank-1] + ` #${myRank}` : `#${myRank}`) : '—';
+          const lastAnsEl    = document.getElementById('pq-last-ans');
+          const lastResultEl = document.getElementById('pq-last-result');
+          const lastTimeEl   = document.getElementById('pq-last-time');
+          if (prevAnswer) {
+            const ansColors = { A: 'var(--red)', B: 'var(--blue)', C: 'var(--yellow)', D: 'var(--green)' };
+            const ansText   = { A: '#fff', B: '#fff', C: '#222', D: '#fff' };
+            lastAnsEl.textContent       = prevAnswer;
+            lastAnsEl.style.background  = ansColors[prevAnswer];
+            lastAnsEl.style.color       = ansText[prevAnswer];
+            lastAnsEl.style.display     = '';
+            lastResultEl.textContent    = prevAnswerCorrect ? '✓' : '✗';
+            lastResultEl.style.color    = prevAnswerCorrect ? '#4cde80' : '#ff6b6b';
+            lastTimeEl.textContent      = prevAnswerTime != null ? `⚡${prevAnswerTime}s` : '';
+          } else {
+            lastAnsEl.style.display  = 'none';
+            lastResultEl.textContent = '—';
+            lastResultEl.style.color = '#555';
+            lastTimeEl.textContent   = '';
+          }
+        }
+
+        // Populate header
+        document.getElementById('pq-category').textContent = msg.category || '';
+        document.getElementById('pq-counter').textContent =
+          `${msg.questionNumber} / ${msg.totalQuestions}`;
+
+        // Populate question text
+        document.getElementById('pq-text').textContent = msg.question;
+
+        // Populate answer button texts + build lookup map
+        for (const ans of msg.answers) {
+          currentAnswers[ans.id] = ans.text;
+          const el = document.getElementById(`ans-btn-${ans.id}-text`);
+          if (el) el.textContent = ans.text;
+        }
+
+        // Timer bar animation
+        if (pqTimerTimeout) clearTimeout(pqTimerTimeout);
+        {
+          const bar = document.getElementById('pq-timer-bar');
+          const elapsed = msg.elapsed || 0;
+          const totalMs = msg.timeLimit * 1000;
+          const remaining = msg.remaining != null ? msg.remaining : totalMs - elapsed;
+          const startPct = (remaining / totalMs) * 100;
+
+          bar.style.transition = 'none';
+          bar.style.width = startPct + '%';
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+              bar.style.transition = `width ${remaining / 1000}s linear`;
+              bar.style.width = '0%';
+            });
+          });
+          pqTimerTimeout = setTimeout(() => { bar.style.width = '0%'; }, remaining);
+        }
+
+        // Low-time pulse at ≤5s remaining
+        {
+          const barEl = document.getElementById('pq-timer-bar');
+          const remainingMs = msg.remaining != null ? msg.remaining : (msg.timeLimit * 1000) - (msg.elapsed || 0);
+          barEl.classList.remove('low-time');
+          if (pqLowTimeTimeout) clearTimeout(pqLowTimeTimeout);
+          const LOW_TIME_MS = 5000;
+          if (remainingMs > LOW_TIME_MS) {
+            pqLowTimeTimeout = setTimeout(() => barEl.classList.add('low-time'), remainingMs - LOW_TIME_MS);
+          } else {
+            barEl.classList.add('low-time');
+          }
+        }
+
         document.querySelectorAll('.ans-btn').forEach(b => b.disabled = false);
         show('question');
         break;
@@ -495,10 +961,16 @@
         break;
 
       case 'REVEAL':
+        if (pqTimerTimeout) { clearTimeout(pqTimerTimeout); pqTimerTimeout = null; }
+        if (pqLowTimeTimeout) { clearTimeout(pqLowTimeTimeout); pqLowTimeTimeout = null; }
+        document.getElementById('pq-timer-bar').classList.remove('low-time');
         handleReveal(msg);
         break;
 
       case 'NEXT_QUESTION':
+        if (pqTimerTimeout) { clearTimeout(pqTimerTimeout); pqTimerTimeout = null; }
+        if (pqLowTimeTimeout) { clearTimeout(pqLowTimeTimeout); pqLowTimeTimeout = null; }
+        document.getElementById('pq-timer-bar').classList.remove('low-time');
         show('waiting');
         document.getElementById('waiting-name').textContent = P('nextSoon');
         document.getElementById('waiting-players').textContent = '';
@@ -509,14 +981,27 @@
         break;
 
       case 'RESTARTED':
-        myUsername = null;
         myScore = 0;
         myRank = null;
+        prevAnswer = null;
+        prevAnswerCorrect = null;
+        prevAnswerTime = null;
+        hasVoted = false;
+        voteCategories.clear();
+        if (myUsername) {
+          usernameInput.value = myUsername;
+        }
+        myUsername = null;
+        joinError.textContent = '';
         show('join');
-        usernameInput.value = '';
         break;
 
       case 'ERROR':
+        if (msg.code === 'ROOM_NOT_FOUND') {
+          // Unlock room input so player can try a different code
+          roomInput.readOnly = false;
+          roomInput.style.opacity = '';
+        }
         joinError.textContent = msg.message || 'Something went wrong.';
         myUsername = null;
         applyPlayerTranslations();
@@ -536,7 +1021,7 @@
     if (document.getElementById('locked').classList.contains('active')) {
       const lockedAnswer = document.getElementById('locked-answer');
       lockedAnswer.classList.remove('flash-ok', 'flash-bad');
-      lockedAnswer.classList.add(wasCorrect ? 'flash-ok' : 'flash-bad');
+      if (wasCorrect) lockedAnswer.classList.add('flash-ok');
       setTimeout(() => {
         lockedAnswer.classList.remove('flash-ok', 'flash-bad');
         lockedAnswer.style.boxShadow = '';
@@ -563,14 +1048,19 @@
       title.className = 'wrong';
     }
 
-    // Chosen answer badge (green if correct, red if wrong)
+    // Chosen answer badge — styled in the answer's own button colour
     const badgeEl = document.getElementById('chosen-answer-reveal');
     if (myLastAnswer) {
+      const ansColors = { A: 'var(--red)', B: 'var(--blue)', C: 'var(--yellow)', D: 'var(--green)' };
+      const ansText   = { A: '#fff', B: '#fff', C: '#222', D: '#fff' };
       badgeEl.style.display = '';
-      badgeEl.className = 'chosen-badge ' + (wasCorrect ? 'chosen-correct' : 'chosen-wrong');
+      badgeEl.className = 'chosen-badge';
+      badgeEl.style.background = ansColors[myLastAnswer] || 'rgba(255,255,255,0.1)';
+      badgeEl.style.color = ansText[myLastAnswer] || '#fff';
+      badgeEl.style.border = 'none';
       badgeEl.textContent = wasCorrect
-        ? `${myLastAnswer} ✓`
-        : `${myLastAnswer} ✗ · Correct: ${msg.correctAnswer}${msg.correctText ? ' — ' + msg.correctText : ''}`;
+        ? `${myLastAnswer} ✓  ${currentAnswers[myLastAnswer] || ''}`
+        : `${myLastAnswer} ✗ · ${currentAnswers[myLastAnswer] || ''}  →  ${msg.correctAnswer}: ${msg.correctText || ''}`;
     } else {
       badgeEl.style.display = 'none';
     }
@@ -585,15 +1075,22 @@
 
     // Points
     const delta = myEntry.delta || 0;
-    document.getElementById('result-points').textContent = delta > 0 ? `+${delta}` : '';
+    document.getElementById('result-points').textContent = delta > 0 ? `+${delta.toLocaleString()}` : '';
     myScore = myEntry.score;
     myRank = myEntry.rank;
-    document.getElementById('result-score').textContent = P('total', myScore);
+    prevAnswer = myLastAnswer;
+    prevAnswerCorrect = wasCorrect;
+    prevAnswerTime = myEntry.answerTime != null ? myEntry.answerTime : null;
+    document.getElementById('result-score').textContent = myScore.toLocaleString() + ' pts';
 
     // Rank with medals
     const rankMedals = ['🥇','🥈','🥉'];
     document.getElementById('result-rank').textContent =
-      myRank <= 3 ? `${rankMedals[myRank-1]} #${myRank}` : P('rank', myRank);
+      myRank <= 3 ? `${rankMedals[myRank-1]} #${myRank}` : `#${myRank}`;
+
+    // Answer time
+    document.getElementById('result-time').textContent =
+      myEntry.answerTime != null ? `⚡${myEntry.answerTime}s` : '—';
 
     // Streak notification
     const streak = myEntry.streak || 0;
@@ -615,7 +1112,7 @@
     const revealEl = document.getElementById('reveal');
     revealEl.classList.remove('flash-correct', 'flash-wrong');
     void revealEl.offsetWidth;
-    revealEl.classList.add(wasCorrect ? 'flash-correct' : 'flash-wrong');
+    if (wasCorrect) revealEl.classList.add('flash-correct');
 
     // Flying points animation
     if (delta > 0) {
@@ -640,7 +1137,6 @@
     show('gameover');
   }
 
-  connect();
 </script>
 </body>
 </html>
