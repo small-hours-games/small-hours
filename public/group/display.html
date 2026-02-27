@@ -760,6 +760,9 @@
       case 'SHITHEAD_GAME_OVER':
         handleShitheadGameOver(msg);
         break;
+      case 'SHITHEAD_PLAYER_KICKED':
+        showShitheadToast(`⏰ ${GN.esc(msg.username)} removed for inactivity`);
+        break;
       case 'SHITHEAD_RESTARTED':
         activeMiniGame = 'lobby';
         showScreen('lobby-display');
