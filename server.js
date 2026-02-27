@@ -10,7 +10,7 @@ const path = require('path');
 const os = require('os');
 const { WebSocketServer } = require('ws');
 const QRCode = require('qrcode');
-const { ShitheadGame } = require('./shithead');
+
 const { fetchCategories } = require('./questions');
 const { downloadDatabase, getState: getDbState, dbStatus } = require('./local-db');
 const { rooms, generateRoomCode, createRoom, buildLobbyState } = require('./server/rooms');
@@ -83,8 +83,6 @@ app.get('/group/:code/display',  pageRateLimit, serveFile('public/group/display.
 app.get('/group/:code/quiz',     pageRateLimit, serveFile('public/games/quiz/index.html'));
 app.get('/group/:code/shithead', pageRateLimit, serveFile('public/games/shithead/index.html'));
 app.get('/rules',                pageRateLimit, serveFile('public/rules.html'));
-app.get('/shithead/host',        pageRateLimit, serveFile('public/shithead/host/index.html'));
-app.get('/shithead/player',      pageRateLimit, serveFile('public/shithead/player/index.html'));
 
 // Compat redirects
 app.get('/host/', (req, res) => res.redirect('/'));
@@ -169,54 +167,6 @@ const server = USE_HTTPS
 
 const wss = new WebSocketServer({ noServer: true });
 
-// ─── Shithead standalone game ─────────────────────────────────────────────────
-
-const shitheadWss   = new WebSocketServer({ noServer: true });
-const shitheadSocks = new Set();
-
-const shitheadGame  = new ShitheadGame((msg) => {
-  const str = JSON.stringify(msg);
-  for (const ws of shitheadSocks) {
-    if (ws.readyState === 1) ws.send(str);
-  }
-});
-
-shitheadWss.on('connection', (ws, req) => {
-  const isHost = req._shitheadHost === true;
-  shitheadSocks.add(ws);
-
-  if (isHost) {
-    shitheadGame.hostConnected(ws);
-  } else {
-    ws.send(JSON.stringify({ type: 'SHITHEAD_CONNECTED' }));
-  }
-
-  ws.on('message', (raw) => {
-    let msg;
-    try { msg = JSON.parse(raw); } catch { return; }
-    const { type } = msg;
-
-    if (isHost) {
-      if (type === 'SHITHEAD_START')   { shitheadGame.startGame(); return; }
-      if (type === 'SHITHEAD_RESTART') { shitheadGame.restart();   return; }
-    } else {
-      if (type === 'SHITHEAD_JOIN')          { shitheadGame.addPlayer(ws, (msg.username || '').trim().slice(0, 20)); return; }
-      const u = shitheadGame.usernameByWs(ws);
-      if (!u) return;
-      if (type === 'SHITHEAD_CONFIRM_SWAP')  { shitheadGame.confirmSwap(u); return; }
-      if (type === 'SHITHEAD_SWAP_CARD')     { shitheadGame.swapCard(u, msg.handCardId, msg.faceUpCardId); return; }
-      if (type === 'SHITHEAD_PLAY_CARDS')    { if (!Array.isArray(msg.cardIds)) return; shitheadGame.playCards(u, msg.cardIds); return; }
-      if (type === 'SHITHEAD_PLAY_FACEDOWN') { shitheadGame.playFaceDown(u, msg.cardId); return; }
-      if (type === 'SHITHEAD_PICK_UP_PILE')  { shitheadGame.pickUpPile(u); return; }
-    }
-  });
-
-  ws.on('close', () => {
-    shitheadSocks.delete(ws);
-    if (!isHost) shitheadGame.removePlayer(ws);
-  });
-});
-
 server.on('upgrade', (req, socket, head) => {
   const p = new URL(req.url, 'http://x').pathname;
   if (p === '/ws') {
@@ -229,11 +179,6 @@ server.on('upgrade', (req, socket, head) => {
     // Compat: old player page → player role
     req._compatRole = 'player';
     wss.handleUpgrade(req, socket, head, ws => wss.emit('connection', ws, req));
-  } else if (p === '/ws/shithead-host') {
-    req._shitheadHost = true;
-    shitheadWss.handleUpgrade(req, socket, head, ws => shitheadWss.emit('connection', ws, req));
-  } else if (p === '/ws/shithead-player') {
-    shitheadWss.handleUpgrade(req, socket, head, ws => shitheadWss.emit('connection', ws, req));
   } else {
     socket.destroy();
   }
