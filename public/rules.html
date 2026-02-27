@@ -43,6 +43,7 @@
       font-weight: 900;
       letter-spacing: 0.01em;
       background: linear-gradient(90deg, var(--accent), var(--timer));
+      background-clip: text;
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
     }
@@ -107,15 +108,24 @@
     <section class="card">
       <h2>Shithead</h2>
       <ul>
-        <li>Swap phase: arrange your 3 face-up cards before play starts.</li>
-        <li>Play cards of equal or higher rank than the current top card.</li>
-        <li>Special cards can reset or clear the pile based on game rules.</li>
-        <li>If you cannot play, pick up the pile.</li>
-        <li>The first player to get rid of all cards wins.</li>
+        <li><strong>Goal:</strong> get rid of all your cards. Last player left is the “Shithead”.</li>
+        <li><strong>Card order (rank):</strong> 2, 3, 4, 5, 6, 7, 8, 9, 10, J, Q, K, A (Ace high).</li>
+        <li><strong>What is rank?</strong> rank means only card value (number/letter), not suit.</li>
+        <li><strong>Turn rule:</strong> normally you must play a card with rank <em>equal to or higher</em> than the effective top card on the pile.</li>
+        <li><strong>Pairs / sets:</strong> there is no point value bonus. A pair/triple is only useful because you may play multiple cards of the <em>same rank</em> in one move.</li>
+        <li><strong>4 of a kind burn:</strong> if the top 4 pile cards are the same rank, the pile burns (clears) and that player plays again.</li>
+        <li><strong>2:</strong> wildcard — always legal to play, regardless of top card.</li>
+        <li><strong>7:</strong> activates “low mode” for next play (next player must play rank 7 or lower).</li>
+        <li><strong>10:</strong> burns the pile immediately and gives you another turn.</li>
+        <li><strong>3:</strong> transparent — it stays on pile, but top comparison ignores 3s when checking what can be played next.</li>
+        <li><strong>Ace:</strong> highest normal rank; behaves like any other non-special high card.</li>
+        <li><strong>Can’t play?</strong> choose “Pick up pile” and add the entire pile to your hand.</li>
+        <li><strong>Play order:</strong> use hand cards first; when hand is empty use face-up table cards; then face-down blind cards.</li>
+        <li><strong>Face-down miss:</strong> if a blind face-down card is illegal, you place it, pick up the whole pile, and turn ends.</li>
       </ul>
     </section>
 
-    <p>If your host uses house rules, the host's call applies for this room.</p>
+    <p>These are the exact in-app rules used by this version. If your host announces extra house rules, agree on them before starting.</p>
   </main>
 
   <script>
