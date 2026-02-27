@@ -485,6 +485,8 @@
     document.getElementById('confirm-swap-btn').textContent = '⏳ Väntar…';
   });
 
+  const sortCards = cards => [...cards].sort((a, b) => a.rank - b.rank);
+
   function renderSwap() {
     if (!myState) return;
     swapSelected = { hand: null, faceUp: null };
@@ -492,13 +494,13 @@
     const handEl = document.getElementById('swap-hand');
     const faceUpEl = document.getElementById('swap-faceup');
 
-    handEl.innerHTML = myState.hand.map(c =>
+    handEl.innerHTML = sortCards(myState.hand).map(c =>
       `<div class="play-card ${isRed(c) ? 'red-card' : 'black-card'}" data-id="${c.id}" data-zone="hand">
         <span>${c.name}</span><span>${c.suit}</span>
       </div>`
     ).join('');
 
-    faceUpEl.innerHTML = myState.faceUp.map(c =>
+    faceUpEl.innerHTML = sortCards(myState.faceUp).map(c =>
       `<div class="play-card ${isRed(c) ? 'red-card' : 'black-card'}" data-id="${c.id}" data-zone="faceup">
         <span>${c.name}</span><span>${c.suit}</span>
       </div>`
@@ -592,7 +594,7 @@
     if (hasHand) {
       zoneHint.textContent = 'Handkort';
       zoneHint.style.display = '';
-      handEl.innerHTML = myState.hand.map(c => {
+      handEl.innerHTML = sortCards(myState.hand).map(c => {
         const playable = myTurn && canPlayCard(c.rank, sevenActive, pt);
         return `<div class="play-card ${isRed(c) ? 'red-card' : 'black-card'} ${!myTurn ? 'not-my-turn' : (!playable ? 'unplayable' : '')}"
           data-id="${c.id}" data-zone="hand">
@@ -607,7 +609,7 @@
       zoneHint.style.display = 'none';
       handEl.innerHTML = '';
       faceUpLabel.style.display = '';
-      faceUpEl.innerHTML = myState.faceUp.map(c => {
+      faceUpEl.innerHTML = sortCards(myState.faceUp).map(c => {
         const playable = myTurn && canPlayCard(c.rank, sevenActive, pt);
         return `<div class="play-card ${isRed(c) ? 'red-card' : 'black-card'} ${!myTurn ? 'not-my-turn' : (!playable ? 'unplayable' : '')}"
           data-id="${c.id}" data-zone="faceup">

@@ -89,92 +89,149 @@
     #swap-progress { text-align: center; font-size: 1.2rem; font-weight: 700; color: var(--timer); }
 
     /* ── GAME ── */
-    #game { gap: 1rem; }
-    .game-top {
-      display: grid;
-      grid-template-columns: 1fr auto 1fr;
-      gap: 1rem;
-      align-items: center;
+    #game {
+      gap: 0;
+      padding: 0;
+      background: radial-gradient(ellipse at center, #1a5f2a 0%, #0d3d18 60%, #0a2e12 100%);
+      border-radius: 1rem;
+      overflow: hidden;
     }
+
+    /* Table felt area */
+    .table-felt {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 1.25rem 1.5rem;
+      background:
+        radial-gradient(ellipse 80% 60% at 50% 50%, rgba(255,255,255,0.04) 0%, transparent 70%);
+    }
+
+    /* Center table area with pile/deck */
+    .table-center {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 2.5rem;
+      background: rgba(0,0,0,0.25);
+      border-radius: 50%;
+      width: min(380px, 90vw);
+      height: 140px;
+      border: 3px solid rgba(255,255,255,0.08);
+      box-shadow: inset 0 2px 12px rgba(0,0,0,0.4), 0 0 30px rgba(0,0,0,0.3);
+      flex-shrink: 0;
+    }
+
     .pile-area {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.4rem;
+    }
+    .pile-label {
+      font-size: 0.7rem;
+      color: rgba(255,255,255,0.6);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+    }
+    .pile-card {
+      width: 70px; height: 98px;
+      background: #fff;
+      border-radius: 8px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.6rem;
+      font-weight: 900;
+      border: 2px solid rgba(255,255,255,0.3);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.5), 2px 2px 0 rgba(0,0,0,0.3);
+      gap: 0.1rem;
+      transition: transform 0.2s;
+    }
+    .pile-card:not(.empty) { transform: rotate(-2deg); }
+    .pile-card.red-card { color: #c00; }
+    .pile-card.black-card { color: #111; }
+    .pile-card .card-rank { font-size: 1.4rem; line-height: 1; }
+    .pile-card .card-suit { font-size: 1rem; line-height: 1; }
+    .pile-card.empty {
+      background: rgba(255,255,255,0.06);
+      border: 2px dashed rgba(255,255,255,0.2);
+      color: rgba(255,255,255,0.3);
+      font-size: 0.85rem;
+      box-shadow: none;
+      transform: none;
+    }
+    .pile-count { font-size: 0.75rem; color: rgba(255,255,255,0.5); }
+
+    .deck-area { display: flex; flex-direction: column; align-items: center; gap: 0.4rem; }
+    .deck-visual {
+      width: 60px; height: 84px;
+      background: linear-gradient(145deg, #1e3a5f, #0a1628);
+      border-radius: 7px;
+      border: 2px solid rgba(255,255,255,0.2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.4rem;
+      box-shadow: 3px 3px 0 rgba(0,0,0,0.4), 0 4px 12px rgba(0,0,0,0.5);
+    }
+
+    .table-info {
       display: flex;
       flex-direction: column;
       align-items: center;
       gap: 0.5rem;
     }
-    .pile-label { font-size: 0.8rem; color: #aaa; text-transform: uppercase; letter-spacing: 0.1em; }
-    .pile-card {
-      width: 80px; height: 112px;
-      background: #fff;
-      border-radius: 10px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      font-size: 1.8rem;
-      font-weight: 900;
-      border: 3px solid rgba(255,255,255,0.2);
-      position: relative;
-      gap: 0.1rem;
-    }
-    .pile-card.red-card { color: #c00; }
-    .pile-card.black-card { color: #111; }
-    .pile-card .card-rank { font-size: 1.6rem; line-height: 1; }
-    .pile-card .card-suit { font-size: 1.2rem; line-height: 1; }
-    .pile-card.empty {
-      background: rgba(255,255,255,0.05);
-      border: 2px dashed rgba(255,255,255,0.2);
-      color: #555;
-      font-size: 1rem;
-    }
-    .pile-count { font-size: 0.9rem; color: #aaa; }
-    .deck-area { display: flex; flex-direction: column; align-items: center; gap: 0.5rem; }
-    .deck-visual {
-      width: 60px; height: 84px;
-      background: linear-gradient(135deg, #1e3a5f, #0a1628);
-      border-radius: 8px;
-      border: 2px solid rgba(255,255,255,0.15);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 1.5rem;
-    }
-
     .current-player-banner {
       text-align: center;
-      font-size: 1.4rem;
+      font-size: 1.1rem;
       font-weight: 700;
-      padding: 0.6rem 1rem;
+      padding: 0.45rem 1rem;
       background: linear-gradient(135deg, var(--accent), var(--gold));
-      border-radius: 0.75rem;
+      border-radius: 2rem;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.4);
+      white-space: nowrap;
     }
     .seven-warning {
       text-align: center;
-      font-size: 1rem;
+      font-size: 0.9rem;
       color: var(--gold);
       font-weight: 700;
+      background: rgba(212,160,23,0.15);
+      border: 1px solid rgba(212,160,23,0.4);
+      border-radius: 0.5rem;
+      padding: 0.25rem 0.75rem;
     }
 
     /* Player boards */
     #player-boards {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
       gap: 0.75rem;
-      flex: 1;
+      width: 100%;
     }
     .player-board {
-      background: var(--card);
+      background: rgba(0,0,0,0.35);
       border-radius: 0.75rem;
       padding: 0.75rem;
       display: flex;
       flex-direction: column;
       gap: 0.5rem;
-      border: 2px solid transparent;
-      transition: border-color 0.3s;
+      border: 2px solid rgba(255,255,255,0.08);
+      transition: border-color 0.3s, box-shadow 0.3s;
+      backdrop-filter: blur(4px);
     }
-    .player-board.active-player { border-color: var(--gold); }
+    .player-board.active-player {
+      border-color: var(--gold);
+      box-shadow: 0 0 18px rgba(212,160,23,0.35);
+    }
     .player-board.finished { opacity: 0.5; }
-    .player-board.shithead { border-color: var(--red); }
+    .player-board.shithead {
+      border-color: var(--red);
+      box-shadow: 0 0 14px rgba(226,27,60,0.3);
+    }
     .player-name {
       font-weight: 700;
       font-size: 1rem;
@@ -185,22 +242,23 @@
     .player-name .badge { font-size: 0.8rem; padding: 0.1rem 0.4rem; border-radius: 0.3rem; background: var(--accent); }
     .cards-row {
       display: flex;
-      gap: 0.3rem;
+      gap: 0.25rem;
       align-items: flex-end;
       flex-wrap: wrap;
     }
     .mini-card {
-      width: 38px; height: 54px;
+      width: 36px; height: 52px;
       background: #fff;
       border-radius: 5px;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      font-size: 0.75rem;
+      font-size: 0.72rem;
       font-weight: 900;
       line-height: 1;
       gap: 1px;
+      box-shadow: 1px 1px 3px rgba(0,0,0,0.4);
     }
     .mini-card.red-card { color: #c00; }
     .mini-card.black-card { color: #111; }
@@ -208,9 +266,9 @@
       background: linear-gradient(135deg, #1e3a5f, #0a1628);
       border: 1px solid rgba(255,255,255,0.15);
       color: rgba(255,255,255,0.3);
-      font-size: 1rem;
+      font-size: 0.95rem;
     }
-    .card-zone-label { font-size: 0.65rem; color: #777; text-transform: uppercase; letter-spacing: 0.05em; }
+    .card-zone-label { font-size: 0.65rem; color: rgba(255,255,255,0.45); text-transform: uppercase; letter-spacing: 0.05em; }
     .hand-count {
       font-size: 0.85rem;
       color: var(--timer);
@@ -348,26 +406,28 @@
 
 <!-- GAME -->
 <div id="game" class="screen">
-  <div class="game-top">
-    <div class="deck-area">
-      <div class="pile-label">Kortlek</div>
-      <div class="deck-visual">🂠</div>
-      <div class="pile-count" id="deck-count">52 kort</div>
+  <div class="table-felt">
+    <div class="table-center">
+      <div class="deck-area">
+        <div class="pile-label">Kortlek</div>
+        <div class="deck-visual">🂠</div>
+        <div class="pile-count" id="deck-count">52 kort</div>
+      </div>
+
+      <div class="table-info">
+        <div id="current-player-banner" class="current-player-banner">–</div>
+        <div id="seven-warning" class="seven-warning" style="display:none;">⚠️ Spela 7 eller lägre!</div>
+      </div>
+
+      <div class="pile-area">
+        <div class="pile-label">Högen</div>
+        <div class="pile-card empty" id="pile-card">Tom</div>
+        <div class="pile-count" id="pile-count">0 kort</div>
+      </div>
     </div>
 
-    <div class="pile-area">
-      <div class="pile-label">Högen</div>
-      <div class="pile-card empty" id="pile-card">Tom</div>
-      <div class="pile-count" id="pile-count">0 kort</div>
-    </div>
-
-    <div style="display:flex;flex-direction:column;align-items:center;gap:.5rem;">
-      <div id="current-player-banner" class="current-player-banner">–</div>
-      <div id="seven-warning" class="seven-warning" style="display:none;">⚠️ Spela 7 eller lägre!</div>
-    </div>
+    <div id="player-boards"></div>
   </div>
-
-  <div id="player-boards"></div>
 </div>
 
 <!-- GAME OVER -->
