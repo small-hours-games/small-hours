@@ -308,7 +308,7 @@ wss.on('connection', (ws, req) => {
 
     ws.on('close', () => {
       room.playerSockets.delete(ws);
-      handlePlayerDisconnect(ws, room);
+      handleDisconnect(ws, room, maybeCleanupRoom);
     });
 
     ws.on('error', (err) => console.error('Player WS error:', err.message));
