@@ -14,6 +14,18 @@ const { Game } = require('./game');
 const { ShitheadGame } = require('./shithead');
 const { fetchCategories } = require('./questions');
 const { downloadDatabase, getState: getDbState, dbStatus } = require('./local-db');
+const {
+  buildLobbyState,
+  broadcastLobbyUpdate,
+  broadcastVoteUpdate,
+  handleJoin,
+  handleDisconnect,
+  handleSetReady,
+  handleSuggestGame,
+  handleCategoryVote,
+  handleRemovePlayer,
+  handleReturnToLobby,
+} = require('./player-manager');
 
 const PORT = process.env.PORT || 3000;
 
@@ -240,15 +252,6 @@ server.on('upgrade', (req, socket, head) => {
 
 const rooms = new Map();
 
-const AVATARS = ['🦊','🐸','🐼','🦁','🐯','🦋','🐨','🐧','🦄','🐙',
-                 '🦖','🐻','🦀','🦩','🐬','🦝','🦔','🦦','🦜','🐳'];
-
-function nameToAvatar(name) {
-  let h = 0;
-  for (const ch of name) h = (h * 31 + ch.charCodeAt(0)) & 0xffff;
-  return AVATARS[h % AVATARS.length];
-}
-
 function generateRoomCode() {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
   let code;
@@ -297,71 +300,6 @@ function createRoom(code) {
 }
 
 // ─── Lobby helpers ────────────────────────────────────────────────────────────
-
-function buildLobbyState(room) {
-  const players = [];
-  for (const [username, p] of room.players.entries()) {
-    players.push({
-      username,
-      avatar: p.avatar,
-      isReady: room.readyPlayers.has(username),
-      isAdmin: username === room.adminUsername,
-    });
-  }
-
-  // Tally game suggestions
-  const gameSuggestions = {};
-  for (const gameType of room.gameSuggestions.values()) {
-    gameSuggestions[gameType] = (gameSuggestions[gameType] || 0) + 1;
-  }
-
-  const readyCount   = room.readyPlayers.size;
-  const totalCount   = room.players.size;
-  const allReady     = totalCount > 0 && readyCount >= totalCount;
-
-  // Category vote tallying
-  const voteTally = {};
-  for (const cats of room.categoryVotes.values()) {
-    for (const c of cats) voteTally[c] = (voteTally[c] || 0) + 1;
-  }
-  const allVoted = totalCount > 0 && room.categoryVotes.size >= totalCount;
-
-  return {
-    players,
-    admin: room.adminUsername,
-    gameSuggestions,
-    readyCount,
-    totalCount,
-    allReady,
-    allVoted,
-    votedCount: room.categoryVotes.size,
-    categoryVotes: voteTally,
-    votedPlayers: [...room.categoryVotes.keys()],
-    activeMiniGame: room.activeMiniGame,
-    language: room.language,
-  };
-}
-
-function broadcastLobbyUpdate(room) {
-  broadcastAll(room, { type: 'LOBBY_UPDATE', ...buildLobbyState(room) });
-}
-
-function broadcastVoteUpdate(room) {
-  // Also emit legacy VOTE_UPDATE for old player/host pages
-  const tally = {};
-  for (const cats of room.categoryVotes.values()) {
-    for (const c of cats) tally[c] = (tally[c] || 0) + 1;
-  }
-  const totalPlayers = room.players.size;
-  const allVoted = totalPlayers > 0 && room.categoryVotes.size >= totalPlayers;
-  broadcastAll(room, {
-    type: 'VOTE_UPDATE',
-    votes: tally,
-    voted: [...room.categoryVotes.keys()],
-    totalPlayers,
-    allVoted,
-  });
-}
 
 function broadcastAll(room, msg) {
   const s = JSON.stringify(msg);
@@ -451,7 +389,7 @@ wss.on('connection', (ws, req) => {
 
     ws.on('close', () => {
       room.playerSockets.delete(ws);
-      handlePlayerDisconnect(ws, room);
+      handleDisconnect(ws, room, maybeCleanupRoom);
     });
 
     ws.on('error', (err) => console.error('Player WS error:', err.message));
@@ -462,57 +400,6 @@ wss.on('connection', (ws, req) => {
 });
 
 // ─── Disconnect handler ───────────────────────────────────────────────────────
-
-function handlePlayerDisconnect(ws, room) {
-  const username = room.wsToUsername.get(ws);
-  room.wsToUsername.delete(ws);
-
-  if (!username) {
-    maybeCleanupRoom(room);
-    return;
-  }
-
-  // If the player already reconnected with a new WS (e.g. navigating between
-  // pages), ignore this stale close so we don't delete them or hand off admin.
-  const currentEntry = room.players.get(username);
-  if (currentEntry && currentEntry.ws !== ws) {
-    maybeCleanupRoom(room);
-    return;
-  }
-
-  const wasLobby = room.activeMiniGame === 'lobby';
-
-  if (wasLobby) {
-    // During a game→lobby transition players are navigating and will reconnect
-    // shortly — skip all deletion and handoff so room.players stays intact.
-    if (!room._returningFromGame) {
-      room.players.delete(username);
-      room.readyPlayers.delete(username);
-      room.gameSuggestions.delete(username);
-      room.categoryVotes.delete(username);
-
-      // Hand off admin if the admin truly left
-      if (username === room.adminUsername) {
-        const nextAdmin = [...room.players.keys()][0];
-        if (nextAdmin) {
-          room.adminUsername = nextAdmin;
-          broadcastAll(room, { type: 'ADMIN_CHANGED', newAdmin: nextAdmin });
-        }
-      }
-    }
-
-    if (room.game) room.game.removePlayer(ws);
-    if (room.shitheadGame) room.shitheadGame.removePlayer(ws);
-    broadcastLobbyUpdate(room);
-    broadcastVoteUpdate(room);
-  } else {
-    // In game: null ws, keep score (existing Game behaviour)
-    if (room.game) room.game.removePlayer(ws);
-    if (room.shitheadGame) room.shitheadGame.removePlayer(ws);
-  }
-
-  maybeCleanupRoom(room);
-}
 
 function maybeCleanupRoom(room) {
   const totalSockets = room.playerSockets.size + room.displaySockets.size;
@@ -591,77 +478,17 @@ function handleMessage(ws, role, msg, room) {
   switch (type) {
 
     case 'JOIN_LOBBY':
-    case 'JOIN': {
-      // Player reconnected — cancel any pending room cleanup
-      clearTimeout(room._cleanupTimer);
-      // If the original admin is reconnecting, clear the returning flag
-      if ((msg.username || '').trim() === room.adminUsername) {
-        room._returningFromGame = false;
-      }
-      const username = (msg.username || '').trim().slice(0, 20);
-      if (!username) {
-        sendTo(ws, { type: 'ERROR', code: 'INVALID_USERNAME', message: 'Username required.' });
-        break;
-      }
-
-      // Assign admin if first player
-      if (room.players.size === 0) {
-        room.adminUsername = username;
-      }
-
-      const avatar = nameToAvatar(username);
-      room.players.set(username, { ws, isReady: false, avatar });
-      room.wsToUsername.set(ws, username);
-
-      // Lazy-create game instance
-      if (!room.game) {
-        room.game = new Game(room._broadcast);
-      }
-      const result = room.game.addPlayer(ws, username);
-
-      // Reconnect to in-progress shithead game
-      if (room.activeMiniGame === 'shithead' && room.shitheadGame) {
-        room.shitheadGame.addPlayer(ws, username);
-      }
-
-      const isAdmin = username === room.adminUsername;
-      const gameRunning = !!(room.game && room.game.state !== 'LOBBY');
-      sendTo(ws, { type: 'JOIN_OK', username, isAdmin, roomCode: room.code, avatar, lang: room.language, gameRunning });
-
-      if (!result.ok) {
-        sendTo(ws, { type: 'ERROR', code: result.code, message: result.message });
-      }
-
-      broadcastLobbyUpdate(room);
-      broadcastVoteUpdate(room);
-
-      // Legacy PLAYER_JOINED for old host display
-      const playerNames = [...room.players.keys()];
-      broadcastToDisplays(room, { type: 'PLAYER_JOINED', players: playerNames, playerCount: room.players.size });
+    case 'JOIN':
+      handleJoin(ws, msg, room);
       break;
-    }
 
-    case 'SET_READY': {
-      const username = room.wsToUsername.get(ws);
-      if (!username) break;
-      if (msg.ready) {
-        room.readyPlayers.add(username);
-      } else {
-        room.readyPlayers.delete(username);
-      }
-      broadcastLobbyUpdate(room);
+    case 'SET_READY':
+      handleSetReady(ws, msg, room);
       break;
-    }
 
-    case 'SUGGEST_GAME': {
-      const username = room.wsToUsername.get(ws);
-      if (!username) break;
-      const gameType = msg.gameType;
-      if (!['quiz', 'shithead'].includes(gameType)) break;
-      room.gameSuggestions.set(username, gameType);
-      broadcastLobbyUpdate(room);
+    case 'SUGGEST_GAME':
+      handleSuggestGame(ws, msg, room);
       break;
-    }
 
     case 'START_MINI_GAME': {
       const username = room.wsToUsername.get(ws);
@@ -696,55 +523,18 @@ function handleMessage(ws, role, msg, room) {
       break;
     }
 
-    case 'REMOVE_PLAYER': {
-      const requester = room.wsToUsername.get(ws);
-      if (requester !== room.adminUsername) {
-        sendTo(ws, { type: 'ERROR', code: 'NOT_ADMIN', message: 'Only admin can remove players.' });
-        break;
-      }
-      const target = msg.username;
-      const targetPlayer = room.players.get(target);
-      if (targetPlayer && targetPlayer.ws) {
-        sendTo(targetPlayer.ws, { type: 'PLAYER_REMOVED', username: target });
-        targetPlayer.ws.close();
-      }
+    case 'REMOVE_PLAYER':
+      handleRemovePlayer(ws, msg, room);
       break;
-    }
 
     case 'RETURN_TO_LOBBY':
-    case 'RESTART': {
-      const username = room.wsToUsername.get(ws);
-      if (username !== room.adminUsername) {
-        sendTo(ws, { type: 'ERROR', code: 'NOT_ADMIN', message: 'Only admin can return to lobby.' });
-        break;
-      }
-      if (room.game) room.game.restart();
-      if (room.shitheadGame) { room.shitheadGame = null; }
-      room.categoryVotes.clear();
-      room.readyPlayers.clear();
-      room.gameSuggestions.clear();
-      room.activeMiniGame = 'lobby';
-      // Flag: suppress admin handoff while players navigate back to lobby
-      room._returningFromGame = true;
-      broadcastLobbyUpdate(room);
-      // Legacy RESTARTED for old player page
-      broadcastAll(room, { type: 'RESTARTED' });
+    case 'RESTART':
+      handleReturnToLobby(ws, room);
       break;
-    }
 
-    case 'CATEGORY_VOTE': {
-      if (room.activeMiniGame !== 'lobby') break;
-      const username = room.wsToUsername.get(ws);
-      if (!username) break;
-      const cats = Array.isArray(msg.categories)
-        ? msg.categories.slice(0, 3).map(Number).filter(n => Number.isInteger(n) && n > 0)
-        : [];
-      if (cats.length === 0) break;
-      room.categoryVotes.set(username, cats);
-      broadcastLobbyUpdate(room);
-      broadcastVoteUpdate(room);
+    case 'CATEGORY_VOTE':
+      handleCategoryVote(ws, msg, room);
       break;
-    }
 
     case 'ANSWER':
       if (room.game) room.game.receiveAnswer(ws, msg.questionId, msg.answerId);
