@@ -4,7 +4,34 @@
   "description": "Local network party quiz game",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "test": "node --test",
+    "coverage": "nyc npm test"
+  },
+  "nyc": {
+    "all": true,
+    "include": [
+      "game.js",
+      "local-db.js",
+      "questions.js",
+      "server.js",
+      "shithead.js",
+      "translator.js"
+    ],
+    "exclude": [
+      "node_modules/**",
+      "tests/**",
+      "public/**"
+    ],
+    "reporter": [
+      "text",
+      "lcov",
+      "html"
+    ],
+    "report-dir": "coverage"
+  },
+  "engines": {
+    "node": ">=20"
   },
   "dependencies": {
     "dotenv": "^17.3.1",
@@ -13,6 +40,7 @@
     "ws": "^8.14.2"
   },
   "devDependencies": {
+    "nyc": "^18.0.0",
     "puppeteer-core": "^24.37.5"
   }
 }
