@@ -13,6 +13,7 @@
     "include": [
       "game.js",
       "local-db.js",
+      "player-manager.js",
       "questions.js",
       "server.js",
       "shithead.js",
