@@ -440,4 +440,38 @@ class Game {
   get currentState() { return this.state; }
 }
 
-module.exports = { Game, STATE };
+// ─── Room-integrated message handler ───────────────────────────────────────
+
+/**
+ * Handle quiz-related player WebSocket messages.
+ * @param {WebSocket} ws
+ * @param {{ type: string }} msg
+ * @param {object} room  – room object from the rooms registry
+ * @returns {boolean} true if the message was handled, false otherwise
+ */
+function handleMessage(ws, msg, room) {
+  const { type } = msg;
+  const username = room.wsToUsername.get(ws);
+
+  switch (type) {
+    case 'ANSWER':
+      if (room.game) room.game.receiveAnswer(ws, msg.questionId, msg.answerId);
+      return true;
+    case 'SKIP':
+      if (username !== room.adminUsername) return true;
+      if (room.game) room.game.skipReveal();
+      return true;
+    case 'CONTINUE_GAME': {
+      if (username !== room.adminUsername) return true;
+      const categories = Array.isArray(msg.categories) && msg.categories.length > 0 ? msg.categories : [9];
+      const questionCount = Number.isInteger(msg.questionCount) && msg.questionCount > 0 ? Math.min(msg.questionCount, 50) : 20;
+      const gameDifficulty = ['easy', 'medium', 'hard'].includes(msg.gameDifficulty) ? msg.gameDifficulty : 'easy';
+      if (room.game) room.game.continueGame(categories, questionCount, gameDifficulty).catch(console.error);
+      return true;
+    }
+    default:
+      return false;
+  }
+}
+
+module.exports = { Game, STATE, handleMessage };

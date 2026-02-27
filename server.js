@@ -10,8 +10,8 @@ const path = require('path');
 const os = require('os');
 const { WebSocketServer } = require('ws');
 const QRCode = require('qrcode');
-const { Game } = require('./game');
-const { ShitheadGame } = require('./shithead');
+const { Game, handleMessage: handleQuizMessage } = require('./game');
+const { ShitheadGame, handleMessage: handleShitheadMessage } = require('./shithead');
 const { fetchCategories } = require('./questions');
 const { downloadDatabase, getState: getDbState, dbStatus } = require('./local-db');
 
@@ -746,27 +746,6 @@ function handleMessage(ws, role, msg, room) {
       break;
     }
 
-    case 'ANSWER':
-      if (room.game) room.game.receiveAnswer(ws, msg.questionId, msg.answerId);
-      break;
-
-    case 'SKIP': {
-      const username = room.wsToUsername.get(ws);
-      if (username !== room.adminUsername) break;
-      if (room.game) room.game.skipReveal();
-      break;
-    }
-
-    case 'CONTINUE_GAME': {
-      const username = room.wsToUsername.get(ws);
-      if (username !== room.adminUsername) break;
-      const categories = Array.isArray(msg.categories) && msg.categories.length > 0 ? msg.categories : [9];
-      const questionCount = Number.isInteger(msg.questionCount) && msg.questionCount > 0 ? Math.min(msg.questionCount, 50) : 20;
-      const gameDifficulty = ['easy', 'medium', 'hard'].includes(msg.gameDifficulty) ? msg.gameDifficulty : 'easy';
-      if (room.game) room.game.continueGame(categories, questionCount, gameDifficulty).catch(console.error);
-      break;
-    }
-
     case 'SET_LANGUAGE': {
       const username = room.wsToUsername.get(ws);
       if (username !== room.adminUsername) break;
@@ -777,40 +756,9 @@ function handleMessage(ws, role, msg, room) {
       break;
     }
 
-    case 'SHITHEAD_CONFIRM_SWAP': {
-      const username = room.wsToUsername.get(ws);
-      if (!username || !room.shitheadGame) break;
-      room.shitheadGame.confirmSwap(username);
+    default:
+      handleQuizMessage(ws, msg, room) || handleShitheadMessage(ws, msg, room);
       break;
-    }
-
-    case 'SHITHEAD_SWAP_CARD': {
-      const username = room.wsToUsername.get(ws);
-      if (!username || !room.shitheadGame) break;
-      room.shitheadGame.swapCard(username, msg.handCardId, msg.faceUpCardId);
-      break;
-    }
-
-    case 'SHITHEAD_PLAY_CARDS': {
-      const username = room.wsToUsername.get(ws);
-      if (!username || !room.shitheadGame || !Array.isArray(msg.cardIds)) break;
-      room.shitheadGame.playCards(username, msg.cardIds);
-      break;
-    }
-
-    case 'SHITHEAD_PLAY_FACEDOWN': {
-      const username = room.wsToUsername.get(ws);
-      if (!username || !room.shitheadGame) break;
-      room.shitheadGame.playFaceDown(username, msg.cardId);
-      break;
-    }
-
-    case 'SHITHEAD_PICK_UP_PILE': {
-      const username = room.wsToUsername.get(ws);
-      if (!username || !room.shitheadGame) break;
-      room.shitheadGame.pickUpPile(username);
-      break;
-    }
   }
 }
 

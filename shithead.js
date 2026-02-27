@@ -527,4 +527,43 @@ class ShitheadGame {
   }
 }
 
-module.exports = { ShitheadGame };
+// ─── Room-integrated message handler ───────────────────────────────────────
+
+/**
+ * Handle shithead-related player WebSocket messages.
+ * @param {WebSocket} ws
+ * @param {{ type: string }} msg
+ * @param {object} room  – room object from the rooms registry
+ * @returns {boolean} true if the message was handled, false otherwise
+ */
+function handleMessage(ws, msg, room) {
+  const { type } = msg;
+  const username = room.wsToUsername.get(ws);
+
+  switch (type) {
+    case 'SHITHEAD_CONFIRM_SWAP':
+      if (!username || !room.shitheadGame) return true;
+      room.shitheadGame.confirmSwap(username);
+      return true;
+    case 'SHITHEAD_SWAP_CARD':
+      if (!username || !room.shitheadGame) return true;
+      room.shitheadGame.swapCard(username, msg.handCardId, msg.faceUpCardId);
+      return true;
+    case 'SHITHEAD_PLAY_CARDS':
+      if (!username || !room.shitheadGame || !Array.isArray(msg.cardIds)) return true;
+      room.shitheadGame.playCards(username, msg.cardIds);
+      return true;
+    case 'SHITHEAD_PLAY_FACEDOWN':
+      if (!username || !room.shitheadGame) return true;
+      room.shitheadGame.playFaceDown(username, msg.cardId);
+      return true;
+    case 'SHITHEAD_PICK_UP_PILE':
+      if (!username || !room.shitheadGame) return true;
+      room.shitheadGame.pickUpPile(username);
+      return true;
+    default:
+      return false;
+  }
+}
+
+module.exports = { ShitheadGame, handleMessage };
