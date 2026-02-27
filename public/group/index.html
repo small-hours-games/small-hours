@@ -358,6 +358,7 @@
       <button class="setting-btn rounds-btn" data-rounds="12">12</button>
       <button class="setting-btn rounds-btn" data-rounds="15">15</button>
     </div>
+    <div class="settings-row" id="deck-count-row">
       <span class="settings-label">Decks:</span>
       <button class="setting-btn deck-btn active" data-decks="1">1 deck</button>
       <button class="setting-btn deck-btn" data-decks="2">2 decks</button>
@@ -374,7 +375,7 @@
   const GAME_TILES = [
     { type: 'quiz',     emoji: '🧠', label: 'Quiz',     available: true },
     { type: 'shithead', emoji: '🃏', label: 'Shithead', available: true },
-    { type: 'cah',      emoji: '🖤', label: 'Cards',    available: true },
+    { type: 'cah',      emoji: '🖤', label: 'Cards against Humanity', available: true },
   ];
 
   const roomCode    = GN.getRoomCode();
