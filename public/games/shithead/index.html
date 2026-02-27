@@ -992,6 +992,15 @@
         handleGameOver(msg);
         break;
 
+      case 'SHITHEAD_PLAYER_KICKED':
+        if (msg.username === myUsername) {
+          GNSound.wrong(); GN.haptic('error');
+          showToast('⏰ You were removed for inactivity.', 3000);
+        } else {
+          showToast(`⏰ ${GN.esc(msg.username)} was removed for inactivity.`, 2500);
+        }
+        break;
+
       case 'SHITHEAD_RESTARTED':
       case 'RESTARTED':
         window.location.href = roomCode ? `/group/${roomCode}` : '/';

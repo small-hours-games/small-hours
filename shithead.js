@@ -5,6 +5,8 @@ const RANK_NAME = { 2:'2', 3:'3', 4:'4', 5:'5', 6:'6', 7:'7', 8:'8', 9:'9',
                     10:'10', 11:'J', 12:'Q', 13:'K', 14:'A' };
 const RANKS     = Object.keys(RANK_NAME).map(Number);
 
+const INACTIVITY_TIMEOUT_MS = 40_000;
+
 class ShitheadGame {
   /**
    * @param {(msg: object) => void} broadcast – sends to all connected sockets
@@ -21,6 +23,7 @@ class ShitheadGame {
     this.sevenActive = false;
     this.finishOrder = [];
     this.shithead   = null;
+    this._inactivityTimer = null;
   }
 
   // ─── Deck helpers ────────────────────────────────────────────────────────
@@ -150,6 +153,63 @@ class ShitheadGame {
       sevenActive:       this.sevenActive,
       effectiveTopRank,
     });
+    this._startInactivityTimer();
+  }
+
+  // ─── Inactivity timer ────────────────────────────────────────────────────
+
+  _clearInactivityTimer() {
+    if (this._inactivityTimer) {
+      clearTimeout(this._inactivityTimer);
+      this._inactivityTimer = null;
+    }
+  }
+
+  _startInactivityTimer() {
+    this._clearInactivityTimer();
+    if (this.state !== 'PLAYING') return;
+    const username = this._currentPlayer();
+    if (!username) return;
+    this._inactivityTimer = setTimeout(() => {
+      this._kickInactivePlayer(username);
+    }, INACTIVITY_TIMEOUT_MS);
+  }
+
+  _kickInactivePlayer(username) {
+    this._clearInactivityTimer();
+    if (this.state !== 'PLAYING') return;
+    if (this._currentPlayer() !== username) return;
+
+    this._broadcast({ type: 'SHITHEAD_PLAYER_KICKED', username, reason: 'inactivity' });
+
+    const idx = this.turnOrder.indexOf(username);
+    if (idx !== -1) {
+      this.turnOrder.splice(idx, 1);
+      if (this.turnOrder.length > 0) {
+        this.turn = idx % this.turnOrder.length;
+      }
+    }
+    this.players.delete(username);
+
+    if (this.turnOrder.length <= 1) {
+      if (this.turnOrder.length === 1) {
+        this.shithead = this.turnOrder[0];
+        const sp = this.players.get(this.shithead);
+        if (sp) sp.hasFinished = true;
+        this.finishOrder.push(this.shithead);
+        this.turnOrder = [];
+      }
+      this.state = 'GAME_OVER';
+      this._broadcastGameState();
+      this._broadcast({
+        type:        'SHITHEAD_GAME_OVER',
+        finishOrder:  this.finishOrder,
+        shithead:     this.shithead,
+      });
+    } else {
+      this._broadcastGameState();
+      this._broadcastTurnInfo();
+    }
   }
 
   // ─── After play: advance + broadcast ────────────────────────────────────
@@ -436,6 +496,7 @@ class ShitheadGame {
   }
 
   restart() {
+    this._clearInactivityTimer();
     this.state       = 'LOBBY';
     this.deck        = [];
     this.pile        = [];
@@ -513,6 +574,7 @@ class ShitheadGame {
         this.finishOrder.push(this.shithead);
         this.turnOrder = [];
       }
+      this._clearInactivityTimer();
       this.state = 'GAME_OVER';
       this._broadcastGameState();
       this._broadcast({
