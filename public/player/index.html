@@ -445,6 +445,21 @@
     }
     #reconnecting.show { display: flex; }
     #reconnecting p { color: #ccc; font-size: 1rem; }
+
+    .rules-link {
+      position: fixed;
+      top: 0.8rem;
+      right: 0.8rem;
+      z-index: 120;
+      text-decoration: none;
+      color: #fff;
+      font-size: 0.8rem;
+      font-weight: 700;
+      padding: 0.4rem 0.7rem;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.1);
+      border: 1px solid rgba(255,255,255,0.18);
+    }
   </style>
 </head>
 <body>
@@ -453,6 +468,7 @@
   <div class="spinner" style="width:50px;height:50px;border:5px solid rgba(255,255,255,0.1);border-top-color:#00c2ff;border-radius:50%;animation:spin 0.8s linear infinite;"></div>
   <p>Reconnecting…</p>
 </div>
+<a id="rules-link" class="rules-link" href="/rules">📖 Rules</a>
 <style> @keyframes spin { to { transform: rotate(360deg); } } </style>
 
 <!-- JOIN -->
@@ -623,6 +639,14 @@
   const _urlParams = new URLSearchParams(window.location.search);
   let roomCode = (_urlParams.get('room') || '').toUpperCase() || null;
 
+  function updateRulesLink() {
+    const from = `${location.pathname}${location.search}`;
+    const room = roomCode || roomInput.value.trim().toUpperCase() || '';
+    document.getElementById('rules-link').href =
+      `/rules?room=${encodeURIComponent(room)}&from=${encodeURIComponent(from)}`;
+  }
+  updateRulesLink();
+
   let ws;
   let connectGen = 0; // incremented each time connect() is called; guards stale WS events
   let myUsername = null;
@@ -770,6 +794,7 @@
     const pos = roomInput.selectionStart;
     roomInput.value = roomInput.value.toUpperCase();
     roomInput.setSelectionRange(pos, pos);
+    updateRulesLink();
   });
 
   function doJoin() {
@@ -780,6 +805,7 @@
     joinError.textContent = '';
     roomCode = room;
     myUsername = name;
+    updateRulesLink();
     connect(); // creates new WS; connectGen guards old WS events
   }
 

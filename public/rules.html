@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Game Night — Rules</title>
+  <style>
+    :root {
+      --bg:     #1a1a2e;
+      --card:   #16213e;
+      --text:   #eaeaea;
+      --accent: #9f44d3;
+      --timer:  #00c2ff;
+      --muted:  #9aa0b2;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      min-height: 100%;
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+    body {
+      padding: 1.25rem;
+      display: flex;
+      justify-content: center;
+    }
+    .wrap {
+      width: 100%;
+      max-width: 720px;
+      display: flex;
+      flex-direction: column;
+      gap: 0.85rem;
+    }
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+    }
+    h1 {
+      font-size: clamp(1.5rem, 5vw, 2rem);
+      font-weight: 900;
+      letter-spacing: 0.01em;
+      background: linear-gradient(90deg, var(--accent), var(--timer));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .back {
+      text-decoration: none;
+      color: #fff;
+      font-weight: 700;
+      font-size: 0.92rem;
+      padding: 0.45rem 0.8rem;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.09);
+      border: 1px solid rgba(255,255,255,0.16);
+      white-space: nowrap;
+    }
+    .card {
+      background: var(--card);
+      border: 1px solid rgba(255,255,255,0.09);
+      border-radius: 0.95rem;
+      padding: 0.95rem 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.55rem;
+    }
+    h2 {
+      font-size: 1.03rem;
+      font-weight: 800;
+    }
+    ul {
+      padding-left: 1.05rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+      color: #d6d8e2;
+      line-height: 1.35;
+      font-size: 0.95rem;
+    }
+    p {
+      color: var(--muted);
+      line-height: 1.4;
+      font-size: 0.92rem;
+    }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <div class="topbar">
+      <h1>📖 Game Rules</h1>
+      <a id="back-link" class="back" href="/">← Back</a>
+    </div>
+
+    <section class="card">
+      <h2>Quiz</h2>
+      <ul>
+        <li>Each player votes for 3 categories before the round starts.</li>
+        <li>Answer each question before time runs out.</li>
+        <li>Correct answers give points. Faster correct answers rank higher.</li>
+        <li>A reveal shows the correct answer, your points, rank, and total score.</li>
+        <li>Highest total score at game over wins.</li>
+      </ul>
+    </section>
+
+    <section class="card">
+      <h2>Shithead</h2>
+      <ul>
+        <li>Swap phase: arrange your 3 face-up cards before play starts.</li>
+        <li>Play cards of equal or higher rank than the current top card.</li>
+        <li>Special cards can reset or clear the pile based on game rules.</li>
+        <li>If you cannot play, pick up the pile.</li>
+        <li>The first player to get rid of all cards wins.</li>
+      </ul>
+    </section>
+
+    <p>If your host uses house rules, the host's call applies for this room.</p>
+  </main>
+
+  <script>
+    const params = new URLSearchParams(location.search);
+    const from = params.get('from');
+    const room = (params.get('room') || '').toUpperCase();
+
+    const isSafePath = typeof from === 'string' && from.startsWith('/');
+    const fallback = room ? `/group/${encodeURIComponent(room)}` : '/';
+    document.getElementById('back-link').href = isSafePath ? from : fallback;
+  </script>
+</body>
+</html>

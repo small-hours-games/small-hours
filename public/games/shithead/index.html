@@ -330,6 +330,21 @@
       white-space: nowrap;
     }
     #toast.show { transform: translateX(-50%) translateY(0); }
+
+    .rules-link {
+      position: fixed;
+      top: 0.8rem;
+      right: 0.8rem;
+      z-index: 120;
+      text-decoration: none;
+      color: #fff;
+      font-size: 0.8rem;
+      font-weight: 700;
+      padding: 0.4rem 0.7rem;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.1);
+      border: 1px solid rgba(255,255,255,0.18);
+    }
   </style>
 </head>
 <body>
@@ -338,6 +353,7 @@
   <div class="spinner"></div>
   <p style="color:#ccc;">Reconnecting…</p>
 </div>
+<a id="rules-link" class="rules-link" href="/rules">📖 Rules</a>
 
 <!-- CONNECTING -->
 <div id="connecting" class="screen active">
@@ -433,6 +449,9 @@
   let swapSelected = { hand: null, faceUp: null };
   let selectedCardIds = new Set();
   let ws, connectGen = 0;
+
+  document.getElementById('rules-link').href =
+    `/rules?room=${encodeURIComponent(roomCode || '')}&from=${encodeURIComponent(location.pathname)}`;
 
   if (!myUsername) {
     // No stored username — redirect to lobby

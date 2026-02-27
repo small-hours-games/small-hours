@@ -109,6 +109,22 @@
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
     }
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 0.45rem;
+    }
+    .rules-link {
+      text-decoration: none;
+      color: #fff;
+      font-size: 0.72rem;
+      font-weight: 700;
+      padding: 0.25rem 0.55rem;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.1);
+      border: 1px solid rgba(255,255,255,0.18);
+      white-space: nowrap;
+    }
     .room-chip {
       background: rgba(159,68,211,0.18);
       border: 1px solid rgba(159,68,211,0.4);
@@ -403,7 +419,10 @@
 <!-- Header -->
 <div id="header">
   <div class="header-title">🎮 Game Night</div>
-  <div class="room-chip" id="room-chip">····</div>
+  <div class="header-right">
+    <a id="rules-link" class="rules-link" href="/rules">📖 Rules</a>
+    <div class="room-chip" id="room-chip">····</div>
+  </div>
 </div>
 
 <!-- Players panel -->
@@ -478,6 +497,8 @@
   let selectedDeckCount     = 1;
 
   document.getElementById('room-chip').textContent = roomCode || '????';
+  document.getElementById('rules-link').href =
+    `/rules?room=${encodeURIComponent(roomCode || '')}&from=${encodeURIComponent(location.pathname)}`;
 
   // ── Name overlay ──────────────────────────────────────────────────────────
   if (myUsername) {

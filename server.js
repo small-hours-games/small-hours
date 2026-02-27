@@ -82,6 +82,7 @@ app.get('/group/:code',          pageRateLimit, serveFile('public/group/index.ht
 app.get('/group/:code/display',  pageRateLimit, serveFile('public/group/display.html'));
 app.get('/group/:code/quiz',     pageRateLimit, serveFile('public/games/quiz/index.html'));
 app.get('/group/:code/shithead', pageRateLimit, serveFile('public/games/shithead/index.html'));
+app.get('/rules',                pageRateLimit, serveFile('public/rules.html'));
 app.get('/shithead/host',        pageRateLimit, serveFile('public/shithead/host/index.html'));
 app.get('/shithead/player',      pageRateLimit, serveFile('public/shithead/player/index.html'));
 
