@@ -205,6 +205,45 @@
     .face-down-card.selected { border-color: var(--gold); transform: translateY(-8px); }
     .face-down-card.not-my-turn { cursor: default; opacity: 0.7; }
 
+    /* ── Opponents ── */
+    #opponents-list { display: flex; flex-direction: column; gap: 0.4rem; width: 100%; }
+    .opponent-row {
+      background: var(--card);
+      border-radius: 0.65rem;
+      padding: 0.5rem 0.75rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+    }
+    .opponent-row.is-current { border: 1px solid var(--accent); }
+    .opponent-row.finished { opacity: 0.45; }
+    .opponent-name { font-size: 0.82rem; font-weight: 700; color: #ccc; }
+    .opponent-cards { display: flex; flex-wrap: wrap; gap: 0.3rem; align-items: center; }
+    .opp-card {
+      width: 38px; height: 54px;
+      background: #fff;
+      border-radius: 6px;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      font-size: 0.72rem; font-weight: 900; line-height: 1.1;
+    }
+    .opp-card.red-card { color: #c00; }
+    .opp-card.black-card { color: #111; }
+    .opp-face-down {
+      width: 38px; height: 54px;
+      background: linear-gradient(135deg, #1e3a5f, #0a1628);
+      border-radius: 6px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.1rem;
+    }
+    .opp-hand-count {
+      background: rgba(255,255,255,0.08);
+      border-radius: 4px;
+      padding: 0.2rem 0.4rem;
+      font-size: 0.72rem;
+      color: #aaa;
+    }
+
     .action-btns { display: flex; gap: 0.5rem; width: 100%; }
     #play-btn {
       flex: 2;
@@ -353,6 +392,9 @@
   <div class="seven-warn" id="seven-warn" style="display:none;">⚠️ Play 7 or lower!</div>
   <div class="turn-banner other-turn" id="turn-banner">Waiting…</div>
 
+  <div class="zone-label" id="opponents-label" style="display:none;">Opponents</div>
+  <div id="opponents-list"></div>
+
   <div class="zone-label" id="zone-hint">Hand cards</div>
   <div class="cards-grid" id="hand-cards"></div>
 
@@ -496,6 +538,30 @@
     }
   }
 
+  function renderOpponents() {
+    if (!gameState) return;
+    const opponents = (gameState.players || []).filter(p => p.username !== myUsername);
+    const label = document.getElementById('opponents-label');
+    const list  = document.getElementById('opponents-list');
+    if (opponents.length === 0) { label.style.display = 'none'; list.innerHTML = ''; return; }
+    label.style.display = '';
+    const cur = turnInfo ? turnInfo.currentPlayer : gameState.currentPlayer;
+    list.innerHTML = opponents.map(p => {
+      const isCurrent = p.username === cur;
+      const faceUpHtml = (p.faceUp || []).map(c =>
+        `<div class="opp-card ${isRed(c) ? 'red-card' : 'black-card'}"><span>${c.name}</span><span>${c.suit}</span></div>`
+      ).join('');
+      const faceDownHtml = Array(p.faceDownCount || 0).fill('<div class="opp-face-down">🂠</div>').join('');
+      const handHtml = p.handCount > 0
+        ? `<div class="opp-hand-count">✋ ${p.handCount}</div>` : '';
+      const classes = ['opponent-row', isCurrent && 'is-current', p.hasFinished && 'finished'].filter(Boolean).join(' ');
+      return `<div class="${classes}">
+        <div class="opponent-name">${p.username}${isCurrent ? ' 🎯' : ''}${p.hasFinished ? ' ✅' : ''}</div>
+        <div class="opponent-cards">${handHtml}${faceUpHtml}${faceDownHtml}</div>
+      </div>`;
+    }).join('');
+  }
+
   // ── Playing phase ──────────────────────────────────────────────────────────
   const isRed = c => c.suit === '♥' || c.suit === '♦';
 
@@ -600,6 +666,7 @@
       });
     }
     updateActionButtons();
+    renderOpponents();
   }
 
   function canPlayCard(rank, sevenActive, pileTop) {

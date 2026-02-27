@@ -176,7 +176,7 @@ class ShitheadGame {
       this._sendTo(ws, { type: 'SHITHEAD_JOIN_OK', username });
       this._sendPlayerState(username);
       this._sendTo(ws, this._buildGameState());
-      this._broadcastTurnInfo();
+      if (this.state === 'PLAYING') this._broadcastTurnInfo();
       return;
     }
     if (this.state !== 'LOBBY') {
