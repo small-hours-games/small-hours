@@ -202,7 +202,7 @@ shitheadWss.on('connection', (ws, req) => {
       if (!u) return;
       if (type === 'SHITHEAD_CONFIRM_SWAP')  { shitheadGame.confirmSwap(u); return; }
       if (type === 'SHITHEAD_SWAP_CARD')     { shitheadGame.swapCard(u, msg.handCardId, msg.faceUpCardId); return; }
-      if (type === 'SHITHEAD_PLAY_CARDS')    { shitheadGame.playCards(u, msg.cardIds); return; }
+      if (type === 'SHITHEAD_PLAY_CARDS')    { if (!Array.isArray(msg.cardIds)) return; shitheadGame.playCards(u, msg.cardIds); return; }
       if (type === 'SHITHEAD_PLAY_FACEDOWN') { shitheadGame.playFaceDown(u, msg.cardId); return; }
       if (type === 'SHITHEAD_PICK_UP_PILE')  { shitheadGame.pickUpPile(u); return; }
     }

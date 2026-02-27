@@ -158,6 +158,10 @@ class ShitheadGame {
   // ─── Public API ──────────────────────────────────────────────────────────
 
   addPlayer(ws, username) {
+    if (!username) {
+      this._sendTo(ws, { type: 'SHITHEAD_ERROR', code: 'INVALID_USERNAME', message: 'Username required.' });
+      return;
+    }
     if (this.players.has(username)) {
       // Reconnect
       const p = this.players.get(username);
@@ -169,11 +173,11 @@ class ShitheadGame {
       return;
     }
     if (this.state !== 'LOBBY') {
-      this._sendTo(ws, { type: 'SHITHEAD_ERROR', message: 'Game already in progress.' });
+      this._sendTo(ws, { type: 'SHITHEAD_ERROR', code: 'GAME_IN_PROGRESS', message: 'Game already in progress.' });
       return;
     }
     if (this.players.size >= 4) {
-      this._sendTo(ws, { type: 'SHITHEAD_ERROR', message: 'Room full (max 4 players).' });
+      this._sendTo(ws, { type: 'SHITHEAD_ERROR', code: 'ROOM_FULL', message: 'Room full (max 4 players).' });
       return;
     }
     this.players.set(username, {
@@ -238,6 +242,11 @@ class ShitheadGame {
     const p = this.players.get(username);
     if (!p || p.swapReady) return;
 
+    if (typeof handCardId !== 'string' || !handCardId ||
+        typeof faceUpCardId !== 'string' || !faceUpCardId) {
+      return;
+    }
+
     const hi = p.hand.findIndex(c => c.id === handCardId);
     const fi = p.faceUp.findIndex(c => c.id === faceUpCardId);
     if (hi === -1 || fi === -1) return;
@@ -248,9 +257,10 @@ class ShitheadGame {
 
   playCards(username, cardIds) {
     if (this.state !== 'PLAYING') return;
+    if (!Array.isArray(cardIds) || cardIds.length === 0) return;
     if (this._currentPlayer() !== username) {
       const p = this.players.get(username);
-      if (p) this._sendTo(p.ws, { type: 'SHITHEAD_ERROR', message: 'Not your turn.' });
+      if (p) this._sendTo(p.ws, { type: 'SHITHEAD_ERROR', code: 'NOT_YOUR_TURN', message: 'Not your turn.' });
       return;
     }
     const p = this.players.get(username);
@@ -265,22 +275,22 @@ class ShitheadGame {
     } else if (hasFaceUp) {
       cards = cardIds.map(id => p.faceUp.find(c => c.id === id)).filter(Boolean);
     } else {
-      this._sendTo(p.ws, { type: 'SHITHEAD_ERROR', message: 'No valid cards to play.' });
+      this._sendTo(p.ws, { type: 'SHITHEAD_ERROR', code: 'NO_VALID_CARDS', message: 'No valid cards to play.' });
       return;
     }
 
     if (!cards || cards.length === 0 || cards.length !== cardIds.length) {
-      this._sendTo(p.ws, { type: 'SHITHEAD_ERROR', message: 'Invalid card selection.' });
+      this._sendTo(p.ws, { type: 'SHITHEAD_ERROR', code: 'INVALID_CARD_SELECTION', message: 'Invalid card selection.' });
       return;
     }
 
     const rank = cards[0].rank;
     if (!cards.every(c => c.rank === rank)) {
-      this._sendTo(p.ws, { type: 'SHITHEAD_ERROR', message: 'All cards must be the same rank.' });
+      this._sendTo(p.ws, { type: 'SHITHEAD_ERROR', code: 'MISMATCHED_RANKS', message: 'All cards must be the same rank.' });
       return;
     }
     if (!this._canPlay(rank)) {
-      this._sendTo(p.ws, { type: 'SHITHEAD_ERROR', message: 'Cannot play that card.' });
+      this._sendTo(p.ws, { type: 'SHITHEAD_ERROR', code: 'ILLEGAL_PLAY', message: 'Cannot play that card.' });
       return;
     }
 
@@ -330,20 +340,25 @@ class ShitheadGame {
     if (this.state !== 'PLAYING') return;
     if (this._currentPlayer() !== username) {
       const p = this.players.get(username);
-      if (p) this._sendTo(p.ws, { type: 'SHITHEAD_ERROR', message: 'Not your turn.' });
+      if (p) this._sendTo(p.ws, { type: 'SHITHEAD_ERROR', code: 'NOT_YOUR_TURN', message: 'Not your turn.' });
       return;
     }
     const p = this.players.get(username);
     if (!p) return;
 
+    if (!cardId) {
+      this._sendTo(p.ws, { type: 'SHITHEAD_ERROR', code: 'CARD_NOT_FOUND', message: 'Card not found.' });
+      return;
+    }
+
     if (p.hand.length > 0 || p.faceUp.length > 0) {
-      this._sendTo(p.ws, { type: 'SHITHEAD_ERROR', message: 'Must play hand or face-up cards first.' });
+      this._sendTo(p.ws, { type: 'SHITHEAD_ERROR', code: 'INVALID_PLAY_ORDER', message: 'Must play hand or face-up cards first.' });
       return;
     }
 
     const idx = p.faceDown.findIndex(c => c.id === cardId);
     if (idx === -1) {
-      this._sendTo(p.ws, { type: 'SHITHEAD_ERROR', message: 'Card not found.' });
+      this._sendTo(p.ws, { type: 'SHITHEAD_ERROR', code: 'CARD_NOT_FOUND', message: 'Card not found.' });
       return;
     }
 
@@ -398,7 +413,7 @@ class ShitheadGame {
     if (this.state !== 'PLAYING') return;
     if (this._currentPlayer() !== username) {
       const p = this.players.get(username);
-      if (p) this._sendTo(p.ws, { type: 'SHITHEAD_ERROR', message: 'Not your turn.' });
+      if (p) this._sendTo(p.ws, { type: 'SHITHEAD_ERROR', code: 'NOT_YOUR_TURN', message: 'Not your turn.' });
       return;
     }
     const p = this.players.get(username);
@@ -430,12 +445,17 @@ class ShitheadGame {
       p.hasFinished = false;
     }
     this._broadcast({ type: 'SHITHEAD_RESTARTED' });
+    this._broadcastGameState();
   }
 
   removePlayer(ws) {
-    for (const [, p] of this.players) {
+    for (const [username, p] of this.players) {
       if (p.ws === ws) {
-        p.ws = null;
+        if (this.state === 'LOBBY') {
+          this.players.delete(username);
+        } else {
+          p.ws = null;
+        }
         break;
       }
     }
