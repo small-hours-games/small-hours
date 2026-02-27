@@ -94,6 +94,23 @@
     .create-btn:active { transform: scale(0.97); }
     .create-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
+    .tv-btn {
+      width: 100%;
+      padding: 0.85rem 1rem;
+      font-size: 1.05rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, #1a6b4a, #0d8a6a);
+      color: #fff;
+      border: 1px solid rgba(0,255,180,0.2);
+      border-radius: 0.85rem;
+      cursor: pointer;
+      letter-spacing: 0.03em;
+      transition: transform 0.12s, opacity 0.2s;
+    }
+    .tv-btn:hover { opacity: 0.88; }
+    .tv-btn:active { transform: scale(0.97); }
+    .tv-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
     .divider {
       width: 100%;
       display: flex;
@@ -167,6 +184,8 @@
 
   <button class="create-btn" id="create-btn">Create Room</button>
 
+  <button class="tv-btn" id="tv-btn" aria-label="Host on TV – create a room and open the big screen display">📺 Host on TV / Big Screen</button>
+
   <div class="divider">or join existing</div>
 
   <div class="join-row">
@@ -180,6 +199,7 @@
 
 <script>
   const createBtn = document.getElementById('create-btn');
+  const tvBtn     = document.getElementById('tv-btn');
   const joinBtn   = document.getElementById('join-btn');
   const codeInput = document.getElementById('room-code-input');
   const errorMsg  = document.getElementById('error-msg');
@@ -208,6 +228,21 @@
       errorMsg.textContent = 'Could not create room. Try again.';
       createBtn.disabled = false;
       createBtn.textContent = 'Create Room';
+    }
+  });
+
+  tvBtn.addEventListener('click', async () => {
+    tvBtn.disabled = true;
+    tvBtn.textContent = 'Creating…';
+    try {
+      const res = await fetch('/api/rooms', { method: 'POST' });
+      if (!res.ok) throw new Error(`Server error: ${res.status}`);
+      const { code } = await res.json();
+      window.location.href = `/group/${code}/display`;
+    } catch (e) {
+      errorMsg.textContent = 'Could not create room. Try again.';
+      tvBtn.disabled = false;
+      tvBtn.textContent = '📺 Host on TV / Big Screen';
     }
   });
 
