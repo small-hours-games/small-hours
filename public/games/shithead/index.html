@@ -530,6 +530,7 @@
 <div id="toast"></div>
 
 <script src="/shared/utils.js"></script>
+<script src="/shared/sounds.js"></script>
 <script>
   const roomCode   = location.pathname.split('/')[2]?.toUpperCase() || '';
   const storageKey = `gn-username-${roomCode}`;
@@ -598,6 +599,7 @@
 
   // ── Swap phase ─────────────────────────────────────────────────────────────
   document.getElementById('confirm-swap-btn').addEventListener('click', () => {
+    GNSound.ready(); GN.haptic('success');
     send({ type: 'SHITHEAD_CONFIRM_SWAP' });
     document.getElementById('confirm-swap-btn').disabled = true;
     document.getElementById('confirm-swap-btn').textContent = '⏳ Waiting…';
@@ -615,7 +617,7 @@
     handEl.innerHTML = sortCards(myState.hand).map(c =>
       `<div class="play-card ${isRed(c) ? 'red-card' : 'black-card'}" data-id="${c.id}" data-zone="hand">
         <span class="card-tl"><b>${c.name}</b><span class="card-suit-sm">${c.suit}</span></span>
-        <span class="card-center">${c.suit}</span>
+        <span class="card-center">${c.name}</span>
         <span class="card-br"><b>${c.name}</b><span class="card-suit-sm">${c.suit}</span></span>
       </div>`
     ).join('');
@@ -623,7 +625,7 @@
     faceUpEl.innerHTML = sortCards(myState.faceUp).map(c =>
       `<div class="play-card ${isRed(c) ? 'red-card' : 'black-card'}" data-id="${c.id}" data-zone="faceup">
         <span class="card-tl"><b>${c.name}</b><span class="card-suit-sm">${c.suit}</span></span>
-        <span class="card-center">${c.suit}</span>
+        <span class="card-center">${c.name}</span>
         <span class="card-br"><b>${c.name}</b><span class="card-suit-sm">${c.suit}</span></span>
       </div>`
     ).join('');
@@ -643,11 +645,13 @@
       if (swapSelected.hand === id) { swapSelected.hand = null; return; }
       swapSelected.hand = id;
       el.classList.add('selected');
+      GNSound.select(); GN.haptic('tick');
     } else {
       document.querySelectorAll('#swap-faceup .play-card').forEach(e => e.classList.remove('selected'));
       if (swapSelected.faceUp === id) { swapSelected.faceUp = null; return; }
       swapSelected.faceUp = id;
       el.classList.add('selected');
+      GNSound.select(); GN.haptic('tick');
     }
     if (swapSelected.hand && swapSelected.faceUp) {
       send({ type: 'SHITHEAD_SWAP_CARD', handCardId: swapSelected.hand, faceUpCardId: swapSelected.faceUp });
@@ -745,7 +749,7 @@
         return `<div class="play-card ${isRed(c) ? 'red-card' : 'black-card'} ${!myTurn ? 'not-my-turn' : (!playable ? 'unplayable' : '')}"
           data-id="${c.id}" data-zone="hand">
           <span class="card-tl"><b>${c.name}</b><span class="card-suit-sm">${c.suit}</span></span>
-          <span class="card-center">${c.suit}</span>
+          <span class="card-center">${c.name}</span>
           <span class="card-br"><b>${c.name}</b><span class="card-suit-sm">${c.suit}</span></span>
         </div>`;
       }).join('');
@@ -762,7 +766,7 @@
         return `<div class="play-card ${isRed(c) ? 'red-card' : 'black-card'} ${!myTurn ? 'not-my-turn' : (!playable ? 'unplayable' : '')}"
           data-id="${c.id}" data-zone="faceup">
           <span class="card-tl"><b>${c.name}</b><span class="card-suit-sm">${c.suit}</span></span>
-          <span class="card-center">${c.suit}</span>
+          <span class="card-center">${c.name}</span>
           <span class="card-br"><b>${c.name}</b><span class="card-suit-sm">${c.suit}</span></span>
         </div>`;
       }).join('');
@@ -829,6 +833,7 @@
       el.classList.add('selected');
       selectedCardIds.add(id);
     }
+    GNSound.select(); GN.haptic('tick');
     updateActionButtons();
   }
 
@@ -848,12 +853,14 @@
 
   document.getElementById('play-btn').addEventListener('click', () => {
     if (selectedCardIds.size === 0) return;
+    GNSound.whoosh(); GN.haptic('medium');
     send({ type: 'SHITHEAD_PLAY_CARDS', cardIds: [...selectedCardIds] });
     selectedCardIds.clear();
     document.getElementById('play-btn').disabled = true;
   });
 
   document.getElementById('pickup-btn').addEventListener('click', () => {
+    GNSound.pop(); GN.haptic('light');
     send({ type: 'SHITHEAD_PICK_UP_PILE' });
     document.getElementById('pickup-btn').disabled = true;
   });
@@ -934,6 +941,7 @@
           }
           renderPlaying();
           if (msg.currentPlayer === myUsername) {
+            GNSound.whoosh(); GN.haptic('medium');
             showToast('🎯 Your turn!', 2000);
           }
         }
@@ -945,18 +953,22 @@
         break;
 
       case 'SHITHEAD_PILE_BURNED':
+        GNSound.correct(); GN.haptic('success');
         showToast('🔥 Pile burned! Play again!', 2500);
         break;
 
       case 'SHITHEAD_PILE_PICKED_UP':
         if (msg.username === myUsername) {
+          GNSound.wrong(); GN.haptic('error');
           showToast(`😬 You pick up the pile (${msg.handCount} cards)`, 2500);
         } else {
+          GNSound.tick();
           showToast(`😅 ${msg.username} picks up the pile`, 2000);
         }
         break;
 
       case 'SHITHEAD_REVEAL_FACEDOWN':
+        GNSound.pop(); GN.haptic('medium');
         if (msg.username === myUsername) {
           showToast(`🎲 You flip: ${msg.card.name}${msg.card.suit}`, 2000);
         } else {
@@ -967,8 +979,10 @@
       case 'SHITHEAD_PLAYER_FINISHED': {
         const medals = ['🥇','🥈','🥉','4️⃣','5️⃣'];
         if (msg.username === myUsername) {
+          GNSound.fanfare(); GN.haptic('success');
           showToast(`${medals[msg.position-1]||'✅'} You finished! Place ${msg.position}!`, 3000);
         } else {
+          GNSound.ready();
           showToast(`${medals[msg.position-1]||'✅'} ${msg.username} finished (place ${msg.position})`, 2000);
         }
         break;
@@ -1018,6 +1032,12 @@
     document.getElementById('go-detail').textContent  = isShithead
       ? 'Better luck next time…'
       : pos === 0 ? 'Well done! 🎉' : 'Thanks for playing!';
+
+    if (isShithead) {
+      GNSound.gameOver(); GN.haptic('error');
+    } else {
+      GNSound.fanfare(); GN.haptic('success');
+    }
 
     if (isAdmin) {
       const btn = document.getElementById('go-lobby-btn');
