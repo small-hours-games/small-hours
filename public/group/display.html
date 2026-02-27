@@ -4,463 +4,373 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Game Night — Display</title>
+  <link rel="stylesheet" href="/shared/theme.css">
   <style>
-    :root {
-      --red:    #e21b3c;
-      --blue:   #1368ce;
-      --yellow: #d89e00;
-      --green:  #26890c;
-      --bg:     #1a1a2e;
-      --card:   #16213e;
-      --text:   #eaeaea;
-      --accent: #9f44d3;
-      --timer:  #00c2ff;
-    }
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
-      font-family: 'Segoe UI', system-ui, sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      height: 100vh;
-      overflow: hidden;
-      display: flex;
-      flex-direction: column;
-    }
+    body { height: 100vh; overflow: hidden; display: flex; flex-direction: column; }
 
-    /* ── Screens ── */
     .screen { display: none; flex-direction: column; height: 100vh; padding: 2rem; }
     .screen.active { display: flex; }
 
     /* ── LOBBY DISPLAY ── */
-    #lobby-display {
-      flex-direction: row;
-      gap: 2rem;
-      align-items: stretch;
-    }
+    #lobby-display { flex-direction: row; gap: 2rem; align-items: stretch; }
     #lobby-left {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 1.25rem;
-      width: 320px;
-      flex-shrink: 0;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 1.5rem; width: 340px; flex-shrink: 0;
     }
     .lobby-title {
-      font-size: clamp(2rem, 3.5vw, 3rem);
-      font-weight: 900;
-      background: linear-gradient(90deg, #9f44d3, #00c2ff);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      text-align: center;
+      font-size: clamp(2.2rem, 4vw, 3.2rem); font-weight: 900;
     }
     #ld-room-code {
-      font-size: 3rem;
-      font-weight: 900;
-      letter-spacing: 0.35em;
-      background: linear-gradient(90deg, #9f44d3, #00c2ff);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
+      font-size: 3.5rem; font-weight: 900; letter-spacing: 0.35em;
     }
     #ld-qr-frame {
-      position: relative;
-      width: 260px;
-      --cb: rgba(159,68,211,0.85);
+      position: relative; width: 260px;
+      --cb: rgba(255,137,6,0.7);
       background:
-        linear-gradient(var(--cb),var(--cb)) top    left  /3px 22px no-repeat,
-        linear-gradient(var(--cb),var(--cb)) top    left  /22px 3px no-repeat,
-        linear-gradient(var(--cb),var(--cb)) top    right /3px 22px no-repeat,
-        linear-gradient(var(--cb),var(--cb)) top    right /22px 3px no-repeat,
-        linear-gradient(var(--cb),var(--cb)) bottom left  /3px 22px no-repeat,
-        linear-gradient(var(--cb),var(--cb)) bottom left  /22px 3px no-repeat,
+        linear-gradient(var(--cb),var(--cb)) top left /3px 22px no-repeat,
+        linear-gradient(var(--cb),var(--cb)) top left /22px 3px no-repeat,
+        linear-gradient(var(--cb),var(--cb)) top right /3px 22px no-repeat,
+        linear-gradient(var(--cb),var(--cb)) top right /22px 3px no-repeat,
+        linear-gradient(var(--cb),var(--cb)) bottom left /3px 22px no-repeat,
+        linear-gradient(var(--cb),var(--cb)) bottom left /22px 3px no-repeat,
         linear-gradient(var(--cb),var(--cb)) bottom right /3px 22px no-repeat,
         linear-gradient(var(--cb),var(--cb)) bottom right /22px 3px no-repeat;
-      padding: 6px;
-      border-radius: 0.6rem;
-      overflow: hidden;
+      padding: 6px; border-radius: 0.6rem; overflow: hidden;
     }
     #ld-qr-frame img { width: 100%; border-radius: 0.4rem; background: #fff; padding: 8px; display: block; }
     .qr-scan-line {
       position: absolute; left: 6px; right: 6px; height: 2px;
-      background: linear-gradient(90deg, transparent 5%, rgba(159,68,211,0.85) 50%, transparent 95%);
+      background: linear-gradient(90deg, transparent 5%, var(--accent) 50%, transparent 95%);
       animation: qrScan 2.6s ease-in-out infinite; pointer-events: none; z-index: 2;
     }
     @keyframes qrScan {
-      0%   { top: 10px; opacity: 0; } 8%   { opacity: 1; } 92%  { opacity: 1; }
+      0% { top: 10px; opacity: 0; } 8% { opacity: 1; } 92% { opacity: 1; }
       100% { top: calc(100% - 10px); opacity: 0; }
     }
     #ld-url {
-      font-size: 0.85rem; font-weight: 700;
-      background: linear-gradient(90deg, #9f44d3, #00c2ff);
-      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-      text-align: center;
+      font-size: 0.9rem; font-weight: 700; text-align: center;
     }
-    #ld-scan-hint { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.12em; color: var(--accent); }
+    #ld-scan-hint {
+      font-size: 0.75rem; font-weight: 800; text-transform: uppercase;
+      letter-spacing: 0.12em; color: var(--accent);
+    }
 
-    #lobby-right {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      gap: 1rem;
-    }
+    #lobby-right { flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 1.5rem; }
     #ld-players-title {
-      font-size: 1rem; font-weight: 700; text-transform: uppercase;
-      letter-spacing: 0.1em; color: #888;
+      font-size: 1.1rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.1em; color: var(--text-muted);
     }
-    #ld-player-list {
-      display: flex; flex-wrap: wrap; gap: 0.65rem;
-    }
+    #ld-player-list { display: flex; flex-wrap: wrap; gap: 0.75rem; }
     .ld-player-chip {
       display: flex; align-items: center; gap: 0.5rem;
-      padding: 0.5rem 1rem 0.5rem 0.6rem;
-      border-radius: 2rem;
-      background: rgba(255,255,255,0.06);
-      border: 1px solid rgba(255,255,255,0.1);
-      font-size: 1.1rem; font-weight: 700;
-      animation: chipIn 0.35s cubic-bezier(0.34,1.56,0.64,1);
+      padding: 0.6rem 1.1rem 0.6rem 0.7rem;
+      border-radius: var(--radius-pill);
+      background: rgba(255,255,255,0.04);
+      border: 1.5px solid rgba(255,255,255,0.06);
+      font-size: 1.15rem; font-weight: 700;
+      animation: bounceIn 0.4s var(--ease-out-back) both;
     }
-    .ld-player-chip.admin-chip { border-color: rgba(255,215,0,0.5); background: rgba(255,215,0,0.1); }
-    @keyframes chipIn { from { transform: scale(0.4); opacity:0; } to { transform: scale(1); opacity:1; } }
-    .ldc-avatar { font-size: 1.3rem; }
+    .ld-player-chip.admin-chip {
+      border-color: rgba(255,215,0,0.4);
+      background: rgba(255,215,0,0.06);
+    }
+    .ldc-avatar { font-size: 1.4rem; }
     .ldc-crown  { font-size: 0.9rem; }
     .ldc-ready  { font-size: 1rem; }
 
-    /* ── GAME SCREEN (mirrors host/index.html) ── */
-    #question-screen { gap: 0.75rem; }
+    /* ── FETCHING / COUNTDOWN ── */
+    #fetching { align-items: center; justify-content: center; gap: 2rem; }
+    #fetching h2 { font-size: 2.2rem; color: var(--text-dim); }
+    #countdown { align-items: center; justify-content: center; gap: 1rem; }
+    #countdown h2 { font-size: 2rem; color: var(--text-dim); }
+    #countdown-number {
+      font-size: clamp(10rem, 22vw, 20rem); font-weight: 900;
+      line-height: 1; animation: countPulse 1s ease;
+    }
+    @keyframes countPulse {
+      from { transform: scale(1.5); opacity: 0.2; }
+      to   { transform: scale(1);   opacity: 1; }
+    }
+    #countdown-total { font-size: 1.3rem; color: var(--text-muted); }
 
-    #q-header {
-      display: flex; justify-content: space-between; align-items: center; flex-shrink: 0;
-    }
+    /* ── QUESTION SCREEN ── */
+    #question-screen { gap: 0.75rem; }
+    #q-header { display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
     #q-category {
-      background: var(--accent); padding: 0.3rem 0.9rem;
-      border-radius: 2rem; font-size: 0.85rem; font-weight: 600;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      padding: 0.35rem 1rem; border-radius: var(--radius-pill);
+      font-size: 0.9rem; font-weight: 700;
     }
-    #q-counter { color: #aaa; font-size: 1rem; }
-    #q-answered { color: #aaa; font-size: 0.9rem; }
+    #q-counter { color: var(--text-muted); font-size: 1rem; }
+    #q-answered { color: var(--text-muted); font-size: 0.9rem; }
 
     #timer-bar-wrap {
-      width: 100%; height: 14px; background: rgba(255,255,255,0.1);
-      border-radius: 7px; overflow: hidden; flex-shrink: 0;
+      width: 100%; height: 16px;
+      background: rgba(255,255,255,0.06);
+      border-radius: 8px; overflow: hidden; flex-shrink: 0;
     }
     #timer-bar {
-      height: 100%; background: linear-gradient(90deg, var(--timer), #8a2be2);
-      border-radius: 7px; width: 100%; transform-origin: left; transition: none;
+      height: 100%;
+      background: linear-gradient(90deg, var(--neon), var(--neon2));
+      border-radius: 8px; width: 100%;
+      transform-origin: left; transition: none;
     }
 
     #q-text {
-      font-size: clamp(1.6rem, 4vw, 3.2rem); font-weight: 700;
-      text-align: center; line-height: 1.3;
-      flex: 1; display: flex; align-items: center; justify-content: center; padding: 0 1rem;
+      font-size: clamp(1.8rem, 4.5vw, 3.5rem); font-weight: 800;
+      text-align: center; line-height: 1.25;
+      flex: 1; display: flex; align-items: center; justify-content: center;
+      padding: 0 2rem;
     }
 
-    #answers-grid {
-      display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; flex-shrink: 0;
-    }
+    #answers-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; flex-shrink: 0; }
     .answer-box {
       display: flex; align-items: center; gap: 0.8rem;
-      padding: 1.1rem 1.4rem; border-radius: 0.75rem;
-      font-size: clamp(1rem, 2.2vw, 1.5rem); font-weight: 600; transition: opacity 0.3s;
+      padding: 1.2rem 1.5rem; border-radius: var(--radius-md);
+      font-size: clamp(1rem, 2.2vw, 1.5rem); font-weight: 700;
+      transition: opacity 0.3s, transform 0.3s;
+      position: relative;
     }
     .answer-box .ans-letter {
-      width: 2.2rem; height: 2.2rem; border-radius: 50%;
+      width: 2.4rem; height: 2.4rem; border-radius: 50%;
       background: rgba(0,0,0,0.25);
       display: flex; align-items: center; justify-content: center;
-      font-weight: 900; flex-shrink: 0;
+      font-weight: 900; flex-shrink: 0; font-size: 1.1rem;
     }
-    .ans-A { background: var(--red); }
-    .ans-B { background: var(--blue); }
-    .ans-C { background: var(--yellow); color: #222; }
-    .ans-D { background: var(--green); }
+    .ans-A { background: var(--ans-red); }
+    .ans-B { background: var(--ans-blue); }
+    .ans-C { background: var(--ans-yellow); color: #222; }
+    .ans-D { background: var(--ans-green); }
 
-    /* In-place reveal animation */
-    .answer-box { position: relative; }
     .answer-box.ans-correct-reveal {
-      box-shadow: 0 0 0 3px #4cde80, 0 0 40px rgba(76,222,128,0.75), 0 0 90px rgba(76,222,128,0.4);
-      animation: correctBounce 0.6s cubic-bezier(0.34,1.56,0.64,1), correctGlow 1.6s ease-in-out 0.6s infinite;
+      box-shadow: 0 0 0 4px var(--correct), 0 0 60px var(--correct-glow), 0 0 120px rgba(44,182,125,0.3);
+      animation: correctBounce 0.6s var(--ease-out-back), correctGlowPulse 1.6s ease-in-out 0.6s infinite;
       z-index: 2;
     }
-    @keyframes correctGlow {
-      0%,100% { box-shadow: 0 0 0 3px #4cde80, 0 0 40px rgba(76,222,128,0.7), 0 0 80px rgba(76,222,128,0.35); }
-      50%      { box-shadow: 0 0 0 4px #4cde80, 0 0 65px rgba(76,222,128,1),   0 0 130px rgba(76,222,128,0.55); }
+    @keyframes correctGlowPulse {
+      0%,100% { box-shadow: 0 0 0 4px var(--correct), 0 0 50px var(--correct-glow); }
+      50%     { box-shadow: 0 0 0 5px var(--correct), 0 0 80px var(--correct-glow), 0 0 140px rgba(44,182,125,0.4); }
     }
     .answer-box.ans-wrong-reveal {
-      opacity: 0.2; filter: grayscale(0.85) brightness(0.6); transition: opacity 0.5s, filter 0.5s;
+      opacity: 0.15; filter: grayscale(0.9) brightness(0.5);
+      transition: opacity 0.5s, filter 0.5s; transform: scale(0.97);
     }
     .answer-box.ans-correct-reveal::after {
-      content: '✓'; position: absolute; right: 1rem; top: 50%; font-size: 2.4rem;
-      font-weight: 900; color: #4cde80; text-shadow: 0 0 18px rgba(76,222,128,0.9);
-      animation: checkPop 0.45s 0.35s cubic-bezier(0.34,1.56,0.64,1) both;
+      content: '✓'; position: absolute; right: 1.2rem; top: 50%;
+      font-size: 2.6rem; font-weight: 900; color: var(--correct);
+      text-shadow: 0 0 20px var(--correct-glow);
+      animation: checkPop 0.45s 0.35s var(--ease-out-back) both;
     }
     @keyframes checkPop { from { transform: translateY(-50%) scale(0.2); opacity:0; } to { transform: translateY(-50%) scale(1); opacity:1; } }
     .answer-box.ans-wrong-reveal::after {
       content: '✗'; position: absolute; right: 1rem; top: 50%; transform: translateY(-50%);
-      font-size: 1.6rem; font-weight: 900; color: rgba(255,255,255,0.2);
+      font-size: 1.6rem; font-weight: 900; color: rgba(255,255,255,0.15);
     }
     @keyframes correctBounce {
-      0%  { transform: scale(1); } 30% { transform: scale(1.09); }
-      60% { transform: scale(0.96); } 80% { transform: scale(1.04); } 100% { transform: scale(1.02); }
+      0%{transform:scale(1)} 30%{transform:scale(1.08)} 60%{transform:scale(0.97)} 100%{transform:scale(1.02)}
     }
 
     /* Scoreboard strip */
     #q-live-lb {
       order: -1; width: 100%;
-      background: linear-gradient(135deg, rgba(22,33,62,0.97), rgba(20,20,40,0.95));
-      border: 1px solid rgba(159,68,211,0.22); border-radius: 1rem;
+      background: linear-gradient(135deg, rgba(26,25,50,0.97), rgba(20,20,40,0.95));
+      border: 1px solid rgba(255,255,255,0.04); border-radius: var(--radius-lg);
       padding: 0.6rem 1rem; display: flex; flex-direction: column; gap: 0.35rem;
       flex-shrink: 0; box-shadow: 0 4px 24px rgba(0,0,0,0.4);
     }
     .ql-strip-row { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; min-height: 3rem; }
     .ql-strip-label {
-      font-size: 0.7rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.12em;
-      color: #666; flex-shrink: 0; white-space: nowrap;
-      padding-right: 0.6rem; border-right: 1px solid rgba(255,255,255,0.1); margin-right: 0.1rem;
-      align-self: stretch; display: flex; align-items: center;
+      font-size: 0.68rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.12em;
+      color: var(--text-muted); flex-shrink: 0; white-space: nowrap;
+      padding-right: 0.6rem; border-right: 1px solid rgba(255,255,255,0.06);
+      margin-right: 0.1rem; align-self: stretch; display: flex; align-items: center;
     }
     .ql-player-chip {
       display: flex; align-items: center; gap: 0.45rem; padding: 0.45rem 0.9rem;
-      border-radius: 0.65rem; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.09);
+      border-radius: var(--radius-md); background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.05);
       min-height: 52px; font-size: 1rem; white-space: nowrap; transition: box-shadow 0.3s;
     }
-    .ql-player-chip.gold   { background: linear-gradient(135deg,rgba(255,215,0,0.2),rgba(255,165,0,0.1)); border: 1px solid rgba(255,215,0,0.55); box-shadow: 0 0 20px rgba(255,215,0,0.18); }
-    .ql-player-chip.silver { background: rgba(192,192,192,0.12); border: 1px solid rgba(192,192,192,0.4); }
-    .ql-player-chip.bronze { background: rgba(205,127,50,0.15); border: 1px solid rgba(205,127,50,0.45); }
-    .ql-player-chip.gold   .ql-chip-name, .ql-player-chip.gold   .ql-chip-score { color: gold; text-shadow: 0 0 10px rgba(255,215,0,0.5); }
-    .ql-player-chip.silver .ql-chip-name, .ql-player-chip.silver .ql-chip-score { color: #d8d8d8; }
-    .ql-player-chip.bronze .ql-chip-name, .ql-player-chip.bronze .ql-chip-score { color: #e8a870; }
+    .ql-player-chip.gold {
+      background: linear-gradient(135deg, rgba(255,215,0,0.12), rgba(255,165,0,0.06));
+      border-color: rgba(255,215,0,0.35); box-shadow: 0 0 20px rgba(255,215,0,0.1);
+    }
+    .ql-player-chip.silver { background: rgba(192,192,192,0.08); border-color: rgba(192,192,192,0.25); }
+    .ql-player-chip.bronze { background: rgba(205,127,50,0.08); border-color: rgba(205,127,50,0.25); }
+    .ql-player-chip.gold .ql-chip-name, .ql-player-chip.gold .ql-chip-score { color: var(--gold); }
+    .ql-player-chip.silver .ql-chip-name, .ql-player-chip.silver .ql-chip-score { color: var(--silver); }
+    .ql-player-chip.bronze .ql-chip-name, .ql-player-chip.bronze .ql-chip-score { color: var(--bronze); }
     .ql-chip-rank  { font-size: 1.5rem; line-height: 1; flex-shrink: 0; }
     .ql-chip-name  { font-weight: 700; font-size: 1.05rem; }
-    .ql-chip-score { color: var(--timer); font-weight: 800; font-size: 1.05rem; margin-left: 0.2rem; }
-    .ql-chip-delta { color: #4cde80; font-size: 0.82rem; font-weight: 700; }
-    .ql-chip-time  { font-size: 0.78rem; color: #aaa; }
+    .ql-chip-score { color: var(--neon); font-weight: 800; font-size: 1.05rem; margin-left: 0.2rem; }
+    .ql-chip-delta { color: var(--correct); font-size: 0.82rem; font-weight: 700; }
+    .ql-chip-time  { font-size: 0.78rem; color: var(--text-dim); }
     .lb-answer-badge {
       display: inline-flex; align-items: center; justify-content: center;
       width: 1.7rem; height: 1.7rem; border-radius: 0.35rem;
       font-size: 0.85rem; font-weight: 900; flex-shrink: 0; border: 2px solid;
     }
-    .badge-correct { background: rgba(76,222,128,0.18); border-color: #4cde80; color: #4cde80; box-shadow: 0 0 6px rgba(76,222,128,0.4); }
-    .badge-wrong   { background: rgba(226,27,60,0.22);  border-color: #e21b3c; color: #ff6b6b; }
-    .badge-none    { background: rgba(255,255,255,0.04); border-color: rgba(255,255,255,0.1); color: #444; }
+    .badge-correct { background: rgba(44,182,125,0.15); border-color: var(--correct); color: var(--correct); box-shadow: 0 0 6px var(--correct-glow); }
+    .badge-wrong   { background: rgba(229,49,112,0.15); border-color: var(--wrong); color: var(--wrong); }
+    .badge-none    { background: rgba(255,255,255,0.03); border-color: rgba(255,255,255,0.08); color: var(--text-muted); }
 
-    /* FETCHING / COUNTDOWN */
-    #fetching { align-items: center; justify-content: center; gap: 2rem; }
-    .spinner { width: 80px; height: 80px; border: 6px solid rgba(255,255,255,0.1); border-top-color: var(--timer); border-radius: 50%; animation: spin 0.8s linear infinite; }
-    @keyframes spin { to { transform: rotate(360deg); } }
-    #fetching h2 { font-size: 2rem; color: #ccc; }
-    #countdown { align-items: center; justify-content: center; gap: 1rem; }
-    #countdown h2 { font-size: 2rem; color: #aaa; }
-    #countdown-number { font-size: clamp(8rem,20vw,18rem); font-weight: 900; color: var(--timer); line-height: 1; animation: pulse 1s ease; }
-    @keyframes pulse { from { transform: scale(1.4); opacity: 0.3; } to { transform: scale(1); opacity: 1; } }
-    #countdown-total { font-size: 1.2rem; color: #888; }
-
-    /* GAME OVER */
-    #gameover { align-items: center; justify-content: flex-start; gap: 1.25rem; padding-top: 1.5rem; overflow-y: auto; }
-    #gameover h1 { font-size: clamp(2rem,5vw,4rem); font-weight: 900; text-align: center;
-      background: linear-gradient(90deg,gold,#ff6b6b,#9f44d3); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    /* ── GAME OVER ── */
+    #gameover { align-items: center; justify-content: flex-start; gap: 1.5rem; padding-top: 2rem; overflow-y: auto; }
+    #gameover h1 {
+      font-size: clamp(2.5rem, 6vw, 4.5rem); font-weight: 900; text-align: center;
+    }
     #podium { display: flex; align-items: flex-end; justify-content: center; gap: 1.5rem; }
-    .podium-slot { display: flex; flex-direction: column; align-items: center; gap: 0.4rem; }
-    .podium-slot .medal { font-size: 2.5rem; }
-    .podium-slot .pd-name { font-size: 1.1rem; font-weight: 700; }
-    .podium-slot .pd-score { font-size: 0.9rem; color: #aaa; }
-    .podium-block { background: var(--accent); border-radius: 0.5rem 0.5rem 0 0; width: 110px; }
-    .podium-1 .podium-block { height: 100px; background: linear-gradient(135deg,gold,#d4a300); }
-    .podium-2 .podium-block { height: 70px;  background: linear-gradient(135deg,#c0c0c0,#888); }
-    .podium-3 .podium-block { height: 50px;  background: linear-gradient(135deg,#cd7f32,#8b4513); }
-    #final-scores { background: var(--card); border-radius: 1rem; padding: 0.75rem 2rem; min-width: 400px; max-height: min(280px,32vh); overflow-y: auto; }
-    .lb-total-row { display: flex; align-items: center; gap: 0.5rem; padding: 0.25rem 0; font-size: 0.9rem; border-bottom: 1px solid rgba(255,255,255,0.05); }
+    .podium-slot { display: flex; flex-direction: column; align-items: center; gap: 0.5rem; }
+    .podium-slot .medal { font-size: 3rem; }
+    .podium-slot .pd-name { font-size: 1.2rem; font-weight: 800; }
+    .podium-slot .pd-score { font-size: 0.95rem; color: var(--text-dim); }
+    .podium-block { border-radius: var(--radius-md) var(--radius-md) 0 0; width: 120px; }
+    .podium-1 .podium-block { height: 110px; background: linear-gradient(135deg, var(--gold), #d4a300); box-shadow: 0 0 30px rgba(255,215,0,0.25); }
+    .podium-2 .podium-block { height: 75px;  background: linear-gradient(135deg, var(--silver), #888); }
+    .podium-3 .podium-block { height: 50px;  background: linear-gradient(135deg, var(--bronze), #8b4513); }
+    #final-scores {
+      background: var(--card-solid); border-radius: var(--radius-lg);
+      padding: 0.75rem 2rem; min-width: 420px; max-height: min(300px, 32vh); overflow-y: auto;
+      border: 1px solid rgba(255,255,255,0.04);
+    }
+    .lb-total-row {
+      display: flex; align-items: center; gap: 0.5rem;
+      padding: 0.3rem 0; font-size: 0.95rem;
+      border-bottom: 1px solid rgba(255,255,255,0.03);
+    }
     .lb-total-row:last-child { border-bottom: none; }
-    .lb-total-rank { width: 1.5rem; font-weight: 700; color: #666; font-size: 0.8rem; }
-    .lb-total-rank.top { color: gold; }
-    .lb-total-name { flex: 1; font-weight: 600; }
-    .lb-total-score { font-weight: 700; color: var(--timer); font-size: 0.9rem; }
+    .lb-total-rank { width: 1.5rem; font-weight: 700; color: var(--text-muted); font-size: 0.85rem; }
+    .lb-total-rank.top { color: var(--gold); }
+    .lb-total-name { flex: 1; font-weight: 700; }
+    .lb-total-score { font-weight: 800; color: var(--neon); font-size: 0.95rem; }
 
     /* ── SHITHEAD DISPLAY ── */
     #shithead-display { gap: 1rem; }
-    .sh-top {
-      display: grid;
-      grid-template-columns: 1fr auto 1fr;
-      gap: 1rem;
-      align-items: center;
-      flex-shrink: 0;
-    }
+    .sh-top { display: grid; grid-template-columns: 1fr auto 1fr; gap: 1rem; align-items: center; flex-shrink: 0; }
     .sh-pile-area { display: flex; flex-direction: column; align-items: center; gap: 0.4rem; }
-    .sh-pile-label { font-size: 0.75rem; color: #aaa; text-transform: uppercase; letter-spacing: 0.1em; }
+    .sh-pile-label { font-size: 0.75rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.1em; }
     .sh-pile-card {
-      width: 80px; height: 112px;
-      background: #fff;
-      border-radius: 10px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      font-size: 1.8rem;
-      font-weight: 900;
-      border: 3px solid rgba(255,255,255,0.2);
-      gap: 0.1rem;
+      width: 80px; height: 112px; background: #fff;
+      border-radius: 10px; display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      font-size: 1.8rem; font-weight: 900;
+      border: 3px solid rgba(255,255,255,0.2); gap: 0.1rem;
     }
     .sh-pile-card.red-card { color: #c00; }
     .sh-pile-card.black-card { color: #111; }
     .sh-pile-card.empty {
-      background: rgba(255,255,255,0.05);
-      border: 2px dashed rgba(255,255,255,0.2);
-      color: #555;
-      font-size: 1rem;
+      background: rgba(255,255,255,0.03);
+      border: 2px dashed rgba(255,255,255,0.12);
+      color: var(--text-muted); font-size: 1rem;
     }
-    .sh-pile-count { font-size: 0.85rem; color: #aaa; }
+    .sh-pile-count { font-size: 0.85rem; color: var(--text-dim); }
     .sh-deck-area { display: flex; flex-direction: column; align-items: center; gap: 0.4rem; }
     .sh-deck-visual {
       width: 60px; height: 84px;
-      background: linear-gradient(135deg, #1e3a5f, #0a1628);
-      border-radius: 8px;
-      border: 2px solid rgba(255,255,255,0.15);
-      display: flex; align-items: center; justify-content: center;
-      font-size: 1.5rem;
+      background: linear-gradient(135deg, var(--bg-alt), var(--bg));
+      border-radius: 8px; border: 2px solid rgba(255,255,255,0.1);
+      display: flex; align-items: center; justify-content: center; font-size: 1.5rem;
     }
     .sh-center { display: flex; flex-direction: column; align-items: center; gap: 0.5rem; }
     .sh-current-banner {
-      text-align: center;
-      font-size: 1.4rem;
-      font-weight: 700;
+      text-align: center; font-size: 1.4rem; font-weight: 700;
       padding: 0.6rem 1rem;
-      background: linear-gradient(135deg, var(--accent), var(--yellow));
-      border-radius: 0.75rem;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      border-radius: var(--radius-md);
     }
-    .sh-seven-warn {
-      font-size: 1rem;
-      color: var(--yellow);
-      font-weight: 700;
-      text-align: center;
-    }
+    .sh-seven-warn { font-size: 1rem; color: var(--ans-yellow); font-weight: 700; text-align: center; }
     #sh-player-boards {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: 0.75rem;
-      flex: 1;
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 0.75rem; flex: 1;
     }
     .sh-player-board {
-      background: var(--card);
-      border-radius: 0.75rem;
-      padding: 0.75rem;
-      display: flex;
-      flex-direction: column;
-      gap: 0.5rem;
-      border: 2px solid transparent;
-      transition: border-color 0.3s;
+      background: var(--card-solid); border-radius: var(--radius-md);
+      padding: 0.75rem; display: flex; flex-direction: column;
+      gap: 0.5rem; border: 2px solid transparent; transition: border-color 0.3s;
     }
-    .sh-player-board.active-player { border-color: var(--yellow); }
+    .sh-player-board.active-player { border-color: var(--accent); }
     .sh-player-board.finished { opacity: 0.5; }
-    .sh-player-board.shithead { border-color: var(--red); }
-    .sh-player-name {
-      font-weight: 700;
-      font-size: 1rem;
-      display: flex;
-      align-items: center;
-      gap: 0.4rem;
-    }
+    .sh-player-board.shithead { border-color: var(--wrong); }
+    .sh-player-name { font-weight: 700; font-size: 1rem; display: flex; align-items: center; gap: 0.4rem; }
     .sh-badge { font-size: 0.8rem; padding: 0.1rem 0.4rem; border-radius: 0.3rem; background: var(--accent); }
-    .sh-cards-row {
-      display: flex;
-      gap: 0.3rem;
-      align-items: flex-end;
-      flex-wrap: wrap;
-    }
+    .sh-cards-row { display: flex; gap: 0.3rem; align-items: flex-end; flex-wrap: wrap; }
     .sh-mini-card {
-      width: 38px; height: 54px;
-      background: #fff;
-      border-radius: 5px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      font-size: 0.75rem;
-      font-weight: 900;
-      line-height: 1;
-      gap: 1px;
+      width: 38px; height: 54px; background: #fff;
+      border-radius: 5px; display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      font-size: 0.75rem; font-weight: 900; line-height: 1; gap: 1px;
     }
     .sh-mini-card.red-card { color: #c00; }
     .sh-mini-card.black-card { color: #111; }
     .sh-mini-card.face-down {
-      background: linear-gradient(135deg, #1e3a5f, #0a1628);
-      border: 1px solid rgba(255,255,255,0.15);
-      color: rgba(255,255,255,0.3);
-      font-size: 1rem;
+      background: linear-gradient(135deg, var(--bg-alt), var(--bg));
+      border: 1px solid rgba(255,255,255,0.1);
+      color: rgba(255,255,255,0.2); font-size: 1rem;
     }
-    .sh-zone-label { font-size: 0.65rem; color: #777; text-transform: uppercase; letter-spacing: 0.05em; }
+    .sh-zone-label { font-size: 0.65rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; }
+
     #sh-swap-screen { align-items: center; justify-content: center; gap: 1rem; }
-    #sh-swap-screen h2 { font-size: 2rem; color: var(--yellow); }
-    #sh-swap-progress { font-size: 1.2rem; font-weight: 700; color: var(--timer); }
+    #sh-swap-screen h2 { font-size: 2rem; color: var(--accent); }
+    #sh-swap-progress { font-size: 1.2rem; font-weight: 700; color: var(--neon); }
     #sh-gameover { align-items: center; justify-content: center; gap: 1.5rem; }
-    #sh-gameover h1 { font-size: 3rem; color: var(--yellow); }
-    #sh-finish-list {
-      display: flex;
-      flex-direction: column;
-      gap: 0.5rem;
-      width: 100%;
-      max-width: 500px;
-    }
+    #sh-gameover h1 { font-size: 3rem; color: var(--accent); }
+    #sh-finish-list { display: flex; flex-direction: column; gap: 0.5rem; width: 100%; max-width: 500px; }
     .sh-finish-item {
-      display: flex;
-      align-items: center;
-      gap: 1rem;
-      padding: 0.75rem 1.25rem;
-      background: var(--card);
-      border-radius: 0.75rem;
-      font-size: 1.2rem;
-      font-weight: 700;
+      display: flex; align-items: center; gap: 1rem;
+      padding: 0.75rem 1.25rem; background: var(--card-solid);
+      border-radius: var(--radius-md); font-size: 1.2rem; font-weight: 700;
     }
     .sh-finish-pos { font-size: 1.8rem; width: 2.5rem; text-align: center; }
-    .sh-shithead-label { margin-left: auto; font-size: 0.85rem; color: var(--red); font-weight: 700; text-transform: uppercase; }
+    .sh-shithead-label { margin-left: auto; font-size: 0.85rem; color: var(--wrong); font-weight: 700; text-transform: uppercase; }
+
     #sh-toast {
-      position: fixed;
-      bottom: 1.5rem;
-      left: 50%;
+      position: fixed; bottom: 1.5rem; left: 50%;
       transform: translateX(-50%) translateY(4rem);
-      background: rgba(30,30,50,0.95);
-      border: 1px solid rgba(255,255,255,0.15);
-      border-radius: 0.75rem;
-      padding: 0.75rem 1.5rem;
-      font-size: 1.1rem;
-      font-weight: 600;
-      color: #fff;
-      z-index: 200;
-      transition: transform 0.4s;
+      background: rgba(26,25,50,0.95); backdrop-filter: blur(8px);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: var(--radius-md); padding: 0.75rem 1.5rem;
+      font-size: 1.1rem; font-weight: 700; color: var(--text);
+      z-index: 200; transition: transform 0.4s var(--ease-out-back);
       pointer-events: none;
     }
     #sh-toast.show { transform: translateX(-50%) translateY(0); }
+
+    .empty-state { color: var(--text-muted); font-style: italic; }
   </style>
 </head>
-<body>
+<body class="bg-mesh bg-noise">
 
 <!-- LOBBY DISPLAY -->
 <div id="lobby-display" class="screen active">
   <div id="lobby-left">
-    <div class="lobby-title">🎮 Game Night</div>
-    <div id="ld-room-code">····</div>
-    <span id="ld-scan-hint">📷 Scan to Join</span>
+    <div class="lobby-title gradient-text">Game Night</div>
+    <div id="ld-room-code" class="gradient-text">----</div>
+    <span id="ld-scan-hint">Scan to Join</span>
     <div id="ld-qr-frame">
       <img id="ld-qr-img" src="" alt="QR">
       <div class="qr-scan-line"></div>
     </div>
-    <div id="ld-url" style="color:#888;font-size:0.82rem;">Loading…</div>
+    <div id="ld-url" class="gradient-text-alt">Loading...</div>
   </div>
   <div id="lobby-right">
     <div id="ld-players-title">Players (<span id="ld-player-count">0</span>)</div>
     <div id="ld-player-list">
-      <span style="color:#555;font-style:italic;">Waiting for players…</span>
+      <span class="empty-state">Waiting for players...</span>
     </div>
   </div>
 </div>
 
 <!-- FETCHING -->
 <div id="fetching" class="screen">
-  <div class="spinner"></div>
-  <h2>Loading questions…</h2>
+  <div class="spinner spinner-lg"></div>
+  <h2>Loading questions...</h2>
 </div>
 
 <!-- COUNTDOWN -->
 <div id="countdown" class="screen">
   <h2>Get Ready!</h2>
-  <div id="countdown-number">3</div>
+  <div id="countdown-number" class="gradient-text">3</div>
   <div id="countdown-total"></div>
 </div>
 
@@ -479,26 +389,24 @@
     <div class="answer-box ans-C"><span class="ans-letter" style="color:#222">C</span><span id="ans-C-text"></span></div>
     <div class="answer-box ans-D"><span class="ans-letter">D</span><span id="ans-D-text"></span></div>
   </div>
-  <div id="q-live-lb">
-    <div id="q-live-lb-rows">
-      <div style="color:#555;font-size:0.82rem;text-align:center;padding:0.75rem 0;">Waiting for players…</div>
-    </div>
-  </div>
+  <div id="q-live-lb"><div id="q-live-lb-rows">
+    <div style="color:var(--text-muted);font-size:0.82rem;text-align:center;padding:0.75rem 0;">Waiting for players...</div>
+  </div></div>
 </div>
 
 <!-- GAME OVER -->
 <div id="gameover" class="screen">
-  <h1>🏆 Game Over!</h1>
+  <h1 class="gradient-text">Game Over!</h1>
   <div id="podium"></div>
   <div id="final-scores"></div>
 </div>
 
-<!-- SHITHEAD: SWAP -->
+<!-- SHITHEAD -->
 <div id="shithead-display" class="screen">
   <div id="sh-swap-screen" style="display:none;flex-direction:column;align-items:center;gap:1rem;justify-content:center;flex:1;">
     <div style="font-size:3rem;">🔄</div>
     <h2>Swap Phase</h2>
-    <p style="color:#aaa;">Players are choosing their face-up cards…</p>
+    <p style="color:var(--text-dim);">Players are choosing their face-up cards...</p>
     <div id="sh-swap-progress">Ready: 0 / 0</div>
   </div>
   <div id="sh-game-screen" style="display:none;flex-direction:column;gap:1rem;flex:1;width:100%;">
@@ -514,8 +422,8 @@
         <div class="sh-pile-count" id="sh-pile-count">0 cards</div>
       </div>
       <div style="display:flex;flex-direction:column;align-items:center;gap:.5rem;">
-        <div id="sh-current-banner" class="sh-current-banner">–</div>
-        <div id="sh-seven-warn" class="sh-seven-warn" style="display:none;">⚠️ Play 7 or lower!</div>
+        <div id="sh-current-banner" class="sh-current-banner">-</div>
+        <div id="sh-seven-warn" class="sh-seven-warn" style="display:none;">Play 7 or lower!</div>
       </div>
     </div>
     <div id="sh-player-boards"></div>
@@ -529,17 +437,19 @@
 
 <div id="sh-toast"></div>
 
+<script src="/shared/sounds.js"></script>
+<script src="/shared/confetti.js"></script>
+<script src="/shared/utils.js"></script>
 <script>
-  const roomCode = location.pathname.split('/')[2]?.toUpperCase();
-
+  const roomCode = GN.getRoomCode();
   let ws, connectGen = 0;
   let currentQuestion  = null;
   let timerBarTimeout  = null;
   let currentScores    = [];
   let currentPlayers   = [];
   let activeMiniGame   = 'lobby';
+  let previousPlayerCount = 0;
 
-  // ── Init ──────────────────────────────────────────────────────────────────
   if (roomCode) {
     document.getElementById('ld-room-code').textContent = roomCode;
     loadQR(roomCode);
@@ -547,152 +457,119 @@
     connect();
   }
 
-  // ── WebSocket ─────────────────────────────────────────────────────────────
-  function buildWsUrl() {
-    const proto = location.protocol === 'https:' ? 'wss' : 'ws';
-    return `${proto}://${location.host}/ws?room=${roomCode}&role=display`;
-  }
-
+  // ── WebSocket ─────────────────────────────────────────────────────────
   function connect() {
     const gen = ++connectGen;
-    ws = new WebSocket(buildWsUrl());
-
+    ws = new WebSocket(GN.buildWsUrl(roomCode, 'display'));
     ws.addEventListener('open', () => console.log('Display WS connected'));
     ws.addEventListener('message', e => { if (gen === connectGen) handleMsg(JSON.parse(e.data)); });
     ws.addEventListener('close', () => { setTimeout(connect, 2000); });
     ws.addEventListener('error', () => ws.close());
   }
 
-  // ── Message handler ───────────────────────────────────────────────────────
   function handleMsg(msg) {
     switch (msg.type) {
-
       case 'DISPLAY_OK':
-        roomCode && updateJoinUrl(roomCode);
         if (msg.state) {
           activeMiniGame = msg.state.activeMiniGame || 'lobby';
           renderLobby(msg.state);
         }
         break;
-
-      case 'HOST_CONNECTED':
-        // Compat: sent alongside DISPLAY_OK
-        break;
-
+      case 'HOST_CONNECTED': break;
       case 'LOBBY_UPDATE':
         activeMiniGame = msg.activeMiniGame || 'lobby';
         if (activeMiniGame === 'lobby') renderLobby(msg);
         break;
-
       case 'PLAYER_JOINED':
-        // Legacy compat update for lobby
         updateLobbyPlayers(msg.players, msg.playerCount);
+        if (msg.playerCount > previousPlayerCount) {
+          GNSound.join();
+          previousPlayerCount = msg.playerCount;
+        }
         break;
-
       case 'MINI_GAME_STARTING':
         activeMiniGame = msg.gameType;
-        // Do NOT redirect — stay here and show the game display
+        GNSound.whoosh();
         break;
-
       case 'GAME_FETCHING':
         showScreen('fetching');
-        document.querySelector('#fetching h2').textContent = 'Loading questions…';
+        document.querySelector('#fetching h2').textContent = 'Loading questions...';
         break;
-
       case 'GAME_TRANSLATING':
         showScreen('fetching');
-        document.querySelector('#fetching h2').textContent = `Translating questions (${msg.current}/${msg.total})…`;
+        document.querySelector('#fetching h2').textContent = `Translating questions (${msg.current}/${msg.total})...`;
         break;
-
       case 'GAME_STARTING':
         showScreen('countdown');
         document.getElementById('countdown-number').textContent = msg.countdown;
         document.getElementById('countdown-total').textContent = `${msg.totalQuestions} questions`;
+        GNSound.countdownBeep();
         break;
-
-      case 'COUNTDOWN_TICK':
-        document.getElementById('countdown-number').style.animation = 'none';
+      case 'COUNTDOWN_TICK': {
+        const el = document.getElementById('countdown-number');
+        el.style.animation = 'none';
         requestAnimationFrame(() => requestAnimationFrame(() => {
-          document.getElementById('countdown-number').style.animation = 'pulse 1s ease';
-          document.getElementById('countdown-number').textContent = msg.countdown;
+          el.style.animation = 'countPulse 1s ease';
+          el.textContent = msg.countdown;
         }));
+        if (msg.countdown > 0) GNSound.countdownBeep();
         break;
-
+      }
       case 'QUESTION':
+        GNSound.whoosh();
         showQuestion(msg);
         break;
-
       case 'ANSWER_COUNT':
         document.getElementById('q-answered').textContent = `${msg.answered} / ${msg.total} answered`;
+        if (msg.answered > 0) GNSound.tick();
         break;
-
       case 'REVEAL':
+        GNSound.reveal();
         showReveal(msg);
         break;
-
       case 'NEXT_QUESTION':
-        for (const id of ['A','B','C','D']) {
-          const box = document.querySelector(`.answer-box.ans-${id}`);
-          if (box) box.classList.remove('ans-correct-reveal','ans-wrong-reveal');
-        }
-        document.getElementById('timer-bar').style.background = 'linear-gradient(90deg, var(--timer), #8a2be2)';
+        hideRevealUI();
         break;
-
       case 'GAME_OVER':
+        GNSound.fanfare();
+        GNConfetti.shower(4000, 6);
         showGameOver(msg);
         break;
-
       case 'RESTARTED':
         activeMiniGame = 'lobby';
         currentScores  = [];
         currentPlayers = [];
         showScreen('lobby-display');
         break;
-
-      // ── Shithead display ────────────────────────────────────────────────
       case 'SHITHEAD_GAME_STATE':
-        if (activeMiniGame === 'shithead') {
-          handleShitheadGameState(msg);
-        }
+        if (activeMiniGame === 'shithead') handleShitheadGameState(msg);
         break;
-
       case 'SHITHEAD_SWAP_PHASE':
         showShitheadScreen('swap');
         break;
-
       case 'SHITHEAD_SWAP_READY':
-        document.getElementById('sh-swap-progress').textContent =
-          `Ready: ${msg.readyCount} / ${msg.total}`;
+        document.getElementById('sh-swap-progress').textContent = `Ready: ${msg.readyCount} / ${msg.total}`;
         break;
-
       case 'SHITHEAD_YOUR_TURN':
-        if (activeMiniGame === 'shithead') {
-          updateShitheadTurn(msg);
-        }
+        if (activeMiniGame === 'shithead') updateShitheadTurn(msg);
         break;
-
       case 'SHITHEAD_PILE_BURNED':
-        showShitheadToast('🔥 Pile burned!');
+        showShitheadToast('Pile burned!');
         break;
-
       case 'SHITHEAD_PILE_PICKED_UP':
-        showShitheadToast(`😬 ${msg.username} picks up the pile (${msg.handCount} cards)`);
+        showShitheadToast(`${msg.username} picks up the pile (${msg.handCount} cards)`);
         break;
-
       case 'SHITHEAD_REVEAL_FACEDOWN':
-        showShitheadToast(`🎲 ${msg.username} flips: ${msg.card.name}${msg.card.suit}`);
+        showShitheadToast(`${msg.username} flips: ${msg.card.name}${msg.card.suit}`);
         break;
-
       case 'SHITHEAD_PLAYER_FINISHED': {
         const medals = ['🥇','🥈','🥉','4️⃣','5️⃣'];
         showShitheadToast(`${medals[msg.position-1]||'✅'} ${msg.username} finished! (place ${msg.position})`);
         break;
       }
-
       case 'SHITHEAD_GAME_OVER':
         handleShitheadGameOver(msg);
         break;
-
       case 'SHITHEAD_RESTARTED':
         activeMiniGame = 'lobby';
         showScreen('lobby-display');
@@ -700,7 +577,7 @@
     }
   }
 
-  // ── Lobby rendering ───────────────────────────────────────────────────────
+  // ── Lobby ──────────────────────────────────────────────────────────────
   function renderLobby(state) {
     showScreen('lobby-display');
     updateLobbyPlayers(state.players || [], state.totalCount || 0);
@@ -712,7 +589,7 @@
     const list = document.getElementById('ld-player-list');
 
     if (currentPlayers.length === 0) {
-      list.innerHTML = '<span style="color:#555;font-style:italic;">Waiting for players…</span>';
+      list.innerHTML = '<span class="empty-state">Waiting for players...</span>';
       return;
     }
 
@@ -720,21 +597,21 @@
     const playersArr = Array.isArray(players) && typeof players[0] === 'object' ? players : currentPlayers.map(n => ({ username: n }));
     for (const p of playersArr) {
       const name   = typeof p === 'string' ? p : p.username;
-      const avatar = (typeof p === 'object' && p.avatar) ? p.avatar : nameToAvatar(name);
+      const avatar = (typeof p === 'object' && p.avatar) ? p.avatar : GN.nameToAvatar(name);
       const admin  = typeof p === 'object' && p.isAdmin;
       const ready  = typeof p === 'object' && p.isReady;
       const chip   = document.createElement('div');
       chip.className = 'ld-player-chip' + (admin ? ' admin-chip' : '');
       chip.innerHTML =
-        `<span class="ldc-avatar">${esc(avatar)}</span>` +
-        `<span style="font-weight:700">${esc(name)}</span>` +
-        (admin ? `<span class="ldc-crown">👑</span>` : '') +
-        `<span class="ldc-ready">${ready ? '✅' : '🟡'}</span>`;
+        `<span class="ldc-avatar">${GN.esc(avatar)}</span>` +
+        `<span style="font-weight:700">${GN.esc(name)}</span>` +
+        (admin ? '<span class="ldc-crown">👑</span>' : '') +
+        `<span class="ldc-ready">${ready ? '✅' : '⏳'}</span>`;
       list.appendChild(chip);
     }
   }
 
-  // ── Game display (mirrors host page logic) ────────────────────────────────
+  // ── Screen management ─────────────────────────────────────────────────
   function showScreen(id) {
     document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
     document.getElementById(id).classList.add('active');
@@ -743,47 +620,45 @@
   function updateQLiveLb() {
     const el = document.getElementById('q-live-lb-rows');
     if (!el) return;
-    const display = currentScores.length > 0
-      ? currentScores
-      : currentPlayers.map(name => ({ username: name, score: 0 }));
+    const display = currentScores.length > 0 ? currentScores : currentPlayers.map(name => ({ username: name, score: 0 }));
     if (display.length === 0) {
-      el.innerHTML = '<div style="color:#555;font-size:0.82rem;padding:0.3rem 0;">Waiting for players…</div>';
+      el.innerHTML = '<div style="color:var(--text-muted);font-size:0.82rem;padding:0.3rem 0;">Waiting for players...</div>';
       return;
     }
     const medals = ['🥇','🥈','🥉'];
-    const cc     = ['gold','silver','bronze'];
-    const chips  = display.map((s, i) => {
-      const delta = s.delta > 0 ? `<span class="ql-chip-delta">+${s.delta.toLocaleString()}</span>` : '';
+    const cc = ['gold','silver','bronze'];
+    const chips = display.map((s, i) => {
+      const delta = s.delta > 0 ? `<span class="ql-chip-delta">+${GN.fmtScore(s.delta)}</span>` : '';
       return `<div class="ql-player-chip ${cc[i]||''}">
         <span class="ql-chip-rank">${medals[i]||`${i+1}.`}</span>
-        <span class="ql-chip-name">${esc(s.username)}</span>
-        ${delta}<span class="ql-chip-score">${s.score.toLocaleString()}</span>
+        <span class="ql-chip-name">${GN.esc(s.username)}</span>
+        ${delta}<span class="ql-chip-score">${GN.fmtScore(s.score)}</span>
       </div>`;
     }).join('');
-    el.innerHTML = `<div class="ql-strip-row"><span class="ql-strip-label">🏆 Standings</span>${chips}</div>`;
+    el.innerHTML = `<div class="ql-strip-row"><span class="ql-strip-label">Standings</span>${chips}</div>`;
   }
 
   function showRevealInSidebar(msg, correctLetter) {
     const el = document.getElementById('q-live-lb-rows');
     if (!el) return;
     const correctPct = msg.answerBreakdown[correctLetter] || 0;
-    const pctLabel   = correctPct === 0 ? '😱 Nobody!' : `✓ ${correctPct}%`;
-    const pctColor   = correctPct === 0 ? '#ff8585' : '#4cde80';
-    const medals     = ['🥇','🥈','🥉'];
-    const cc         = ['gold','silver','bronze'];
+    const pctLabel = correctPct === 0 ? 'Nobody!' : `${correctPct}%`;
+    const pctColor = correctPct === 0 ? 'var(--wrong)' : 'var(--correct)';
+    const medals = ['🥇','🥈','🥉'];
+    const cc = ['gold','silver','bronze'];
     const roundSorted = [...msg.scores].sort((a,b) => b.delta - a.delta);
     const totalSorted = [...msg.scores].sort((a,b) => b.score - a.score);
 
     const roundChips = roundSorted.map((s, i) => {
-      const isCorrect  = s.answer === correctLetter;
+      const isCorrect = s.answer === correctLetter;
       const badgeClass = s.answer ? (isCorrect ? 'badge-correct' : 'badge-wrong') : 'badge-none';
-      const streak     = s.streak || 0;
-      const fire       = streak >= 5 ? '🔥🔥' : streak >= 3 ? '🔥' : '';
-      const timeHtml   = s.answerTime != null ? `<span class="ql-chip-time">⚡${s.answerTime}s</span>` : '';
-      const deltaHtml  = s.delta > 0 ? `<span class="ql-chip-delta">+${s.delta.toLocaleString()}</span>` : '';
+      const streak = s.streak || 0;
+      const fire = streak >= 5 ? '🔥🔥' : streak >= 3 ? '🔥' : '';
+      const timeHtml = s.answerTime != null ? `<span class="ql-chip-time">${s.answerTime}s</span>` : '';
+      const deltaHtml = s.delta > 0 ? `<span class="ql-chip-delta">+${GN.fmtScore(s.delta)}</span>` : '';
       return `<div class="ql-player-chip">
         <span class="ql-chip-rank">${medals[i]||`${i+1}.`}</span>
-        <span class="ql-chip-name">${esc(s.username)}${fire}</span>
+        <span class="ql-chip-name">${GN.esc(s.username)}${fire}</span>
         ${timeHtml}<span class="lb-answer-badge ${badgeClass}">${s.answer||'—'}</span>
         ${deltaHtml}
       </div>`;
@@ -791,11 +666,11 @@
 
     const totalChips = totalSorted.map((s, i) => {
       const streak = s.streak || 0;
-      const fire   = streak >= 5 ? '🔥🔥' : streak >= 3 ? '🔥' : '';
+      const fire = streak >= 5 ? '🔥🔥' : streak >= 3 ? '🔥' : '';
       return `<div class="ql-player-chip ${cc[i]||''}">
         <span class="ql-chip-rank">${medals[i]||`${i+1}.`}</span>
-        <span class="ql-chip-name">${esc(s.username)}${fire}</span>
-        <span class="ql-chip-score">${s.score.toLocaleString()}</span>
+        <span class="ql-chip-name">${GN.esc(s.username)}${fire}</span>
+        <span class="ql-chip-score">${GN.fmtScore(s.score)}</span>
       </div>`;
     }).join('');
 
@@ -817,7 +692,7 @@
     showScreen('question-screen');
     updateQLiveLb();
     document.getElementById('q-category').textContent = q.category;
-    document.getElementById('q-counter').textContent  = `Q ${q.questionNumber} / ${q.totalQuestions}`;
+    document.getElementById('q-counter').textContent = `Q ${q.questionNumber} / ${q.totalQuestions}`;
     document.getElementById('q-answered').textContent = `0 / ? answered`;
     document.getElementById('q-text').textContent = q.question;
     const isTF = q.answers.length === 2;
@@ -845,7 +720,7 @@
       const box = document.querySelector(`.answer-box.ans-${id}`);
       if (box) box.classList.remove('ans-correct-reveal','ans-wrong-reveal');
     }
-    document.getElementById('timer-bar').style.background = 'linear-gradient(90deg, var(--timer), #8a2be2)';
+    document.getElementById('timer-bar').style.background = 'linear-gradient(90deg, var(--neon), var(--neon2))';
   }
 
   function showReveal(msg) {
@@ -856,7 +731,8 @@
     const correctLetter = msg.correctAnswer;
     const bar = document.getElementById('timer-bar');
     bar.style.transition = 'none';
-    bar.style.background = 'linear-gradient(90deg, #e21b3c, #ff7c3a)';
+    bar.style.background = 'linear-gradient(90deg, var(--wrong), var(--accent))';
+
     for (const id of ['A','B','C','D']) {
       const box = document.querySelector(`.answer-box.ans-${id}`);
       if (box) {
@@ -864,6 +740,15 @@
         box.classList.add(id === correctLetter ? 'ans-correct-reveal' : 'ans-wrong-reveal');
       }
     }
+
+    // Correct answer sparkle
+    const correctBox = document.querySelector(`.answer-box.ans-${correctLetter}`);
+    if (correctBox) {
+      const rect = correctBox.getBoundingClientRect();
+      GNConfetti.sparkle(rect.left + rect.width / 2, rect.top + rect.height / 2, 20);
+    }
+
+    GNSound.correct();
     currentScores = [...msg.scores].sort((a,b) => b.score - a.score);
     showRevealInSidebar(msg, correctLetter);
   }
@@ -875,35 +760,36 @@
   function showGameOver(msg) {
     hideRevealUI();
     showScreen('gameover');
-    const top3   = msg.finalScores.slice(0, 3);
+    const top3 = msg.finalScores.slice(0, 3);
     const medals = ['🥇','🥈','🥉'];
-    const order  = [1, 0, 2];
+    const order = [1, 0, 2];
     const podium = document.getElementById('podium');
     podium.innerHTML = '';
     for (const pos of order) {
       const p = top3[pos]; if (!p) continue;
       const slot = document.createElement('div');
       slot.className = `podium-slot podium-${pos + 1}`;
+      slot.style.animationDelay = `${pos * 0.2}s`;
       slot.innerHTML = `
         <div class="medal">${medals[pos]}</div>
-        <div class="pd-name">${esc(p.username)}</div>
-        <div class="pd-score">${p.score.toLocaleString()} pts</div>
+        <div class="pd-name">${GN.esc(p.username)}</div>
+        <div class="pd-score">${GN.fmtScore(p.score)} pts</div>
         <div class="podium-block"></div>`;
       podium.appendChild(slot);
     }
     document.getElementById('final-scores').innerHTML = msg.finalScores.map(s => `
       <div class="lb-total-row">
         <span class="lb-total-rank ${s.rank<=3?'top':''}">${s.rank}.</span>
-        <span class="lb-total-name">${esc(s.username)}</span>
-        <span class="lb-total-score">${s.score.toLocaleString()} pts</span>
+        <span class="lb-total-name">${GN.esc(s.username)}</span>
+        <span class="lb-total-score">${GN.fmtScore(s.score)} pts</span>
       </div>`).join('');
   }
 
-  // ── QR + URL ──────────────────────────────────────────────────────────────
+  // ── QR / URL ──────────────────────────────────────────────────────────
   async function loadQR(code) {
     try {
-      const res  = await fetch(`/api/qr?room=${code}`);
-      const svg  = await res.text();
+      const res = await fetch(`/api/qr?room=${code}`);
+      const svg = await res.text();
       const blob = new Blob([svg], { type: 'image/svg+xml' });
       document.getElementById('ld-qr-img').src = URL.createObjectURL(blob);
     } catch (e) { console.warn('QR failed', e); }
@@ -914,17 +800,7 @@
     document.getElementById('ld-url').textContent = url;
   }
 
-  const AVATARS = ['🦊','🐸','🐼','🦁','🐯','🦋','🐨','🐧','🦄','🐙','🦖','🐻','🦀','🦩','🐬','🦝','🦔','🦦','🦜','🐳'];
-  function nameToAvatar(name) {
-    let h = 0; for (const ch of name) h = (h * 31 + ch.charCodeAt(0)) & 0xffff;
-    return AVATARS[h % AVATARS.length];
-  }
-
-  function esc(str) {
-    const d = document.createElement('div'); d.textContent = str; return d.innerHTML;
-  }
-
-  // ── Shithead display helpers ──────────────────────────────────────────────
+  // ── Shithead display helpers ──────────────────────────────────────────
   const SH_RED_SUITS = ['♥', '♦'];
   let shToastTimer;
 
@@ -939,23 +815,20 @@
   function showShitheadScreen(sub) {
     showScreen('shithead-display');
     document.getElementById('sh-swap-screen').style.display  = sub === 'swap'     ? 'flex' : 'none';
-    document.getElementById('sh-game-screen').style.display  = sub === 'game'     ? 'flex' : 'none';
-    document.getElementById('sh-gameover').style.display     = sub === 'gameover' ? 'flex' : 'none';
+    document.getElementById('sh-game-screen').style.display   = sub === 'game'     ? 'flex' : 'none';
+    document.getElementById('sh-gameover').style.display      = sub === 'gameover' ? 'flex' : 'none';
   }
 
   function handleShitheadGameState(msg) {
     if (msg.state === 'LOBBY')     { showScreen('lobby-display'); return; }
     if (msg.state === 'SWAP')      { showShitheadScreen('swap'); return; }
     if (msg.state === 'PLAYING')   { showShitheadScreen('game'); updateShitheadGame(msg); return; }
-    if (msg.state === 'GAME_OVER') return; // handled by SHITHEAD_GAME_OVER
   }
 
   function updateShitheadTurn(msg) {
-    if (!document.getElementById('sh-game-screen') ||
-        document.getElementById('sh-game-screen').style.display === 'none') {
+    if (!document.getElementById('sh-game-screen') || document.getElementById('sh-game-screen').style.display === 'none') {
       showShitheadScreen('game');
     }
-    // Update pile card
     const pileEl = document.getElementById('sh-pile-card');
     if (msg.pileTop) {
       const isRed = SH_RED_SUITS.includes(msg.pileTop.suit);
@@ -966,18 +839,12 @@
       pileEl.innerHTML = 'Empty';
     }
     document.getElementById('sh-pile-count').textContent = msg.pileSize + ' cards';
-    const banner = document.getElementById('sh-current-banner');
-    banner.textContent = msg.currentPlayer ? `🎯 ${msg.currentPlayer}'s turn` : '–';
+    document.getElementById('sh-current-banner').textContent = msg.currentPlayer ? `${msg.currentPlayer}'s turn` : '-';
     document.getElementById('sh-seven-warn').style.display = msg.sevenActive ? '' : 'none';
   }
 
   function updateShitheadGame(msg) {
-    updateShitheadTurn({
-      pileTop:       msg.pileTop,
-      pileSize:      msg.pileSize,
-      currentPlayer: msg.currentPlayer,
-      sevenActive:   msg.sevenActive,
-    });
+    updateShitheadTurn({ pileTop: msg.pileTop, pileSize: msg.pileSize, currentPlayer: msg.currentPlayer, sevenActive: msg.sevenActive });
     document.getElementById('sh-deck-count').textContent = msg.deckSize + ' cards';
     renderShitheadBoards(msg);
   }
@@ -990,44 +857,26 @@
       if (p.username === msg.currentPlayer) cls += ' active-player';
       if (p.hasFinished && p.isShithead) cls += ' shithead';
       else if (p.hasFinished) cls += ' finished';
-
       const faceUpCards = (p.faceUp || []).map(c => {
         const isRed = SH_RED_SUITS.includes(c.suit);
-        return `<div class="sh-mini-card ${isRed ? 'red-card' : 'black-card'}">
-          <span>${c.name}</span><span>${c.suit}</span>
-        </div>`;
+        return `<div class="sh-mini-card ${isRed ? 'red-card' : 'black-card'}"><span>${c.name}</span><span>${c.suit}</span></div>`;
       }).join('');
-      const faceDownCards = Array.from({ length: p.faceDownCount || 0 }, () =>
-        `<div class="sh-mini-card face-down">🂠</div>`
-      ).join('');
-
+      const faceDownCards = Array.from({ length: p.faceDownCount || 0 }, () => '<div class="sh-mini-card face-down">🂠</div>').join('');
       let statusBadge = '';
-      if (p.isShithead) {
-        statusBadge = '<span class="sh-badge" style="background:#e21b3c">💩 Shithead</span>';
-      } else if (p.hasFinished) {
-        const pos    = msg.finishOrder.indexOf(p.username) + 1;
+      if (p.isShithead) statusBadge = '<span class="sh-badge" style="background:var(--wrong)">Shithead</span>';
+      else if (p.hasFinished) {
+        const pos = msg.finishOrder.indexOf(p.username) + 1;
         const medals = ['🥇','🥈','🥉'];
-        statusBadge  = `<span class="sh-badge" style="background:#26890c">${medals[pos-1] || '#'+pos}</span>`;
+        statusBadge = `<span class="sh-badge" style="background:var(--correct)">${medals[pos-1] || '#'+pos}</span>`;
       }
-
       return `<div class="${cls}">
-        <div class="sh-player-name">${esc(p.username)} ${statusBadge}</div>
-        <div>
-          <div class="sh-zone-label">Hand (${p.handCount})</div>
-          <div class="sh-cards-row">
-            ${p.handCount > 0
-              ? Array.from({ length: p.handCount }, () => `<div class="sh-mini-card face-down">🂠</div>`).join('')
-              : '<span style="color:#555;font-size:.8rem">–</span>'}
-          </div>
-        </div>
-        <div>
-          <div class="sh-zone-label">Face-up</div>
-          <div class="sh-cards-row">${faceUpCards || '<span style="color:#555;font-size:.8rem">–</span>'}</div>
-        </div>
-        <div>
-          <div class="sh-zone-label">Face-down (${p.faceDownCount})</div>
-          <div class="sh-cards-row">${faceDownCards || '<span style="color:#555;font-size:.8rem">–</span>'}</div>
-        </div>
+        <div class="sh-player-name">${GN.esc(p.username)} ${statusBadge}</div>
+        <div><div class="sh-zone-label">Hand (${p.handCount})</div>
+          <div class="sh-cards-row">${p.handCount > 0 ? Array.from({ length: p.handCount }, () => '<div class="sh-mini-card face-down">🂠</div>').join('') : '<span style="color:var(--text-muted);font-size:.8rem">-</span>'}</div></div>
+        <div><div class="sh-zone-label">Face-up</div>
+          <div class="sh-cards-row">${faceUpCards || '<span style="color:var(--text-muted);font-size:.8rem">-</span>'}</div></div>
+        <div><div class="sh-zone-label">Face-down (${p.faceDownCount})</div>
+          <div class="sh-cards-row">${faceDownCards || '<span style="color:var(--text-muted);font-size:.8rem">-</span>'}</div></div>
       </div>`;
     }).join('');
   }
@@ -1035,12 +884,11 @@
   function handleShitheadGameOver(msg) {
     showShitheadScreen('gameover');
     const medals = ['🥇','🥈','🥉','4️⃣','5️⃣'];
-    const list   = document.getElementById('sh-finish-list');
-    list.innerHTML = msg.finishOrder.map((u, i) => `
+    document.getElementById('sh-finish-list').innerHTML = msg.finishOrder.map((u, i) => `
       <div class="sh-finish-item">
         <span class="sh-finish-pos">${medals[i] || (i+1)+'.'}</span>
-        <span>${esc(u)}</span>
-        ${u === msg.shithead ? '<span class="sh-shithead-label">💩 Shithead</span>' : ''}
+        <span>${GN.esc(u)}</span>
+        ${u === msg.shithead ? '<span class="sh-shithead-label">Shithead</span>' : ''}
       </div>`).join('');
   }
 </script>

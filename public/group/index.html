@@ -4,432 +4,315 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Game Night — Lobby</title>
+  <link rel="stylesheet" href="/shared/theme.css">
   <style>
-    :root {
-      --red:    #e21b3c;
-      --blue:   #1368ce;
-      --yellow: #d89e00;
-      --green:  #26890c;
-      --bg:     #1a1a2e;
-      --card:   #16213e;
-      --text:   #eaeaea;
-      --accent: #9f44d3;
-      --timer:  #00c2ff;
-    }
-    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-    html, body {
-      height: 100%;
-      font-family: 'Segoe UI', system-ui, sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      overscroll-behavior: none;
-    }
     body {
       display: flex;
       flex-direction: column;
       align-items: center;
-      padding: 1rem 1rem 6rem;
+      padding: 1rem 1rem 7rem;
       gap: 0.85rem;
       min-height: 100vh;
     }
 
     /* ── Name overlay ── */
     #name-overlay {
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,0.75);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      z-index: 100;
-      padding: 1.5rem;
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.8);
+      backdrop-filter: blur(8px);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 100; padding: 1.5rem;
     }
     #name-overlay.hidden { display: none; }
     .name-card {
-      background: var(--card);
-      border: 1px solid rgba(159,68,211,0.3);
-      border-radius: 1.25rem;
-      padding: 2rem 1.5rem;
-      width: min(380px, 100%);
-      display: flex;
-      flex-direction: column;
-      gap: 1rem;
-      align-items: center;
+      background: var(--card-solid);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: var(--radius-xl);
+      padding: 2.5rem 2rem;
+      width: min(400px, 100%);
+      display: flex; flex-direction: column;
+      gap: 1.25rem; align-items: center;
+      box-shadow: var(--shadow-card);
     }
     .name-card h2 {
-      font-size: 1.5rem;
-      font-weight: 900;
-      background: linear-gradient(90deg, #9f44d3, #00c2ff);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
+      font-size: 1.6rem; font-weight: 900;
     }
-    .name-card p { color: #aaa; font-size: 0.9rem; text-align: center; }
+    .name-card p { color: var(--text-dim); font-size: 0.9rem; text-align: center; }
     #name-input {
-      width: 100%;
-      padding: 1rem 1.25rem;
-      font-size: 1.2rem;
-      background: rgba(255,255,255,0.06);
+      width: 100%; padding: 1rem 1.25rem;
+      font-size: 1.25rem; font-weight: 700;
+      background: rgba(255,255,255,0.04);
       color: var(--text);
-      border: 2px solid rgba(255,255,255,0.14);
-      border-radius: 0.75rem;
-      outline: none;
-      transition: border-color 0.2s;
+      border: 2px solid rgba(255,255,255,0.08);
+      border-radius: var(--radius-md);
+      outline: none; transition: border-color 0.2s, box-shadow 0.2s;
       text-align: center;
     }
-    #name-input:focus { border-color: var(--accent); }
-    #name-input::placeholder { color: #444; }
-    #name-submit-btn {
-      width: 100%;
-      padding: 1rem;
-      font-size: 1.1rem;
-      font-weight: 700;
-      background: linear-gradient(135deg, var(--accent), #4a90d9);
-      color: #fff;
-      border: none;
-      border-radius: 0.75rem;
-      cursor: pointer;
-      transition: opacity 0.2s, transform 0.1s;
-    }
-    #name-submit-btn:active { transform: scale(0.97); }
-    #name-error { color: #ff6b6b; font-size: 0.85rem; min-height: 1em; }
+    #name-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
+    #name-input::placeholder { color: var(--text-muted); }
+    #name-error { color: var(--wrong); font-size: 0.85rem; min-height: 1em; }
 
     /* ── Header ── */
     #header {
-      width: 100%;
-      max-width: 460px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
+      width: 100%; max-width: 480px;
+      display: flex; align-items: center; justify-content: space-between;
       padding: 0.25rem 0;
     }
     .header-title {
-      font-size: 1.2rem;
-      font-weight: 900;
-      background: linear-gradient(90deg, #9f44d3, #00c2ff);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
+      font-size: 1.15rem; font-weight: 900;
     }
     .header-right {
-      display: flex;
-      align-items: center;
-      gap: 0.45rem;
+      display: flex; align-items: center; gap: 0.4rem;
     }
     .rules-link {
-      text-decoration: none;
-      color: #fff;
-      font-size: 0.72rem;
-      font-weight: 700;
-      padding: 0.25rem 0.55rem;
-      border-radius: 999px;
-      background: rgba(255,255,255,0.1);
-      border: 1px solid rgba(255,255,255,0.18);
-      white-space: nowrap;
+      text-decoration: none; color: var(--text-dim);
+      font-size: 0.72rem; font-weight: 700;
+      padding: 0.25rem 0.55rem; border-radius: var(--radius-pill);
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.08);
+      transition: color 0.2s, border-color 0.2s;
     }
+    .rules-link:hover { color: var(--text); border-color: rgba(255,255,255,0.2); }
     .room-chip {
-      background: rgba(159,68,211,0.18);
-      border: 1px solid rgba(159,68,211,0.4);
-      border-radius: 0.5rem;
+      background: linear-gradient(135deg, rgba(255,137,6,0.15), rgba(229,49,112,0.15));
+      border: 1px solid rgba(255,137,6,0.3);
+      border-radius: var(--radius-md);
       padding: 0.3rem 0.75rem;
-      font-size: 1.1rem;
-      font-weight: 900;
+      font-size: 1.1rem; font-weight: 900;
       letter-spacing: 0.2em;
-      color: #cc88ff;
+      color: var(--accent);
     }
 
-    /* ── Card container ── */
+    /* ── Panel ── */
     .panel {
-      width: 100%;
-      max-width: 460px;
-      background: var(--card);
-      border-radius: 1rem;
+      width: 100%; max-width: 480px;
+      background: var(--card); border-radius: var(--radius-lg);
+      border: 1px solid rgba(255,255,255,0.04);
       padding: 1rem 1.1rem;
     }
     .panel-title {
-      font-size: 0.72rem;
-      font-weight: 800;
-      text-transform: uppercase;
-      letter-spacing: 0.12em;
-      color: #666;
-      margin-bottom: 0.6rem;
+      font-size: 0.7rem; font-weight: 800; text-transform: uppercase;
+      letter-spacing: 0.12em; color: var(--text-muted); margin-bottom: 0.6rem;
     }
 
     /* ── Players ── */
-    #player-list {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.45rem;
-    }
+    #player-list { display: flex; flex-wrap: wrap; gap: 0.45rem; }
     .player-chip {
-      display: flex;
-      align-items: center;
-      gap: 0.4rem;
-      padding: 0.35rem 0.7rem 0.35rem 0.4rem;
-      border-radius: 2rem;
-      background: rgba(255,255,255,0.07);
-      border: 1px solid rgba(255,255,255,0.1);
-      font-size: 0.9rem;
-      font-weight: 700;
-      animation: chipIn 0.35s cubic-bezier(0.34,1.56,0.64,1);
+      display: flex; align-items: center; gap: 0.4rem;
+      padding: 0.4rem 0.7rem 0.4rem 0.45rem;
+      border-radius: var(--radius-pill);
+      background: rgba(255,255,255,0.04);
+      border: 1.5px solid rgba(255,255,255,0.06);
+      font-size: 0.88rem; font-weight: 700;
+      animation: bounceIn 0.4s var(--ease-out-back) both;
       position: relative;
     }
-    @keyframes chipIn {
-      from { transform: scale(0.4); opacity: 0; }
-      to   { transform: scale(1);   opacity: 1; }
+    .player-chip.me {
+      border-color: rgba(255,137,6,0.4);
+      background: rgba(255,137,6,0.08);
     }
-    .player-chip.me { border-color: rgba(159,68,211,0.5); background: rgba(159,68,211,0.15); }
-    .player-chip.admin-chip { border-color: rgba(255,215,0,0.5); background: rgba(255,215,0,0.1); }
-    .pc-avatar { font-size: 1.1rem; }
+    .player-chip.admin-chip {
+      border-color: rgba(255,215,0,0.4);
+      background: rgba(255,215,0,0.08);
+    }
+    .pc-avatar { font-size: 1.15rem; }
     .pc-name   { max-width: 7rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .pc-crown  { font-size: 0.85rem; }
-    .pc-ready  { font-size: 0.9rem; margin-left: 0.15rem; }
+    .pc-ready  { font-size: 0.85rem; margin-left: 0.1rem; }
     .pc-remove {
-      margin-left: 0.15rem;
-      background: none;
-      border: none;
-      color: #ff6b6b;
-      cursor: pointer;
-      font-size: 0.85rem;
-      padding: 0 0.1rem;
-      opacity: 0.6;
-      display: none;
+      margin-left: 0.1rem; background: none; border: none;
+      color: var(--wrong); cursor: pointer; font-size: 0.82rem;
+      padding: 0 0.1rem; opacity: 0.5; display: none;
     }
     .pc-remove:hover { opacity: 1; }
     .pc-remove.visible { display: inline; }
 
     /* ── Game grid ── */
-    #game-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 0.65rem;
-    }
+    #game-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.65rem; }
     .game-tile {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 0.3rem;
-      padding: 1rem 0.75rem;
-      background: rgba(255,255,255,0.04);
-      border: 2px solid rgba(255,255,255,0.1);
-      border-radius: 0.85rem;
-      cursor: pointer;
-      transition: background 0.15s, border-color 0.15s, transform 0.1s;
-      text-align: center;
-      min-height: 80px;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center; gap: 0.3rem;
+      padding: 1.1rem 0.75rem; min-height: 90px;
+      background: rgba(255,255,255,0.03);
+      border: 2px solid rgba(255,255,255,0.06);
+      border-radius: var(--radius-lg);
+      cursor: pointer; text-align: center;
+      transition: all 0.2s var(--ease-out-back);
     }
-    .game-tile:hover { background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.2); }
+    .game-tile:hover {
+      background: rgba(255,255,255,0.06);
+      border-color: rgba(255,255,255,0.15);
+      transform: translateY(-2px);
+    }
     .game-tile:active { transform: scale(0.96); }
     .game-tile.my-vote {
-      background: rgba(159,68,211,0.2);
-      border-color: rgba(159,68,211,0.6);
+      background: rgba(255,137,6,0.12);
+      border-color: rgba(255,137,6,0.5);
+      box-shadow: 0 0 20px rgba(255,137,6,0.15);
     }
-    .game-tile.available { border-color: rgba(0,194,255,0.25); }
-    .tile-emoji { font-size: 1.8rem; }
-    .tile-label { font-size: 0.9rem; font-weight: 700; }
-    .tile-coming { font-size: 0.65rem; color: #666; }
+    .tile-emoji { font-size: 2rem; }
+    .tile-label { font-size: 0.92rem; font-weight: 700; }
     .tile-votes {
-      display: flex;
-      align-items: center;
-      gap: 0.2rem;
-      background: rgba(159,68,211,0.25);
-      border: 1px solid rgba(159,68,211,0.45);
-      border-radius: 1rem;
-      padding: 0.1rem 0.5rem;
-      font-size: 0.72rem;
-      font-weight: 800;
-      color: #cc88ff;
+      display: flex; align-items: center; gap: 0.2rem;
+      background: rgba(255,137,6,0.2);
+      border: 1px solid rgba(255,137,6,0.35);
+      border-radius: var(--radius-pill);
+      padding: 0.1rem 0.5rem; font-size: 0.72rem;
+      font-weight: 800; color: var(--accent);
     }
 
-    /* ── Vote section ── */
-    #vote-section { width: 100%; max-width: 460px; }
+    /* ── Vote status ── */
+    #vote-section { width: 100%; max-width: 480px; }
     #vote-status-msg {
-      font-size: 0.82rem;
-      color: #888;
-      text-align: center;
-      padding: 0.25rem 0;
+      font-size: 0.82rem; color: var(--text-muted);
+      text-align: center; padding: 0.25rem 0;
     }
-    #vote-status-msg.all-voted { color: #4cde80; font-weight: 700; }
+    #vote-status-msg.all-voted { color: var(--correct); font-weight: 700; }
 
-    /* ── Action buttons ── */
+    /* ── QR strip ── */
+    #qr-strip {
+      width: 100%; max-width: 480px;
+      display: flex; align-items: center; gap: 0.75rem;
+      background: rgba(127,90,240,0.06);
+      border: 1px solid rgba(127,90,240,0.15);
+      border-radius: var(--radius-lg);
+      padding: 0.6rem 0.85rem;
+    }
+    #qr-strip img {
+      width: 60px; height: 60px;
+      border-radius: var(--radius-sm);
+      background: #fff; padding: 3px; flex-shrink: 0;
+    }
+    #qr-join-url {
+      flex: 1; min-width: 0;
+      font-size: 0.72rem; font-weight: 700;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    #copy-qr-btn {
+      flex-shrink: 0; padding: 0.25rem 0.6rem;
+      font-size: 0.75rem; font-weight: 700;
+      background: rgba(127,90,240,0.15); color: var(--neon2);
+      border: 1px solid rgba(127,90,240,0.3);
+      border-radius: var(--radius-sm); cursor: pointer;
+      transition: all 0.2s;
+    }
+    #copy-qr-btn:hover { background: rgba(127,90,240,0.3); color: #fff; }
+
+    /* ── Bottom actions ── */
     #actions {
-      position: fixed;
-      bottom: 0; left: 0; right: 0;
-      background: rgba(14,18,44,0.97);
-      border-top: 1px solid rgba(159,68,211,0.25);
+      position: fixed; bottom: 0; left: 0; right: 0;
+      background: rgba(15, 14, 23, 0.97);
+      backdrop-filter: blur(12px);
+      border-top: 1px solid rgba(255,255,255,0.04);
       padding: 0.75rem 1rem 1rem;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 0.6rem;
+      display: flex; flex-direction: column;
+      align-items: center; gap: 0.6rem;
+      z-index: 50;
     }
     .ready-btn {
-      width: min(440px, 100%);
-      padding: 0.85rem;
-      font-size: 1.1rem;
-      font-weight: 700;
-      background: rgba(255,255,255,0.07);
-      color: #aaa;
-      border: 2px solid rgba(255,255,255,0.15);
-      border-radius: 0.75rem;
-      cursor: pointer;
-      transition: background 0.15s, border-color 0.15s, color 0.15s, transform 0.1s;
-      letter-spacing: 0.03em;
+      width: min(460px, 100%); padding: 0.85rem;
+      font-size: 1.1rem; font-weight: 700;
+      background: rgba(255,255,255,0.04); color: var(--text-dim);
+      border: 2px solid rgba(255,255,255,0.08);
+      border-radius: var(--radius-md); cursor: pointer;
+      transition: all 0.2s var(--ease-out-back);
     }
     .ready-btn.ready {
-      background: rgba(76,222,128,0.15);
-      border-color: #4cde80;
-      color: #4cde80;
+      background: rgba(44,182,125,0.12);
+      border-color: var(--correct);
+      color: var(--correct);
+      box-shadow: 0 0 15px var(--correct-glow);
     }
     .ready-btn:active { transform: scale(0.97); }
 
     #start-section {
-      width: min(440px, 100%);
-      display: none;
-      flex-direction: column;
-      gap: 0.5rem;
+      width: min(460px, 100%);
+      display: none; flex-direction: column; gap: 0.5rem;
     }
     #start-section.visible { display: flex; }
 
-    /* Settings row */
     .settings-row {
-      display: flex;
-      gap: 0.4rem;
-      flex-wrap: wrap;
-      align-items: center;
+      display: flex; gap: 0.4rem; flex-wrap: wrap; align-items: center;
     }
-    .settings-label { font-size: 0.78rem; color: #888; white-space: nowrap; }
+    .settings-label { font-size: 0.76rem; color: var(--text-muted); white-space: nowrap; }
     .setting-btn {
-      padding: 0.3rem 0.65rem;
-      font-size: 0.82rem;
-      font-weight: 700;
-      background: rgba(255,255,255,0.07);
-      color: #aaa;
-      border: 1.5px solid rgba(255,255,255,0.12);
-      border-radius: 0.45rem;
-      cursor: pointer;
-      transition: background 0.12s, border-color 0.12s, color 0.12s;
+      padding: 0.3rem 0.65rem; font-size: 0.8rem; font-weight: 700;
+      background: rgba(255,255,255,0.04); color: var(--text-dim);
+      border: 1.5px solid rgba(255,255,255,0.08);
+      border-radius: var(--radius-sm); cursor: pointer;
+      transition: all 0.15s;
     }
-    .setting-btn:hover { background: rgba(255,255,255,0.13); color: #fff; }
-    .setting-btn.active { background: rgba(159,68,211,0.25); border-color: var(--accent); color: #fff; }
-    .diff-btn[data-diff="easy"].active   { background: rgba(19,104,206,0.25); color: #6ab0ff; border-color: #1368ce; }
-    .diff-btn[data-diff="medium"].active { background: rgba(216,158,0,0.25);  color: #ffd166; border-color: #d89e00; }
-    .diff-btn[data-diff="hard"].active   { background: rgba(226,27,60,0.30);  color: #ff7c96; border-color: #e21b3c; }
+    .setting-btn:hover { background: rgba(255,255,255,0.08); color: var(--text); }
+    .setting-btn.active {
+      background: rgba(255,137,6,0.15);
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+    .diff-btn[data-diff="easy"].active   { background: rgba(19,104,206,0.2); color: #6ab0ff; border-color: #1368ce; }
+    .diff-btn[data-diff="medium"].active { background: rgba(216,158,0,0.2);  color: #ffd166; border-color: #d89e00; }
+    .diff-btn[data-diff="hard"].active   { background: rgba(226,27,60,0.2);  color: #ff7c96; border-color: #e21b3c; }
 
     .start-btn {
-      width: 100%;
-      padding: 0.9rem;
-      font-size: 1.15rem;
-      font-weight: 700;
-      background: linear-gradient(135deg, var(--accent), #4a90d9);
-      color: #fff;
-      border: none;
-      border-radius: 0.75rem;
-      cursor: pointer;
-      transition: opacity 0.2s, transform 0.1s;
-      letter-spacing: 0.04em;
+      width: 100%; padding: 0.9rem;
+      font-size: 1.15rem; font-weight: 800;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      color: #fff; border: none;
+      border-radius: var(--radius-md); cursor: pointer;
+      transition: all 0.2s var(--ease-out-back);
+      box-shadow: 0 4px 15px rgba(255,137,6,0.3);
     }
-    .start-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .start-btn:disabled { opacity: 0.3; cursor: not-allowed; box-shadow: none; }
+    .start-btn:not(:disabled):hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(255,137,6,0.4); }
     .start-btn:not(:disabled):active { transform: scale(0.97); }
 
-    /* ── QR strip ── */
-    #qr-strip {
-      width: 100%;
-      max-width: 460px;
-      display: flex;
-      align-items: center;
-      gap: 0.75rem;
-      background: rgba(159,68,211,0.08);
-      border: 1px solid rgba(159,68,211,0.25);
-      border-radius: 0.85rem;
-      padding: 0.6rem 0.85rem;
-    }
-    #qr-strip img {
-      width: 64px; height: 64px;
-      border-radius: 0.4rem;
-      background: #fff;
-      padding: 3px;
-      flex-shrink: 0;
-    }
-    #qr-join-url {
-      flex: 1;
-      min-width: 0;
-      font-size: 0.75rem;
-      font-weight: 700;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      background: linear-gradient(90deg, #9f44d3, #00c2ff);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-    }
-    #copy-qr-btn {
-      flex-shrink: 0;
-      padding: 0.25rem 0.65rem;
-      font-size: 0.78rem;
-      font-weight: 700;
-      background: rgba(159,68,211,0.2);
-      color: #cc88ff;
-      border: 1px solid rgba(159,68,211,0.4);
-      border-radius: 0.4rem;
-      cursor: pointer;
-      white-space: nowrap;
-      transition: background 0.15s;
-    }
-    #copy-qr-btn:hover { background: rgba(159,68,211,0.4); color: #fff; }
-
-    /* ── Reconnecting overlay ── */
+    /* ── Reconnecting ── */
     #reconnecting {
       position: fixed; inset: 0;
       background: rgba(0,0,0,0.7);
+      backdrop-filter: blur(4px);
       display: none; align-items: center; justify-content: center;
       flex-direction: column; gap: 1rem; z-index: 99;
     }
     #reconnecting.show { display: flex; }
-    .spinner {
-      width: 48px; height: 48px;
-      border: 5px solid rgba(255,255,255,0.1);
-      border-top-color: var(--timer);
-      border-radius: 50%;
-      animation: spin 0.8s linear infinite;
-    }
-    @keyframes spin { to { transform: rotate(360deg); } }
-    #reconnecting p { color: #ccc; }
+    #reconnecting p { color: var(--text-dim); }
+
+    .empty-state { color: var(--text-muted); font-style: italic; font-size: 0.85rem; }
   </style>
 </head>
-<body>
+<body class="bg-mesh">
 
 <!-- Name overlay -->
 <div id="name-overlay">
   <div class="name-card">
-    <h2>🎮 Game Night</h2>
+    <h2 class="gradient-text">Game Night</h2>
     <p>Enter your name to join the lobby</p>
     <input id="name-input" type="text" maxlength="20" placeholder="Your name"
       autocomplete="off" autocorrect="off" spellcheck="false">
-    <button id="name-submit-btn">Join Lobby</button>
+    <button class="btn-primary" id="name-submit-btn" style="width:100%">Join Lobby</button>
     <div id="name-error"></div>
   </div>
 </div>
 
-<!-- Reconnecting overlay -->
+<!-- Reconnecting -->
 <div id="reconnecting">
   <div class="spinner"></div>
-  <p>Reconnecting…</p>
+  <p>Reconnecting...</p>
 </div>
 
 <!-- Header -->
 <div id="header">
-  <div class="header-title">🎮 Game Night</div>
+  <div class="header-title gradient-text">Game Night</div>
   <div class="header-right">
-    <a id="rules-link" class="rules-link" href="/rules">📖 Rules</a>
-    <div class="room-chip" id="room-chip">····</div>
+    <a id="rules-link" class="rules-link" href="/rules">Rules</a>
+    <div class="room-chip" id="room-chip">----</div>
   </div>
 </div>
 
-<!-- Players panel -->
+<!-- Players -->
 <div class="panel" id="players-panel">
   <div class="panel-title">Players (<span id="player-count">0</span>)</div>
   <div id="player-list">
-    <span style="color:#555;font-style:italic;font-size:0.85rem;">Waiting for players…</span>
+    <span class="empty-state">Waiting for players...</span>
   </div>
 </div>
 
@@ -447,13 +330,13 @@
 <!-- QR strip -->
 <div id="qr-strip">
   <img id="qr-img" src="" alt="QR">
-  <div id="qr-join-url">Loading…</div>
-  <button id="copy-qr-btn">📋 Copy</button>
+  <div id="qr-join-url" class="gradient-text-alt">Loading...</div>
+  <button id="copy-qr-btn">Copy</button>
 </div>
 
-<!-- Fixed bottom actions -->
+<!-- Bottom actions -->
 <div id="actions">
-  <button class="ready-btn" id="ready-btn">✅ I'm Ready</button>
+  <button class="ready-btn" id="ready-btn">I'm Ready</button>
   <div id="start-section">
     <div class="settings-row" id="difficulty-row">
       <span class="settings-label">Difficulty:</span>
@@ -474,25 +357,28 @@
       <button class="setting-btn deck-btn" data-decks="2">2 decks</button>
       <button class="setting-btn deck-btn" data-decks="3">3 decks</button>
     </div>
-    <button class="start-btn" id="start-btn" disabled>🚀 Start Game</button>
+    <button class="start-btn" id="start-btn" disabled>Start Game</button>
   </div>
 </div>
 
+<script src="/shared/sounds.js"></script>
+<script src="/shared/confetti.js"></script>
+<script src="/shared/utils.js"></script>
 <script>
   const GAME_TILES = [
     { type: 'quiz',     emoji: '🧠', label: 'Quiz',     available: true },
     { type: 'shithead', emoji: '🃏', label: 'Shithead', available: true },
   ];
 
-  const roomCode    = location.pathname.split('/')[2]?.toUpperCase();
+  const roomCode    = GN.getRoomCode();
   const storageKey  = `gn-username-${roomCode}`;
   let myUsername    = sessionStorage.getItem(storageKey) || null;
   let isAdmin       = false;
   let isReady       = false;
-  let myVote        = null;      // gameType I voted for
-  let lobbyState    = null;      // last LOBBY_UPDATE
+  let myVote        = null;
+  let lobbyState    = null;
   let ws, connectGen = 0;
-  let selectedDifficulty   = 'easy';
+  let selectedDifficulty    = 'easy';
   let selectedQuestionCount = 10;
   let selectedDeckCount     = 1;
 
@@ -500,7 +386,7 @@
   document.getElementById('rules-link').href =
     `/rules?room=${encodeURIComponent(roomCode || '')}&from=${encodeURIComponent(location.pathname)}`;
 
-  // ── Name overlay ──────────────────────────────────────────────────────────
+  // ── Name overlay ──────────────────────────────────────────────────────
   if (myUsername) {
     document.getElementById('name-overlay').classList.add('hidden');
     connect();
@@ -515,30 +401,25 @@
     myUsername = val;
     sessionStorage.setItem(storageKey, myUsername);
     document.getElementById('name-overlay').classList.add('hidden');
+    GNSound.join();
+    GN.haptic('success');
     connect();
   }
 
-  // ── WebSocket ─────────────────────────────────────────────────────────────
-  function buildWsUrl() {
-    const proto = location.protocol === 'https:' ? 'wss' : 'ws';
-    return `${proto}://${location.host}/ws?room=${roomCode}&role=player`;
-  }
-
+  // ── WebSocket ─────────────────────────────────────────────────────────
   function connect() {
     const gen = ++connectGen;
-    ws = new WebSocket(buildWsUrl());
+    ws = new WebSocket(GN.buildWsUrl(roomCode, 'player'));
     document.getElementById('reconnecting').classList.remove('show');
 
     ws.addEventListener('open', () => {
       if (gen !== connectGen) return;
       send({ type: 'JOIN_LOBBY', username: myUsername });
     });
-
     ws.addEventListener('message', e => {
       if (gen !== connectGen) return;
       handleMsg(JSON.parse(e.data));
     });
-
     ws.addEventListener('close', () => {
       if (gen !== connectGen) return;
       if (myUsername) {
@@ -546,28 +427,24 @@
         setTimeout(connect, 2000);
       }
     });
-
     ws.addEventListener('error', () => ws.close());
   }
 
   function send(msg) { if (ws && ws.readyState === 1) ws.send(JSON.stringify(msg)); }
 
-  // ── Message handler ───────────────────────────────────────────────────────
+  // ── Message handler ───────────────────────────────────────────────────
   function handleMsg(msg) {
     switch (msg.type) {
-
       case 'CONNECTED':
         document.getElementById('reconnecting').classList.remove('show');
         break;
-
       case 'JOIN_OK':
-        myUsername  = msg.username;
-        isAdmin     = msg.isAdmin;
+        myUsername = msg.username;
+        isAdmin    = msg.isAdmin;
         sessionStorage.setItem(storageKey, myUsername);
         loadQR();
         updateJoinUrl();
         break;
-
       case 'LOBBY_UPDATE':
         lobbyState = msg;
         renderPlayers(msg);
@@ -575,46 +452,38 @@
         renderVoteStatus(msg);
         updateStartSection(msg);
         break;
-
       case 'ADMIN_CHANGED':
         isAdmin = (msg.newAdmin === myUsername);
         updateStartSection(lobbyState);
         break;
-
       case 'MINI_GAME_STARTING':
+        GNSound.whoosh();
+        GN.haptic('heavy');
         window.location.href = msg.url;
         break;
-
       case 'PLAYER_REMOVED':
         if (msg.username === myUsername) {
           sessionStorage.removeItem(storageKey);
           window.location.href = '/?removed=1';
         }
         break;
-
       case 'ERROR':
-        if (msg.code === 'ROOM_NOT_FOUND') {
-          window.location.href = '/';
-        } else {
-          console.error('Server error:', msg.code, msg.message);
-        }
+        if (msg.code === 'ROOM_NOT_FOUND') window.location.href = '/';
         break;
-
       case 'RESTARTED':
-        // Admin sent return to lobby — already here, just reset ready state
         isReady = false;
         renderReadyBtn();
         break;
     }
   }
 
-  // ── Render players ────────────────────────────────────────────────────────
+  // ── Render players ────────────────────────────────────────────────────
   function renderPlayers(state) {
     const list = document.getElementById('player-list');
     document.getElementById('player-count').textContent = state.totalCount;
 
     if (state.players.length === 0) {
-      list.innerHTML = '<span style="color:#555;font-style:italic;font-size:0.85rem;">Waiting for players…</span>';
+      list.innerHTML = '<span class="empty-state">Waiting for players...</span>';
       return;
     }
 
@@ -625,12 +494,12 @@
         (p.username === myUsername ? ' me' : '') +
         (p.isAdmin ? ' admin-chip' : '');
       chip.innerHTML =
-        `<span class="pc-avatar">${esc(p.avatar || '🙂')}</span>` +
-        `<span class="pc-name">${esc(p.username)}</span>` +
+        `<span class="pc-avatar">${GN.esc(p.avatar || '🙂')}</span>` +
+        `<span class="pc-name">${GN.esc(p.username)}</span>` +
         (p.isAdmin ? `<span class="pc-crown">👑</span>` : '') +
-        `<span class="pc-ready">${p.isReady ? '✅' : '🟡'}</span>` +
+        `<span class="pc-ready">${p.isReady ? '✅' : '⏳'}</span>` +
         `<button class="pc-remove${isAdmin && p.username !== myUsername ? ' visible' : ''}"
-          data-name="${esc(p.username)}" title="Remove">✕</button>`;
+          data-name="${GN.esc(p.username)}" title="Remove">✕</button>`;
       list.appendChild(chip);
     }
 
@@ -641,50 +510,43 @@
     });
   }
 
-  // ── Render game grid ──────────────────────────────────────────────────────
+  // ── Render game grid ──────────────────────────────────────────────────
   function renderGameGrid(state) {
     const grid = document.getElementById('game-grid');
     grid.innerHTML = '';
-
     for (const tile of GAME_TILES) {
       const votes = state.gameSuggestions[tile.type] || 0;
       const isMine = myVote === tile.type;
-
       const div = document.createElement('div');
-      div.className = 'game-tile' +
-        (isMine ? ' my-vote' : '') +
-        (tile.available ? ' available' : '');
-
+      div.className = 'game-tile' + (isMine ? ' my-vote' : '');
       div.innerHTML =
         `<span class="tile-emoji">${tile.emoji}</span>` +
         `<span class="tile-label">${tile.label}</span>` +
-        (tile.available ? '' : `<span class="tile-coming">Coming soon</span>`) +
         (votes > 0 ? `<span class="tile-votes">▲ ${votes}</span>` : '');
-
       if (tile.available) {
         div.addEventListener('click', () => {
           myVote = tile.type;
+          GNSound.select();
+          GN.haptic('light');
           send({ type: 'SUGGEST_GAME', gameType: tile.type });
           renderGameGrid(lobbyState || state);
           updateStartSection(lobbyState || state);
         });
       }
-
       grid.appendChild(div);
     }
   }
 
-  // ── Render vote status ────────────────────────────────────────────────────
+  // ── Render vote status ────────────────────────────────────────────────
   function renderVoteStatus(state) {
     const el = document.getElementById('vote-status-msg');
     if (state.totalCount === 0) { el.textContent = ''; return; }
-
     const readyCount = state.readyCount || 0;
     if (state.allReady) {
-      el.textContent = `✅ All ${state.totalCount} players ready`;
+      el.textContent = `All ${state.totalCount} players ready`;
       el.className = 'all-voted';
     } else if (readyCount > 0) {
-      el.textContent = `⏳ ${readyCount} / ${state.totalCount} ready`;
+      el.textContent = `${readyCount} / ${state.totalCount} ready`;
       el.className = '';
     } else {
       el.textContent = '';
@@ -692,46 +554,45 @@
     }
   }
 
-  // ── Ready button ──────────────────────────────────────────────────────────
+  // ── Ready button ──────────────────────────────────────────────────────
   const readyBtn = document.getElementById('ready-btn');
   readyBtn.addEventListener('click', () => {
     isReady = !isReady;
+    if (isReady) { GNSound.ready(); GN.haptic('success'); }
+    else { GNSound.tick(); GN.haptic('light'); }
     send({ type: 'SET_READY', ready: isReady });
     renderReadyBtn();
   });
 
   function renderReadyBtn() {
-    readyBtn.textContent = isReady ? '✅ Ready!' : "✅ I'm Ready";
+    readyBtn.textContent = isReady ? 'Ready!' : "I'm Ready";
     readyBtn.classList.toggle('ready', isReady);
   }
 
-  // ── Start section (admin only) ────────────────────────────────────────────
+  // ── Start section ─────────────────────────────────────────────────────
   function updateStartSection(state) {
     if (!state) return;
     const section = document.getElementById('start-section');
     if (!isAdmin) { section.classList.remove('visible'); return; }
     section.classList.add('visible');
-
-    // Show difficulty/question count only for quiz; deck count only for shithead
     const isQuiz     = myVote === 'quiz';
     const isShithead = myVote === 'shithead';
     document.getElementById('difficulty-row').style.display  = isQuiz     ? '' : 'none';
     document.getElementById('questions-row').style.display   = isQuiz     ? '' : 'none';
     document.getElementById('deck-count-row').style.display  = isShithead ? '' : 'none';
-
-    // Start btn enabled when all players ready + someone voted a game
     const hasGame  = !!myVote;
     const allReady = state.allReady;
     const canStart = state.totalCount > 0 && allReady && hasGame;
     document.getElementById('start-btn').disabled = !canStart;
   }
 
-  // ── Settings pickers ──────────────────────────────────────────────────────
+  // ── Settings pickers ──────────────────────────────────────────────────
   document.querySelectorAll('.diff-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       document.querySelectorAll('.diff-btn').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
       selectedDifficulty = btn.dataset.diff;
+      GNSound.tick();
     });
   });
   document.querySelectorAll('.q-btn').forEach(btn => {
@@ -739,25 +600,27 @@
       document.querySelectorAll('.q-btn').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
       selectedQuestionCount = Number(btn.dataset.count);
+      GNSound.tick();
     });
   });
-
   document.querySelectorAll('.deck-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       document.querySelectorAll('.deck-btn').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
       selectedDeckCount = Number(btn.dataset.decks);
+      GNSound.tick();
     });
   });
 
-  // ── Start button ──────────────────────────────────────────────────────────
+  // ── Start button ──────────────────────────────────────────────────────
   document.getElementById('start-btn').addEventListener('click', () => {
     if (!myVote) return;
+    GNSound.countdownFinal();
+    GN.haptic('heavy');
     if (myVote === 'shithead') {
       send({ type: 'START_MINI_GAME', gameType: 'shithead', deckCount: selectedDeckCount });
       return;
     }
-    // For quiz, gather all category IDs
     fetch('/api/categories').then(r => r.json()).then(cats => {
       send({
         type: 'START_MINI_GAME',
@@ -777,7 +640,7 @@
     });
   });
 
-  // ── QR / Join URL ─────────────────────────────────────────────────────────
+  // ── QR / Join URL ─────────────────────────────────────────────────────
   async function loadQR() {
     try {
       const res  = await fetch(`/api/qr?room=${roomCode}`);
@@ -797,17 +660,11 @@
     try {
       await navigator.clipboard.writeText(url);
       const btn = document.getElementById('copy-qr-btn');
-      btn.textContent = '✅ Copied!';
-      setTimeout(() => { btn.textContent = '📋 Copy'; }, 2000);
+      btn.textContent = 'Copied!';
+      GNSound.pop();
+      setTimeout(() => { btn.textContent = 'Copy'; }, 2000);
     } catch (e) { /* unavailable */ }
   });
-
-  // ── Helpers ───────────────────────────────────────────────────────────────
-  function esc(str) {
-    const d = document.createElement('div');
-    d.textContent = str;
-    return d.innerHTML;
-  }
 
   updateJoinUrl();
 </script>

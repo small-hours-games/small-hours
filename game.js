@@ -59,7 +59,11 @@ class Game {
       return { ok: false, code: 'INVALID_USERNAME', message: 'Username must be 1–20 characters.' };
     }
 
-    this.players.set(username, { ws, score: 0, rank: null, prevRank: null, answered: false, streak: 0, lastAnswerTime: null });
+    this.players.set(username, {
+      ws, score: 0, rank: null, prevRank: null, answered: false, streak: 0, lastAnswerTime: null,
+      powerups: { doublePoints: 1, fiftyFifty: 1, timeFreeze: 1 },
+      activePowerup: null, // currently active powerup for this question
+    });
     this._broadcastPlayerList();
     return { ok: true };
   }
@@ -223,6 +227,7 @@ class Game {
       player.lastAnswer = null;
       player.lastDelta = 0;
       player.lastAnswerTime = null;
+      player.activePowerup = null;
     }
 
     this.state = STATE.QUESTION_ACTIVE;
@@ -265,7 +270,8 @@ class Game {
     const timeFraction = Math.max(0, 1 - elapsed / (q.timeLimit * 1000));
     const isCorrect = answerId === q.correctId;
     const scoreMult = q.scoreMult || 1;
-    const delta = isCorrect ? Math.round(1000 * (0.5 + 0.5 * timeFraction) * scoreMult) : 0;
+    const powerupMult = (player.activePowerup === 'doublePoints') ? 2 : 1;
+    const delta = isCorrect ? Math.round(1000 * (0.5 + 0.5 * timeFraction) * scoreMult * powerupMult) : 0;
     player.score += delta;
     player.lastDelta = delta;
     player.lastAnswerTime = parseFloat((elapsed / 1000).toFixed(1));
@@ -363,6 +369,8 @@ class Game {
         streak: p.streak || 0,
         answerTime: p.lastAnswerTime,
         answer: p.lastAnswer || null,
+        activePowerup: p.activePowerup || null,
+        powerups: p.powerups ? { ...p.powerups } : null,
       }));
   }
 
@@ -425,6 +433,92 @@ class Game {
     markQuestionsUsed(this.questions);
     this.currentIdx = -1;
     this._startCountdown();
+  }
+
+  // ─── Power-ups ─────────────────────────────────────────────────────────────
+
+  usePowerup(ws, powerupType) {
+    if (this.state !== STATE.QUESTION_ACTIVE) return { ok: false };
+
+    let username = null;
+    let player = null;
+    for (const [name, p] of this.players.entries()) {
+      if (p.ws === ws) { username = name; player = p; break; }
+    }
+    if (!player) return { ok: false };
+
+    const validTypes = ['doublePoints', 'fiftyFifty', 'timeFreeze'];
+    if (!validTypes.includes(powerupType)) return { ok: false };
+    if (!player.powerups || !player.powerups[powerupType] || player.powerups[powerupType] <= 0) {
+      return { ok: false, code: 'NO_POWERUP', message: 'No uses remaining.' };
+    }
+    if (player.activePowerup) {
+      return { ok: false, code: 'ALREADY_ACTIVE', message: 'Already using a power-up.' };
+    }
+    if (player.answered) {
+      return { ok: false, code: 'ALREADY_ANSWERED', message: 'Already answered.' };
+    }
+
+    player.powerups[powerupType]--;
+    player.activePowerup = powerupType;
+
+    const q = this.questions[this.currentIdx];
+
+    if (powerupType === 'fiftyFifty') {
+      const wrongAnswers = q.answers.filter(a => a.id !== q.correctId);
+      const toRemove = wrongAnswers.sort(() => Math.random() - 0.5).slice(0, 2);
+      const removedIds = toRemove.map(a => a.id);
+
+      if (ws.readyState === 1) {
+        ws.send(JSON.stringify({
+          type: 'POWERUP_ACTIVATED',
+          powerupType: 'fiftyFifty',
+          removedAnswers: removedIds,
+          remaining: { ...player.powerups },
+        }));
+      }
+      this._broadcast({
+        type: 'POWERUP_USED',
+        username,
+        powerupType: 'fiftyFifty',
+      });
+      return { ok: true };
+    }
+
+    if (powerupType === 'timeFreeze') {
+      if (ws.readyState === 1) {
+        ws.send(JSON.stringify({
+          type: 'POWERUP_ACTIVATED',
+          powerupType: 'timeFreeze',
+          extraTime: 10,
+          remaining: { ...player.powerups },
+        }));
+      }
+      this._broadcast({
+        type: 'POWERUP_USED',
+        username,
+        powerupType: 'timeFreeze',
+      });
+      return { ok: true };
+    }
+
+    if (powerupType === 'doublePoints') {
+      if (ws.readyState === 1) {
+        ws.send(JSON.stringify({
+          type: 'POWERUP_ACTIVATED',
+          powerupType: 'doublePoints',
+          remaining: { ...player.powerups },
+        }));
+      }
+      this._broadcast({
+        type: 'POWERUP_USED',
+        username,
+        powerupType: 'doublePoints',
+      });
+      return { ok: true };
+    }
+
+    return { ok: false };
   }
 
   // ─── Helpers ───────────────────────────────────────────────────────────────

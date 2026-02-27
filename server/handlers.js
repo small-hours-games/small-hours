@@ -296,6 +296,16 @@ function handleMessage(ws, role, msg, room) {
       if (room.game) room.game.receiveAnswer(ws, msg.questionId, msg.answerId);
       break;
 
+    case 'USE_POWERUP': {
+      if (room.game && msg.powerupType) {
+        const result = room.game.usePowerup(ws, msg.powerupType);
+        if (!result.ok && result.code) {
+          sendTo(ws, { type: 'ERROR', code: result.code, message: result.message });
+        }
+      }
+      break;
+    }
+
     case 'SKIP': {
       const username = room.wsToUsername.get(ws);
       if (username !== room.adminUsername) break;

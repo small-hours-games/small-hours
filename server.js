@@ -70,6 +70,13 @@ function rateLimit(maxReq, windowMs) {
     next();
   };
 }
+// Periodic cleanup to prevent memory leak from abandoned IPs
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, entry] of rateLimitMap) {
+    if (now - entry.start > 120_000) rateLimitMap.delete(key);
+  }
+}, 60_000);
 const pageRateLimit = rateLimit(120, 60 * 1000);
 
 // ─── New routes (before static) ─────────────────────────────────────────────

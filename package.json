@@ -13,10 +13,9 @@
     "include": [
       "game.js",
       "local-db.js",
-      "players.js",
       "questions.js",
-      "rooms.js",
       "server.js",
+      "server/*.js",
       "shithead.js",
       "translator.js"
     ],
