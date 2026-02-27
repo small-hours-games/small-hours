@@ -164,17 +164,18 @@ function handleMessage(ws, role, msg, room) {
       }
       const result = room.game.addPlayer(ws, username);
 
-      // Reconnect to in-progress shithead game
-      if (room.activeMiniGame === 'shithead' && room.shitheadGame) {
-        room.shitheadGame.addPlayer(ws, username);
-      }
-
       const isAdmin = username === room.adminUsername;
       const gameRunning = !!(room.game && room.game.state !== 'LOBBY');
       sendTo(ws, { type: 'JOIN_OK', username, isAdmin, roomCode: room.code, avatar, lang: room.language, gameRunning });
 
       if (!result.ok) {
         sendTo(ws, { type: 'ERROR', code: result.code, message: result.message });
+      }
+
+      // Reconnect to in-progress shithead game (must be after JOIN_OK so that
+      // SHITHEAD_GAME_STATE arrives after JOIN_OK and is not overwritten by it)
+      if (room.activeMiniGame === 'shithead' && room.shitheadGame) {
+        room.shitheadGame.addPlayer(ws, username);
       }
 
       broadcastLobbyUpdate(room);
