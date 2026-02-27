@@ -152,6 +152,7 @@
     }
     .tile-emoji { font-size: 2rem; }
     .tile-label { font-size: 0.92rem; font-weight: 700; }
+    .tile-min { font-size: 0.7rem; color: var(--text-dim); }
     .tile-votes {
       display: flex; align-items: center; gap: 0.2rem;
       background: rgba(255,137,6,0.2);
@@ -373,9 +374,9 @@
 <script src="/shared/utils.js"></script>
 <script>
   const GAME_TILES = [
-    { type: 'quiz',     emoji: '🧠', label: 'Quiz',     available: true },
-    { type: 'shithead', emoji: '🃏', label: 'Shithead', available: true },
-    { type: 'cah',      emoji: '🖤', label: 'Cards against Humanity', available: true },
+    { type: 'quiz',     emoji: '🧠', label: 'Quiz',                   available: true },
+    { type: 'shithead', emoji: '🃏', label: 'Shithead',               available: true, minPlayers: 2 },
+    { type: 'cah',      emoji: '🖤', label: 'Cards against Humanity', available: true, minPlayers: 3 },
   ];
 
   const roomCode    = GN.getRoomCode();
@@ -531,6 +532,7 @@
       div.innerHTML =
         `<span class="tile-emoji">${tile.emoji}</span>` +
         `<span class="tile-label">${tile.label}</span>` +
+        (tile.minPlayers ? `<span class="tile-min">Min: ${tile.minPlayers} players</span>` : '') +
         (votes > 0 ? `<span class="tile-votes">▲ ${votes}</span>` : '');
       if (tile.available) {
         div.addEventListener('click', () => {

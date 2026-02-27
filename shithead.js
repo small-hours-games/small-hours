@@ -243,8 +243,8 @@ class ShitheadGame {
       this._sendTo(ws, { type: 'SHITHEAD_ERROR', code: 'GAME_IN_PROGRESS', message: 'Game already in progress.' });
       return;
     }
-    if (this.players.size >= 4) {
-      this._sendTo(ws, { type: 'SHITHEAD_ERROR', code: 'ROOM_FULL', message: 'Room full (max 4 players).' });
+    if (this.players.size >= 6) {
+      this._sendTo(ws, { type: 'SHITHEAD_ERROR', code: 'ROOM_FULL', message: 'Room full (max 6 players).' });
       return;
     }
     this.players.set(username, {
