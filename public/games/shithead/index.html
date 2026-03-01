@@ -274,7 +274,18 @@
     }
 
     /* ── Opponents ── */
-    #opponents-list { display: flex; flex-direction: column; gap: 0.5rem; width: 100%; }
+    #opponents-list {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      grid-template-rows: 1fr 1fr;
+      gap: 0.75rem;
+      position: fixed;
+      inset: 0.5rem;
+      width: calc(100% - 1rem);
+      height: calc(100% - 1rem);
+      pointer-events: none;
+      z-index: 10;
+    }
     .opponent-row {
       background: var(--card);
       backdrop-filter: blur(12px);
@@ -286,12 +297,26 @@
       flex-direction: column;
       gap: 0.4rem;
       box-shadow: var(--shadow-card);
-      transition: border-color 0.2s;
+      transition: border-color 0.2s, background-color 0.2s;
+      pointer-events: auto;
+      width: fit-content;
+      max-width: 150px;
     }
+    .opponent-row:nth-child(1) { justify-self: start; align-self: start; }
+    .opponent-row:nth-child(2) { justify-self: end; align-self: start; }
+    .opponent-row:nth-child(3) { justify-self: start; align-self: end; }
+    .opponent-row:nth-child(4) { justify-self: end; align-self: end; }
     .opponent-row.is-current {
       border-color: var(--accent);
       box-shadow: 0 0 0 1px var(--accent), var(--shadow-card);
     }
+    .opponent-row.last-card-warn {
+      border-color: var(--wrong);
+      background: rgba(229,49,112,0.08);
+      box-shadow: 0 0 0 1px var(--wrong), var(--shadow-card);
+      animation: warnPulse 1.2s ease-in-out infinite;
+    }
+    @keyframes warnPulse { 0%,100% { border-color: var(--wrong); } 50% { border-color: rgba(229,49,112,0.7); } }
     .opponent-row.finished { opacity: 0.42; }
     .opp-header { display: flex; align-items: center; gap: 0.5rem; }
     .opp-avatar { font-size: 1.1rem; flex-shrink: 0; }
@@ -312,18 +337,39 @@
       color: var(--correct);
       border: 1px solid rgba(44,182,125,0.3);
     }
-    .opponent-cards { display: flex; flex-wrap: wrap; gap: 0.35rem; align-items: center; }
+    .opponent-cards {
+      display: flex;
+      align-items: center;
+      gap: 0.2rem;
+      min-height: 54px;
+      position: relative;
+    }
     .opp-card {
-      width: 38px; height: 54px;
+      width: 36px; height: 52px;
       background: #fff;
       border-radius: 6px;
       display: flex; flex-direction: column;
       align-items: center; justify-content: center;
-      font-size: 0.72rem; font-weight: 900; line-height: 1.15;
+      font-size: 0.68rem; font-weight: 900; line-height: 1.15;
       box-shadow: 0 1px 4px rgba(0,0,0,0.35);
+      position: relative;
+      flex-shrink: 0;
     }
     .opp-card.red-card { color: #c00; }
     .opp-card.black-card { color: #111; }
+    /* Stacked card effect */
+    .opponent-cards .opp-card:not(:first-child) {
+      margin-left: -18px;
+    }
+    .opponent-cards .opp-card:nth-child(2) {
+      transform: translateY(3px) rotate(1.5deg);
+    }
+    .opponent-cards .opp-card:nth-child(3) {
+      transform: translateY(6px) rotate(-1.5deg);
+    }
+    .opponent-cards .opp-card:nth-child(n+4) {
+      transform: translateY(9px);
+    }
     .opp-hand-chip {
       display: flex; align-items: center; gap: 0.3rem;
       padding: 0.25rem 0.55rem;
@@ -665,21 +711,25 @@
     const label = document.getElementById('opponents-label');
     const list  = document.getElementById('opponents-list');
     if (opponents.length === 0) { label.style.display = 'none'; list.innerHTML = ''; return; }
-    label.style.display = '';
+    label.style.display = 'none'; // Hide label, opponents now in corners
     const cur = turnInfo ? turnInfo.currentPlayer : gameState.currentPlayer;
     list.innerHTML = opponents.map(p => {
       const isCurrent = p.username === cur;
       const avatar    = GN.nameToAvatar(p.username);
+      const hasHand = (p.handCount || 0) > 0;
+      const faceDownCount = p.faceDownCount || 0;
+      const isLastCard = !hasHand && faceDownCount > 0;
+
       const faceUpHtml = (p.faceUp || []).map(c =>
         `<div class="opp-card ${isRed(c) ? 'red-card' : 'black-card'}"><span>${c.name}</span><span>${c.suit}</span></div>`
       ).join('');
-      const faceDownHtml = Array.from({ length: p.faceDownCount || 0 }, () => '<div class="opp-face-down"></div>').join('');
-      const handHtml = p.handCount > 0
+      const faceDownHtml = Array.from({ length: faceDownCount }, () => '<div class="opp-face-down"></div>').join('');
+      const handHtml = hasHand
         ? `<div class="opp-hand-chip">✋ ${p.handCount}</div>` : '';
       const badge = isCurrent
         ? `<span class="opp-badge">🎯 Playing</span>`
-        : (p.hasFinished ? `<span class="opp-finished-badge">✅ Done</span>` : '');
-      const classes = ['opponent-row', isCurrent && 'is-current', p.hasFinished && 'finished'].filter(Boolean).join(' ');
+        : (isLastCard ? `<span class="opp-badge">⚠️ Last</span>` : (p.hasFinished ? `<span class="opp-finished-badge">✅ Done</span>` : ''));
+      const classes = ['opponent-row', isCurrent && 'is-current', p.hasFinished && 'finished', isLastCard && 'last-card-warn'].filter(Boolean).join(' ');
       return `<div class="${classes}">
         <div class="opp-header">
           <span class="opp-avatar">${avatar}</span>
