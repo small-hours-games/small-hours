@@ -80,6 +80,37 @@
     }
     .pile-label { font-size: 0.72rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.09em; font-weight: 700; }
 
+    .pile-section {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.35rem;
+    }
+    .deck-stack {
+      width: 80px; height: 120px;
+      position: relative;
+    }
+    .deck-back {
+      position: absolute;
+      width: 76px; height: 116px;
+      background: linear-gradient(135deg, #2d2a7c, #1a1760);
+      border-radius: 8px;
+      border: 2px solid rgba(255,255,255,0.18);
+      box-shadow: 0 3px 10px rgba(0,0,0,0.5);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.6rem;
+    }
+    .deck-back:nth-child(1) { transform: translate(-3px, -3px); opacity: 0.55; }
+    .deck-back:nth-child(2) { transform: translate(-1.5px, -1.5px); opacity: 0.75; }
+    .deck-back:nth-child(3) { transform: translate(0, 0); }
+    .deck-stack.empty .deck-back { opacity: 0.2; }
+    .pile-sep {
+      width: 1px; height: 80px;
+      background: rgba(255,255,255,0.08);
+      align-self: center;
+    }
+    .pile-count { font-size: 0.8rem; color: var(--text-dim); font-weight: 600; text-align: center; }
+
     /* ── Playing cards ── */
     .play-card {
       width: 56px; height: 80px;
@@ -532,13 +563,20 @@
 <!-- PLAYING -->
 <div id="playing" class="screen">
   <div class="pile-info">
-    <div>
+    <div class="pile-section">
+      <div class="pile-label">Deck</div>
+      <div class="deck-stack" id="deck-stack">
+        <div class="deck-back"></div>
+        <div class="deck-back"></div>
+        <div class="deck-back">🂠</div>
+      </div>
+      <div id="deck-count-label" class="pile-count">– cards</div>
+    </div>
+    <div class="pile-sep"></div>
+    <div class="pile-section">
       <div class="pile-label">Pile</div>
       <div class="pile-top-card empty" id="pile-display">Empty</div>
-    </div>
-    <div class="pile-stats">
-      <div id="pile-count-label">0 cards in pile</div>
-      <div id="deck-count-label" style="margin-top:.25rem;">– in deck</div>
+      <div id="pile-count-label" class="pile-count">0 cards</div>
     </div>
   </div>
 
@@ -765,9 +803,11 @@
     const sevenActive = turnInfo ? turnInfo.sevenActive : false;
     document.getElementById('seven-warn').style.display = sevenActive ? '' : 'none';
     document.getElementById('pile-count-label').textContent =
-      (gameState.pileSize || 0) + ' cards in pile';
+      (gameState.pileSize || 0) + ' cards';
     document.getElementById('deck-count-label').textContent =
-      (gameState.deckSize || 0) + ' in deck';
+      (gameState.deckSize || 0) + ' cards';
+    const deckStack = document.getElementById('deck-stack');
+    if (deckStack) deckStack.classList.toggle('empty', (gameState.deckSize || 0) === 0);
 
     const banner = document.getElementById('turn-banner');
     if (myTurn) {
