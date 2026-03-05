@@ -103,6 +103,8 @@ app.get('/group/:code/display',  pageRateLimit, serveFile('public/group/display.
 app.get('/group/:code/quiz',     pageRateLimit, serveFile('public/games/quiz/index.html'));
 app.get('/group/:code/shithead', pageRateLimit, serveFile('public/games/shithead/index.html'));
 app.get('/group/:code/cah',      pageRateLimit, serveFile('public/games/cah/index.html'));
+app.get('/group/:code/spy',      pageRateLimit, serveFile('games/spy/public/index.html'));
+app.get('/group/:code/spy/display', pageRateLimit, serveFile('games/spy/public/display.html'));
 app.get('/rules',                pageRateLimit, serveFile('public/rules.html'));
 
 // Compat redirects
