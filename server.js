@@ -17,6 +17,9 @@ const { rooms, generateRoomCode, createRoom, buildLobbyState } = require('./serv
 const { broadcastAll, broadcastToDisplays, sendTo, broadcastLobbyUpdate, broadcastVoteUpdate } = require('./server/broadcast');
 const { handleMessage, handlePlayerDisconnect, maybeCleanupRoom } = require('./server/handlers');
 
+// ─── Load game modules ──────────────────────────────────────────────────────
+const spyGame = require('./games/spy/server');
+
 const PORT = process.env.PORT || 3000;
 
 // Load TLS cert if available (enables HTTPS for iOS Safari compatibility)
@@ -79,6 +82,16 @@ setInterval(() => {
 }, 60_000);
 const pageRateLimit = rateLimit(120, 60 * 1000);
 
+// ─── Game handlers and routes ───────────────────────────────────────────────
+
+// Map of message type → handler function (loaded from game modules)
+const wsHandlers = {};
+
+// Register handlers from game modules
+for (const [msgType, handler] of Object.entries(spyGame.handlers)) {
+  wsHandlers[msgType] = handler;
+}
+
 // ─── New routes (before static) ─────────────────────────────────────────────
 
 function serveFile(rel) {
@@ -110,6 +123,9 @@ app.post('/api/rooms', (req, res) => {
 app.get('/api/rooms/:code', (req, res) => {
   res.json({ exists: rooms.has(req.params.code.toUpperCase()) });
 });
+
+// Game-specific public files
+app.use('/games/spy', express.static(path.join(__dirname, 'games/spy/public')));
 
 // Static files (serves public/index.html for /, etc.)
 app.use(express.static(path.join(__dirname, 'public')));
@@ -166,6 +182,14 @@ app.post('/api/db/download', (req, res) => {
   downloadDatabase().catch(console.error);
   res.json({ ok: true, message: 'Download started.' });
 });
+
+// Register game-specific API routes
+for (const [path, handler] of Object.entries(spyGame.routes)) {
+  app.get(path, (req, res) => {
+    const roomCode = req.params.code || req.query.room;
+    handler(req, res, roomCode);
+  });
+}
 
 // ─── HTTPS or HTTP server ────────────────────────────────────────────────────
 
