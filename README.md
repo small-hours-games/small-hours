@@ -1,31 +1,8 @@
-<div align="center">
-
-![Small Hours Games](ece9bd90-5d5a-4249-b861-a406d12a7ecf.png)
-
 # Small Hours Games - Quiz Trivia
-
-**A collection of local multiplayer party games for gatherings and sofa gaming**
-
-[![GitHub](https://img.shields.io/badge/Organization-small--hours--games-blue?logo=github)](https://github.com/small-hours-games)
-[![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
-
-</div>
 
 A self-hosted multiplayer trivia game for local network parties. Players join from their phones, a host controls the game from a browser.
 
-> **Part of [Small Hours Games](https://github.com/small-hours-games)** — A collection of local multiplayer party games designed for get-togethers and sofa-style gaming.
-
-## About Small Hours Games
-
-Small Hours Games is a collection of local multiplayer party games optimized for:
-- 🎮 Local network play (no internet required)
-- 📱 Phone/browser clients (no app install)
-- 🎯 Get-togethers, parties, and casual gaming
-- 🏠 Sofa-style gaming experiences
-
-**Current Games:**
-- 🎯 **Quiz Trivia** — Real-time multiplayer trivia game
-- 🃏 **Shithead** — Fast-paced card game (in development)
+> Part of the [Small Hours Games](https://github.com/small-hours-games) collection of local multiplayer party games.
 
 ## Features
 
@@ -34,7 +11,6 @@ Small Hours Games is a collection of local multiplayer party games optimized for
 - Questions from Open Trivia DB with local cache
 - Optional HTTPS for iOS Safari compatibility
 - Docker support
-- Responsive design for all screen sizes
 
 ## Quick Start
 
@@ -99,15 +75,3 @@ All files   |   ...   |   ...    |   ...   |   ...   |
 A detailed HTML report is written to `coverage/index.html` and an LCOV report
 to `coverage/lcov.info` (suitable for uploading to coverage services such as
 Codecov or Coveralls).
-
-## Organization
-
-This project is part of **[Small Hours Games](https://github.com/small-hours-games)**.
-
-- **Organization**: https://github.com/small-hours-games
-- **Repository**: https://github.com/small-hours-games/small-hours
-- **Live Demo**: https://quiz.aldervall.se
-
-## License
-
-MIT - Feel free to use, modify, and deploy for your own gatherings!
