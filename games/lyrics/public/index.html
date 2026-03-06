@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Game Night — Lyrics Quiz</title>
+  <link rel="stylesheet" href="/shared/theme.css">
+  <style>
+    body {
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      padding: 1.5rem; gap: 1rem; min-height: 100vh;
+    }
+
+    .screen { display: none; flex-direction: column; align-items: center; width: 100%; max-width: 440px; gap: 1rem; }
+    .screen.active { display: flex; animation: fadeIn 0.22s ease-out both; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* ── WAITING ── */
+    #waiting { text-align: center; gap: 1.5rem; }
+    #waiting .big-emoji { font-size: 4rem; animation: float 3s ease-in-out infinite; }
+    @keyframes float { 0%,100% { transform:translateY(0); } 50% { transform:translateY(-8px); } }
+    #waiting h2 { font-size: 1.5rem; font-weight: 800; }
+    #waiting p { color: var(--text-dim); }
+
+    /* ── COUNTDOWN ── */
+    #countdown { text-align: center; gap: 1rem; }
+    #countdown h2 { font-size: 1.3rem; font-weight: 800; }
+    .countdown-number { font-size: 5rem; font-weight: 900; color: var(--neon); }
+
+    /* ── QUESTION ── */
+    #question { gap: 0.75rem; width: 100%; }
+    .q-header { display: flex; justify-content: space-between; align-items: center; width: 100%; }
+    .q-number { font-size: 0.8rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.08em; }
+    .q-timer { font-size: 1.8rem; font-weight: 900; color: var(--neon); min-width: 50px; text-align: right; }
+    .q-timer.warning { color: #ff6b6b; animation: pulse 0.6s ease-in-out infinite; }
+    @keyframes pulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.08); } }
+
+    .song-title { font-size: 0.75rem; color: var(--text-muted); text-align: center; font-style: italic; }
+
+    .prompt-box {
+      background: linear-gradient(135deg, rgba(127, 90, 240, 0.15), rgba(0, 234, 255, 0.08));
+      border: 2px solid var(--neon2);
+      border-radius: var(--radius-lg);
+      padding: 1rem 1.2rem;
+      text-align: center;
+      box-shadow: 0 0 20px var(--neon2-glow);
+    }
+    .prompt-label { font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.12em; color: var(--text-muted); margin-bottom: 0.4rem; }
+    .prompt-text { font-size: 1.05rem; font-weight: 700; color: var(--text); line-height: 1.4; }
+
+    .what-next { font-size: 0.85rem; font-weight: 800; color: var(--accent); text-align: center; margin: 0.25rem 0; }
+
+    .answers { display: flex; flex-direction: column; gap: 0.5rem; width: 100%; }
+    .ans-btn {
+      width: 100%; padding: 0.85rem 1rem;
+      border: 2px solid rgba(255,255,255,0.08);
+      border-radius: var(--radius-md);
+      background: rgba(255,255,255,0.04);
+      color: var(--text); font-size: 0.9rem; font-weight: 600;
+      text-align: left; cursor: pointer;
+      transition: all 0.15s; display: flex; align-items: center; gap: 0.6rem;
+    }
+    .ans-btn:active { transform: scale(0.98); }
+    .ans-btn .ans-letter {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 28px; height: 28px; border-radius: 6px;
+      font-weight: 900; font-size: 0.8rem; flex-shrink: 0;
+    }
+    .ans-btn[data-id="A"] .ans-letter { background: var(--ans-red); }
+    .ans-btn[data-id="B"] .ans-letter { background: var(--ans-blue); }
+    .ans-btn[data-id="C"] .ans-letter { background: var(--ans-yellow); color: #222; }
+    .ans-btn[data-id="D"] .ans-letter { background: var(--ans-green); }
+
+    .ans-btn.selected { border-color: var(--accent); background: rgba(255,137,6,0.12); box-shadow: 0 0 15px var(--accent-glow); }
+    .ans-btn.correct { border-color: #44ff44; background: rgba(68,255,68,0.15); box-shadow: 0 0 15px rgba(68,255,68,0.3); }
+    .ans-btn.wrong { border-color: #ff4444; background: rgba(255,68,68,0.1); opacity: 0.6; }
+    .ans-btn:disabled { cursor: default; }
+
+    /* ── REVEAL ── */
+    #reveal { text-align: center; gap: 1rem; width: 100%; }
+    #reveal h2 { font-size: 1.2rem; font-weight: 800; }
+    .correct-line {
+      font-size: 1rem; font-weight: 700; padding: 0.75rem 1rem;
+      background: rgba(68,255,68,0.1); border: 1px solid rgba(68,255,68,0.3);
+      border-radius: var(--radius-md); color: #44ff44;
+    }
+    .score-delta { font-size: 1.5rem; font-weight: 900; }
+    .score-delta.positive { color: #44ff44; }
+    .score-delta.zero { color: var(--text-muted); }
+
+    /* ── SCORES ── */
+    .scores-list { display: flex; flex-direction: column; gap: 0.4rem; width: 100%; }
+    .score-row {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0.5rem 0.75rem; background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.05); border-radius: var(--radius-md);
+    }
+    .score-row.me { border-color: var(--accent); background: rgba(255,137,6,0.08); }
+    .score-row .rank { font-size: 0.85rem; font-weight: 900; color: var(--gold, #ffd700); min-width: 30px; }
+    .score-row .name { flex: 1; margin-left: 0.5rem; font-weight: 600; font-size: 0.9rem; }
+    .score-row .pts { font-weight: 900; color: var(--neon); font-size: 1rem; }
+    .score-row .delta { font-size: 0.75rem; font-weight: 700; margin-left: 0.4rem; }
+    .score-row .delta.pos { color: #44ff44; }
+
+    /* ── GAME OVER ── */
+    #gameover { text-align: center; gap: 1rem; width: 100%; }
+    #gameover h2 { font-size: 1.5rem; font-weight: 900; }
+    .winner-crown { font-size: 3rem; }
+  </style>
+</head>
+<body>
+
+  <!-- WAITING -->
+  <div id="waiting" class="screen active">
+    <div class="big-emoji">🎵</div>
+    <h2>Lyrics Quiz</h2>
+    <p>Waiting for the game to start...</p>
+  </div>
+
+  <!-- COUNTDOWN -->
+  <div id="countdown" class="screen">
+    <h2>Get Ready!</h2>
+    <div class="countdown-number" id="countdown-num">3</div>
+    <p style="color:var(--text-dim)">Continue the lyrics...</p>
+  </div>
+
+  <!-- QUESTION -->
+  <div id="question" class="screen">
+    <div class="q-header">
+      <span class="q-number" id="q-number">1 / 15</span>
+      <span class="q-timer" id="q-timer">15</span>
+    </div>
+    <div class="song-title" id="q-song"></div>
+    <div class="prompt-box">
+      <div class="prompt-label">The lyrics say...</div>
+      <div class="prompt-text" id="q-prompt"></div>
+    </div>
+    <div class="what-next">What comes next?</div>
+    <div class="answers" id="q-answers"></div>
+  </div>
+
+  <!-- REVEAL -->
+  <div id="reveal" class="screen">
+    <h2 id="reveal-title">Answer</h2>
+    <div class="correct-line" id="reveal-line"></div>
+    <div class="score-delta" id="reveal-delta"></div>
+    <div class="scores-list" id="reveal-scores"></div>
+  </div>
+
+  <!-- GAME OVER -->
+  <div id="gameover" class="screen">
+    <div class="winner-crown">🏆</div>
+    <h2>Game Over!</h2>
+    <div class="scores-list" id="final-scores"></div>
+  </div>
+
+  <script src="/shared/utils.js"></script>
+  <script>
+    const { esc, haptic, fmtScore, ANS_COLORS, rankDisplay, buildWsUrl, getRoomCode } = GN;
+
+    const roomCode = getRoomCode();
+    let ws = null;
+    let myUsername = null;
+    let timerInterval = null;
+
+    // ── Screen management ──
+    function showScreen(id) {
+      document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+    }
+
+    // ── Connect WS ──
+    function connect() {
+      const stored = sessionStorage.getItem('gn_username');
+      if (!stored) { window.location.href = `/group/${roomCode}`; return; }
+      myUsername = stored;
+
+      ws = new WebSocket(buildWsUrl(roomCode, 'player'));
+
+      ws.onopen = () => {
+        ws.send(JSON.stringify({ type: 'JOIN_LOBBY', username: myUsername }));
+      };
+
+      ws.onmessage = (e) => {
+        const msg = JSON.parse(e.data);
+        handleMessage(msg);
+      };
+
+      ws.onclose = () => { setTimeout(connect, 2000); };
+    }
+
+    // ── Message handler ──
+    function handleMessage(msg) {
+      switch (msg.type) {
+        case 'JOIN_OK':
+        case 'CONNECTED':
+          break;
+
+        case 'LYRICS_GAME_STARTING':
+          showScreen('countdown');
+          document.getElementById('countdown-num').textContent = msg.countdown;
+          break;
+
+        case 'LYRICS_COUNTDOWN_TICK':
+          document.getElementById('countdown-num').textContent = msg.countdown;
+          haptic('tick');
+          break;
+
+        case 'LYRICS_QUESTION':
+          showQuestion(msg);
+          break;
+
+        case 'LYRICS_ANSWER_CONFIRMED':
+          markSelected(msg.answerId);
+          haptic('light');
+          break;
+
+        case 'LYRICS_ANSWER_COUNT':
+          // Could show "3/5 answered" indicator
+          break;
+
+        case 'LYRICS_REVEAL':
+          showReveal(msg);
+          break;
+
+        case 'LYRICS_NEXT_QUESTION':
+          break;
+
+        case 'LYRICS_GAME_OVER':
+          showGameOver(msg);
+          break;
+
+        case 'MINI_GAME_STARTING':
+          if (msg.gameType === 'lyrics') break; // we're already here
+          window.location.href = msg.url;
+          break;
+
+        case 'RESTARTED':
+          window.location.href = `/group/${roomCode}`;
+          break;
+      }
+    }
+
+    // ── Show question ──
+    function showQuestion(msg) {
+      showScreen('question');
+
+      document.getElementById('q-number').textContent = `${msg.questionNumber} / ${msg.totalQuestions}`;
+      document.getElementById('q-song').textContent = msg.songTitle || '';
+      document.getElementById('q-prompt').textContent = msg.prompt;
+
+      const answersEl = document.getElementById('q-answers');
+      answersEl.innerHTML = '';
+
+      for (const ans of msg.answers) {
+        const btn = document.createElement('button');
+        btn.className = 'ans-btn';
+        btn.dataset.id = ans.id;
+        btn.innerHTML = `<span class="ans-letter">${esc(ans.id)}</span><span>${esc(ans.text)}</span>`;
+        btn.onclick = () => sendAnswer(ans.id);
+        answersEl.appendChild(btn);
+      }
+
+      // Timer
+      const timerEl = document.getElementById('q-timer');
+      const timeLimit = msg.timeLimit || 15;
+      const startTime = msg.serverTimestamp || Date.now();
+      const elapsed = msg.elapsed || 0;
+
+      clearInterval(timerInterval);
+      timerInterval = setInterval(() => {
+        const now = Date.now();
+        const elapsedMs = now - startTime;
+        const remaining = Math.max(0, timeLimit - Math.floor(elapsedMs / 1000));
+        timerEl.textContent = remaining;
+        timerEl.classList.toggle('warning', remaining <= 5);
+        if (remaining <= 0) clearInterval(timerInterval);
+      }, 200);
+    }
+
+    function sendAnswer(answerId) {
+      // Disable all buttons
+      document.querySelectorAll('.ans-btn').forEach(b => { b.disabled = true; });
+      ws.send(JSON.stringify({ type: 'LYRICS_ANSWER', answerId }));
+    }
+
+    function markSelected(answerId) {
+      document.querySelectorAll('.ans-btn').forEach(b => {
+        if (b.dataset.id === answerId) b.classList.add('selected');
+      });
+    }
+
+    // ── Show reveal ──
+    function showReveal(msg) {
+      clearInterval(timerInterval);
+      showScreen('reveal');
+
+      // Mark correct/wrong on answer buttons (if still visible)
+      document.querySelectorAll('.ans-btn').forEach(b => {
+        if (b.dataset.id === msg.correctAnswer) b.classList.add('correct');
+        else if (b.classList.contains('selected')) b.classList.add('wrong');
+      });
+
+      document.getElementById('reveal-line').textContent = msg.correctText;
+
+      // Find my score
+      const me = msg.scores.find(s => s.username === myUsername);
+      const deltaEl = document.getElementById('reveal-delta');
+      if (me && me.delta > 0) {
+        deltaEl.textContent = `+${fmtScore(me.delta)}`;
+        deltaEl.className = 'score-delta positive';
+        haptic('success');
+      } else {
+        deltaEl.textContent = '+0';
+        deltaEl.className = 'score-delta zero';
+      }
+
+      document.getElementById('reveal-title').textContent = msg.songTitle ? `From: ${msg.songTitle}` : 'Answer';
+      renderScores('reveal-scores', msg.scores);
+    }
+
+    // ── Game over ──
+    function showGameOver(msg) {
+      clearInterval(timerInterval);
+      showScreen('gameover');
+      renderScores('final-scores', msg.finalScores);
+      haptic('heavy');
+    }
+
+    function renderScores(containerId, scores) {
+      const el = document.getElementById(containerId);
+      el.innerHTML = '';
+      for (const s of scores) {
+        const row = document.createElement('div');
+        row.className = 'score-row' + (s.username === myUsername ? ' me' : '');
+        const deltaHtml = s.delta > 0 ? `<span class="delta pos">+${fmtScore(s.delta)}</span>` : '';
+        row.innerHTML = `
+          <span class="rank">${rankDisplay(s.rank)}</span>
+          <span class="name">${esc(s.username)}</span>
+          ${deltaHtml}
+          <span class="pts">${fmtScore(s.score)}</span>
+        `;
+        el.appendChild(row);
+      }
+    }
+
+    connect();
+  </script>
+</body>
+</html>

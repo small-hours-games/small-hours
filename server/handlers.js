@@ -4,6 +4,7 @@ const { Game } = require('../game');
 const { ShitheadGame } = require('../shithead');
 const { CAHGame } = require('../cah');
 const spyGame = require('../games/spy/server');
+const { LyricsGame } = require('../games/lyrics/server/game');
 const { rooms, nameToAvatar } = require('./rooms');
 const { broadcastAll, broadcastToDisplays, sendTo, broadcastLobbyUpdate, broadcastVoteUpdate } = require('./broadcast');
 
@@ -14,7 +15,8 @@ function maybeCleanupRoom(room) {
   const idle = room.activeMiniGame === 'lobby' ||
     (room.game && room.game.state === 'GAME_OVER') ||
     (room.shitheadGame && room.shitheadGame.state === 'GAME_OVER') ||
-    (room.cahGame && room.cahGame.state === 'GAME_OVER');
+    (room.cahGame && room.cahGame.state === 'GAME_OVER') ||
+    (room.lyricsGame && room.lyricsGame.state === 'GAME_OVER');
   if (totalSockets === 0 && idle) {
     // Grace period: players navigating between pages temporarily have 0 sockets.
     // Wait 30s before deleting so back-to-lobby transitions don't destroy the room.
@@ -73,6 +75,7 @@ function handlePlayerDisconnect(ws, room) {
     if (room.game) room.game.removePlayer(ws);
     if (room.shitheadGame) room.shitheadGame.removePlayer(ws);
     if (room.cahGame) room.cahGame.removePlayer(ws);
+    if (room.lyricsGame) room.lyricsGame.removePlayer(ws);
     broadcastLobbyUpdate(room);
     broadcastVoteUpdate(room);
   } else {
@@ -80,6 +83,7 @@ function handlePlayerDisconnect(ws, room) {
     if (room.game) room.game.removePlayer(ws);
     if (room.shitheadGame) room.shitheadGame.removePlayer(ws);
     if (room.cahGame) room.cahGame.removePlayer(ws);
+    if (room.lyricsGame) room.lyricsGame.removePlayer(ws);
   }
 
   maybeCleanupRoom(room);
@@ -115,6 +119,7 @@ function handleMessage(ws, role, msg, room) {
         if (room.game) room.game.restart();
         if (room.shitheadGame) { room.shitheadGame = null; }
         if (room.cahGame) { room.cahGame = null; }
+      if (room.lyricsGame) { room.lyricsGame = null; }
         room.categoryVotes.clear();
         room.readyPlayers.clear();
         room.gameSuggestions.clear();
@@ -187,6 +192,10 @@ function handleMessage(ws, role, msg, room) {
       if (room.activeMiniGame === 'cah' && room.cahGame) {
         room.cahGame.addPlayer(ws, username);
       }
+      // Reconnect to in-progress lyrics game
+      if (room.activeMiniGame === 'lyrics' && room.lyricsGame) {
+        room.lyricsGame.addPlayer(ws, username);
+      }
 
       broadcastLobbyUpdate(room);
       broadcastVoteUpdate(room);
@@ -213,7 +222,7 @@ function handleMessage(ws, role, msg, room) {
       const username = room.wsToUsername.get(ws);
       if (!username) break;
       const gameType = msg.gameType;
-      if (!['quiz', 'shithead', 'cah', 'spy'].includes(gameType)) break;
+      if (!['quiz', 'shithead', 'cah', 'spy', 'lyrics'].includes(gameType)) break;
       room.gameSuggestions.set(username, gameType);
       broadcastLobbyUpdate(room);
       break;
@@ -265,6 +274,12 @@ function handleMessage(ws, role, msg, room) {
         room.cahGame.startGame(maxRounds);
       } else if (gameType === 'spy') {
         spyGame.onStartGame(room);
+      } else if (gameType === 'lyrics') {
+        room.lyricsGame = new LyricsGame(room._broadcast);
+        for (const [uname, p] of room.players) {
+          room.lyricsGame.addPlayer(p.ws, uname);
+        }
+        room.lyricsGame.startGame(questionCount);
       }
       break;
     }
@@ -294,6 +309,7 @@ function handleMessage(ws, role, msg, room) {
       if (room.game) room.game.restart();
       if (room.shitheadGame) { room.shitheadGame = null; }
       if (room.cahGame) { room.cahGame = null; }
+      if (room.lyricsGame) { room.lyricsGame = null; }
       room.categoryVotes.clear();
       room.readyPlayers.clear();
       room.gameSuggestions.clear();
@@ -322,6 +338,10 @@ function handleMessage(ws, role, msg, room) {
 
     case 'ANSWER':
       if (room.game) room.game.receiveAnswer(ws, msg.questionId, msg.answerId);
+      break;
+
+    case 'LYRICS_ANSWER':
+      if (room.lyricsGame) room.lyricsGame.receiveAnswer(ws, msg.answerId);
       break;
 
     case 'USE_POWERUP': {
