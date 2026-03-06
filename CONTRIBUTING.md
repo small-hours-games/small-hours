@@ -18,7 +18,7 @@ Thank you for your interest in contributing! This document covers how to set up 
 
 ## Getting Started
 
-**Prerequisites:** Node.js >= 18, npm, Docker (optional).
+**Prerequisites:** Node.js >= 20, npm, Docker (optional).
 
 ```bash
 # Clone the repository
@@ -84,7 +84,7 @@ Key architectural decisions:
 
 ## Coding Standards
 
-- **`'use strict'`** at the top of every `.js` file.
+- **`'use strict'`** at the top of every server-side `.js` file.
 - Use `const` / `let`; avoid `var`.
 - Prefer named functions over anonymous callbacks for anything non-trivial.
 - Error handling: use `try/catch` around async operations; broadcast `{ type: 'ERROR', code, message }` to clients on failure.
@@ -132,11 +132,11 @@ case 'RESET_SCORES': {
 **Automated tests:**
 
 ```bash
-npm test        # Run tests via Node's built-in test runner (auto-discovers *.test.js files)
+npm test        # Run unit tests via Node's built-in test runner (auto-discovers *.test.js files)
 npm run coverage  # Coverage report with nyc (outputs to coverage/)
 ```
 
-E2E browser tests live in `tests/` and use puppeteer-core. These scripts (`fullgame.mjs`, `restart.mjs`, `continue.mjs`) automate the full player flow in a headless browser.
+E2E browser tests live in `tests/` and use puppeteer-core. These scripts (`fullgame.mjs`, `restart.mjs`, `continue.mjs`) automate the full player flow in a headless browser. Note: there are currently no unit test files — `npm test` will pass with zero tests. The E2E scripts are the primary automated coverage.
 
 **Manual testing procedure:**
 
@@ -178,7 +178,7 @@ This section is specifically for AI coding agents (GitHub Copilot, GPT-based too
 - **Broadcasting:** Use `broadcastAll(room, msg)` to reach all clients in a room, `broadcastToDisplays(room, msg)` for display-only messages, or `sendTo(ws, msg)` for a single client. Inside game classes, use `this._broadcast(msg)` which is scoped to the room.
 - **Room cleanup:** Rooms auto-delete after 30 seconds with zero connections and an idle game state. Be aware of this when testing disconnect/reconnect flows.
 - **No circular dependencies:** `questions.js` and `local-db.js` each duplicate the tiny `fetchJSON` helper to avoid this.
-- **`'use strict'` is required** in all server-side files.
+- **`'use strict'` is required** in all server-side `.js` files (not browser scripts).
 
 ### Prompting Tips
 

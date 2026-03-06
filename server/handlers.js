@@ -409,6 +409,14 @@ function handleMessage(ws, role, msg, room) {
       room.cahGame.czarPick(username, msg.submissionId);
       break;
     }
+
+    // ── Spy game messages ─────────────────────────────────────────────────
+    case 'SEND_CLUE':
+    case 'SEND_GUESS': {
+      const handler = spyGame.handlers[type];
+      if (handler) handler(ws, msg, room);
+      break;
+    }
   }
 }
 

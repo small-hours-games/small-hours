@@ -21,6 +21,7 @@ const handlers = {
       // Send per-player state to each player (hides word from spy)
       for (const socket of room.playerSockets) {
         const playerName = room.wsToUsername.get(socket);
+        if (!playerName) continue;
         const state = game.getState(playerName);
         const broadcast = {
           type: 'CLUE_RECEIVED',
@@ -35,8 +36,8 @@ const handlers = {
         }
       }
 
-      // Displays can see the word (no forUsername = not the spy)
-      const displayState = game.getState(null);
+      // Displays see a display-safe state (word visible via known non-spy)
+      const displayState = game.getState(null, { display: true });
       const displayBroadcast = {
         type: 'CLUE_RECEIVED',
         username,
@@ -66,6 +67,7 @@ const handlers = {
       // Send per-player state to each player (hides word from spy)
       for (const socket of room.playerSockets) {
         const playerName = room.wsToUsername.get(socket);
+        if (!playerName) continue;
         const state = game.getState(playerName);
         const broadcast = {
           type: 'GUESS_RECEIVED',
@@ -79,8 +81,8 @@ const handlers = {
         }
       }
 
-      // Displays can see the word
-      const displayState = game.getState(null);
+      // Displays see a display-safe state
+      const displayState = game.getState(null, { display: true });
       const displayBroadcast = {
         type: 'GUESS_RECEIVED',
         username,
@@ -108,8 +110,10 @@ const routes = {
       return;
     }
 
-    // API endpoint should not leak the word; return state without spy context
-    res.json(game.getState(null));
+    // API endpoint: strip sensitive fields (word + spy identity)
+    const state = game.getState(null);
+    const { word, spy, ...publicState } = state;
+    res.json(publicState);
   }
 };
 
@@ -134,6 +138,7 @@ function onStartGame(room) {
     // Send per-player state to each player (hides word from spy)
     for (const socket of room.playerSockets) {
       const username = room.wsToUsername.get(socket);
+      if (!username) continue;
       const state = game.getState(username);
       const message = {
         type: 'GAME_STATE',
@@ -146,8 +151,8 @@ function onStartGame(room) {
       }
     }
 
-    // Displays can see the word (no forUsername = not the spy)
-    const displayState = game.getState(null);
+    // Displays see a display-safe state (word visible via known non-spy)
+    const displayState = game.getState(null, { display: true });
     const displayMessage = {
       type: 'GAME_STATE',
       gameState: displayState

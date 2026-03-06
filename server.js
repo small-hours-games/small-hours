@@ -82,16 +82,6 @@ setInterval(() => {
 }, 60_000);
 const pageRateLimit = rateLimit(120, 60 * 1000);
 
-// ─── Game handlers and routes ───────────────────────────────────────────────
-
-// Map of message type → handler function (loaded from game modules)
-const wsHandlers = {};
-
-// Register handlers from game modules
-for (const [msgType, handler] of Object.entries(spyGame.handlers)) {
-  wsHandlers[msgType] = handler;
-}
-
 // ─── New routes (before static) ─────────────────────────────────────────────
 
 function serveFile(rel) {

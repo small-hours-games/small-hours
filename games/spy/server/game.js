@@ -192,17 +192,19 @@ class SpyGame {
     return true;
   }
 
-  getState(forUsername) {
+  getState(forUsername, { display = false } = {}) {
     const round = this.getCurrentRound();
     const now = Date.now();
     const elapsed = Math.max(0, now - round.phaseStartTime);
     const phaseDuration = PHASE_DURATIONS[round.phase];
     const timeRemaining = Math.max(0, phaseDuration - elapsed);
 
-    // Hide the word from the spy (unless in reveal/score phase where it's public)
+    // Default-safe: hide word from spy, unknown callers, and unauthenticated requests.
+    // Displays get the word (they show it to the room). Known non-spy players get it.
     const isRevealPhase = round.phase === PHASES.REVEAL || round.phase === PHASES.SCORE;
-    const isSpy = forUsername === round.spy;
-    const showWord = !isSpy || isRevealPhase;
+    const isKnownPlayer = forUsername && this.players.has(forUsername);
+    const isSpy = isKnownPlayer && forUsername === round.spy;
+    const showWord = display || (isKnownPlayer && (!isSpy || isRevealPhase));
 
     return {
       roundNumber: round.number,
