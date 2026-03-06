@@ -377,6 +377,7 @@
     { type: 'quiz',     emoji: '🧠', label: 'Quiz',                   available: true },
     { type: 'shithead', emoji: '🃏', label: 'Shithead',               available: true, minPlayers: 2 },
     { type: 'cah',      emoji: '🖤', label: 'Cards against Humanity', available: true, minPlayers: 3 },
+    { type: 'spy',      emoji: '🕵️', label: 'Spy Game',              available: true, minPlayers: 3 },
   ];
 
   const roomCode    = GN.getRoomCode();
@@ -644,6 +645,10 @@
     }
     if (myVote === 'cah') {
       send({ type: 'START_MINI_GAME', gameType: 'cah', maxRounds: selectedRoundCount });
+      return;
+    }
+    if (myVote === 'spy') {
+      send({ type: 'START_MINI_GAME', gameType: 'spy' });
       return;
     }
     fetch('/api/categories').then(r => r.json()).then(cats => {
