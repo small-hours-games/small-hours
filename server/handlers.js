@@ -3,6 +3,7 @@
 const { Game } = require('../game');
 const { ShitheadGame } = require('../shithead');
 const { CAHGame } = require('../cah');
+const spyGame = require('../games/spy/server');
 const { rooms, nameToAvatar } = require('./rooms');
 const { broadcastAll, broadcastToDisplays, sendTo, broadcastLobbyUpdate, broadcastVoteUpdate } = require('./broadcast');
 
@@ -212,7 +213,7 @@ function handleMessage(ws, role, msg, room) {
       const username = room.wsToUsername.get(ws);
       if (!username) break;
       const gameType = msg.gameType;
-      if (!['quiz', 'shithead', 'cah'].includes(gameType)) break;
+      if (!['quiz', 'shithead', 'cah', 'spy'].includes(gameType)) break;
       room.gameSuggestions.set(username, gameType);
       broadcastLobbyUpdate(room);
       break;
@@ -237,6 +238,10 @@ function handleMessage(ws, role, msg, room) {
         sendTo(ws, { type: 'ERROR', code: 'NOT_ENOUGH_PLAYERS', message: 'Cards requires at least 3 players.' });
         break;
       }
+      if (gameType === 'spy' && room.players.size < 3) {
+        sendTo(ws, { type: 'ERROR', code: 'NOT_ENOUGH_PLAYERS', message: 'Spy requires at least 3 players.' });
+        break;
+      }
 
       room.activeMiniGame = gameType;
       broadcastAll(room, { type: 'MINI_GAME_STARTING', gameType, url: `/group/${room.code}/${gameType}` });
@@ -258,6 +263,8 @@ function handleMessage(ws, role, msg, room) {
           room.cahGame.addPlayer(p.ws, uname);
         }
         room.cahGame.startGame(maxRounds);
+      } else if (gameType === 'spy') {
+        spyGame.onStartGame(room);
       }
       break;
     }
