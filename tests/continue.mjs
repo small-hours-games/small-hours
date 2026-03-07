@@ -70,8 +70,10 @@ try {
   // ── Start game ─────────────────────────────────────────────────────────────
   console.log('\n=== START GAME ===');
   await js(p2, () => document.getElementById('ready-btn').click());
-  await js(p1, () => { document.querySelectorAll('.game-tile.available')[0].click(); document.getElementById('ready-btn').click(); });
+  await js(p1, () => { document.querySelectorAll('.game-tile')[0]?.click(); document.getElementById('ready-btn').click(); });
   await wait(1500);
+  const btnExists = await js(p1, () => !!document.getElementById('start-btn'));
+  if (!btnExists) throw new Error('Start button not found');
   await js(p1, () => document.getElementById('start-btn').click());
   await wait(3000);
   console.log('Both on quiz page:', p1.url().includes('/quiz') && p2.url().includes('/quiz') ? '✅' : '❌');
@@ -132,13 +134,22 @@ try {
 
   // ── Back to lobby ──────────────────────────────────────────────────────────
   console.log('\n=== BACK TO LOBBY ===');
-  await js(p2, () => document.getElementById('go-lobby-btn')?.click());
-  await js(p1, () => document.getElementById('go-lobby-btn')?.click());
+  await Promise.all([
+    (async () => {
+      await js(p2, () => document.getElementById('go-lobby-btn')?.click());
+      await p2.waitForNavigation({ waitUntil: 'networkidle0' }).catch(() => {});
+    })(),
+    (async () => {
+      await wait(1000);
+      await js(p1, () => document.getElementById('go-lobby-btn')?.click());
+      await p1.waitForNavigation({ waitUntil: 'networkidle0' }).catch(() => {});
+    })(),
+  ]);
+  await wait(1000);
 
   const exp = `${BASE}/group/${roomCode}`;
-  const aliceBack = await (async () => { const t=Date.now(); while(Date.now()-t<8000){if(p1.url()===exp)return true;await wait(300);} return false; })();
-  const bobBack   = await (async () => { const t=Date.now(); while(Date.now()-t<8000){if(p2.url()===exp)return true;await wait(300);} return false; })();
-  await wait(2000); // let WS reconnect + LOBBY_UPDATE arrive
+  const aliceBack = p1.url() === exp;
+  const bobBack = p2.url() === exp;
   console.log('Alice URL:', aliceBack ? '✅' : `❌ ${p1.url()}`);
   console.log('Bob URL:  ', bobBack   ? '✅' : `❌ ${p2.url()}`);
   const chips = await js(p1, () => [...document.querySelectorAll('.player-chip')].map(c=>c.innerText.replace(/\n/g,' ').trim()));

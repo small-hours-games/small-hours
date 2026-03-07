@@ -62,8 +62,10 @@ try {
   // ── Game 1 ─────────────────────────────────────────────────────────────────
   console.log('\n=== START GAME 1 ===');
   await js(p2, () => document.getElementById('ready-btn').click());
-  await js(p1, () => { document.querySelectorAll('.game-tile.available')[0].click(); document.getElementById('ready-btn').click(); });
+  await js(p1, () => { document.querySelectorAll('.game-tile')[0]?.click(); document.getElementById('ready-btn').click(); });
   await wait(1500);
+  const btnExists = await js(p1, () => !!document.getElementById('start-btn'));
+  if (!btnExists) throw new Error('Start button not found');
   await js(p1, () => document.getElementById('start-btn').click());
   await wait(3000);
   console.log('Both on quiz page:', p1.url().includes('/quiz') && p2.url().includes('/quiz') ? '✅' : '❌');
@@ -86,17 +88,21 @@ try {
   console.log('\n=== BACK TO LOBBY ===');
 
   // Bob goes first (non-admin — just navigates, no WS message)
+  const bobNavPromise = p2.waitForNavigation({ waitUntil: 'networkidle0' }).catch(() => {});
   await js(p2, () => document.getElementById('go-lobby-btn')?.click());
+  await bobNavPromise;
   const bobBack = await waitForUrl(p2, `/group/${roomCode}`, 8000);
   console.log('Bob back at lobby URL:', bobBack ? '✅' : '❌');
 
   // Alice goes second (admin — sends RETURN_TO_LOBBY + navigates)
+  const aliceNavPromise = p1.waitForNavigation({ waitUntil: 'networkidle0' }).catch(() => {});
   await js(p1, () => document.getElementById('go-lobby-btn')?.click());
+  await aliceNavPromise;
   const aliceBack = await waitForUrl(p1, `/group/${roomCode}`, 8000);
   console.log('Alice back at lobby URL:', aliceBack ? '✅' : '❌');
 
   // Give WS time to reconnect and receive LOBBY_UPDATE
-  await wait(3000);
+  await wait(1000);
 
   // ── Verify lobby state is reset ────────────────────────────────────────────
   console.log('\n=== LOBBY STATE AFTER RESTART ===');
@@ -121,12 +127,14 @@ try {
   // ── Start Game 2 from clean lobby ──────────────────────────────────────────
   console.log('\n=== START GAME 2 ===');
   await js(p2, () => document.getElementById('ready-btn').click());
-  await js(p1, () => { document.querySelectorAll('.game-tile.available')[0].click(); document.getElementById('ready-btn').click(); });
+  await js(p1, () => { document.querySelectorAll('.game-tile')[0]?.click(); document.getElementById('ready-btn').click(); });
   await wait(1500);
 
   const startBtnEnabled = await js(p1, () => !document.getElementById('start-btn')?.disabled);
   console.log('Start btn enabled after ready+vote:', startBtnEnabled ? '✅' : '❌');
 
+  const btnExists2 = await js(p1, () => !!document.getElementById('start-btn'));
+  if (!btnExists2) throw new Error('Start button not found on Game 2');
   await js(p1, () => document.getElementById('start-btn').click());
   await wait(3000);
   console.log('Both on quiz page (Game 2):', p1.url().includes('/quiz') && p2.url().includes('/quiz') ? '✅' : '❌');

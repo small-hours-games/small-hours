@@ -33,11 +33,24 @@ try {
   // ── Start ──────────────────────────────────────────────────────────────────
   console.log('\n=== START GAME ===');
   await js(p2, () => document.getElementById('ready-btn').click());
-  await js(p1, () => { document.querySelectorAll('.game-tile.available')[0].click(); document.getElementById('ready-btn').click(); });
+  await js(p1, () => { document.querySelectorAll('.game-tile')[0]?.click(); document.getElementById('ready-btn').click(); });
   await wait(1500);
-  await js(p1, () => document.getElementById('start-btn').click());
-  await wait(3000);
-  console.log('Both on quiz page:', p1.url().includes('/quiz') && p2.url().includes('/quiz') ? '✅' : '❌');
+  const btnExists = await js(p1, () => !!document.getElementById('start-btn'));
+  console.log('Start button exists:', btnExists ? '✅' : '❌');
+  if (btnExists) {
+    await js(p1, () => document.getElementById('start-btn').click());
+    await wait(3000);
+    console.log('Both on quiz page:', p1.url().includes('/quiz') && p2.url().includes('/quiz') ? '✅' : '❌');
+  } else {
+    console.log('Start button not found, diagnostics:');
+    const diag = await js(p1, () => ({
+      startSection: !!document.getElementById('start-section'),
+      startSectionVisible: document.getElementById('start-section')?.classList.contains('visible'),
+      gameTiles: document.querySelectorAll('.game-tile').length,
+    }));
+    console.log('  ', JSON.stringify(diag));
+    throw new Error('Start button not found');
+  }
 
   // ── Wait for Q1 (categories chosen in lobby, no vote on quiz page) ────────
   console.log('\n=== WAITING FOR Q1 ===');
@@ -96,10 +109,19 @@ try {
 
   // ── Back to lobby ──────────────────────────────────────────────────────────
   console.log('\n=== BACK TO LOBBY ===');
-  await js(p2, () => document.getElementById('go-lobby-btn')?.click());
-  await wait(2500);
-  await js(p1, () => document.getElementById('go-lobby-btn')?.click());
-  await wait(4000);
+  // Use Promise.all with navigation waits to handle frame detachment
+  await Promise.all([
+    (async () => {
+      await js(p2, () => document.getElementById('go-lobby-btn')?.click());
+      await p2.waitForNavigation({ waitUntil: 'networkidle0' }).catch(() => {});
+    })(),
+    (async () => {
+      await wait(2000);
+      await js(p1, () => document.getElementById('go-lobby-btn')?.click());
+      await p1.waitForNavigation({ waitUntil: 'networkidle0' }).catch(() => {});
+    })(),
+  ]);
+  await wait(1000);
 
   const exp = `${BASE}/group/${roomCode}`;
   console.log('Alice URL:', p1.url() === exp ? '✅' : `❌ ${p1.url()}`);
