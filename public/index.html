@@ -54,10 +54,6 @@
       display: inline-block;
       animation: float 3s ease-in-out infinite;
     }
-    @keyframes float {
-      0%, 100% { transform: translateY(0); }
-      50% { transform: translateY(-8px); }
-    }
     .hero-title {
       font-size: clamp(2.6rem, 9vw, 4rem);
       font-weight: 900;
@@ -214,6 +210,9 @@
 
 <div class="landing-card">
   <div class="hero">
+    <div class="logo-container">
+      <img src="/assets/logo.png" alt="small-hours games" class="hero-logo">
+    </div>
     <div class="hero-icon">🎮</div>
     <div class="hero-title gradient-text">Game Night</div>
     <div class="hero-sub">Your living room, game show ready.</div>
