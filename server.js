@@ -10,6 +10,7 @@ const path = require('path');
 const os = require('os');
 const { WebSocketServer } = require('ws');
 const QRCode = require('qrcode');
+const helmet = require('helmet');
 
 const { fetchCategories } = require('./questions');
 const { downloadDatabase, getState: getDbState, dbStatus } = require('./local-db');
@@ -52,7 +53,18 @@ const PUBLIC_SCHEME = DOMAIN ? 'https' : SCHEME;
 // ─── Express app ────────────────────────────────────────────────────────────
 
 const app = express();
+app.use(helmet());  // Add security headers
 app.use(express.json());
+
+// ─── Request logging middleware ────────────────────────────────────────────
+app.use((req, res, next) => {
+  const start = Date.now();
+  res.on('finish', () => {
+    const duration = Date.now() - start;
+    console.log(`${req.method} ${req.path} - ${res.statusCode} (${duration}ms)`);
+  });
+  next();
+});
 
 // ─── Simple in-memory rate limiter ──────────────────────────────────────────
 
@@ -82,6 +94,8 @@ setInterval(() => {
   }
 }, 60_000);
 const pageRateLimit = rateLimit(120, 60 * 1000);
+const apiRateLimit = rateLimit(30, 60 * 1000);  // Stricter for API endpoints
+const dbDownloadLimit = rateLimit(2, 60 * 60 * 1000);  // Max 2 downloads per hour per IP
 
 // ─── New routes (before static) ─────────────────────────────────────────────
 
@@ -107,14 +121,24 @@ app.get('/join',  (req, res) => {
   res.redirect(r ? `/group/${r}` : '/');
 });
 
+// Health check endpoint
+app.get('/health', (req, res) => {
+  res.json({
+    ok: true,
+    uptime: process.uptime(),
+    rooms: rooms.size,
+    timestamp: Date.now()
+  });
+});
+
 // Room API
-app.post('/api/rooms', (req, res) => {
+app.post('/api/rooms', apiRateLimit, (req, res) => {
   const code = generateRoomCode();
   createRoom(code);
   res.json({ code });
 });
 
-app.get('/api/rooms/:code', (req, res) => {
+app.get('/api/rooms/:code', apiRateLimit, (req, res) => {
   res.json({ exists: rooms.has(req.params.code.toUpperCase()) });
 });
 
@@ -170,8 +194,8 @@ app.get('/api/db/status', (req, res) => {
   res.json({ ...dbStatus(), downloading: dl.active, dlProgress: dl.current, dlTotal: dl.total, dlLabel: dl.label, dlError: dl.error });
 });
 
-// Trigger download (non-blocking)
-app.post('/api/db/download', (req, res) => {
+// Trigger download (non-blocking) - rate limited to prevent DoS
+app.post('/api/db/download', dbDownloadLimit, (req, res) => {
   const dl = getDbState();
   if (dl.active) return res.json({ ok: false, message: 'Already downloading.' });
   downloadDatabase().catch(console.error);
@@ -192,7 +216,36 @@ const server = USE_HTTPS
   ? https.createServer({ cert: fs.readFileSync(CERT_PATH), key: fs.readFileSync(KEY_PATH) }, app)
   : http.createServer(app);
 
-const wss = new WebSocketServer({ noServer: true });
+// WebSocket server with security limits
+const wss = new WebSocketServer({
+  noServer: true,
+  maxPayload: 16384  // 16KB max per message - prevents oversized frame attacks
+});
+
+// Per-socket message rate limiting
+const socketLimits = new WeakMap();
+function checkSocketRateLimit(ws) {
+  const now = Date.now();
+  let limit = socketLimits.get(ws);
+  if (!limit || now >= limit.resetTime) {
+    limit = { count: 0, resetTime: now + 1000 };
+  }
+  limit.count++;
+  socketLimits.set(ws, limit);
+  return limit.count <= 30;  // Max 30 messages per second
+}
+
+// Room cleanup: expire rooms older than 4 hours with no activity
+const ROOM_MAX_AGE_MS = 4 * 60 * 60 * 1000;
+setInterval(() => {
+  const now = Date.now();
+  for (const [code, room] of rooms) {
+    if (now - room.createdAt > ROOM_MAX_AGE_MS && room.playerSockets.size === 0 && room.displaySockets.size === 0) {
+      console.log(`Cleaning up abandoned room ${code}`);
+      rooms.delete(code);
+    }
+  }
+}, 5 * 60 * 1000);  // Check every 5 minutes
 
 server.on('upgrade', (req, socket, head) => {
   const p = new URL(req.url, 'http://x').pathname;
@@ -248,6 +301,12 @@ wss.on('connection', (ws, req) => {
     if (room.players.size > 0) broadcastVoteUpdate(room);
 
     ws.on('message', (raw) => {
+      // Rate limit: check message frequency per socket
+      if (!checkSocketRateLimit(ws)) {
+        console.warn(`Rate limit exceeded on display socket`);
+        ws.close(1008, 'Rate limited');
+        return;
+      }
       let msg;
       try { msg = JSON.parse(raw); } catch { return; }
       handleMessage(ws, 'display', msg, room);
@@ -274,6 +333,12 @@ wss.on('connection', (ws, req) => {
     sendTo(ws, { type: 'CONNECTED', lang: room.language });
 
     ws.on('message', (raw) => {
+      // Rate limit: check message frequency per socket
+      if (!checkSocketRateLimit(ws)) {
+        console.warn(`Rate limit exceeded on player socket`);
+        ws.close(1008, 'Rate limited');
+        return;
+      }
       let msg;
       try { msg = JSON.parse(raw); } catch { return; }
       handleMessage(ws, 'player', msg, room);
@@ -301,4 +366,45 @@ server.listen(PORT, '0.0.0.0', () => {
     console.log('  ⚠️  First visit: Safari will warn about the self-signed cert.');
     console.log('     Tap "Show Details" → "visit this website" → confirm.\n');
   }
+});
+
+// ─── Graceful shutdown ──────────────────────────────────────────────────────
+
+process.on('SIGTERM', () => {
+  console.log('\n⚠️  SIGTERM received - initiating graceful shutdown...');
+
+  // Notify all connected WebSocket clients
+  for (const [code, room] of rooms) {
+    const msg = JSON.stringify({ type: 'SERVER_RESTARTING', message: 'Server is restarting. Please wait...' });
+    room.playerSockets.forEach(ws => {
+      try { ws.send(msg); } catch (err) { /* socket may be closing */ }
+    });
+    room.displaySockets.forEach(ws => {
+      try { ws.send(msg); } catch (err) { /* socket may be closing */ }
+    });
+  }
+
+  // Stop accepting new connections
+  server.close(() => {
+    console.log('✓ Server closed. Exiting.\n');
+    process.exit(0);
+  });
+
+  // Hard exit after 5 seconds if graceful close doesn't complete
+  setTimeout(() => {
+    console.log('✗ Graceful shutdown timeout - force exiting\n');
+    process.exit(1);
+  }, 5000);
+});
+
+// ─── Error handling ────────────────────────────────────────────────────────
+
+process.on('uncaughtException', (err) => {
+  console.error('\n❌ Uncaught Exception:', err);
+  process.exit(1);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('\n❌ Unhandled Rejection at', promise, 'reason:', reason);
+  // Don't exit on unhandled rejection, but log it
 });

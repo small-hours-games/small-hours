@@ -154,7 +154,11 @@ function handleMessage(ws, role, msg, room) {
       if ((msg.username || '').trim() === room.adminUsername) {
         room._returningFromGame = false;
       }
-      const username = (msg.username || '').trim().slice(0, 20);
+      // Input validation: sanitize username to prevent XSS or injection
+      let username = (msg.username || '').trim().slice(0, 20);
+      // Remove potentially dangerous characters: <, >, ", ', script tags
+      username = username.replace(/[<>"']/g, '');
+
       if (!username) {
         sendTo(ws, { type: 'ERROR', code: 'INVALID_USERNAME', message: 'Username required.' });
         break;

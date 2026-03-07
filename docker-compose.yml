@@ -16,6 +16,28 @@ services:
       - path: .env
         required: false
 
+    # Health check: docker restart if unhealthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+    # Resource limits: prevent runaway resource consumption
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '1.0'
+
+    # Log rotation: prevent unbounded log growth
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
     volumes:
       # Bind-mount source code — git pull on host = instant update, no rebuild needed
       - ./:/app
