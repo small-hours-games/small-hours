@@ -305,3 +305,19 @@ body {
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.1); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.2); }
+
+/* ── Lobby Header with Logo ──────────────────────────────────────────────── */
+.lobby-header {
+  display: flex;
+  align-items: center;
+  padding: 1rem;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+}
+
+.header-logo {
+  width: 40px;
+  height: 40px;
+  margin-right: 1rem;
+  display: inline-block;
+}

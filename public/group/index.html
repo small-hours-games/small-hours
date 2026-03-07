@@ -64,6 +64,20 @@
     .header-right {
       display: flex; align-items: center; gap: 0.4rem;
     }
+    .lobby-header {
+      display: flex;
+      align-items: center;
+      padding: 1rem;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      width: 100%;
+    }
+    .header-logo {
+      width: 40px;
+      height: 40px;
+      margin-right: 1rem;
+      display: inline-block;
+    }
     .rules-link {
       text-decoration: none; color: var(--text-dim);
       font-size: 0.72rem; font-weight: 700;
@@ -301,13 +315,16 @@
 </div>
 
 <!-- Header -->
-<div id="header">
-  <div class="header-title gradient-text">Game Night</div>
-  <div class="header-right">
-    <a id="rules-link" class="rules-link" href="/rules">Rules</a>
-    <div class="room-chip" id="room-chip">----</div>
+<header class="lobby-header">
+  <img src="/assets/logo.png" alt="small-hours games" class="header-logo">
+  <div id="header" style="flex: 1;">
+    <div class="header-title gradient-text">Game Night</div>
+    <div class="header-right">
+      <a id="rules-link" class="rules-link" href="/rules">Rules</a>
+      <div class="room-chip" id="room-chip">----</div>
+    </div>
   </div>
-</div>
+</header>
 
 <!-- Players -->
 <div class="panel" id="players-panel">
