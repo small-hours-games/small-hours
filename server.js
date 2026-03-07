@@ -53,7 +53,8 @@ const PUBLIC_SCHEME = DOMAIN ? 'https' : SCHEME;
 // ─── Express app ────────────────────────────────────────────────────────────
 
 const app = express();
-app.use(helmet());  // Add security headers
+// Add security headers (disable CSP since game uses inline scripts)
+app.use(helmet({ contentSecurityPolicy: false }));
 app.use(express.json());
 
 // ─── Request logging middleware ────────────────────────────────────────────
