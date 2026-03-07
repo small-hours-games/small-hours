@@ -8,6 +8,7 @@ const spyGame = require('../games/spy/server');
 const { LyricsGame } = require('../games/lyrics/server/game');
 const { rooms, nameToAvatar } = require('./rooms');
 const { broadcastAll, broadcastToDisplays, sendTo, broadcastLobbyUpdate, broadcastVoteUpdate } = require('./broadcast');
+const Persistence = require('./persistence');
 
 // ─── Room cleanup ─────────────────────────────────────────────────────────────
 
@@ -338,6 +339,75 @@ function handleMessage(ws, role, msg, room) {
         sendTo(ws, { type: 'ERROR', code: 'NOT_ADMIN', message: 'Only admin can return to lobby.' });
         break;
       }
+
+      // Save game history and update player stats before clearing game instances
+      if (room.game && room.game.phase === 'GAME_OVER') {
+        try {
+          const finalState = room.game.getState();
+          const gameRecord = {
+            gameId: `quiz-${new Date().toISOString()}`,
+            gameType: 'quiz',
+            roomCode: room.code,
+            startTime: room.game.startTime,
+            endTime: Date.now(),
+            duration: Date.now() - room.game.startTime,
+            players: finalState.players
+              .filter(p => !p.isBot)  // Only save human players
+              .map((p, idx) => ({
+                username: p.username || '',
+                finalScore: p.score || 0,
+                rank: idx + 1,
+                isBot: false
+              }))
+          };
+
+          Persistence.saveGameHistory(gameRecord);
+
+          // Update individual player stats
+          for (const player of gameRecord.players) {
+            if (player.username) {
+              Persistence.updatePlayerStats(player.username, player.finalScore, 'quiz');
+            }
+          }
+        } catch (error) {
+          console.error('Failed to save game history:', error);
+        }
+      }
+
+      if (room.shitheadGame && room.shitheadGame.state === 'GAME_OVER') {
+        try {
+          const finalState = room.shitheadGame.getState?.();
+          if (finalState && finalState.players) {
+            const gameRecord = {
+              gameId: `shithead-${new Date().toISOString()}`,
+              gameType: 'shithead',
+              roomCode: room.code,
+              startTime: room.shitheadGame.startTime,
+              endTime: Date.now(),
+              duration: Date.now() - (room.shitheadGame.startTime || Date.now()),
+              players: finalState.players
+                .filter(p => !p.isBot)
+                .map((p, idx) => ({
+                  username: p.username || '',
+                  finalScore: p.score || 0,
+                  rank: idx + 1,
+                  isBot: false
+                }))
+            };
+
+            Persistence.saveGameHistory(gameRecord);
+
+            for (const player of gameRecord.players) {
+              if (player.username) {
+                Persistence.updatePlayerStats(player.username, player.finalScore, 'shithead');
+              }
+            }
+          }
+        } catch (error) {
+          console.error('Failed to save shithead game history:', error);
+        }
+      }
+
       if (room.game) { room.game = null; }  // Reset game instance
       if (room.shitheadGame) { room.shitheadGame = null; }
       if (room.cahGame) { room.cahGame = null; }
