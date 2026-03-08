@@ -383,7 +383,9 @@ wss.on('connection', (ws, req) => {
 // - Call game.tick() to update internal state
 // - Call game.getState() to pull complete state
 // - Broadcast state to all players and displays
+let tickCounter = 0;
 setInterval(() => {
+  tickCounter++;
   for (const [code, room] of rooms) {
     // Tick and broadcast quiz games
     if (room.game && room.activeMiniGame === 'quiz') {
@@ -399,14 +401,28 @@ setInterval(() => {
     }
     // Tick and broadcast shithead games
     if (room.shitheadGame && room.activeMiniGame === 'shithead') {
+      // Log every 5 ticks (~500ms)
+      if (tickCounter % 5 === 0) {
+        console.log(`[Tick ${tickCounter}] Shithead room ${code}: phase=${room.shitheadGame.phase}, players=${room.playerSockets.size}, displays=${room.displaySockets.size}`);
+      }
       room.shitheadGame.tick();
       const gameState = room.shitheadGame.getState();
       const stateMsg = JSON.stringify({ type: 'GAME_STATE', ...gameState });
+      let playersSent = 0, displaysSent = 0;
       for (const ws of room.playerSockets) {
-        if (ws.readyState === 1) ws.send(stateMsg);
+        if (ws.readyState === 1) {
+          ws.send(stateMsg);
+          playersSent++;
+        }
       }
       for (const ws of room.displaySockets) {
-        if (ws.readyState === 1) ws.send(stateMsg);
+        if (ws.readyState === 1) {
+          ws.send(stateMsg);
+          displaysSent++;
+        }
+      }
+      if (tickCounter % 20 === 0) {
+        console.log(`  → Sent GAME_STATE to ${playersSent} players, ${displaysSent} displays`);
       }
     }
   }
