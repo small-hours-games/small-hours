@@ -434,6 +434,7 @@
   let hasVoted          = false;
   let voteCategories    = new Set();
   let lastRevealScores  = [];
+  let lastGamePhase     = null;  // Track phase for GAME_STATE transitions
 
   function connect() {
     const gen = ++connectGen;
@@ -583,6 +584,119 @@
         }
         if (msg.powerupType === 'doublePoints') {
           GNConfetti.screenFlash('rgba(255, 137, 6, 0.2)');
+        }
+        break;
+      }
+
+      case 'GAME_STATE': {
+        // Handle the new state-based protocol from QuizController
+        const state = msg;
+        const prevPhase = lastGamePhase || null;
+        lastGamePhase = state.phase;
+
+        // Update player's current score and rank from state
+        const myPlayer = state.players.find(p => p.username === myUsername);
+        if (myPlayer) {
+          myScore = myPlayer.score || 0;
+          myRank = myPlayer.rank || null;
+        }
+
+        // Handle phase transitions
+        switch (state.phase) {
+          case 'FETCHING':
+            if (prevPhase !== 'FETCHING') {
+              const fromGameOver = document.getElementById('gameover').classList.contains('active');
+              show('waiting');
+              document.getElementById('waiting-name').textContent = fromGameOver ? 'New round!' : 'Loading questions...';
+              document.getElementById('waiting-sub').textContent = fromGameOver ? 'Scores carry over — good luck!' : '';
+            }
+            break;
+
+          case 'COUNTDOWN':
+            if (prevPhase !== 'COUNTDOWN') {
+              show('waiting');
+              const remaining = Math.ceil(state.timeRemaining / 1000);
+              document.getElementById('waiting-name').textContent = `Starting in ${remaining}...`;
+              GNSound.countdownBeep();
+            } else {
+              // Update countdown ticker
+              const remaining = Math.ceil(state.timeRemaining / 1000);
+              document.getElementById('waiting-name').textContent = `Starting in ${remaining}...`;
+              if (remaining === 1) GNSound.countdownFinal();
+            }
+            break;
+
+          case 'QUESTION_ACTIVE':
+            if (prevPhase !== 'QUESTION_ACTIVE' && state.currentQuestion) {
+              // New question appeared
+              GNSound.whoosh();
+              GN.haptic('medium');
+
+              // Convert GAME_STATE format to QUESTION message format
+              const answerLetters = ['A', 'B', 'C', 'D'];
+              const questionMsg = {
+                questionId: `q-${state.questionIndex}`,
+                questionNumber: state.questionIndex,
+                totalQuestions: state.totalQuestions,
+                category: '', // Not in GAME_STATE
+                question: state.currentQuestion.text,
+                answers: state.currentQuestion.answers.map((text, idx) => ({
+                  id: answerLetters[idx],
+                  text: text
+                })),
+                timeLimit: state.currentQuestion.timeLimit
+              };
+              handleQuestion(questionMsg);
+            }
+            break;
+
+          case 'REVEAL':
+            if (prevPhase !== 'REVEAL' && state.currentQuestion) {
+              // Show correct answer
+              if (pqTimerTimeout) { clearTimeout(pqTimerTimeout); pqTimerTimeout = null; }
+              if (pqLowTimeTimeout) { clearTimeout(pqLowTimeTimeout); pqLowTimeTimeout = null; }
+              document.getElementById('pq-timer-bar').classList.remove('low-time');
+
+              // Convert GAME_STATE format to REVEAL message format
+              const answerLetters = ['A', 'B', 'C', 'D'];
+              const correctLetter = answerLetters[state.correctAnswerIndex] || 'A';
+
+              const revealMsg = {
+                correctAnswer: correctLetter,
+                scores: state.players.map(p => ({
+                  username: p.username,
+                  score: p.score || 0,
+                  rank: p.rank
+                }))
+              };
+              handleReveal(revealMsg);
+            }
+            break;
+
+          case 'BETWEEN_QUESTIONS':
+            if (prevPhase !== 'BETWEEN_QUESTIONS') {
+              if (pqTimerTimeout) { clearTimeout(pqTimerTimeout); pqTimerTimeout = null; }
+              if (pqLowTimeTimeout) { clearTimeout(pqLowTimeTimeout); pqLowTimeTimeout = null; }
+              document.getElementById('pq-timer-bar').classList.remove('low-time');
+              show('waiting');
+              document.getElementById('waiting-name').textContent = 'Next question soon...';
+              document.getElementById('waiting-sub').textContent = '';
+            }
+            break;
+
+          case 'GAME_OVER':
+            if (prevPhase !== 'GAME_OVER') {
+              // Show game over screen
+              const gameOverMsg = {
+                players: state.players.map(p => ({
+                  username: p.username,
+                  score: p.score || 0,
+                  rank: p.rank
+                }))
+              };
+              handleGameOver(gameOverMsg);
+            }
+            break;
         }
         break;
       }
