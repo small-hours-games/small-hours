@@ -346,6 +346,7 @@ wss.on('connection', (ws, req) => {
   // ── Player connection ─────────────────────────────────────────────────────
   if (isPlayer) {
     if (!roomCode || !rooms.has(roomCode)) {
+      console.log(`[WS] Room not found: ${roomCode}, available rooms: ${[...rooms.keys()].join(', ')}`);
       sendTo(ws, { type: 'ERROR', code: 'ROOM_NOT_FOUND', message: 'Room not found. Check the room code.' });
       ws.close();
       return;
@@ -374,7 +375,7 @@ wss.on('connection', (ws, req) => {
       handlePlayerDisconnect(ws, room);
     });
 
-    ws.on('error', (err) => console.error('Player WS error:', err.message));
+    ws.on('error', (err) => console.error(`[WS] Player ${roomCode} error:`, err.message));
     return;
   }
 
