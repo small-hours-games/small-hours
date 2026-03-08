@@ -187,7 +187,10 @@ function handleMessage(ws, role, msg, room) {
       });
 
       // Auto-manage bot: add bot if this is first human player
-      BotController.maybeAddBot(room);
+      const botWasAdded = BotController.maybeAddBot(room);
+      if (botWasAdded) {
+        room.readyPlayers.add(BotController.BOT_USERNAME);
+      }
 
       const isAdmin = username === room.adminUsername;
       const gameRunning = !!(room.game && room.game.phase !== 'LOBBY');
@@ -223,6 +226,7 @@ function handleMessage(ws, role, msg, room) {
       // Auto-manage bot: remove bot if now 2+ humans
       const botWasRemoved = BotController.maybeRemoveBot(room);
       if (botWasRemoved) {
+        room.readyPlayers.delete(BotController.BOT_USERNAME);
         broadcastAll(room, { type: 'PLAYER_REMOVED', username: BotController.BOT_USERNAME });
       }
 
