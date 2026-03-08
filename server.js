@@ -385,14 +385,23 @@ wss.on('connection', (ws, req) => {
 // - Broadcast state to all players and displays
 setInterval(() => {
   for (const [code, room] of rooms) {
+    // Tick and broadcast quiz games
     if (room.game && room.activeMiniGame === 'quiz') {
-      // Update game state
       room.game.tick();
-
-      // Pull state and broadcast to all connected clients
       const gameState = room.game.getState();
       const stateMsg = JSON.stringify({ type: 'GAME_STATE', ...gameState });
-
+      for (const ws of room.playerSockets) {
+        if (ws.readyState === 1) ws.send(stateMsg);
+      }
+      for (const ws of room.displaySockets) {
+        if (ws.readyState === 1) ws.send(stateMsg);
+      }
+    }
+    // Tick and broadcast shithead games
+    if (room.shitheadGame && room.activeMiniGame === 'shithead') {
+      room.shitheadGame.tick();
+      const gameState = room.shitheadGame.getState();
+      const stateMsg = JSON.stringify({ type: 'GAME_STATE', ...gameState });
       for (const ws of room.playerSockets) {
         if (ws.readyState === 1) ws.send(stateMsg);
       }

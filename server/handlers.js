@@ -2,6 +2,7 @@
 
 const QuizController = require('./QuizController');
 const BotController = require('./BotController');
+const ShiteadController = require('./ShiteadController');
 const { CAHGame } = require('../cah');
 const spyGame = require('../games/spy/server');
 const { LyricsGame } = require('../games/lyrics/server/game');
@@ -15,6 +16,7 @@ function maybeCleanupRoom(room) {
   const totalSockets = room.playerSockets.size + room.displaySockets.size;
   const idle = room.activeMiniGame === 'lobby' ||
     (room.game && room.game.phase === 'GAME_OVER') ||
+    (room.shitheadGame && room.shitheadGame.phase === 'GAME_OVER') ||
     (room.cahGame && room.cahGame.state === 'GAME_OVER') ||
     (room.lyricsGame && room.lyricsGame.state === 'GAME_OVER');
   if (totalSockets === 0 && idle) {
@@ -117,6 +119,7 @@ function handleMessage(ws, role, msg, room) {
       case 'RESTART':
         // TODO: implement restart for QuizController
         // if (room.game) room.game.restart();
+        if (room.shitheadGame) { room.shitheadGame = null; }
         if (room.cahGame) { room.cahGame = null; }
       if (room.lyricsGame) { room.lyricsGame = null; }
         room.categoryVotes.clear();
@@ -238,7 +241,7 @@ function handleMessage(ws, role, msg, room) {
       const username = room.wsToUsername.get(ws);
       if (!username) break;
       const gameType = msg.gameType;
-      if (!['quiz', 'cah', 'spy', 'lyrics'].includes(gameType)) break;
+      if (!['quiz', 'shithead', 'cah', 'spy', 'lyrics'].includes(gameType)) break;
       room.gameSuggestions.set(username, gameType);
       broadcastLobbyUpdate(room);
       break;
@@ -255,6 +258,10 @@ function handleMessage(ws, role, msg, room) {
       const questionCount = Number.isInteger(msg.questionCount) && msg.questionCount > 0 ? Math.min(msg.questionCount, 50) : 20;
       const gameDifficulty = ['easy', 'medium', 'hard'].includes(msg.gameDifficulty) ? msg.gameDifficulty : 'easy';
 
+      if (gameType === 'shithead' && room.players.size < 2) {
+        sendTo(ws, { type: 'ERROR', code: 'NOT_ENOUGH_PLAYERS', message: 'Shithead requires at least 2 players.' });
+        break;
+      }
       if (gameType === 'cah' && room.players.size < 3) {
         sendTo(ws, { type: 'ERROR', code: 'NOT_ENOUGH_PLAYERS', message: 'Cards requires at least 3 players.' });
         break;
@@ -281,6 +288,12 @@ function handleMessage(ws, role, msg, room) {
           });
         }
         room.game.start();
+      } else if (gameType === 'shithead') {
+        room.shitheadGame = new ShiteadController();
+        for (const [uname, p] of room.players) {
+          room.shitheadGame.addPlayer(p.ws, uname, { isBot: p.isBot });
+        }
+        room.shitheadGame.start();
       } else if (gameType === 'cah') {
         const maxRounds = Number.isInteger(msg.maxRounds) ? Math.max(1, Math.min(20, msg.maxRounds)) : 8;
         room.cahGame = new CAHGame(room._broadcast);
@@ -358,6 +371,7 @@ function handleMessage(ws, role, msg, room) {
       }
 
       if (room.game) { room.game = null; }  // Reset game instance
+      if (room.shitheadGame) { room.shitheadGame = null; }
       if (room.cahGame) { room.cahGame = null; }
       if (room.lyricsGame) { room.lyricsGame = null; }
       room.categoryVotes.clear();
