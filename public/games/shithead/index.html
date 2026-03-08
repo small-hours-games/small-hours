@@ -732,65 +732,56 @@
 
   function renderSwap() {
     if (!myState) return;
-    swapSelected = { hand: null, faceUp: null };
+    // Don't reset swapSelected - preserve selections across renders
 
     const handEl   = document.getElementById('swap-hand');
     const faceUpEl = document.getElementById('swap-faceup');
 
-    handEl.innerHTML = sortCards(myState.hand).map((c, idx) =>
-      `<div class="play-card ${isRed(c) ? 'red-card' : 'black-card'}" data-id="${c.rank}-${c.suit}-${idx}" data-zone="hand">
+    handEl.innerHTML = sortCards(myState.hand).map((c, idx) => {
+      const cardId = `${c.rank}-${c.suit}-${idx}`;
+      const isSelected = swapSelected.hand === cardId ? ' selected' : '';
+      return `<div class="play-card ${isRed(c) ? 'red-card' : 'black-card'}${isSelected}" data-id="${cardId}" data-zone="hand">
         <span class="card-tl"><b>${c.rank}</b><span class="card-suit-sm">${c.suit}</span></span>
         <span class="card-center">${c.rank}</span>
         <span class="card-br"><b>${c.rank}</b><span class="card-suit-sm">${c.suit}</span></span>
-      </div>`
-    ).join('');
+      </div>`;
+    }).join('');
 
-    faceUpEl.innerHTML = sortCards(myState.faceUp).map((c, idx) =>
-      `<div class="play-card ${isRed(c) ? 'red-card' : 'black-card'}" data-id="${c.rank}-${c.suit}-${idx}" data-zone="faceup">
+    faceUpEl.innerHTML = sortCards(myState.faceUp).map((c, idx) => {
+      const cardId = `${c.rank}-${c.suit}-${idx}`;
+      const isSelected = swapSelected.faceUp === cardId ? ' selected' : '';
+      return `<div class="play-card ${isRed(c) ? 'red-card' : 'black-card'}${isSelected}" data-id="${cardId}" data-zone="faceup">
         <span class="card-tl"><b>${c.rank}</b><span class="card-suit-sm">${c.suit}</span></span>
         <span class="card-center">${c.rank}</span>
         <span class="card-br"><b>${c.rank}</b><span class="card-suit-sm">${c.suit}</span></span>
-      </div>`
-    ).join('');
+      </div>`;
+    }).join('');
 
     // Use event delegation: attach listeners to containers, not individual cards
     // This survives re-rendering (which happens on every GAME_STATE update)
     if (!handEl._listenerAttached) {
       handEl.addEventListener('click', (e) => {
         const card = e.target.closest('.play-card');
-        console.log('[Swap] Hand container click, card found: ' + (card ? card.dataset.id : 'none'));
         if (card) onSwapClick('hand', card);
       });
       handEl._listenerAttached = true;
-      console.log('[Swap] Hand container listener attached');
     }
     if (!faceUpEl._listenerAttached) {
       faceUpEl.addEventListener('click', (e) => {
         const card = e.target.closest('.play-card');
-        console.log('[Swap] FaceUp container click, card found: ' + (card ? card.dataset.id : 'none'));
         if (card) onSwapClick('faceup', card);
       });
       faceUpEl._listenerAttached = true;
-      console.log('[Swap] FaceUp container listener attached');
     }
   }
 
   function onSwapClick(zone, el) {
     const id = el.dataset.id;
-    console.log('[Swap] onSwapClick: zone=' + zone + ', id=' + id + ', el=' + (el ? 'found' : 'null'));
     if (zone === 'hand') {
-      document.querySelectorAll('#swap-hand .play-card').forEach(e => e.classList.remove('selected'));
-      if (swapSelected.hand === id) { swapSelected.hand = null; return; }
-      swapSelected.hand = id;
-      console.log('[Swap] Adding selected class to element, hasClass=' + el.classList.contains('selected'));
-      el.classList.add('selected');
-      console.log('[Swap] After add, hasClass=' + el.classList.contains('selected'));
+      if (swapSelected.hand === id) { swapSelected.hand = null; } else { swapSelected.hand = id; }
       GNSound.select(); GN.haptic('tick');
     } else {
-      document.querySelectorAll('#swap-faceup .play-card').forEach(e => e.classList.remove('selected'));
-      if (swapSelected.faceUp === id) { swapSelected.faceUp = null; return; }
-      swapSelected.faceUp = id;
-      el.classList.add('selected');
+      if (swapSelected.faceUp === id) { swapSelected.faceUp = null; } else { swapSelected.faceUp = id; }
       GNSound.select(); GN.haptic('tick');
     }
     if (swapSelected.hand && swapSelected.faceUp) {
