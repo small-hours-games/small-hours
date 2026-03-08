@@ -435,6 +435,7 @@
   let voteCategories    = new Set();
   let lastRevealScores  = [];
   let lastGamePhase     = null;  // Track phase for GAME_STATE transitions
+  let lastQuestionIndex = -1;    // Track question index to detect new questions
 
   function connect() {
     const gen = ++connectGen;
@@ -627,7 +628,9 @@
             break;
 
           case 'QUESTION_ACTIVE':
-            if (prevPhase !== 'QUESTION_ACTIVE' && state.currentQuestion) {
+            // Detect new question by checking if question index changed
+            if (state.currentQuestion && state.questionIndex !== lastQuestionIndex) {
+              lastQuestionIndex = state.questionIndex;
               // New question appeared
               GNSound.whoosh();
               GN.haptic('medium');
