@@ -199,6 +199,18 @@ function handleMessage(ws, role, msg, room) {
       const gameRunning = !!(room.game && room.game.phase !== 'LOBBY');
       sendTo(ws, { type: 'JOIN_OK', username, isAdmin, roomCode: room.code, avatar, lang: room.language, gameRunning });
 
+      // Reconnect to in-progress shithead game
+      if (room.activeMiniGame === 'shithead' && room.shitheadGame) {
+        const playerData = room.players.get(username);
+        room.shitheadGame.addPlayer(username, {
+          username,
+          ws,
+          isBot: playerData?.isBot || false,
+          cardHand: [],
+          cardFaceUp: [],
+          cardFaceDown: [],
+        });
+      }
       // Reconnect to in-progress CAH game
       if (room.activeMiniGame === 'cah' && room.cahGame) {
         room.cahGame.addPlayer(ws, username);
