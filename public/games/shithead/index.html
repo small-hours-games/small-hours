@@ -727,7 +727,8 @@
     document.getElementById('confirm-swap-btn').textContent = '⏳ Waiting…';
   });
 
-  const sortCards = cards => [...cards].sort((a, b) => a.rank - b.rank);
+  const rankOrder = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
+  const sortCards = cards => [...cards].sort((a, b) => rankOrder.indexOf(a.rank) - rankOrder.indexOf(b.rank));
 
   function renderSwap() {
     if (!myState) return;
@@ -738,17 +739,17 @@
 
     handEl.innerHTML = sortCards(myState.hand).map(c =>
       `<div class="play-card ${isRed(c) ? 'red-card' : 'black-card'}" data-id="${c.id}" data-zone="hand">
-        <span class="card-tl"><b>${c.name}</b><span class="card-suit-sm">${c.suit}</span></span>
-        <span class="card-center">${c.name}</span>
-        <span class="card-br"><b>${c.name}</b><span class="card-suit-sm">${c.suit}</span></span>
+        <span class="card-tl"><b>${c.rank}</b><span class="card-suit-sm">${c.suit}</span></span>
+        <span class="card-center">${c.rank}</span>
+        <span class="card-br"><b>${c.rank}</b><span class="card-suit-sm">${c.suit}</span></span>
       </div>`
     ).join('');
 
     faceUpEl.innerHTML = sortCards(myState.faceUp).map(c =>
       `<div class="play-card ${isRed(c) ? 'red-card' : 'black-card'}" data-id="${c.id}" data-zone="faceup">
-        <span class="card-tl"><b>${c.name}</b><span class="card-suit-sm">${c.suit}</span></span>
-        <span class="card-center">${c.name}</span>
-        <span class="card-br"><b>${c.name}</b><span class="card-suit-sm">${c.suit}</span></span>
+        <span class="card-tl"><b>${c.rank}</b><span class="card-suit-sm">${c.suit}</span></span>
+        <span class="card-center">${c.rank}</span>
+        <span class="card-br"><b>${c.rank}</b><span class="card-suit-sm">${c.suit}</span></span>
       </div>`
     ).join('');
 
@@ -797,7 +798,7 @@
       const isLastCard = !hasHand && faceDownCount > 0;
 
       const faceUpHtml = (p.faceUp || []).map(c =>
-        `<div class="opp-card ${isRed(c) ? 'red-card' : 'black-card'}"><span>${c.name}</span><span>${c.suit}</span></div>`
+        `<div class="opp-card ${isRed(c) ? 'red-card' : 'black-card'}"><span>${c.rank}</span><span>${c.suit}</span></div>`
       ).join('');
       const faceDownHtml = Array.from({ length: faceDownCount }, () => '<div class="opp-face-down"></div>').join('');
       const handHtml = hasHand
@@ -876,9 +877,9 @@
         const playable = myTurn && canPlayCard(c.rank, sevenActive, pt);
         return `<div class="play-card ${isRed(c) ? 'red-card' : 'black-card'} ${!myTurn ? 'not-my-turn' : (!playable ? 'unplayable' : '')}"
           data-id="${c.id}" data-zone="hand">
-          <span class="card-tl"><b>${c.name}</b><span class="card-suit-sm">${c.suit}</span></span>
-          <span class="card-center">${c.name}</span>
-          <span class="card-br"><b>${c.name}</b><span class="card-suit-sm">${c.suit}</span></span>
+          <span class="card-tl"><b>${c.rank}</b><span class="card-suit-sm">${c.suit}</span></span>
+          <span class="card-center">${c.rank}</span>
+          <span class="card-br"><b>${c.rank}</b><span class="card-suit-sm">${c.suit}</span></span>
         </div>`;
       }).join('');
       faceUpLabel.style.display = 'none';
@@ -893,9 +894,9 @@
         const playable = myTurn && canPlayCard(c.rank, sevenActive, pt);
         return `<div class="play-card ${isRed(c) ? 'red-card' : 'black-card'} ${!myTurn ? 'not-my-turn' : (!playable ? 'unplayable' : '')}"
           data-id="${c.id}" data-zone="faceup">
-          <span class="card-tl"><b>${c.name}</b><span class="card-suit-sm">${c.suit}</span></span>
-          <span class="card-center">${c.name}</span>
-          <span class="card-br"><b>${c.name}</b><span class="card-suit-sm">${c.suit}</span></span>
+          <span class="card-tl"><b>${c.rank}</b><span class="card-suit-sm">${c.suit}</span></span>
+          <span class="card-center">${c.rank}</span>
+          <span class="card-br"><b>${c.rank}</b><span class="card-suit-sm">${c.suit}</span></span>
         </div>`;
       }).join('');
       faceDownLabel.style.display = 'none';
