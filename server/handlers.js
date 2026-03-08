@@ -2,7 +2,6 @@
 
 const QuizController = require('./QuizController');
 const BotController = require('./BotController');
-const { ShitheadGame } = require('../shithead');
 const { CAHGame } = require('../cah');
 const spyGame = require('../games/spy/server');
 const { LyricsGame } = require('../games/lyrics/server/game');
@@ -16,7 +15,6 @@ function maybeCleanupRoom(room) {
   const totalSockets = room.playerSockets.size + room.displaySockets.size;
   const idle = room.activeMiniGame === 'lobby' ||
     (room.game && room.game.phase === 'GAME_OVER') ||
-    (room.shitheadGame && room.shitheadGame.state === 'GAME_OVER') ||
     (room.cahGame && room.cahGame.state === 'GAME_OVER') ||
     (room.lyricsGame && room.lyricsGame.state === 'GAME_OVER');
   if (totalSockets === 0 && idle) {
@@ -75,7 +73,6 @@ function handlePlayerDisconnect(ws, room) {
     }
 
     if (room.game) room.game.removePlayer(username);
-    if (room.shitheadGame) room.shitheadGame.removePlayer(ws);
     if (room.cahGame) room.cahGame.removePlayer(ws);
     if (room.lyricsGame) room.lyricsGame.removePlayer(ws);
     broadcastLobbyUpdate(room);
@@ -83,7 +80,6 @@ function handlePlayerDisconnect(ws, room) {
   } else {
     // In game: keep score, remove from game
     if (room.game) room.game.removePlayer(username);
-    if (room.shitheadGame) room.shitheadGame.removePlayer(ws);
     if (room.cahGame) room.cahGame.removePlayer(ws);
     if (room.lyricsGame) room.lyricsGame.removePlayer(ws);
   }
@@ -121,7 +117,6 @@ function handleMessage(ws, role, msg, room) {
       case 'RESTART':
         // TODO: implement restart for QuizController
         // if (room.game) room.game.restart();
-        if (room.shitheadGame) { room.shitheadGame = null; }
         if (room.cahGame) { room.cahGame = null; }
       if (room.lyricsGame) { room.lyricsGame = null; }
         room.categoryVotes.clear();
@@ -198,11 +193,6 @@ function handleMessage(ws, role, msg, room) {
       const gameRunning = !!(room.game && room.game.phase !== 'LOBBY');
       sendTo(ws, { type: 'JOIN_OK', username, isAdmin, roomCode: room.code, avatar, lang: room.language, gameRunning });
 
-      // Reconnect to in-progress shithead game (must be after JOIN_OK so that
-      // SHITHEAD_GAME_STATE arrives after JOIN_OK and is not overwritten by it)
-      if (room.activeMiniGame === 'shithead' && room.shitheadGame) {
-        room.shitheadGame.addPlayer(ws, username);
-      }
       // Reconnect to in-progress CAH game
       if (room.activeMiniGame === 'cah' && room.cahGame) {
         room.cahGame.addPlayer(ws, username);
@@ -244,7 +234,7 @@ function handleMessage(ws, role, msg, room) {
       const username = room.wsToUsername.get(ws);
       if (!username) break;
       const gameType = msg.gameType;
-      if (!['quiz', 'shithead', 'cah', 'spy', 'lyrics'].includes(gameType)) break;
+      if (!['quiz', 'cah', 'spy', 'lyrics'].includes(gameType)) break;
       room.gameSuggestions.set(username, gameType);
       broadcastLobbyUpdate(room);
       break;
@@ -261,10 +251,6 @@ function handleMessage(ws, role, msg, room) {
       const questionCount = Number.isInteger(msg.questionCount) && msg.questionCount > 0 ? Math.min(msg.questionCount, 50) : 20;
       const gameDifficulty = ['easy', 'medium', 'hard'].includes(msg.gameDifficulty) ? msg.gameDifficulty : 'easy';
 
-      if (gameType === 'shithead' && room.players.size < 2) {
-        sendTo(ws, { type: 'ERROR', code: 'NOT_ENOUGH_PLAYERS', message: 'Shithead requires at least 2 players.' });
-        break;
-      }
       if (gameType === 'cah' && room.players.size < 3) {
         sendTo(ws, { type: 'ERROR', code: 'NOT_ENOUGH_PLAYERS', message: 'Cards requires at least 3 players.' });
         break;
@@ -291,13 +277,6 @@ function handleMessage(ws, role, msg, room) {
           });
         }
         room.game.start();
-      } else if (gameType === 'shithead') {
-        const deckCount = Number.isInteger(msg.deckCount) ? Math.max(1, Math.min(3, msg.deckCount)) : 1;
-        room.shitheadGame = new ShitheadGame(room._broadcast);
-        for (const [uname, p] of room.players) {
-          room.shitheadGame.addPlayer(p.ws, uname);
-        }
-        room.shitheadGame.startGame(deckCount);
       } else if (gameType === 'cah') {
         const maxRounds = Number.isInteger(msg.maxRounds) ? Math.max(1, Math.min(20, msg.maxRounds)) : 8;
         room.cahGame = new CAHGame(room._broadcast);
@@ -374,42 +353,7 @@ function handleMessage(ws, role, msg, room) {
         }
       }
 
-      if (room.shitheadGame && room.shitheadGame.state === 'GAME_OVER') {
-        try {
-          const finalState = room.shitheadGame.getState?.();
-          if (finalState && finalState.players) {
-            const gameRecord = {
-              gameId: `shithead-${new Date().toISOString()}`,
-              gameType: 'shithead',
-              roomCode: room.code,
-              startTime: room.shitheadGame.startTime,
-              endTime: Date.now(),
-              duration: Date.now() - (room.shitheadGame.startTime || Date.now()),
-              players: finalState.players
-                .filter(p => !p.isBot)
-                .map((p, idx) => ({
-                  username: p.username || '',
-                  finalScore: p.score || 0,
-                  rank: idx + 1,
-                  isBot: false
-                }))
-            };
-
-            Persistence.saveGameHistory(gameRecord);
-
-            for (const player of gameRecord.players) {
-              if (player.username) {
-                Persistence.updatePlayerStats(player.username, player.finalScore, 'shithead');
-              }
-            }
-          }
-        } catch (error) {
-          console.error('Failed to save shithead game history:', error);
-        }
-      }
-
       if (room.game) { room.game = null; }  // Reset game instance
-      if (room.shitheadGame) { room.shitheadGame = null; }
       if (room.cahGame) { room.cahGame = null; }
       if (room.lyricsGame) { room.lyricsGame = null; }
       room.categoryVotes.clear();
@@ -491,41 +435,6 @@ function handleMessage(ws, role, msg, room) {
         room.language = msg.lang;
         broadcastAll(room, { type: 'LANGUAGE_SET', lang: room.language });
       }
-      break;
-    }
-
-    case 'SHITHEAD_CONFIRM_SWAP': {
-      const username = room.wsToUsername.get(ws);
-      if (!username || !room.shitheadGame) break;
-      room.shitheadGame.confirmSwap(username);
-      break;
-    }
-
-    case 'SHITHEAD_SWAP_CARD': {
-      const username = room.wsToUsername.get(ws);
-      if (!username || !room.shitheadGame) break;
-      room.shitheadGame.swapCard(username, msg.handCardId, msg.faceUpCardId);
-      break;
-    }
-
-    case 'SHITHEAD_PLAY_CARDS': {
-      const username = room.wsToUsername.get(ws);
-      if (!username || !room.shitheadGame || !Array.isArray(msg.cardIds)) break;
-      room.shitheadGame.playCards(username, msg.cardIds);
-      break;
-    }
-
-    case 'SHITHEAD_PLAY_FACEDOWN': {
-      const username = room.wsToUsername.get(ws);
-      if (!username || !room.shitheadGame) break;
-      room.shitheadGame.playFaceDown(username, msg.cardId);
-      break;
-    }
-
-    case 'SHITHEAD_PICK_UP_PILE': {
-      const username = room.wsToUsername.get(ws);
-      if (!username || !room.shitheadGame) break;
-      room.shitheadGame.pickUpPile(username);
       break;
     }
 
