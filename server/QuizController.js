@@ -41,8 +41,8 @@ class QuizController extends GameController {
     try {
       this.questions = await fetchQuestions(
         this.categories,
-        this.difficulty,
-        this.questionCount
+        this.questionCount,
+        this.difficulty
       )
       if (this.phase === 'FETCHING') {  // Still in fetching phase
         this.transitionTo('COUNTDOWN')
