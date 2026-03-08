@@ -635,6 +635,13 @@
       debugLog.push(msg);
       console.log(`[Debug] ${msg}`);
     },
+    getMessageTypes: () => {
+      // Extract message types from debug log
+      return debugLog
+        .filter(line => line.startsWith('[Msg]'))
+        .map(line => line.replace('[Msg] Received: ', ''));
+    },
+    getMyState: () => myState,
   };
 
   initLog.push(`[Init] roomCode=${roomCode}, myUsername=${myUsername}`);
@@ -988,6 +995,9 @@
 
   // ── Message handler ────────────────────────────────────────────────────────
   function handleMsg(msg) {
+    // Log all messages for debugging
+    debugLog.push(`[Msg] Received: ${msg.type}`);
+
     switch (msg.type) {
       case 'CONNECTED':
         document.getElementById('reconnecting').classList.remove('show');
