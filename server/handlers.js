@@ -205,6 +205,11 @@ function handleMessage(ws, role, msg, room) {
         if (existingPlayer) {
           // Player already exists, just update WebSocket
           existingPlayer.ws = ws;
+          // Send their current game state immediately
+          const playerState = room.shitheadGame.getPlayerState(username);
+          if (playerState) {
+            sendTo(ws, { type: 'SHITHEAD_YOUR_STATE', ...playerState });
+          }
         }
       }
       // Reconnect to in-progress CAH game

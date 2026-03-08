@@ -94,6 +94,17 @@ class ShiteadController extends GameController {
     return this._getPhaseTimeRemaining()
   }
 
+  getPlayerState(username) {
+    const player = this.players.get(username)
+    if (!player) return null
+    return {
+      username,
+      hand: player.cardHand || [],
+      faceUp: player.cardFaceUp || [],
+      faceDownIds: (player.cardFaceDown || []).map((_, idx) => idx)
+    }
+  }
+
   _getPhaseTimeRemaining() {
     switch (this.phase) {
       case 'SETUP':
