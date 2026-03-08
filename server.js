@@ -364,6 +364,7 @@ wss.on('connection', (ws, req) => {
       }
       let msg;
       try { msg = JSON.parse(raw); } catch { return; }
+      console.log(`[WS] Player ${roomCode} received message: ${msg.type}`);
       handleMessage(ws, 'player', msg, room);
     });
 
