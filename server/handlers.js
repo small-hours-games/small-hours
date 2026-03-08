@@ -201,15 +201,11 @@ function handleMessage(ws, role, msg, room) {
 
       // Reconnect to in-progress shithead game
       if (room.activeMiniGame === 'shithead' && room.shitheadGame) {
-        const playerData = room.players.get(username);
-        room.shitheadGame.addPlayer(username, {
-          username,
-          ws,
-          isBot: playerData?.isBot || false,
-          cardHand: [],
-          cardFaceUp: [],
-          cardFaceDown: [],
-        });
+        const existingPlayer = room.shitheadGame.players.get(username);
+        if (existingPlayer) {
+          // Player already exists, just update WebSocket
+          existingPlayer.ws = ws;
+        }
       }
       // Reconnect to in-progress CAH game
       if (room.activeMiniGame === 'cah' && room.cahGame) {
