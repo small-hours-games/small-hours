@@ -762,16 +762,24 @@
     if (!handEl._listenerAttached) {
       handEl.addEventListener('click', (e) => {
         const card = e.target.closest('.play-card');
-        if (card) onSwapClick('hand', card);
+        if (card) {
+          console.log('[Click] Hand card clicked: ' + card.dataset.id);
+          onSwapClick('hand', card);
+        }
       });
       handEl._listenerAttached = true;
+      console.log('[Swap] Hand listener attached and ready for clicks');
     }
     if (!faceUpEl._listenerAttached) {
       faceUpEl.addEventListener('click', (e) => {
         const card = e.target.closest('.play-card');
-        if (card) onSwapClick('faceup', card);
+        if (card) {
+          console.log('[Click] FaceUp card clicked: ' + card.dataset.id);
+          onSwapClick('faceup', card);
+        }
       });
       faceUpEl._listenerAttached = true;
+      console.log('[Swap] FaceUp listener attached and ready for clicks');
     }
   }
 
