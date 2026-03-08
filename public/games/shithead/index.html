@@ -737,16 +737,16 @@
     const handEl   = document.getElementById('swap-hand');
     const faceUpEl = document.getElementById('swap-faceup');
 
-    handEl.innerHTML = sortCards(myState.hand).map(c =>
-      `<div class="play-card ${isRed(c) ? 'red-card' : 'black-card'}" data-id="${c.id}" data-zone="hand">
+    handEl.innerHTML = sortCards(myState.hand).map((c, idx) =>
+      `<div class="play-card ${isRed(c) ? 'red-card' : 'black-card'}" data-id="${c.rank}-${c.suit}-${idx}" data-zone="hand">
         <span class="card-tl"><b>${c.rank}</b><span class="card-suit-sm">${c.suit}</span></span>
         <span class="card-center">${c.rank}</span>
         <span class="card-br"><b>${c.rank}</b><span class="card-suit-sm">${c.suit}</span></span>
       </div>`
     ).join('');
 
-    faceUpEl.innerHTML = sortCards(myState.faceUp).map(c =>
-      `<div class="play-card ${isRed(c) ? 'red-card' : 'black-card'}" data-id="${c.id}" data-zone="faceup">
+    faceUpEl.innerHTML = sortCards(myState.faceUp).map((c, idx) =>
+      `<div class="play-card ${isRed(c) ? 'red-card' : 'black-card'}" data-id="${c.rank}-${c.suit}-${idx}" data-zone="faceup">
         <span class="card-tl"><b>${c.rank}</b><span class="card-suit-sm">${c.suit}</span></span>
         <span class="card-center">${c.rank}</span>
         <span class="card-br"><b>${c.rank}</b><span class="card-suit-sm">${c.suit}</span></span>
@@ -873,10 +873,10 @@
     if (hasHand) {
       zoneHint.textContent = 'Hand cards';
       zoneHint.style.display = '';
-      handEl.innerHTML = sortCards(myState.hand).map(c => {
+      handEl.innerHTML = sortCards(myState.hand).map((c, idx) => {
         const playable = myTurn && canPlayCard(c.rank, sevenActive, pt);
         return `<div class="play-card ${isRed(c) ? 'red-card' : 'black-card'} ${!myTurn ? 'not-my-turn' : (!playable ? 'unplayable' : '')}"
-          data-id="${c.id}" data-zone="hand">
+          data-id="${c.rank}-${c.suit}-${idx}" data-zone="hand">
           <span class="card-tl"><b>${c.rank}</b><span class="card-suit-sm">${c.suit}</span></span>
           <span class="card-center">${c.rank}</span>
           <span class="card-br"><b>${c.rank}</b><span class="card-suit-sm">${c.suit}</span></span>
@@ -890,10 +890,10 @@
       zoneHint.style.display = 'none';
       handEl.innerHTML = '';
       faceUpLabel.style.display = '';
-      faceUpEl.innerHTML = sortCards(myState.faceUp).map(c => {
+      faceUpEl.innerHTML = sortCards(myState.faceUp).map((c, idx) => {
         const playable = myTurn && canPlayCard(c.rank, sevenActive, pt);
         return `<div class="play-card ${isRed(c) ? 'red-card' : 'black-card'} ${!myTurn ? 'not-my-turn' : (!playable ? 'unplayable' : '')}"
-          data-id="${c.id}" data-zone="faceup">
+          data-id="${c.rank}-${c.suit}-${idx}" data-zone="faceup">
           <span class="card-tl"><b>${c.rank}</b><span class="card-suit-sm">${c.suit}</span></span>
           <span class="card-center">${c.rank}</span>
           <span class="card-br"><b>${c.rank}</b><span class="card-suit-sm">${c.suit}</span></span>
