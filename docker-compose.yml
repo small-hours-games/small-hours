@@ -2,6 +2,7 @@ name: small-hours
 
 services:
   quiz:
+    container_name: small-hours
     build: .
     restart: unless-stopped
 
@@ -52,7 +53,7 @@ services:
       - ./certs:/app/certs:ro
 
 # ── To apply code changes ────────────────────────────────────────────────────
-#   git pull && docker restart small-hours_quiz_1
+#   git pull && docker restart small-hours
 #
 # ── To rebuild after package.json changes ───────────────────────────────────
 #   docker compose up --build -d
