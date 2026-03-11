@@ -23,4 +23,4 @@ jobs:
           script: |
             cd /opt/Quiz-trivia
             git pull
-            docker restart quiz-trivia-quiz-1
+            docker restart small-hours_quiz_1
