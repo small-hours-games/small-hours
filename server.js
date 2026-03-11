@@ -104,6 +104,10 @@ function serveFile(rel) {
   return (_req, res) => res.sendFile(path.join(__dirname, rel));
 }
 
+// Modern routes
+app.get('/player/:code',         pageRateLimit, serveFile('public/player/index.html'));
+app.get('/host/:code',           pageRateLimit, serveFile('public/host/index.html'));
+
 // Legacy /group/ routes → redirect to modern /player/ routes
 app.get('/group/:code',          pageRateLimit, (req, res) => res.redirect(`/player/${req.params.code}`));
 app.get('/group/:code/display',  pageRateLimit, (req, res) => res.redirect(`/host/${req.params.code}`));
