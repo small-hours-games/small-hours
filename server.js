@@ -392,8 +392,8 @@ let tickCounter = 0;
 setInterval(() => {
   tickCounter++;
   for (const [code, room] of rooms) {
-    // Tick and broadcast quiz games
-    if (room.game && room.activeMiniGame === 'quiz') {
+    // Tick and broadcast all GameController-based games (quiz, CAH, Spy, Lyrics, Guess, etc.)
+    if (room.game && room.activeMiniGame) {
       room.game.tick();
       const gameState = room.game.getState();
       const stateMsg = JSON.stringify({ type: 'GAME_STATE', ...gameState });
