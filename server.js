@@ -20,7 +20,7 @@ const { handleMessage, handlePlayerDisconnect, maybeCleanupRoom } = require('./s
 const Persistence = require('./server/persistence');
 
 // ─── Load game modules ──────────────────────────────────────────────────────
-const spyGame = require('./games/spy/server');
+// (Game controllers are loaded from handlers.js as needed)
 
 const PORT = process.env.PORT || 3000;
 
@@ -224,13 +224,7 @@ app.get('/api/history', (req, res) => {
   res.json({ games });
 });
 
-// Register game-specific API routes
-for (const [path, handler] of Object.entries(spyGame.routes)) {
-  app.get(path, (req, res) => {
-    const roomCode = req.params.code || req.query.room;
-    handler(req, res, roomCode);
-  });
-}
+// Game-specific API routes are no longer needed (state broadcast via WebSocket)
 
 // ─── HTTPS or HTTP server ────────────────────────────────────────────────────
 

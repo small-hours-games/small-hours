@@ -4,9 +4,9 @@ const QuizController = require('./QuizController');
 const BotController = require('./BotController');
 const ShiteadController = require('./ShiteadController');
 const GuessController = require('../games/guess/server');
-const { CAHGame } = require('../cah');
-const spyGame = require('../games/spy/server');
-const { LyricsGame } = require('../games/lyrics/server/game');
+const SpyGameController = require('../games/spy/server');
+const LyricsGameController = require('../games/lyrics/server');
+const CAHGameController = require('../games/cah/server');
 const { rooms, nameToAvatar } = require('./rooms');
 const { broadcastAll, broadcastToDisplays, sendTo, broadcastLobbyUpdate, broadcastVoteUpdate } = require('./broadcast');
 const Persistence = require('./persistence');
@@ -17,9 +17,7 @@ function maybeCleanupRoom(room) {
   const totalSockets = room.playerSockets.size + room.displaySockets.size;
   const idle = room.activeMiniGame === 'lobby' ||
     (room.game && room.game.phase === 'GAME_OVER') ||
-    (room.shitheadGame && room.shitheadGame.phase === 'GAME_OVER') ||
-    (room.cahGame && room.cahGame.state === 'GAME_OVER') ||
-    (room.lyricsGame && room.lyricsGame.state === 'GAME_OVER');
+    (room.shitheadGame && room.shitheadGame.phase === 'GAME_OVER');
   if (totalSockets === 0 && idle) {
     // Grace period: players navigating between pages temporarily have 0 sockets.
     // Wait 30s before deleting so back-to-lobby transitions don't destroy the room.
@@ -76,15 +74,11 @@ function handlePlayerDisconnect(ws, room) {
     }
 
     if (room.game) room.game.removePlayer(username);
-    if (room.cahGame) room.cahGame.removePlayer(ws);
-    if (room.lyricsGame) room.lyricsGame.removePlayer(ws);
     broadcastLobbyUpdate(room);
     broadcastVoteUpdate(room);
   } else {
     // In game: keep score, remove from game
     if (room.game) room.game.removePlayer(username);
-    if (room.cahGame) room.cahGame.removePlayer(ws);
-    if (room.lyricsGame) room.lyricsGame.removePlayer(ws);
   }
 
   maybeCleanupRoom(room);
@@ -121,8 +115,6 @@ function handleMessage(ws, role, msg, room) {
         // TODO: implement restart for QuizController
         // if (room.game) room.game.restart();
         if (room.shitheadGame) { room.shitheadGame = null; }
-        if (room.cahGame) { room.cahGame = null; }
-      if (room.lyricsGame) { room.lyricsGame = null; }
         room.categoryVotes.clear();
         room.readyPlayers.clear();
         room.gameSuggestions.clear();
@@ -213,15 +205,6 @@ function handleMessage(ws, role, msg, room) {
           }
         }
       }
-      // Reconnect to in-progress CAH game
-      if (room.activeMiniGame === 'cah' && room.cahGame) {
-        room.cahGame.addPlayer(ws, username);
-      }
-      // Reconnect to in-progress lyrics game
-      if (room.activeMiniGame === 'lyrics' && room.lyricsGame) {
-        room.lyricsGame.addPlayer(ws, username);
-      }
-
       broadcastLobbyUpdate(room);
       broadcastVoteUpdate(room);
 
@@ -321,19 +304,23 @@ function handleMessage(ws, role, msg, room) {
         room.shitheadGame.start();
       } else if (gameType === 'cah') {
         const maxRounds = Number.isInteger(msg.maxRounds) ? Math.max(1, Math.min(20, msg.maxRounds)) : 8;
-        room.cahGame = new CAHGame(room._broadcast);
+        room.game = new CAHGameController(maxRounds);
         for (const [uname, p] of room.players) {
-          room.cahGame.addPlayer(p.ws, uname);
+          room.game.addPlayer(uname, { score: 0 });
         }
-        room.cahGame.startGame(maxRounds);
+        room.game.start();
       } else if (gameType === 'spy') {
-        spyGame.onStartGame(room);
-      } else if (gameType === 'lyrics') {
-        room.lyricsGame = new LyricsGame(room._broadcast);
+        room.game = new SpyGameController();
         for (const [uname, p] of room.players) {
-          room.lyricsGame.addPlayer(p.ws, uname);
+          room.game.addPlayer(uname, { score: 0 });
         }
-        room.lyricsGame.startGame(questionCount);
+        room.game.start();
+      } else if (gameType === 'lyrics') {
+        room.game = new LyricsGameController(questionCount);
+        for (const [uname, p] of room.players) {
+          room.game.addPlayer(uname, { score: 0 });
+        }
+        room.game.start();
       } else if (gameType === 'guess') {
         // Example game using new GameController pattern
         room.game = new GuessController();
@@ -406,10 +393,9 @@ function handleMessage(ws, role, msg, room) {
         }
       }
 
-      if (room.game) { room.game = null; }  // Reset game instance
+      // Reset all games
+      if (room.game) { room.game = null; }
       if (room.shitheadGame) { room.shitheadGame = null; }
-      if (room.cahGame) { room.cahGame = null; }
-      if (room.lyricsGame) { room.lyricsGame = null; }
       room.categoryVotes.clear();
       room.readyPlayers.clear();
       room.gameSuggestions.clear();
