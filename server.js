@@ -104,8 +104,11 @@ function serveFile(rel) {
   return (_req, res) => res.sendFile(path.join(__dirname, rel));
 }
 
-app.get('/group/:code',          pageRateLimit, serveFile('public/group/index.html'));
-app.get('/group/:code/display',  pageRateLimit, serveFile('public/group/display.html'));
+// Legacy /group/ routes → redirect to modern /player/ routes
+app.get('/group/:code',          pageRateLimit, (req, res) => res.redirect(`/player/${req.params.code}`));
+app.get('/group/:code/display',  pageRateLimit, (req, res) => res.redirect(`/host/${req.params.code}`));
+
+// Game routes (keep /group/ prefix for backward compatibility with game URLs)
 app.get('/group/:code/quiz',     pageRateLimit, serveFile('public/games/quiz/index.html'));
 app.get('/group/:code/shithead', pageRateLimit, serveFile('public/games/shithead/index.html'));
 app.get('/group/:code/cah',      pageRateLimit, serveFile('public/games/cah/index.html'));
