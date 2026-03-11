@@ -194,6 +194,7 @@ class LyricsGame {
     this._updateRanks();
 
     const q = this.questions[this.currentIdx];
+    if (!q || !q.answers) return; // Safety check for missing question data
     const correctObj = q.answers.find(a => a.id === q.correctId);
 
     this._broadcast({
@@ -259,6 +260,7 @@ class LyricsGame {
 
     if (this.state === STATE.QUESTION_ACTIVE) {
       const q = this.questions[this.currentIdx];
+      if (!q || !q.answers) return; // Safety check for missing question data
       const elapsed = Date.now() - this.questionStartTime;
       const remaining = Math.max(0, QUESTION_TIME * 1000 - elapsed);
       send({
@@ -275,6 +277,7 @@ class LyricsGame {
       });
     } else if (this.state === STATE.REVEAL || this.state === STATE.BETWEEN_QUESTIONS) {
       const q = this.questions[this.currentIdx];
+      if (!q || !q.answers) return; // Safety check for missing question data
       const correctObj = q.answers.find(a => a.id === q.correctId);
       send({
         type: 'LYRICS_REVEAL',
