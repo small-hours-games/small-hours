@@ -495,7 +495,16 @@ function handleMessage(ws, role, msg, room) {
       if (!username || !room.shitheadGame) break;
       const { handCardId, faceUpCardId } = msg;
       if (handCardId && faceUpCardId) {
-        room.shitheadGame.swapCard(username, handCardId, faceUpCardId);
+        const swapped = room.shitheadGame.swapCard(username, handCardId, faceUpCardId);
+        // If swap succeeded, send updated player state back to client
+        if (swapped) {
+          const playerState = room.shitheadGame.getPlayerState(username);
+          const response = { type: 'SHITHEAD_YOUR_STATE', ...playerState };
+          if (ws.readyState === 1) ws.send(JSON.stringify(response));
+          console.log(`[Shithead] ${username} swapped cards successfully`);
+        } else {
+          console.log(`[Shithead] ${username} swap failed - invalid indices`);
+        }
       }
       break;
     }

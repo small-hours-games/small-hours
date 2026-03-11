@@ -737,8 +737,12 @@
     const handEl   = document.getElementById('swap-hand');
     const faceUpEl = document.getElementById('swap-faceup');
 
-    handEl.innerHTML = sortCards(myState.hand).map((c, idx) => {
-      const cardId = `${c.rank}-${c.suit}-${idx}`;
+    // FIX: Use original indices, not sorted indices
+    // Map sorted cards back to their original positions in myState.hand
+    handEl.innerHTML = sortCards(myState.hand).map((c) => {
+      // Find the original index of this card in the unsorted array
+      const originalIdx = myState.hand.findIndex(card => card === c);
+      const cardId = `${c.rank}-${c.suit}-${originalIdx}`;
       const isSelected = swapSelected.hand === cardId ? ' selected' : '';
       return `<div class="play-card ${isRed(c) ? 'red-card' : 'black-card'}${isSelected}" data-id="${cardId}" data-zone="hand">
         <span class="card-tl"><b>${c.rank}</b><span class="card-suit-sm">${c.suit}</span></span>
@@ -747,8 +751,12 @@
       </div>`;
     }).join('');
 
-    faceUpEl.innerHTML = sortCards(myState.faceUp).map((c, idx) => {
-      const cardId = `${c.rank}-${c.suit}-${idx}`;
+    // FIX: Use original indices, not sorted indices
+    // Map sorted cards back to their original positions in myState.faceUp
+    faceUpEl.innerHTML = sortCards(myState.faceUp).map((c) => {
+      // Find the original index of this card in the unsorted array
+      const originalIdx = myState.faceUp.findIndex(card => card === c);
+      const cardId = `${c.rank}-${c.suit}-${originalIdx}`;
       const isSelected = swapSelected.faceUp === cardId ? ' selected' : '';
       return `<div class="play-card ${isRed(c) ? 'red-card' : 'black-card'}${isSelected}" data-id="${cardId}" data-zone="faceup">
         <span class="card-tl"><b>${c.rank}</b><span class="card-suit-sm">${c.suit}</span></span>
