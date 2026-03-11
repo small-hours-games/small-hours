@@ -897,6 +897,103 @@
         }
         break;
 
+      case 'GAME_STATE': {
+        // Handle generic game state from GameController-based games
+        // This interprets game phase and updates UI accordingly
+        const { phase, currentQuestion, players, questionIndex, totalQuestions } = msg;
+
+        if (!phase) break; // No phase info, skip
+
+        // Update based on game phase
+        switch (phase) {
+          case 'FETCHING':
+          case 'TRANSLATING':
+            show('waiting');
+            document.getElementById('waiting-name').textContent =
+              phase === 'FETCHING' ? P('loading') : P('translating');
+            break;
+
+          case 'COUNTDOWN':
+            show('waiting');
+            const countdownTime = msg.timeRemaining ? Math.ceil(msg.timeRemaining / 1000) : 0;
+            document.getElementById('waiting-name').textContent = P('startingIn', countdownTime);
+            break;
+
+          case 'QUESTION_ACTIVE':
+            if (currentQuestion) {
+              // For Quiz-like games with currentQuestion object
+              currentQuestionId = msg.questionId || `q${questionIndex}`;
+              myLastAnswer = null;
+              currentAnswers = currentQuestion.answers || [];
+
+              show('question');
+
+              // Update question display
+              const qText = document.getElementById('pq-text');
+              if (qText) qText.textContent = currentQuestion.text || '';
+
+              // Update category/counter
+              if (document.getElementById('pq-category')) {
+                document.getElementById('pq-category').textContent = msg.category || '';
+              }
+              if (document.getElementById('pq-counter')) {
+                document.getElementById('pq-counter').textContent =
+                  `${(questionIndex || 0) + 1} / ${totalQuestions || 0}`;
+              }
+
+              // Update answer buttons
+              const ansButtons = document.querySelectorAll('.ans-btn');
+              const answers = currentQuestion.answers || [];
+              ansButtons.forEach((btn, idx) => {
+                btn.textContent = answers[idx] || '';
+                btn.dataset.id = String.fromCharCode(65 + idx); // A, B, C, D
+                btn.disabled = false;
+              });
+            }
+            break;
+
+          case 'REVEAL':
+            show('reveal');
+            // Display correct answer and results if available
+            if (msg.correctAnswerIndex !== undefined && currentQuestion) {
+              const correctAns = String.fromCharCode(65 + msg.correctAnswerIndex);
+              document.querySelectorAll('.ans-btn').forEach((btn, idx) => {
+                if (idx === msg.correctAnswerIndex) {
+                  btn.classList.add('correct');
+                } else {
+                  btn.classList.remove('correct');
+                }
+              });
+            }
+            if (document.getElementById('result-title')) {
+              document.getElementById('result-title').textContent = 'Reveal!';
+            }
+            break;
+
+          case 'BETWEEN_QUESTIONS':
+            // Transition screen between questions - could show waiting or brief pause
+            if (document.getElementById('waiting').classList.contains('active')) {
+              // Stay on waiting if we're between questions
+            }
+            break;
+
+          case 'GAME_OVER':
+            show('gameover');
+            // Game over screen should display based on player ranking/scores
+            if (document.getElementById('go-rank') && players && players.length > 0) {
+              const myPlayer = players.find(p => p.username === myUsername);
+              if (myPlayer) {
+                document.getElementById('go-rank').textContent = `Rank: ${myPlayer.rank}`;
+                if (document.getElementById('go-score')) {
+                  document.getElementById('go-score').textContent = `Score: ${myPlayer.score}`;
+                }
+              }
+            }
+            break;
+        }
+        break;
+      }
+
       case 'QUESTION':
         currentQuestionId = msg.questionId;
         myLastAnswer = null;
