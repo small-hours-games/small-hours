@@ -128,7 +128,7 @@ ssh root@10.10.0.21 \
 # → ghcr.io/small-hours-games/small-hours:1.0.1
 
 # 5. Test server health
-curl http://10.10.0.21:3000/health
+curl https://10.10.0.21:3001/health
 # → {"ok":true,"uptime":...}
 
 # 6. Verify no source bind mount (only data + certs)
@@ -154,7 +154,7 @@ ssh root@10.10.0.21 \
 - **Common causes**:
   - `/health` endpoint failing (but server.js has it at line 134)
   - Missing `.env` file or invalid env vars
-  - Port 3000 in use (for `--network host`)
+  - Port 3001 in use (for `--network host`)
   - Not enough time for startup (health check starts after 10s)
 
 ### Old Images Not Pruned
@@ -204,7 +204,7 @@ docker run -d \
 
 The deploy job looks for `/opt/small-hours/.env` and passes it to the container with `--env-file`. Supported vars:
 
-- `PORT` — Server port (default: 3000)
+- `PORT` — Server port (default: 3001)
 - `DOMAIN` — Custom domain for QR codes
 - `NODE_ENV` — Set to `production` in .env if desired
 
