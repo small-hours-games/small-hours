@@ -140,6 +140,9 @@ function handleMessage(ws, role, msg, room) {
   }
 
   // ── Player messages ───────────────────────────────────────────────────────
+  if (type !== 'GAME_STATE' && type !== 'LOBBY_STATE') {
+    console.log(`[Handler] Message type: ${type}`);
+  }
   switch (type) {
 
     case 'JOIN_LOBBY':
@@ -160,6 +163,8 @@ function handleMessage(ws, role, msg, room) {
         break;
       }
 
+      console.log(`[Join] JOIN_LOBBY: username=${username}, roomCode=${room.code}, activeMiniGame=${room.activeMiniGame}`);
+
       // Assign admin if first player
       if (room.players.size === 0) {
         room.adminUsername = username;
@@ -168,6 +173,8 @@ function handleMessage(ws, role, msg, room) {
       const avatar = nameToAvatar(username);
       room.players.set(username, { ws, isReady: false, avatar });
       room.wsToUsername.set(ws, username);
+
+      console.log(`[Join]   Updated room.players (lobby), now ${room.players.size} players total`);
 
       // Lazy-create game instance with default quiz parameters
       if (!room.game) {
@@ -182,10 +189,20 @@ function handleMessage(ws, role, msg, room) {
         lastAnswerTime: null,
       });
 
+      console.log(`[Join]   Added to room.game (quiz), now ${room.game.players.size} players in quiz`);
+
       // Auto-manage bot: add bot if this is first human player
       const botWasAdded = BotController.maybeAddBot(room);
       if (botWasAdded) {
         room.readyPlayers.add(BotController.BOT_USERNAME);
+        console.log(`[Join]   Bot was added`);
+      }
+
+      // Auto-remove bot if now 2+ humans
+      const botWasRemoved = BotController.maybeRemoveBot(room);
+      if (botWasRemoved) {
+        room.readyPlayers.delete(BotController.BOT_USERNAME);
+        console.log(`[Join]   Bot was removed`);
       }
 
       const isAdmin = username === room.adminUsername;
@@ -194,16 +211,24 @@ function handleMessage(ws, role, msg, room) {
 
       // Reconnect to in-progress shithead game
       if (room.activeMiniGame === 'shithead' && room.shitheadGame) {
+        console.log(`[Join]   Shithead game active, checking for existing player ${username}`);
         const existingPlayer = room.shitheadGame.players.get(username);
         if (existingPlayer) {
-          // Player already exists, just update WebSocket
+          console.log(`[Join]   Found existing player ${username} in shitheadGame, updating WebSocket`);
           existingPlayer.ws = ws;
           // Send their current game state immediately
           const playerState = room.shitheadGame.getPlayerState(username);
           if (playerState) {
             sendTo(ws, { type: 'SHITHEAD_YOUR_STATE', ...playerState });
           }
+          console.log(`[Join]   Sent SHITHEAD_YOUR_STATE to ${username}`);
+        } else {
+          console.log(`[Join]   WARNING: Player ${username} NOT found in shitheadGame.players!`);
+          console.log(`[Join]   Available players in shitheadGame: ${Array.from(room.shitheadGame.players.keys()).join(', ')}`);
+          console.log(`[Join]   shitheadGame.players.size = ${room.shitheadGame.players.size}`);
         }
+      } else {
+        console.log(`[Join]   Not shithead game (activeMiniGame=${room.activeMiniGame}, shitheadGame=${!!room.shitheadGame})`);
       }
       broadcastLobbyUpdate(room);
       broadcastVoteUpdate(room);
@@ -245,12 +270,15 @@ function handleMessage(ws, role, msg, room) {
     }
 
     case 'START_MINI_GAME': {
+      console.log(`[StartGame] START_MINI_GAME received from room ${room.code}`);
       const username = room.wsToUsername.get(ws);
       if (username !== room.adminUsername) {
+        console.log(`[StartGame]   ERROR: ${username} is not admin (admin is ${room.adminUsername})`);
         sendTo(ws, { type: 'ERROR', code: 'NOT_ADMIN', message: 'Only admin can start the game.' });
         break;
       }
       const gameType = msg.gameType || 'quiz';
+      console.log(`[StartGame]   gameType=${gameType}, username=${username}`);
       const categories = Array.isArray(msg.categories) && msg.categories.length > 0 ? msg.categories : [9];
       const questionCount = Number.isInteger(msg.questionCount) && msg.questionCount > 0 ? Math.min(msg.questionCount, 50) : 20;
       const gameDifficulty = ['easy', 'medium', 'hard'].includes(msg.gameDifficulty) ? msg.gameDifficulty : 'easy';
@@ -290,8 +318,10 @@ function handleMessage(ws, role, msg, room) {
         }
         room.game.start();
       } else if (gameType === 'shithead') {
+        console.log(`[StartGame] Creating shitheadGame for room ${room.code}, current room.players: ${Array.from(room.players.keys()).join(', ')}`);
         room.shitheadGame = new ShiteadController();
         for (const [uname, p] of room.players) {
+          console.log(`[StartGame]   Adding ${uname} to shitheadGame`);
           room.shitheadGame.addPlayer(uname, {
             username: uname,
             ws: p.ws,
@@ -302,6 +332,7 @@ function handleMessage(ws, role, msg, room) {
           });
         }
         room.shitheadGame.start();
+        console.log(`[StartGame] shitheadGame started with ${room.shitheadGame.players.size} players`);
       } else if (gameType === 'cah') {
         const maxRounds = Number.isInteger(msg.maxRounds) ? Math.max(1, Math.min(20, msg.maxRounds)) : 8;
         room.game = new CAHGameController(maxRounds);
