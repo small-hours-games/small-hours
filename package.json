@@ -13,13 +13,11 @@
   "nyc": {
     "all": true,
     "include": [
-      "game.js",
       "local-db.js",
       "questions.js",
       "server.js",
       "server/*.js",
-      "shithead.js",
-      "translator.js"
+      "games/*/server.js"
     ],
     "exclude": [
       "node_modules/**",

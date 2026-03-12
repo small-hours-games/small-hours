@@ -1,5 +1,7 @@
 'use strict';
 
+const { shuffle } = require('../../server/deck');
+
 // ─── Card Deck ────────────────────────────────────────────────────────────────
 
 const BLACK_CARDS = [
@@ -139,6 +141,7 @@ class CAHGame {
     this.shuffledSubmissions = [];
     this.whiteDeck   = [];
     this.blackDeck   = [];
+    this._nextRoundTimer = null;
   }
 
   // ─── Helpers ─────────────────────────────────────────────────────────────
@@ -147,14 +150,6 @@ class CAHGame {
     if (ws && ws.readyState === 1) ws.send(JSON.stringify(msg));
   }
 
-  _shuffle(arr) {
-    const a = [...arr];
-    for (let i = a.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [a[i], a[j]] = [a[j], a[i]];
-    }
-    return a;
-  }
 
   _currentCzar() {
     const usernames = [...this.players.keys()];
@@ -250,8 +245,8 @@ class CAHGame {
   startGame(maxRounds) {
     if (this.state !== 'LOBBY' || this.players.size < 2) return;
     this.maxRounds  = Math.max(1, Math.min(20, maxRounds ?? 8));
-    this.whiteDeck  = this._shuffle(WHITE_CARDS.map((text, id) => ({ id: String(id), text })));
-    this.blackDeck  = this._shuffle([...BLACK_CARDS]);
+    this.whiteDeck  = shuffle(WHITE_CARDS.map((text, id) => ({ id: String(id), text })));
+    this.blackDeck  = shuffle([...BLACK_CARDS]);
     this.round      = 0;
     this.czarIndex  = 0;
     for (const [, p] of this.players) {
@@ -329,7 +324,7 @@ class CAHGame {
   _startJudging() {
     this.state = 'JUDGING';
     const entries = [...this.submissions.entries()].map(([username, cards]) => ({ username, cards }));
-    this.shuffledSubmissions = this._shuffle(entries).map((e, i) => ({ id: i, cards: e.cards, username: e.username }));
+    this.shuffledSubmissions = shuffle(entries).map((e, i) => ({ id: i, cards: e.cards, username: e.username }));
 
     this._broadcastGameState();
     // Broadcast anonymous submissions to all
@@ -387,12 +382,14 @@ class CAHGame {
     this.czarIndex = (this.czarIndex + 1) % this.players.size;
 
     // Automatically advance after a delay
-    setTimeout(() => {
+    if (this._nextRoundTimer) clearTimeout(this._nextRoundTimer);
+    this._nextRoundTimer = setTimeout(() => {
       if (this.state === 'ROUND_OVER') this._nextRound();
     }, 6000);
   }
 
   _endGame() {
+    if (this._nextRoundTimer) clearTimeout(this._nextRoundTimer);
     this.state = 'GAME_OVER';
     const scores = [...this.players.entries()]
       .map(([username, p]) => ({ username, points: p.points }))
@@ -400,6 +397,10 @@ class CAHGame {
       .map((s, i) => ({ ...s, rank: i + 1 }));
     this._broadcastGameState();
     this._broadcast({ type: 'CAH_GAME_OVER', scores });
+  }
+
+  cleanup() {
+    if (this._nextRoundTimer) clearTimeout(this._nextRoundTimer);
   }
 
   restart() {

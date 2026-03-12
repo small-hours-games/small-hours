@@ -305,8 +305,9 @@ function handleMessage(ws, role, msg, room) {
       } else if (gameType === 'cah') {
         const maxRounds = Number.isInteger(msg.maxRounds) ? Math.max(1, Math.min(20, msg.maxRounds)) : 8;
         room.game = new CAHGameController(maxRounds);
+        room.game.setRoom(room);
         for (const [uname, p] of room.players) {
-          room.game.addPlayer(uname, { score: 0 });
+          room.game.addPlayer(uname, { score: 0, ws: p.ws });
         }
         room.game.start();
       } else if (gameType === 'spy') {
@@ -317,6 +318,7 @@ function handleMessage(ws, role, msg, room) {
         room.game.start();
       } else if (gameType === 'lyrics') {
         room.game = new LyricsGameController(questionCount);
+        room.game.setRoom(room);
         for (const [uname, p] of room.players) {
           room.game.addPlayer(uname, { score: 0 });
         }
@@ -360,37 +362,76 @@ function handleMessage(ws, role, msg, room) {
       }
 
       // Save game history and update player stats before clearing game instances
+      const gameType = room.activeMiniGame;
       if (room.game && room.game.phase === 'GAME_OVER') {
-        try {
-          const finalState = room.game.getState();
-          const gameRecord = {
-            gameId: `quiz-${new Date().toISOString()}`,
-            gameType: 'quiz',
-            roomCode: room.code,
-            startTime: room.game.startTime,
-            endTime: Date.now(),
-            duration: Date.now() - room.game.startTime,
-            players: finalState.players
-              .filter(p => !p.isBot)  // Only save human players
-              .map((p, idx) => ({
-                username: p.username || '',
-                finalScore: p.score || 0,
-                rank: idx + 1,
-                isBot: false
-              }))
-          };
+        (async () => {
+          try {
+            const finalState = room.game.getState();
+            const sortedPlayers = [...finalState.players].sort((a, b) => (b.score || 0) - (a.score || 0));
+            const gameRecord = {
+              gameId: `${gameType}-${new Date().toISOString()}`,
+              gameType,
+              roomCode: room.code,
+              startTime: room.game.startTime,
+              endTime: Date.now(),
+              duration: Date.now() - room.game.startTime,
+              players: sortedPlayers
+                .filter(p => !p.isBot)
+                .map((p, idx) => ({
+                  username: p.username || '',
+                  finalScore: p.score || 0,
+                  rank: idx + 1,
+                  isBot: false
+                }))
+            };
 
-          Persistence.saveGameHistory(gameRecord);
+            await Persistence.saveGameHistory(gameRecord);
 
-          // Update individual player stats
-          for (const player of gameRecord.players) {
-            if (player.username) {
-              Persistence.updatePlayerStats(player.username, player.finalScore, 'quiz');
+            // Update individual player stats
+            for (const player of gameRecord.players) {
+              if (player.username) {
+                const isWinner = player.rank === 1;
+                await Persistence.updatePlayerStats(player.username, player.finalScore, gameType, isWinner);
+              }
             }
+          } catch (error) {
+            console.error('Failed to save game history:', error);
           }
-        } catch (error) {
-          console.error('Failed to save game history:', error);
-        }
+        })();
+      } else if (room.shitheadGame && room.shitheadGame.phase === 'GAME_OVER') {
+        (async () => {
+          try {
+            const finalState = room.shitheadGame.getState();
+            const gameRecord = {
+              gameId: `shithead-${new Date().toISOString()}`,
+              gameType: 'shithead',
+              roomCode: room.code,
+              startTime: room.shitheadGame.startTime,
+              endTime: Date.now(),
+              duration: Date.now() - room.shitheadGame.startTime,
+              players: finalState.players
+                .filter(p => !p.isBot)
+                .map((p, idx) => ({
+                  username: p.username || '',
+                  finalScore: p.score || 0,
+                  rank: idx + 1,
+                  isBot: false
+                }))
+            };
+
+            await Persistence.saveGameHistory(gameRecord);
+
+            // Update individual player stats
+            for (const player of gameRecord.players) {
+              if (player.username) {
+                const isWinner = player.rank === 1;
+                await Persistence.updatePlayerStats(player.username, player.finalScore, 'shithead', isWinner);
+              }
+            }
+          } catch (error) {
+            console.error('Failed to save game history:', error);
+          }
+        })();
       }
 
       // Reset all games
@@ -434,9 +475,13 @@ function handleMessage(ws, role, msg, room) {
       break;
     }
 
-    case 'LYRICS_ANSWER':
-      if (room.lyricsGame) room.lyricsGame.receiveAnswer(ws, msg.answerId);
+    case 'LYRICS_ANSWER': {
+      const username = room.wsToUsername.get(ws);
+      if (username && room.game) {
+        room.game.handlePlayerAction(username, { type: 'LYRICS_ANSWER', answerId: msg.answerId });
+      }
       break;
+    }
 
     case 'USE_POWERUP': {
       // Powerups are handled as part of ANSWER message
@@ -480,15 +525,15 @@ function handleMessage(ws, role, msg, room) {
 
     case 'CAH_SUBMIT_CARDS': {
       const username = room.wsToUsername.get(ws);
-      if (!username || !room.cahGame || !Array.isArray(msg.cardIds)) break;
-      room.cahGame.submitCards(username, msg.cardIds);
+      if (!username || !room.game || !Array.isArray(msg.cardIds)) break;
+      room.game.handlePlayerAction(username, { type, cardIds: msg.cardIds });
       break;
     }
 
     case 'CAH_CZAR_PICK': {
       const username = room.wsToUsername.get(ws);
-      if (!username || !room.cahGame) break;
-      room.cahGame.czarPick(username, msg.submissionId);
+      if (!username || !room.game) break;
+      room.game.handlePlayerAction(username, { type, submissionId: msg.submissionId });
       break;
     }
 
@@ -514,8 +559,10 @@ function handleMessage(ws, role, msg, room) {
     // ── Spy game messages ─────────────────────────────────────────────────
     case 'SEND_CLUE':
     case 'SEND_GUESS': {
-      const handler = spyGame.handlers[type];
-      if (handler) handler(ws, msg, room);
+      const username = room.wsToUsername.get(ws);
+      if (username && room.game) {
+        room.game.handlePlayerAction(username, { type, ...msg });
+      }
       break;
     }
   }

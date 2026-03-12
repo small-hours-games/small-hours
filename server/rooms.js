@@ -47,7 +47,6 @@ function createRoom(code) {
     activeMiniGame: 'lobby',
     game: null,                        // lazy-created on first JOIN_LOBBY
     shitheadGame: null,
-    cahGame: null,
     playerSockets: new Set(),
     displaySockets: new Set(),
     wsToUsername: new Map(),           // ws → username

@@ -1,8 +1,6 @@
 <div align="center">
 
-![Small Hours Games](ece9bd90-5d5a-4249-b861-a406d12a7ecf.png)
-
-# Small Hours Games - Quiz Trivia
+# Small Hours Games
 
 **A collection of local multiplayer party games for gatherings and sofa gaming**
 
@@ -24,8 +22,12 @@ Small Hours Games is a collection of local multiplayer party games optimized for
 - 🏠 Sofa-style gaming experiences
 
 **Current Games:**
-- 🎯 **Quiz Trivia** — Real-time multiplayer trivia game
-- 🃏 **Shithead** — Fast-paced card game (in development)
+- 🎯 **Quiz** — Real-time multiplayer trivia with power-ups
+- 🃏 **Shithead** — Fast-paced card game
+- 🕵️ **Spy** — Word guessing game
+- 🎵 **Lyrics** — Music lyric guessing
+- 🎨 **Cards Against Humanity** — Party game
+- 🎲 **Number Guess** — Reference implementation
 
 ## Features
 

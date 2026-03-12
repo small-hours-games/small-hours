@@ -1,6 +1,7 @@
-// server/ShiteadController.js
+'use strict';
 
 const GameController = require('./GameController')
+const { createDeck, shuffle } = require('./deck')
 
 /**
  * Shithead card game controller
@@ -19,6 +20,27 @@ class ShiteadController extends GameController {
     this.swapDuration = 30000      // 30s for card swap phase
     this.playTimeout = 10000       // 10s per move
     this.swapStartTime = null
+    this.currentPlayerTurnStart = null
+  }
+
+  processBotSwaps() {
+    // Auto-swap for bot players during SWAP phase
+    if (this.phase === 'SWAP') {
+      for (const [username, player] of this.players) {
+        if (player.isBot && !player._botSwapScheduled) {
+          const swapChoice = this.getBotSwapChoice(username)
+          if (swapChoice) {
+            // Small random delay for natural feel (500-1500ms)
+            player._botSwapScheduled = true
+            const delayMs = 500 + Math.random() * 1000
+            setTimeout(() => {
+              this.swapCard(username, swapChoice.handCardId, swapChoice.faceUpCardId)
+              player._botSwapScheduled = false
+            }, delayMs)
+          }
+        }
+      }
+    }
   }
 
   start() {
@@ -52,7 +74,12 @@ class ShiteadController extends GameController {
         break
 
       case 'PLAY':
-        // Handled by player actions
+        // Check if current player's turn has expired (auto-advance)
+        if (this.currentPlayerTurnStart && Date.now() - this.currentPlayerTurnStart > this.playTimeout) {
+          this._advanceToNextPlayer()
+          this.currentPlayerTurnStart = Date.now()
+        }
+        // Check if all players have finished
         if (this._allPlayersFinished()) {
           this.transitionTo('GAME_OVER')
         }
@@ -123,7 +150,7 @@ class ShiteadController extends GameController {
   handlePlayerAction(username, data) {
     if (this.phase !== 'PLAY') return
 
-    const player = this.getPlayerState(username)
+    const player = this.players.get(username)
     if (!player || username !== this.getCurrentPlayerUsername()) return
 
     const { card } = data
@@ -131,7 +158,12 @@ class ShiteadController extends GameController {
     if (this._isValidPlay(card)) {
       this.pile.push(card)
       this._removeCardFromPlayer(player, card)
+      // Replenish hand from deck if needed
+      while (player.cardHand.length < 3 && this.deck.length > 0) {
+        player.cardHand.push(this.deck.pop())
+      }
       this._advanceToNextPlayer()
+      this.currentPlayerTurnStart = Date.now()
     }
   }
 
@@ -142,14 +174,11 @@ class ShiteadController extends GameController {
     const player = this.players.get(username)
     if (!player || !player.cardHand || !player.cardFaceUp) return false
 
-    // Parse card IDs: format is "rank-suit-index"
-    const handIdx = parseInt(handCardId.split('-').pop())
-    const faceUpIdx = parseInt(faceUpCardId.split('-').pop())
+    // Find cards by stable id
+    const handIdx    = player.cardHand.findIndex(c => c.id === handCardId)
+    const faceUpIdx  = player.cardFaceUp.findIndex(c => c.id === faceUpCardId)
 
-    if (handIdx < 0 || handIdx >= player.cardHand.length ||
-        faceUpIdx < 0 || faceUpIdx >= player.cardFaceUp.length) {
-      return false
-    }
+    if (handIdx === -1 || faceUpIdx === -1) return false
 
     // Swap the cards
     const temp = player.cardHand[handIdx]
@@ -197,10 +226,9 @@ class ShiteadController extends GameController {
     const handCard = player.cardHand[worstHandIdx]
     const faceUpCard = player.cardFaceUp[bestFaceUpIdx]
 
-    // Build card IDs in format "rank-suit-index"
     return {
-      handCardId: `${handCard.rank}-${handCard.suit}-${worstHandIdx}`,
-      faceUpCardId: `${faceUpCard.rank}-${faceUpCard.suit}-${bestFaceUpIdx}`
+      handCardId: handCard.id,
+      faceUpCardId: faceUpCard.id
     }
   }
 
@@ -209,20 +237,7 @@ class ShiteadController extends GameController {
    */
 
   _initializeDeck() {
-    const suits = ['♠', '♥', '♦', '♣']
-    const ranks = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A']
-
-    for (const suit of suits) {
-      for (const rank of ranks) {
-        this.deck.push({rank, suit})
-      }
-    }
-
-    // Shuffle
-    for (let i = this.deck.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [this.deck[i], this.deck[j]] = [this.deck[j], this.deck[i]]
-    }
+    this.deck = shuffle(createDeck())
   }
 
   _dealCards() {
@@ -250,15 +265,20 @@ class ShiteadController extends GameController {
   }
 
   _revealCards() {
-    // Show face-down cards to owner only
+    // Mark all face-down cards as revealed for display
+    for (const player of this.getAllPlayers()) {
+      player.faceDownRevealed = true
+    }
   }
 
   _startPlay() {
     this.currentPlayerIndex = 0
+    this.currentPlayerTurnStart = Date.now()
   }
 
   _advanceToNextPlayer() {
     this.currentPlayerIndex = (this.currentPlayerIndex + 1) % this.playerOrder.length
+    this.currentPlayerTurnStart = Date.now()
   }
 
   _isValidPlay(card) {

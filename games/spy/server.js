@@ -53,7 +53,7 @@ class SpyGameController extends GameController {
         }
 
         // Check if game is over
-        if (this.spyGame.currentRoundIndex >= this.spyGame.maxRounds) {
+        if (!this.spyGame.gameRunning) {
           this.transitionTo('GAME_OVER');
         }
         break;
@@ -76,7 +76,7 @@ class SpyGameController extends GameController {
     }
 
     const currentRound = this.spyGame.getCurrentRound();
-    const players = Array.from(this.players.values()).map(p => {
+    const players = Array.from(this.spyGame.players.values()).map(p => {
       const roundScores = currentRound ? (currentRound.scores[p.username] || 0) : 0;
       return {
         username: p.username,
@@ -124,11 +124,6 @@ class SpyGameController extends GameController {
 
   removePlayer(username) {
     this.players.delete(username);
-  }
-
-  transitionTo(newPhase) {
-    this.phase = newPhase;
-    this.phaseStartTime = Date.now();
   }
 }
 

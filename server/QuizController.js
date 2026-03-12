@@ -1,4 +1,4 @@
-// server/QuizController.js
+'use strict';
 
 const GameController = require('./GameController')
 const { fetchQuestions } = require('../questions')
@@ -56,6 +56,13 @@ class QuizController extends GameController {
 
   tick() {
     switch (this.phase) {
+      case 'FETCHING':
+        // Safety net: if fetching takes >30s, abort and end game
+        if (this.isPhaseExpired(30000)) {
+          this.transitionTo('GAME_OVER')
+        }
+        break
+
       case 'COUNTDOWN':
         if (this.isPhaseExpired(this.countdownDuration)) {
           this._loadNextQuestion()
@@ -105,11 +112,25 @@ class QuizController extends GameController {
   getState() {
     const playerArray = this.getAllPlayers()
 
-    // Sort by score for ranking
-    const rankedPlayers = playerArray.map((p, idx) => ({
-      ...p,
-      rank: idx + 1
-    }))
+    // Sort by score descending for ranking
+    const sortedByScore = [...playerArray].sort((a, b) => (b.score || 0) - (a.score || 0))
+    const rankedPlayers = sortedByScore.map((p, idx) => {
+      const playerState = { ...p, rank: idx + 1 }
+
+      // Apply fiftyFifty power-up filtering in the state view
+      if (p.activePowerup === 'fiftyFifty' && this.currentQuestion && this.phase === 'QUESTION_ACTIVE') {
+        // Show only correct answer + 1 wrong answer
+        const correctIdx = this.currentQuestion.correctIndex
+        const incorrectIndices = this.currentQuestion.answers
+          .map((_, i) => i)
+          .filter(i => i !== correctIdx)
+        const hiddenIndices = incorrectIndices.slice(0, -1) // Hide all but 1 wrong answer
+        playerState.filteredAnswerIndices = this.currentQuestion.answers
+          .map((ans, i) => hiddenIndices.includes(i) ? '?' : ans)
+      }
+
+      return playerState
+    })
 
     const state = {
       phase: this.phase,
@@ -217,6 +238,11 @@ class QuizController extends GameController {
     if (powerup && player.powerups[powerup] > 0) {
       player.activePowerup = powerup
       player.powerups[powerup]--
+
+      // Apply timeFreeze power-up: add 10 seconds to question time limit
+      if (powerup === 'timeFreeze') {
+        this.questionTimeLimit += 10000
+      }
     }
 
     // Calculate score

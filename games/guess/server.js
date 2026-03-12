@@ -54,7 +54,7 @@ class GuessController extends GameController {
       case 'REVEAL':
         if (now - this.phaseStartTime >= 3000) {
           // Check if game is over or continue
-          const hasWinners = [...this.players.values()].some(p => p.guess === this.secretNumber);
+          const hasWinners = [...this.players.values()].some(p => p.lastGuess === this.secretNumber);
           if (hasWinners || this.players.size === 0) {
             this.transitionTo('GAME_OVER');
           } else {
@@ -159,14 +159,6 @@ class GuessController extends GameController {
 
   _endRound() {
     this.transitionTo('REVEAL');
-  }
-
-  /**
-   * Helper to manage phase transitions
-   */
-  transitionTo(newPhase) {
-    this.phase = newPhase;
-    this.phaseStartTime = Date.now();
   }
 }
 

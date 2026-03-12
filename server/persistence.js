@@ -1,39 +1,45 @@
-// server/persistence.js
+'use strict';
 
-const fs = require('fs')
-const path = require('path')
+const fs = require('fs').promises;
+const path = require('path');
 
 class Persistence {
   constructor() {
-    this.dataDir = path.join(__dirname, '../data')
-    this.gameHistoryPath = path.join(this.dataDir, 'gameHistory.json')
-    this.playerStatsPath = path.join(this.dataDir, 'playerStats.json')
+    this.dataDir = path.join(__dirname, '../data');
+    this.gameHistoryPath = path.join(this.dataDir, 'gameHistory.json');
+    this.playerStatsPath = path.join(this.dataDir, 'playerStats.json');
 
     // Ensure data directory exists
-    if (!fs.existsSync(this.dataDir)) {
-      fs.mkdirSync(this.dataDir, {recursive: true})
+    this._ensureDir();
+  }
+
+  async _ensureDir() {
+    try {
+      await fs.mkdir(this.dataDir, { recursive: true });
+    } catch (error) {
+      console.error('Failed to create data directory:', error);
     }
   }
 
   /**
    * Save completed game to history
    */
-  saveGameHistory(gameRecord) {
+  async saveGameHistory(gameRecord) {
     try {
-      const line = JSON.stringify(gameRecord) + '\n'
-      fs.appendFileSync(this.gameHistoryPath, line)
-      console.log(`[Persistence] Saved game history: ${gameRecord.gameId}`)
+      const line = JSON.stringify(gameRecord) + '\n';
+      await fs.appendFile(this.gameHistoryPath, line);
+      console.log(`[Persistence] Saved game history: ${gameRecord.gameId}`);
     } catch (error) {
-      console.error('Failed to save game history:', error)
+      console.error('Failed to save game history:', error);
     }
   }
 
   /**
    * Update player stats after game
    */
-  updatePlayerStats(username, score, gameType) {
+  async updatePlayerStats(username, score, gameType, win = false) {
     try {
-      let stats = this._loadPlayerStats()
+      let stats = await this._loadPlayerStats();
 
       if (!stats[username]) {
         stats[username] = {
@@ -43,69 +49,74 @@ class Persistence {
           averageScore: 0,
           lastPlayed: new Date().toISOString().split('T')[0],
           favoriteGame: gameType
-        }
+        };
       }
 
-      stats[username].gamesPlayed++
-      stats[username].totalScore += score
+      stats[username].gamesPlayed++;
+      stats[username].totalScore += score;
+      if (win) {
+        stats[username].wins++;
+      }
       stats[username].averageScore = Math.round(
         stats[username].totalScore / stats[username].gamesPlayed
-      )
-      stats[username].lastPlayed = new Date().toISOString().split('T')[0]
+      );
+      stats[username].lastPlayed = new Date().toISOString().split('T')[0];
 
-      fs.writeFileSync(this.playerStatsPath, JSON.stringify(stats, null, 2))
-      console.log(`[Persistence] Updated stats for ${username}`)
+      await fs.writeFile(this.playerStatsPath, JSON.stringify(stats, null, 2));
+      console.log(`[Persistence] Updated stats for ${username}`);
     } catch (error) {
-      console.error('Failed to update player stats:', error)
+      console.error('Failed to update player stats:', error);
     }
   }
 
   /**
    * Get leaderboard
    */
-  getLeaderboard(limit = 10) {
+  async getLeaderboard(limit = 10) {
     try {
-      const stats = this._loadPlayerStats()
+      const stats = await this._loadPlayerStats();
       return Object.entries(stats)
-        .map(([username, data]) => ({username, ...data}))
+        .map(([username, data]) => ({ username, ...data }))
         .sort((a, b) => b.totalScore - a.totalScore)
-        .slice(0, limit)
+        .slice(0, limit);
     } catch (error) {
-      console.error('Failed to load leaderboard:', error)
-      return []
+      console.error('Failed to load leaderboard:', error);
+      return [];
     }
   }
 
   /**
    * Get player stats
    */
-  getPlayerStats(username) {
+  async getPlayerStats(username) {
     try {
-      const stats = this._loadPlayerStats()
-      return stats[username] || null
+      const stats = await this._loadPlayerStats();
+      return stats[username] || null;
     } catch (error) {
-      console.error('Failed to load player stats:', error)
-      return null
+      console.error('Failed to load player stats:', error);
+      return null;
     }
   }
 
   /**
    * Get recent games
    */
-  getRecentGames(limit = 20) {
+  async getRecentGames(limit = 20) {
     try {
-      if (!fs.existsSync(this.gameHistoryPath)) {
-        return []
+      try {
+        const content = await fs.readFile(this.gameHistoryPath, 'utf-8');
+        const lines = content.trim().split('\n');
+        return lines
+          .slice(-limit)
+          .reverse()
+          .map(line => JSON.parse(line));
+      } catch (err) {
+        // File doesn't exist yet
+        return [];
       }
-
-      const lines = fs.readFileSync(this.gameHistoryPath, 'utf-8').trim().split('\n')
-      return lines
-        .slice(-limit)
-        .reverse()
-        .map(line => JSON.parse(line))
     } catch (error) {
-      console.error('Failed to load recent games:', error)
-      return []
+      console.error('Failed to load recent games:', error);
+      return [];
     }
   }
 
@@ -113,14 +124,15 @@ class Persistence {
    * Private helpers
    */
 
-  _loadPlayerStats() {
-    if (!fs.existsSync(this.playerStatsPath)) {
-      return {}
+  async _loadPlayerStats() {
+    try {
+      const content = await fs.readFile(this.playerStatsPath, 'utf-8');
+      return JSON.parse(content);
+    } catch (error) {
+      // File doesn't exist or is invalid JSON, return empty stats
+      return {};
     }
-
-    const content = fs.readFileSync(this.playerStatsPath, 'utf-8')
-    return JSON.parse(content)
   }
 }
 
-module.exports = new Persistence()
+module.exports = new Persistence();

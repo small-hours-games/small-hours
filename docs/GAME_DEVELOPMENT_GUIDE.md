@@ -71,10 +71,11 @@ class MyGameController extends GameController {
 module.exports = MyGameController;
 ```
 
-### 2️⃣ Create the Game UI
+### 2️⃣ Create the Game UIs
 
-Create `games/{gameName}/ui/index.html`:
+Create **two** UIs — one for TV/host display, one for player phones.
 
+**TV Display** (`games/{gameName}/host/index.html`) — shows full game board:
 ```html
 <!DOCTYPE html>
 <html>
@@ -83,37 +84,65 @@ Create `games/{gameName}/ui/index.html`:
   <link rel="stylesheet" href="/shared/theme.css">
 </head>
 <body>
-  <div id="gameContainer">
-    <!-- Your game UI -->
+  <div id="gameBoard">
+    <!-- Scoreboard, cards, board state, etc. for TV -->
   </div>
 
   <script>
-    let ws = null;
-    const roomCode = /* extract from URL */;
-    const username = /* extract from sessionStorage */;
+    const urlParams = new URLSearchParams(window.location.search);
+    const roomCode = window.location.pathname.split('/')[2];
 
-    function connect() {
-      ws = new WebSocket(`ws://${location.host}`);
-      ws.onmessage = (event) => {
-        const msg = JSON.parse(event.data);
-        updateUI(msg);
-      };
-    }
-
-    function updateUI(msg) {
+    const ws = new WebSocket(`ws://${location.host}?room=${roomCode}&role=display`);
+    ws.onmessage = (event) => {
+      const msg = JSON.parse(event.data);
       if (msg.type === 'GAME_STATE') {
-        // Update your UI based on game state
+        renderDisplay(msg);  // Render full game board for TV
       }
+    };
+
+    function renderDisplay(state) {
+      // Update TV display with full game state
+    }
+  </script>
+</body>
+</html>
+```
+
+**Player Phones** (`games/{gameName}/player/index.html`) — shows only player controls:
+```html
+<!DOCTYPE html>
+<html>
+<head>
+  <title>My Game</title>
+  <link rel="stylesheet" href="/shared/theme.css">
+</head>
+<body>
+  <div id="playerInterface">
+    <!-- Answer buttons, input forms, player's score -->
+  </div>
+
+  <script>
+    const roomCode = window.location.pathname.split('/')[2];
+    const username = sessionStorage.getItem(`gn-username-${roomCode}`);
+
+    const ws = new WebSocket(`ws://${location.host}?room=${roomCode}&role=player`);
+    ws.onmessage = (event) => {
+      const msg = JSON.parse(event.data);
+      if (msg.type === 'GAME_STATE') {
+        renderPlayerUI(msg);  // Render only player's relevant UI
+      }
+    };
+
+    function renderPlayerUI(state) {
+      // Update player interface (answer options, prompts, their score)
     }
 
     function sendAction(action) {
       ws.send(JSON.stringify({
-        type: 'ANSWER', // or custom message type
+        type: 'ANSWER_QUESTION',  // or custom message
         ...action
       }));
     }
-
-    connect();
   </script>
 </body>
 </html>
@@ -138,18 +167,22 @@ Also update the game type validation:
 if (!['quiz', 'shithead', 'myGame', ...].includes(gameType)) break;
 ```
 
-### 4️⃣ Done!
+### 4️⃣ Test with npm start
 
-Your game will be auto-discovered by the server. Access it at:
-```
-http://localhost:3000/group/{roomCode}/{gameName}
+```bash
+npm start
+# Browser: http://localhost:3000
+# 1. Create room from landing page → get room code (e.g., ABCD)
+# 2. Open TV/host at /host/ABCD
+# 3. Open player phones at /player/ABCD
+# 4. Join, suggest your game, start, and play!
 ```
 
 ---
 
 ## Example: Number Guess Game
 
-See `games/guess/server.js` and `games/guess/ui/index.html` for a complete, working example.
+See `games/guess/server.js` (GameController), `games/guess/host/index.html` (TV display), and `games/guess/player/index.html` (player phones) for a complete, working example.
 
 ### Features Demonstrated
 
@@ -273,10 +306,9 @@ if (elapsed >= 3000) this.transitionTo('ACTIVE');
 npm start
 # Browser: http://localhost:3000
 # 1. Create room → get room code (e.g., ABCD)
-# 2. Open /group/ABCD as admin
-# 3. Suggest/start your game
-# 4. Join from another device/tab
-# 5. Play!
+# 2. Open TV display at /host/ABCD
+# 3. Open player view at /player/ABCD (or from phone via QR code)
+# 4. Join, suggest/start your game, and play!
 ```
 
 ### Unit Testing
@@ -379,9 +411,10 @@ ws.onmessage = (event) => {
 
 ## Future: Auto-discovery with gameRegistry
 
-Once gameRegistry is integrated into handlers.js, you won't need step 3. Just create:
+Once gameRegistry is fully integrated into handlers.js, you won't need step 3. Just create:
 - `games/{name}/server.js` exporting GameController subclass
-- `games/{name}/ui/index.html` with WebSocket UI
+- `games/{name}/host/index.html` (TV display)
+- `games/{name}/player/index.html` (player phones)
 
 The gameRegistry will auto-discover it on startup.
 

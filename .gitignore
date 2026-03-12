@@ -6,3 +6,7 @@ data/
 CLAUDE.md
 coverage/
 .nyc_output/
+playwright-report/
+test-results/
+data-test/
+*.tmp.*

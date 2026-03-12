@@ -15,21 +15,22 @@ class LyricsGameController extends GameController {
     super();
     this.lyricsGame = null;
     this.questionCount = questionCount;
+    this.room = null;
+  }
+
+  setRoom(room) {
+    this.room = room;
   }
 
   start() {
     this.startTime = Date.now();
-    // Initialize lyrics game
-    this.lyricsGame = new LyricsGameLogic(
-      // broadcast callback
-      (msg) => {
-        // Broadcast handled by room
-      }
-    );
+    // Initialize lyrics game with broadcast function
+    const { broadcastAll } = require('../../server/broadcast');
+    this.lyricsGame = new LyricsGameLogic(this.room ? (msg) => broadcastAll(this.room, msg) : (msg) => {});
 
     // Add players
     for (const [username, playerData] of this.players) {
-      this.lyricsGame.addPlayer(null, username); // ws is null, handled by room
+      this.lyricsGame.addPlayer(null, username);
     }
 
     this.lyricsGame.startGame(this.questionCount);
@@ -93,7 +94,7 @@ class LyricsGameController extends GameController {
   handlePlayerAction(username, action) {
     if (!this.lyricsGame || action.answerId === undefined) return;
 
-    this.lyricsGame.receiveAnswer(null, action.answerId, username);
+    this.lyricsGame.receiveAnswer(username, action.answerId);
   }
 
   addPlayer(username, playerData) {
@@ -106,11 +107,6 @@ class LyricsGameController extends GameController {
 
   removePlayer(username) {
     this.players.delete(username);
-  }
-
-  transitionTo(newPhase) {
-    this.phase = newPhase;
-    this.phaseStartTime = Date.now();
   }
 }
 

@@ -68,15 +68,13 @@ class LyricsGame {
     return { ok: true };
   }
 
-  removePlayer(ws) {
-    for (const [username, player] of this.players.entries()) {
-      if (player.ws === ws) {
-        if (this.state === STATE.LOBBY) {
-          this.players.delete(username);
-        } else {
-          player.ws = null;
-        }
-        return;
+  removePlayer(username) {
+    const player = this.players.get(username);
+    if (player) {
+      if (this.state === STATE.LOBBY) {
+        this.players.delete(username);
+      } else {
+        player.ws = null;
       }
     }
   }
@@ -152,13 +150,10 @@ class LyricsGame {
     this._timer = setTimeout(() => this._revealAnswer(), QUESTION_TIME * 1000);
   }
 
-  receiveAnswer(ws, answerId) {
+  receiveAnswer(username, answerId) {
     if (this.state !== STATE.QUESTION_ACTIVE) return;
 
-    let player = null;
-    for (const p of this.players.values()) {
-      if (p.ws === ws) { player = p; break; }
-    }
+    const player = this.players.get(username);
     if (!player || player.answered) return;
 
     player.answered = true;
@@ -173,8 +168,8 @@ class LyricsGame {
     player.lastDelta = delta;
     player.streak = isCorrect ? (player.streak + 1) : 0;
 
-    if (ws.readyState === 1) {
-      ws.send(JSON.stringify({ type: 'LYRICS_ANSWER_CONFIRMED', answerId }));
+    if (player.ws && player.ws.readyState === 1) {
+      player.ws.send(JSON.stringify({ type: 'LYRICS_ANSWER_CONFIRMED', answerId }));
     }
 
     const answered = [...this.players.values()].filter(p => p.answered).length;
@@ -293,6 +288,18 @@ class LyricsGame {
 
   _clearTimer() {
     if (this._timer) { clearTimeout(this._timer); this._timer = null; }
+  }
+
+  getState() {
+    const players = this._buildScores();
+    const currentQuestion = this.currentIdx >= 0 ? this.currentIdx + 1 : 0;
+    return {
+      phase: this.state,
+      players,
+      currentQuestion,
+      totalQuestions: this.questions.length,
+      gameOver: this.state === STATE.GAME_OVER
+    };
   }
 
   get playerCount() { return this.players.size; }

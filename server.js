@@ -104,9 +104,6 @@ function serveFile(rel) {
   return (_req, res) => res.sendFile(path.join(__dirname, rel));
 }
 
-// Health check endpoint (required for Playwright test readiness)
-app.get('/health', (req, res) => res.json({ ok: true, status: 'healthy' }));
-
 // Modern routes
 app.get('/player/:code',         pageRateLimit, serveFile('public/player/index.html'));
 app.get('/host/:code',           pageRateLimit, serveFile('public/host/index.html'));
@@ -161,12 +158,12 @@ app.use('/games/lyrics', express.static(path.join(__dirname, 'games/lyrics/publi
 // Static files (serves public/index.html for /, etc.)
 app.use(express.static(path.join(__dirname, 'public')));
 
-// QR code endpoint — encodes /group/:code URL
+// QR code endpoint — encodes /player/:code URL
 app.get('/api/qr', async (req, res) => {
   try {
     const roomCode = req.query.room;
     const joinUrl = roomCode
-      ? `${PUBLIC_SCHEME}://${PUBLIC_HOST}/group/${roomCode}`
+      ? `${PUBLIC_SCHEME}://${PUBLIC_HOST}/player/${roomCode}`
       : `${PUBLIC_SCHEME}://${PUBLIC_HOST}`;
     const svg = await QRCode.toString(joinUrl, { type: 'svg', margin: 1 });
     res.setHeader('Content-Type', 'image/svg+xml');
@@ -397,51 +394,14 @@ setInterval(() => {
     if (room.game && room.activeMiniGame) {
       room.game.tick();
       const gameState = room.game.getState();
-      const stateMsg = JSON.stringify({ type: 'GAME_STATE', ...gameState });
-      for (const ws of room.playerSockets) {
-        if (ws.readyState === 1) ws.send(stateMsg);
-      }
-      for (const ws of room.displaySockets) {
-        if (ws.readyState === 1) ws.send(stateMsg);
-      }
+      broadcastAll(room, { type: 'GAME_STATE', ...gameState });
     }
     // Tick and broadcast shithead games
     if (room.shitheadGame && room.activeMiniGame === 'shithead') {
       room.shitheadGame.tick();
-
-      // Auto-swap for bot players during SWAP phase
-      if (room.shitheadGame.phase === 'SWAP') {
-        for (const [username, player] of room.shitheadGame.players) {
-          if (player.isBot && !player.ws) {
-            // Bot hasn't swapped yet
-            const swapChoice = room.shitheadGame.getBotSwapChoice(username);
-            if (swapChoice) {
-              // Small random delay for natural feel (500-1500ms)
-              if (!player._botSwapScheduled) {
-                player._botSwapScheduled = true;
-                const delayMs = 500 + Math.random() * 1000;
-                setTimeout(() => {
-                  room.shitheadGame.swapCard(username, swapChoice.handCardId, swapChoice.faceUpCardId);
-                  player._botSwapScheduled = false;
-                }, delayMs);
-              }
-            }
-          }
-        }
-      }
-
+      room.shitheadGame.processBotSwaps();
       const gameState = room.shitheadGame.getState();
-      const stateMsg = JSON.stringify({ type: 'GAME_STATE', ...gameState });
-      for (const ws of room.playerSockets) {
-        if (ws.readyState === 1) {
-          ws.send(stateMsg);
-        }
-      }
-      for (const ws of room.displaySockets) {
-        if (ws.readyState === 1) {
-          ws.send(stateMsg);
-        }
-      }
+      broadcastAll(room, { type: 'GAME_STATE', ...gameState });
     }
   }
 }, 100);  // Tick every ~100ms

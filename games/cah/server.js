@@ -15,24 +15,28 @@ class CAHGameController extends GameController {
     super();
     this.cahGame = null;
     this.maxRounds = maxRounds;
-    this.wsMap = new Map(); // Map usernames to fake ws objects for compatibility
+    this.room = null;
+  }
+
+  setRoom(room) {
+    this.room = room;
   }
 
   start() {
     this.startTime = Date.now();
 
-    // Create fake broadcast callback (room handles actual broadcasting)
+    // Create broadcast callback
+    const { broadcastAll } = require('../../server/broadcast');
     const broadcast = (msg) => {
-      // Room will call getState() ~100ms
+      if (this.room) broadcastAll(this.room, msg);
     };
 
     this.cahGame = new CAHGameLogic(broadcast);
 
-    // Add players with fake WebSocket objects
-    for (const [username] of this.players) {
-      const fakeWs = { readyState: 1, send: () => {} }; // Room handles actual broadcasting
-      this.wsMap.set(username, fakeWs);
-      this.cahGame.addPlayer(fakeWs, username);
+    // Add players with their real WebSocket objects from the room
+    for (const [username, playerData] of this.players) {
+      const realWs = playerData.ws || { readyState: 1, send: () => {} };
+      this.cahGame.addPlayer(realWs, username);
     }
 
     this.cahGame.startGame(this.maxRounds);
@@ -124,15 +128,13 @@ class CAHGameController extends GameController {
 
   removePlayer(username) {
     this.players.delete(username);
-    this.wsMap.delete(username);
     if (this.cahGame) {
-      this.cahGame.removePlayer(null); // CAH logic doesn't need ws for remove
+      // Find and remove the player by username
+      const player = this.cahGame.players.get(username);
+      if (player) {
+        this.cahGame.removePlayer(player.ws);
+      }
     }
-  }
-
-  transitionTo(newPhase) {
-    this.phase = newPhase;
-    this.phaseStartTime = Date.now();
   }
 }
 
