@@ -645,6 +645,76 @@
 </head>
 <body>
   <!-- ════════════════════════════════════════════════════════════════ -->
+  <!-- USERNAME ENTRY OVERLAY -->
+  <!-- ════════════════════════════════════════════════════════════════ -->
+  <div id="username-overlay" style="
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    backdrop-filter: blur(4px);
+  ">
+    <div style="
+      background: var(--surface);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 20px;
+      padding: 2rem;
+      width: 90%;
+      max-width: 400px;
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    ">
+      <div style="text-align: center;">
+        <div style="
+          font-size: 3rem;
+          margin-bottom: 1rem;
+        ">🎮</div>
+        <h2 style="
+          font-size: 1.4rem;
+          font-weight: 700;
+          margin: 0;
+          color: var(--text);
+        ">What's your name?</h2>
+      </div>
+      <input
+        id="username-input"
+        type="text"
+        placeholder="Enter your username..."
+        style="
+          padding: 1rem;
+          font-size: 1rem;
+          background: rgba(255, 255, 255, 0.06);
+          border: 1px solid rgba(255, 255, 255, 0.12);
+          border-radius: 12px;
+          color: var(--text);
+          outline: none;
+          transition: all 0.2s;
+        "
+        maxlength="30"
+      >
+      <button
+        id="username-submit"
+        style="
+          padding: 1rem;
+          font-size: 1.1rem;
+          font-weight: 700;
+          background: linear-gradient(135deg, var(--accent), #ff6b35);
+          border: none;
+          border-radius: 12px;
+          color: white;
+          cursor: pointer;
+          transition: all 0.2s;
+          box-shadow: 0 8px 24px rgba(255, 137, 6, 0.3);
+        "
+      >Join Room</button>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════════════════════════ -->
   <!-- HEADER -->
   <!-- ════════════════════════════════════════════════════════════════ -->
   <div class="header">
@@ -716,6 +786,7 @@
   <!-- ════════════════════════════════════════════════════════════════ -->
   <div class="action-bar">
     <button class="ready-btn" id="ready-btn">I'm Ready</button>
+    <button class="ready-btn" id="start-game-btn" style="display: none; background: linear-gradient(135deg, var(--neon), #00bcd4);">Start Game</button>
   </div>
 
   <!-- ════════════════════════════════════════════════════════════════ -->
@@ -742,6 +813,7 @@
     let username = '';
     let myWs = null;
     let myReady = false;
+    let selectedGame = null;
     let lobbyState = {
       players: [],
       admin: null,
@@ -754,10 +826,14 @@
     let rateLimitCooldown = 0;
 
     // ─── DOM Elements ──────────────────────────────────────────────
+    const usernameOverlay = document.getElementById('username-overlay');
+    const usernameInput = document.getElementById('username-input');
+    const usernameSubmit = document.getElementById('username-submit');
     const roomCodeEl = document.getElementById('room-code');
     const playerNameEl = document.getElementById('player-name');
     const playerListEl = document.getElementById('player-list');
     const readyBtn = document.getElementById('ready-btn');
+    const startGameBtn = document.getElementById('start-game-btn');
     const leaveBtn = document.getElementById('leave-btn');
     const gameChipsEl = document.getElementById('game-chips');
     const gameVotingEl = document.getElementById('game-voting');
@@ -771,15 +847,99 @@
     // ─── Initialization ────────────────────────────────────────────
     function init() {
       roomCode = GN.getRoomCode();
-      username = sessionStorage.getItem(`gn-username-${roomCode}`) || 'Player';
-      playerNameEl.textContent = username;
+
+      if (!roomCode) {
+        // No room code provided, redirect to landing page
+        window.location.href = '/';
+        return;
+      }
+
       roomCodeEl.textContent = roomCode;
 
+      // First, check if room exists or create it
+      checkOrCreateRoom();
+    }
+
+    // ─── Check if room exists ────────────────────────────────────────
+    async function checkOrCreateRoom() {
+      try {
+        const response = await fetch(`/api/rooms/${roomCode}`);
+        const data = await response.json();
+
+        if (!data.exists) {
+          // Room doesn't exist - show error and redirect to landing
+          console.log(`[Init] Room ${roomCode} not found`);
+          GN.notify('Room not found. Redirecting to create a new room...', 'info', 3000);
+          setTimeout(() => {
+            window.location.href = '/';
+          }, 1500);
+          return;
+        }
+
+        // Room exists, proceed to username entry
+        proceedToUsernameEntry();
+      } catch (error) {
+        console.error('[Init] Error checking room:', error);
+        // Proceed anyway, let server handle it
+        proceedToUsernameEntry();
+      }
+    }
+
+    // ─── Show username entry and proceed ────────────────────────────
+    function proceedToUsernameEntry() {
+      // Check if username is already saved
+      const savedUsername = sessionStorage.getItem(`gn-username-${roomCode}`);
+      if (savedUsername) {
+        username = savedUsername;
+        playerNameEl.textContent = username;
+        connectAndStartLobby();
+      } else {
+        // Show username entry overlay
+        usernameOverlay.style.display = 'flex';
+        usernameInput.focus();
+
+        // Handle username submission
+        const handleUsernameSubmit = () => {
+          const inputName = usernameInput.value.trim();
+          if (!inputName) return;
+
+          username = inputName;
+          sessionStorage.setItem(`gn-username-${roomCode}`, username);
+          playerNameEl.textContent = username;
+          usernameOverlay.style.display = 'none';
+
+          connectAndStartLobby();
+        };
+
+        usernameSubmit.addEventListener('click', handleUsernameSubmit);
+        usernameInput.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') handleUsernameSubmit();
+        });
+      }
+    }
+
+    // ─── Connect WebSocket and send JOIN_LOBBY ──────────────────────
+    function connectAndStartLobby() {
       // Connect WebSocket
       myWs = GN.connectWebSocket(roomCode, 'player', onWsMessage);
 
+      // Send JOIN_LOBBY once connected (check readyState to handle race condition)
+      const sendJoinLobby = () => {
+        if (myWs.readyState === WebSocket.OPEN) {
+          myWs.send(JSON.stringify({ type: 'JOIN_LOBBY', username }));
+        } else {
+          myWs.addEventListener('open', () => {
+            myWs.send(JSON.stringify({ type: 'JOIN_LOBBY', username }));
+          });
+        }
+      };
+
+      // Send immediately or on next open event
+      setTimeout(sendJoinLobby, 10);
+
       // Event listeners
       readyBtn.addEventListener('click', handleReadyToggle);
+      startGameBtn.addEventListener('click', handleStartGame);
       leaveBtn.addEventListener('click', handleLeave);
       chatToggle.addEventListener('click', toggleChatDrawer);
       chatSend.addEventListener('click', sendChatMessage);
@@ -798,11 +958,17 @@
 
     // ─── WebSocket Message Handler ──────────────────────────────────
     function onWsMessage(msg) {
-      if (msg.type === 'LOBBY_STATE') {
-        lobbyState = msg;
+      if (msg.type === 'LOBBY_UPDATE') {
+        // Update lobby state with new player/vote data
+        lobbyState.players = msg.players || [];
+        lobbyState.admin = msg.admin;
+        lobbyState.readyCount = msg.readyCount || 0;
+        lobbyState.totalCount = msg.totalCount || 0;
+        lobbyState.gameSuggestions = msg.gameSuggestions || {};
+        lobbyState.allReady = msg.allReady || false;
         renderLobbyState();
-      } else if (msg.type === 'GAME_STATE') {
-        // Game started, navigate to game
+      } else if (msg.type === 'GAME_STATE' && msg.gameType && msg.phase && msg.phase !== 'LOBBY') {
+        // Game has started, navigate to game page
         window.location.href = `/games/${msg.gameType}/?room=${roomCode}`;
       } else if (msg.type === 'CHAT_MESSAGE') {
         addChatMessage(msg);
@@ -851,7 +1017,7 @@
       for (const game of GAMES) {
         const count = lobbyState.gameSuggestions[game] || 0;
         const chip = document.createElement('button');
-        chip.className = 'game-chip';
+        chip.className = 'game-chip' + (selectedGame === game ? ' voted' : '');
         chip.textContent = GAME_LABELS[game] + (count > 0 ? ` ${count}` : '');
         chip.addEventListener('click', () => suggestGame(game));
         gameChipsEl.appendChild(chip);
@@ -862,12 +1028,25 @@
       // Update players count
       const countText = `Players (${lobbyState.readyCount}/${lobbyState.totalCount})`;
       document.getElementById('players-title').textContent = countText;
+
+      // Show Start Game button if user is admin and a game is selected
+      const isAdmin = lobbyState.admin === username;
+      startGameBtn.style.display = (isAdmin && selectedGame) ? 'inline-block' : 'none';
     }
 
     // ─── Game Suggestion ────────────────────────────────────────────
     function suggestGame(gameType) {
+      selectedGame = gameType;
       myWs.send(JSON.stringify({ type: 'SUGGEST_GAME', gameType }));
+      renderLobbyState(); // Update to show selected game and Start button
       GNSound.select();
+    }
+
+    // ─── Start Game (Admin Only) ────────────────────────────────────
+    function handleStartGame() {
+      if (!selectedGame) return;
+      myWs.send(JSON.stringify({ type: 'START_MINI_GAME', gameType: selectedGame }));
+      GNSound.pop();
     }
 
     // ─── Chat Messages ──────────────────────────────────────────────

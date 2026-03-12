@@ -101,7 +101,8 @@ window.GN = (() => {
 
   // ── Room code from URL ────────────────────────────────────────────────
   function getRoomCode() {
-    return (location.pathname.split('/')[2] || '').toUpperCase();
+    const params = new URLSearchParams(location.search);
+    return (params.get('room') || location.pathname.split('/')[2] || '').toUpperCase();
   }
 
   // ── WebSocket connection helper ────────────────────────────────────────
