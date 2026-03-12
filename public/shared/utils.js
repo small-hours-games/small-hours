@@ -104,9 +104,77 @@ window.GN = (() => {
     return (location.pathname.split('/')[2] || '').toUpperCase();
   }
 
+  // ── WebSocket connection helper ────────────────────────────────────────
+  function connectWebSocket(roomCode, role, onMessage) {
+    const wsUrl = buildWsUrl(roomCode, role);
+    const ws = new WebSocket(wsUrl);
+
+    ws.addEventListener('open', () => {
+      console.log(`[WS] Connected as ${role} to room ${roomCode}`);
+    });
+
+    ws.addEventListener('message', (evt) => {
+      try {
+        const msg = JSON.parse(evt.data);
+        onMessage(msg);
+      } catch (err) {
+        console.error('[WS] Invalid message:', evt.data, err);
+      }
+    });
+
+    ws.addEventListener('error', (err) => {
+      console.error('[WS] Error:', err);
+    });
+
+    ws.addEventListener('close', () => {
+      console.log('[WS] Disconnected');
+    });
+
+    return ws;
+  }
+
+  // ── DOM helpers ────────────────────────────────────────────────────────
+  function showElement(el) {
+    if (el) el.style.display = '';
+  }
+
+  function hideElement(el) {
+    if (el) el.style.display = 'none';
+  }
+
+  function toggleClass(el, className) {
+    if (el) el.classList.toggle(className);
+  }
+
+  function setClass(el, className, condition) {
+    if (el) {
+      if (condition) el.classList.add(className);
+      else el.classList.remove(className);
+    }
+  }
+
+  // ── Notification helper ────────────────────────────────────────────────
+  function notify(message, type = 'info', duration = 3000) {
+    const notif = el('div', `notification notification-${type}`, message);
+    notif.style.cssText = `
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: ${type === 'success' ? 'var(--correct)' : type === 'error' ? 'var(--wrong)' : 'var(--accent)'};
+      color: white;
+      padding: 12px 20px;
+      border-radius: var(--radius-md);
+      z-index: 1100;
+      animation: slideUp 300ms ease-out;
+    `;
+    document.body.appendChild(notif);
+    setTimeout(() => notif.remove(), duration);
+  }
+
   return {
     AVATARS, nameToAvatar, esc, haptic,
     fmtScore, ordinal, ANS_COLORS, RANK_MEDALS, rankDisplay,
-    buildWsUrl, el, sleep, animateNumber, getRoomCode
+    buildWsUrl, connectWebSocket, el, sleep, animateNumber, getRoomCode,
+    showElement, hideElement, toggleClass, setClass, notify
   };
 })();
