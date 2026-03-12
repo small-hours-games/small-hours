@@ -550,6 +550,13 @@
   <p id="swap-ready-info" style="color:var(--text-muted);font-size:.8rem;"></p>
 </div>
 
+<!-- REVEAL -->
+<div id="reveal" class="screen">
+  <h2>🎴 Revealing Cards</h2>
+  <p>Preparing for play...</p>
+  <div style="text-align:center;font-size:3rem;animation:float 3s ease-in-out infinite;">✨</div>
+</div>
+
 <!-- PLAYING -->
 <div id="playing" class="screen">
   <div class="pile-info">
@@ -1194,7 +1201,7 @@
       case 'GAME_STATE':
         console.log(`[Client] GAME_STATE received: phase=${msg.phase}, players=${msg.players?.length}`);
         console.log(`[Client] Message keys: ${Object.keys(msg).join(', ')}`);
-        gameState = { state: msg.phase };
+        gameState = msg;  // Store entire game state from server
 
         if (msg.playerState) {
           console.log(`[Client] playerState included: hand=${msg.playerState.hand?.length}, faceUp=${msg.playerState.faceUp?.length}, faceDown=${msg.playerState.faceDown?.length}`);
@@ -1222,9 +1229,8 @@
             document.getElementById('waiting-name').textContent = 'Swap phase…';
           }
         } else if (msg.phase === 'REVEAL') {
-          console.log('[Client] Showing waiting screen for REVEAL');
-          show('waiting');
-          document.getElementById('waiting-name').textContent = 'Revealing cards…';
+          console.log('[Client] Showing reveal screen for REVEAL');
+          show('reveal');
         } else if (msg.phase === 'PLAY') {
           console.log('[Client] PLAY phase, rendering playing screen');
           if (!document.getElementById('playing').classList.contains('active')) {
