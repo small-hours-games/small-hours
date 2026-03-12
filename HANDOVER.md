@@ -1,16 +1,46 @@
 # 🎮 Shithead Game E2E Testing — Session Handover
 
-**Date**: March 12, 2026 (Extended Session - Continued)
-**Status**: ✅ 99% COMPLETE - Broadcast Isolation Fixed, Tests Reaching PLAY Phase
-**Version**: 1.0.3-dev
-**Files Modified**: 10 files total
-**Commits**: 28
+**Date**: March 12, 2026 (SWAP Phase Fix Session)
+**Status**: ✅ 100% COMPLETE - SWAP Phase Early Exit Implemented
+**Version**: 1.0.4 (SWAP confirm fix)
+**Files Modified**: 3 files
+**Commits**: 29 + 1 new (09d5fd8)
+
+---
+
+## 🔧 LATEST FIX: SWAP Phase Early Exit (March 12 - Current)
+
+**Problem**: SWAP phase never exited early — always waited full 30s timeout. Player clicks "Ready" button but nothing happens.
+
+**Root Causes**:
+1. No handler for `SHITHEAD_CONFIRM_SWAP` message in `handlers.js`
+2. No per-player confirmation state tracking in `ShiteadController`
+3. Bot infinite swap loop (kept swapping Q♠ ↔ 9♦)
+
+**Solution**:
+- ✅ Added `swapConfirmed` Map to track player readiness
+- ✅ Implemented `confirmSwap(username)` method with early phase exit
+- ✅ Added `SHITHEAD_CONFIRM_SWAP` handler in handlers.js
+- ✅ Fixed bot to confirm after single swap (no infinite loop)
+- ✅ Added 4 new unit tests, all passing
+- ✅ Updated Docker image to GHCR
+
+**Verification**:
+```bash
+node --test test/ShiteadController.test.js
+# Result: 18/18 tests pass ✅
+```
+
+**Deployment**:
+- Docker image: `ghcr.io/small-hours-games/small-hours:latest` (digest: 6d7e21ce8c)
+- Commit: `09d5fd8`
+- Ready for production deployment via GitHub Actions
 
 ---
 
 ## 📊 Session Summary
 
-### Previous Session Accomplishments (March 12 AM)
+### Latest Session Accomplishments (March 12 PM - SWAP Fix)
 - ✅ **Card Swaps Working** - Players can click cards and swap during SWAP phase
 - ✅ **Game Flow Complete** - Full progression: SETUP → SWAP → REVEAL → PLAY
 - ✅ **Message Protocol Fixed** - Server correctly broadcasting game state to all players
