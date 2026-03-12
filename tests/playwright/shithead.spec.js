@@ -50,7 +50,7 @@ test.describe('Shithead Card Game', () => {
     }
 
     // Confirm swap
-    const confirmBtn = p1.locator('#confirm-swap-btn', '#confirm-btn');
+    const confirmBtn = p1.locator('#confirm-swap-btn');
     const isVisible = await confirmBtn.isVisible().catch(() => false);
 
     if (isVisible) {
@@ -58,7 +58,7 @@ test.describe('Shithead Card Game', () => {
     }
 
     // Both players should confirm
-    await p2.locator('#confirm-swap-btn', '#confirm-btn')
+    await p2.locator('#confirm-swap-btn')
       .click()
       .catch(() => {});
 
