@@ -556,6 +556,45 @@ function handleMessage(ws, role, msg, room) {
       break;
     }
 
+    case 'CHAT_MESSAGE': {
+      const username = room.wsToUsername.get(ws);
+      if (!username) break;
+
+      // Rate limiting: max 3 messages per 5 seconds per player
+      const now = Date.now();
+      let limit = room.chatRateLimit.get(username);
+      if (!limit || now >= limit.resetTime) {
+        limit = { count: 0, resetTime: now + 5000 };
+      }
+      limit.count++;
+      room.chatRateLimit.set(username, limit);
+
+      if (limit.count > 3) {
+        sendTo(ws, { type: 'ERROR', code: 'CHAT_RATE_LIMIT', message: 'Chat rate limit exceeded.' });
+        break;
+      }
+
+      // Sanitize message: strip HTML, max 200 chars
+      let text = String(msg.text || '').trim().replace(/<[^>]*>/g, '').slice(0, 200);
+      if (!text) break;
+
+      // Add to chat history (keep last 50)
+      const chatMsg = {
+        username,
+        avatar: room.players.get(username)?.avatar || '🎮',
+        text,
+        timestamp: Date.now()
+      };
+      room.chatHistory.push(chatMsg);
+      if (room.chatHistory.length > 50) {
+        room.chatHistory.shift();
+      }
+
+      // Broadcast to all
+      broadcastAll(room, { type: 'CHAT_MESSAGE', ...chatMsg });
+      break;
+    }
+
     // ── Spy game messages ─────────────────────────────────────────────────
     case 'SEND_CLUE':
     case 'SEND_GUESS': {

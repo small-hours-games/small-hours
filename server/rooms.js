@@ -55,6 +55,8 @@ function createRoom(code) {
     readyPlayers: new Set(),
     language: 'en',
     categoryVotes: new Map(),          // username → [catId, ...]
+    chatHistory: [],                   // recent messages (last 50)
+    chatRateLimit: new Map(),          // username → { count, resetTime }
     createdAt: Date.now(),
     _broadcast: broadcast,
   });
@@ -102,6 +104,7 @@ function buildLobbyState(room) {
     votedPlayers: [...room.categoryVotes.keys()],
     activeMiniGame: room.activeMiniGame,
     language: room.language,
+    chatHistory: room.chatHistory,
   };
 }
 
