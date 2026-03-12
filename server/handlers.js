@@ -335,6 +335,7 @@ function handleMessage(ws, role, msg, room) {
         room.game.start();
       } else if (gameType === 'shithead') {
         console.log(`[StartGame] Creating shitheadGame for room ${room.code}, current room.players: ${Array.from(room.players.keys()).join(', ')}`);
+        room.game = null;  // Clear any existing game (e.g., Quiz game)
         room.shitheadGame = new ShiteadController();
         for (const [uname, p] of room.players) {
           console.log(`[StartGame]   Adding ${uname} to shitheadGame`);

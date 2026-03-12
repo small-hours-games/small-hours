@@ -391,7 +391,8 @@ setInterval(() => {
   tickCounter++;
   for (const [code, room] of rooms) {
     // Tick and broadcast all GameController-based games (quiz, CAH, Spy, Lyrics, Guess, etc.)
-    if (room.game && room.activeMiniGame) {
+    // BUT NOT shithead (which has its own broadcast logic below)
+    if (room.game && room.activeMiniGame && room.activeMiniGame !== 'shithead') {
       room.game.tick();
       const gameState = room.game.getState();
       broadcastAll(room, { type: 'GAME_STATE', ...gameState });
