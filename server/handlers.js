@@ -223,9 +223,25 @@ function handleMessage(ws, role, msg, room) {
           }
           console.log(`[Join]   Sent SHITHEAD_YOUR_STATE to ${username}`);
         } else {
-          console.log(`[Join]   WARNING: Player ${username} NOT found in shitheadGame.players!`);
-          console.log(`[Join]   Available players in shitheadGame: ${Array.from(room.shitheadGame.players.keys()).join(', ')}`);
-          console.log(`[Join]   shitheadGame.players.size = ${room.shitheadGame.players.size}`);
+          console.log(`[Join]   Player ${username} not found in shitheadGame, adding as late-join`);
+          // Player is joining during active game - add them
+          room.shitheadGame.addPlayer(username, {
+            username: username,
+            ws: ws,
+            isBot: false,
+            cardHand: [],
+            cardFaceUp: [],
+            cardFaceDown: [],
+          });
+          console.log(`[Join]   Added ${username} to shitheadGame. Now ${room.shitheadGame.players.size} players`);
+          // Send current game state immediately
+          const playerState = room.shitheadGame.getPlayerState(username);
+          if (playerState) {
+            sendTo(ws, { type: 'SHITHEAD_YOUR_STATE', ...playerState });
+          }
+          const gameState = room.shitheadGame.getState();
+          sendTo(ws, { type: 'GAME_STATE', ...gameState });
+          console.log(`[Join]   Sent GAME_STATE and SHITHEAD_YOUR_STATE to late-join ${username}`);
         }
       } else {
         console.log(`[Join]   Not shithead game (activeMiniGame=${room.activeMiniGame}, shitheadGame=${!!room.shitheadGame})`);
