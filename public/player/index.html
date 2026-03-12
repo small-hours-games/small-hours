@@ -977,6 +977,13 @@
       }
     }
 
+    // ─── Global send() function (exposed for E2E tests) ──────────────
+    window.send = function(msg) {
+      if (myWs && myWs.readyState === WebSocket.OPEN) {
+        myWs.send(JSON.stringify(msg));
+      }
+    };
+
     // ─── Connect WebSocket and send JOIN_LOBBY ──────────────────────
     function connectAndStartLobby() {
       // Connect WebSocket
