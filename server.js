@@ -408,7 +408,11 @@ setInterval(() => {
         if (player.ws) {
           const playerState = room.shitheadGame.getPlayerState(username);
           if (playerState) {
-            player.ws.send(JSON.stringify({ type: 'SHITHEAD_YOUR_STATE', ...playerState }));
+            player.ws.send(JSON.stringify({
+              type: 'SHITHEAD_YOUR_STATE',
+              phase: room.shitheadGame.phase,
+              ...playerState
+            }));
           }
         }
       }

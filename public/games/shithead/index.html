@@ -1148,12 +1148,10 @@
           document.getElementById('waiting-name').textContent = 'Game starting…';
           document.getElementById('waiting-players').textContent = '';
         } else if (msg.phase === 'SWAP') {
+          // Show swap screen and wait for myState to render it
+          show('swap');
           if (myState && myState.hand) {
-            show('swap');
             renderSwap();
-          } else {
-            show('waiting');
-            document.getElementById('waiting-name').textContent = 'Swap phase…';
           }
         } else if (msg.phase === 'REVEAL') {
           show('waiting');
