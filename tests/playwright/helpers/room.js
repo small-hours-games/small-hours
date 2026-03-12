@@ -22,6 +22,11 @@ async function createRoom(request) {
  * @param {string} name - player display name
  */
 async function joinRoom(page, code, name) {
+  // Capture all console messages
+  page.on('console', msg => {
+    console.log(`[${name}] ${msg.text()}`);
+  });
+
   // Navigate with room code in query parameter
   await page.goto(`/player/?room=${code}`);
   // Fill username

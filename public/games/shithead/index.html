@@ -715,11 +715,14 @@
     const elem = document.getElementById(id);
     if (!elem) {
       console.log(`[UI]   ERROR: Element #${id} not found in DOM!`);
+      console.log(`[UI]   Available screens: ${Array.from(document.querySelectorAll('.screen')).map(s => s.id).join(', ')}`);
       return;
     }
     console.log(`[UI]   Adding .active to #${id}`);
     elem.classList.add('active');
     console.log(`[UI]   #${id}.active = ${elem.classList.contains('active')}`);
+    console.log(`[UI]   Element in DOM: ${!!document.getElementById(id)}`);
+    console.log(`[UI]   Element display: ${window.getComputedStyle(elem).display}`);
   }
 
   // ── Toast ──────────────────────────────────────────────────────────────────
@@ -759,6 +762,8 @@
       return;
     }
 
+    console.log(`[Render] myState.hand type: ${Array.isArray(myState.hand) ? 'array' : typeof myState.hand}`);
+    console.log(`[Render] myState.faceUp type: ${Array.isArray(myState.faceUp) ? 'array' : typeof myState.faceUp}`);
     console.log(`[Render] Rendering ${myState.hand?.length || 0} hand cards and ${myState.faceUp?.length || 0} face-up cards`);
 
     // FIX: Use original indices, not sorted indices
@@ -1167,13 +1172,14 @@
 
       case 'GAME_STATE':
         console.log(`[Client] GAME_STATE received: phase=${msg.phase}, players=${msg.players?.length}`);
+        console.log(`[Client] Message keys: ${Object.keys(msg).join(', ')}`);
         gameState = { state: msg.phase };
 
         if (msg.playerState) {
-          console.log(`[Client] playerState included: hand=${msg.playerState.hand?.length}, faceUp=${msg.playerState.faceUp?.length}`);
+          console.log(`[Client] playerState included: hand=${msg.playerState.hand?.length}, faceUp=${msg.playerState.faceUp?.length}, faceDown=${msg.playerState.faceDown?.length}`);
           myState = msg.playerState;
         } else {
-          console.log(`[Client] WARNING: playerState NOT in message!`);
+          console.log(`[Client] WARNING: playerState NOT in message! Available: ${Object.keys(msg).join(', ')}`);
         }
 
         if (msg.phase === 'SETUP') {
@@ -1182,11 +1188,13 @@
           document.getElementById('waiting-name').textContent = 'Game starting…';
           document.getElementById('waiting-players').textContent = '';
         } else if (msg.phase === 'SWAP') {
-          console.log(`[Client] SWAP phase received. myState=${myState ? 'exists' : 'null'}, hand=${myState?.hand?.length || 0}`);
+          console.log(`[Client] SWAP phase received. myState=${myState ? 'exists' : 'null'}`);
           if (myState) {
+            console.log(`[Client] myState details: hand=${myState.hand?.length}, faceUp=${myState.faceUp?.length}, username=${myState.username}`);
             console.log('[Client] Showing SWAP screen and rendering cards');
             show('swap');
             renderSwap();
+            console.log(`[Client] After show/render, #swap.active=${document.getElementById('swap').classList.contains('active')}`);
           } else {
             console.log('[Client] SWAP phase but no myState, showing waiting instead');
             show('waiting');

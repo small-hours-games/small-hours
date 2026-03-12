@@ -18,7 +18,7 @@ async function getGameState(page) {
  * Returns array of card elements.
  */
 async function getHandCards(page) {
-  const locator = page.locator('.hand .card');
+  const locator = page.locator('#swap-hand .play-card');
   const count = await locator.count();
   const cards = [];
   for (let i = 0; i < count; i++) {
@@ -36,7 +36,7 @@ async function getHandCards(page) {
  * Returns array of card elements.
  */
 async function getFaceUpCards(page) {
-  const locator = page.locator('.faceup .card');
+  const locator = page.locator('#swap-faceup .play-card');
   const count = await locator.count();
   const cards = [];
   for (let i = 0; i < count; i++) {
@@ -84,8 +84,8 @@ async function assertPlayerCardCounts(page, expectedHand, expectedFaceUp, expect
  * Simulates a swap action.
  */
 async function performCardSwap(page, handCardIndex = 0, faceUpCardIndex = 0) {
-  const handCards = page.locator('.hand .card');
-  const faceUpCards = page.locator('.faceup .card');
+  const handCards = page.locator('#swap-hand .play-card');
+  const faceUpCards = page.locator('#swap-faceup .play-card');
 
   await handCards.nth(handCardIndex).click();
   await page.waitForTimeout(300);
@@ -110,7 +110,7 @@ async function confirmSwap(page) {
  * Click a card in hand during PLAY phase.
  */
 async function playCard(page, handCardIndex = 0) {
-  const handCards = page.locator('.hand .card');
+  const handCards = page.locator('#hand-cards .play-card');
   if (await handCards.count() > handCardIndex) {
     await handCards.nth(handCardIndex).click();
     await page.waitForTimeout(500);
