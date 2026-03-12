@@ -270,4 +270,52 @@ test.describe('Shithead Card Game - Multi-Player', () => {
     await ctx2.close();
   });
 
+  test('card playing: verify valid plays during PLAY phase', async ({ request, browser }) => {
+    const code = await createRoom(request);
+    const ctx1 = await browser.newContext();
+    const ctx2 = await browser.newContext();
+    const p1 = await ctx1.newPage();
+    const p2 = await ctx2.newPage();
+
+    await joinRoom(p1, code, 'Alice');
+    await joinRoom(p2, code, 'Bob');
+    await startMiniGame(p1, 'shithead');
+
+    // Navigate and complete SWAP phase
+    await p1.waitForURL(/\/group\/[A-Z]{4}\/shithead/, { timeout: 15_000 });
+    await p2.waitForURL(/\/group\/[A-Z]{4}\/shithead/, { timeout: 15_000 });
+
+    await waitForAllPlayersInPhase([p1, p2], 'swap', 15_000);
+    await confirmSwap(p1);
+    await confirmSwap(p2);
+
+    await waitForAllPlayersInPhase([p1, p2], 'reveal', 10_000);
+    await waitForAllPlayersInPhase([p1, p2], 'playing', 10_000);
+
+    // Get game state to see current player
+    let state = await getGameState(p1);
+    const currentPlayer = state.currentPlayerUsername;
+    const targetPage = currentPlayer === 'Alice' ? p1 : p2;
+
+    // Get initial hand count
+    const initialHandCount = await targetPage.locator('.hand .card').count();
+    expect(initialHandCount).toBeGreaterThan(0);
+
+    // Play a card
+    await playCard(targetPage, 0);
+    await targetPage.waitForTimeout(500);
+
+    // Verify hand count decreased or stayed the same (depends on replenishment)
+    const afterPlayHandCount = await targetPage.locator('.hand .card').count();
+    expect(afterPlayHandCount).toBeLessThanOrEqual(initialHandCount);
+
+    // Verify current player changed (turn advanced)
+    state = await getGameState(p1);
+    const newCurrentPlayer = state.currentPlayerUsername;
+    expect(newCurrentPlayer).not.toBe(currentPlayer);
+
+    await ctx1.close();
+    await ctx2.close();
+  });
+
 });
