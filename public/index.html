@@ -326,7 +326,7 @@
     try {
       const res = await fetch('/api/rooms', { method: 'POST' });
       const { code } = await res.json();
-      window.location.href = `/player/${code}`;
+      window.location.href = `/player/?room=${code}`;
     } catch (e) {
       errorMsg.textContent = 'Could not create room. Try again.';
       createBtn.disabled = false;
@@ -363,7 +363,7 @@
     }
     GNSound.select();
     errorMsg.textContent = '';
-    window.location.href = `/group/${code}`;
+    window.location.href = `/player/?room=${code}`;
   }
 </script>
 </body>
