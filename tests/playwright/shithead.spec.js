@@ -13,17 +13,28 @@ test.describe('Shithead Card Game - Multi-Player', () => {
   test('two players: setup → swap → reveal → play → game over', async ({ request, browser }) => {
     // Create room and join 2 players
     const code = await createRoom(request);
+    console.log(`[Test] Created room: ${code}`);
+
     const ctx1 = await browser.newContext();
     const ctx2 = await browser.newContext();
     const p1 = await ctx1.newPage();
     const p2 = await ctx2.newPage();
 
     // Join as Alice and Bob
+    console.log('[Test] Alice joining...');
     await joinRoom(p1, code, 'Alice');
+    console.log('[Test] Alice joined, waiting before Bob joins...');
+    await new Promise(r => setTimeout(r, 500));
+
+    console.log('[Test] Bob joining...');
     await joinRoom(p2, code, 'Bob');
+    console.log('[Test] Bob joined, waiting before game start...');
+    await new Promise(r => setTimeout(r, 500));
 
     // Start shithead game (as admin, usually first player)
+    console.log('[Test] Starting shithead game...');
     await startMiniGame(p1, 'shithead');
+    console.log('[Test] Game start message sent');
 
     // Phase 1: SETUP - navigate to game
     await p1.waitForURL(/\/group\/[A-Z]{4}\/shithead/, { timeout: 15_000 });
