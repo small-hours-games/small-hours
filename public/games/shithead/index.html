@@ -860,7 +860,8 @@
     }
     console.log(`[Click]   After selection: hand=${swapSelected.hand}, faceUp=${swapSelected.faceUp}`);
     if (swapSelected.hand && swapSelected.faceUp) {
-      const msg = { type: 'SHITHEAD_SWAP_CARD', handCardId: swapSelected.hand, faceUpCardId: swapSelected.faceUp };
+      // Convert string IDs from data attributes to numbers for server comparison
+      const msg = { type: 'SHITHEAD_SWAP_CARD', handCardId: parseInt(swapSelected.hand), faceUpCardId: parseInt(swapSelected.faceUp) };
       console.log(`[Click]   Both selected, about to send:`, msg);
       console.log(`[Click]   ws=${ws ? `exists, readyState=${ws.readyState}` : 'null'}`);
       try {
