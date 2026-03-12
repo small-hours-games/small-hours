@@ -401,17 +401,21 @@ setInterval(() => {
       room.shitheadGame.tick();
       room.shitheadGame.processBotSwaps();
       const gameState = room.shitheadGame.getState();
-      broadcastAll(room, { type: 'GAME_STATE', ...gameState });
 
-      // Send individual player state for Shithead
+      // Send GAME_STATE to displays without player-specific state
+      for (const ws of room.displaySockets) {
+        ws.send(JSON.stringify({ type: 'GAME_STATE', ...gameState }));
+      }
+
+      // Send GAME_STATE to each player with their individual state included
       for (const [username, player] of room.shitheadGame.players) {
         if (player.ws) {
           const playerState = room.shitheadGame.getPlayerState(username);
           if (playerState) {
             player.ws.send(JSON.stringify({
-              type: 'SHITHEAD_YOUR_STATE',
-              phase: room.shitheadGame.phase,
-              ...playerState
+              type: 'GAME_STATE',
+              ...gameState,
+              playerState: playerState
             }));
           }
         }

@@ -1139,8 +1139,16 @@
 
       case 'GAME_STATE':
         // Handle the new state-based protocol from ShiteadController
-        console.log(`[Shithead] Received GAME_STATE: phase=${msg.phase}`);
+        console.log(`[Shithead] Received GAME_STATE: phase=${msg.phase}, playerState=${msg.playerState ? 'YES' : 'NO'}`);
         gameState = { state: msg.phase };
+
+        // Extract player state if included in message (prevents race condition)
+        if (msg.playerState) {
+          myState = msg.playerState;
+          console.log(`[Shithead] myState updated:`, myState);
+        } else {
+          console.log('[Shithead] ⚠️ No playerState in GAME_STATE message!');
+        }
 
         if (msg.phase === 'SETUP') {
           console.log('[Shithead] Showing waiting screen for SETUP');
@@ -1150,8 +1158,12 @@
         } else if (msg.phase === 'SWAP') {
           // Show swap screen and wait for myState to render it
           show('swap');
+          console.log(`[Shithead] SWAP phase - myState=${myState ? 'SET' : 'NULL'}, hand=${myState?.hand ? 'YES' : 'NO'}`);
           if (myState && myState.hand) {
+            console.log('[Shithead] Rendering swap screen with', myState.hand.length, 'hand cards');
             renderSwap();
+          } else {
+            console.log('[Shithead] ⚠️ Cannot render swap - myState missing or no hand');
           }
         } else if (msg.phase === 'REVEAL') {
           show('waiting');
