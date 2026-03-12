@@ -3,7 +3,8 @@ name: small-hours
 services:
   quiz:
     container_name: small-hours
-    build: .
+    image: ghcr.io/small-hours-games/small-hours:latest
+    pull_policy: always
     restart: unless-stopped
 
     # host networking lets the server see your real LAN IP and
@@ -52,9 +53,9 @@ services:
       # TLS certs (optional — server falls back to HTTP without them)
       - ./certs:/app/certs:ro
 
-# ── To apply code changes ────────────────────────────────────────────────────
-#   git pull && docker restart small-hours
+# ── To pull latest published image ────────────────────────────────────────
+#   docker compose pull && docker compose up -d
 #
-# ── To rebuild after package.json changes ───────────────────────────────────
-#   docker compose up --build -d
+# ── Authenticate with GitHub Packages (if private repo) ──────────────────────
+#   echo "YOUR_GITHUB_PAT" | docker login ghcr.io -u YOUR_USERNAME --password-stdin
 # ────────────────────────────────────────────────────────────────────────────
