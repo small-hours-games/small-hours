@@ -26,7 +26,7 @@ async function joinRoom(page, code, name) {
   await page.goto(`/player/?room=${code}`);
   // Fill username
   await page.locator('#username-input').fill(name);
-  await page.locator('#join-btn').click();
+  await page.locator('#username-submit').click();
 
   // After JOIN_OK, waiting screen appears
   await page.locator('#waiting.active').waitFor({ state: 'visible', timeout: 10_000 });
