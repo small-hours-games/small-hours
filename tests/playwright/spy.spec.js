@@ -28,20 +28,12 @@ test.describe('Spy Game (Bug 1 Detection)', () => {
 
     // Start spy game
     await startMiniGame(p1, 'spy');
-    await p1.waitForTimeout(1000);
 
     try {
-      // Wait for game to navigate and start
-      await p1.waitForNavigation({ timeout: 5_000 }).catch(() => {
-        // Navigation might not happen due to bug, continue
-      });
-
-      // Try to access spy page
-      const currentUrl = p1.url();
-      if (!currentUrl.includes('/spy')) {
-        // Server may have crashed before redirect
-        console.log('Warning: Server did not navigate to /spy before crash');
-      }
+      // Wait for game to navigate to spy page
+      await p1.waitForURL(/\/group\/[A-Z]{4}\/spy/, { timeout: 10_000 });
+      await p2.waitForURL(/\/group\/[A-Z]{4}\/spy/, { timeout: 10_000 });
+      await p3.waitForURL(/\/group\/[A-Z]{4}\/spy/, { timeout: 10_000 });
 
       // Wait a bit for game setup
       await p1.waitForTimeout(3_000);

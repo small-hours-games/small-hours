@@ -16,12 +16,15 @@ test.describe('Quiz Game', () => {
 
     // Admin clicks "Quiz" button from game menu (or uses startMiniGame)
     await startMiniGame(p1, 'quiz');
-    await p1.waitForTimeout(500);
+
+    // Wait for players to navigate to quiz page
+    await p1.waitForURL(/\/group\/[A-Z]{4}\/quiz/, { timeout: 15_000 });
+    await p2.waitForURL(/\/group\/[A-Z]{4}\/quiz/, { timeout: 15_000 });
 
     // Vote screen should appear after START_MINI_GAME
     // Wait for vote buttons and vote for 3 categories each
     async function voteForCategories(page) {
-      await page.locator('.vote-cat-btn').first().waitFor({ state: 'visible', timeout: 10_000 });
+      await page.locator('.vote-cat-btn').first().waitFor({ state: 'visible', timeout: 15_000 });
       const buttons = await page.locator('.vote-cat-btn').all();
       for (let i = 0; i < 3 && i < buttons.length; i++) {
         await buttons[i].click();
@@ -77,10 +80,11 @@ test.describe('Quiz Game', () => {
       send({ type: 'START_MINI_GAME', gameType: type, questionCount: 1 });
     }, 'quiz');
 
-    await p1.waitForTimeout(500);
+    // Wait for quiz page to load
+    await p1.waitForURL(/\/group\/[A-Z]{4}\/quiz/, { timeout: 15_000 });
 
     // Vote for categories (will appear after START_MINI_GAME)
-    await p1.locator('.vote-cat-btn').first().waitFor({ state: 'visible', timeout: 10_000 });
+    await p1.locator('.vote-cat-btn').first().waitFor({ state: 'visible', timeout: 15_000 });
     const buttons = await p1.locator('.vote-cat-btn').all();
     for (let i = 0; i < 3 && i < buttons.length; i++) {
       await buttons[i].click();

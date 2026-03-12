@@ -16,11 +16,10 @@ test.describe('Shithead Card Game', () => {
 
     // Start shithead game
     await startMiniGame(p1, 'shithead');
-    await p1.waitForTimeout(500);
 
-    // Navigate to shithead page
-    await p1.waitForNavigation({ timeout: 5_000 }).catch(() => {});
-    await p2.waitForNavigation({ timeout: 5_000 }).catch(() => {});
+    // Wait for players to navigate to shithead page
+    await p1.waitForURL(/\/group\/[A-Z]{4}\/shithead/, { timeout: 15_000 });
+    await p2.waitForURL(/\/group\/[A-Z]{4}\/shithead/, { timeout: 15_000 });
 
     // Wait for swap screen
     await waitForScreen(p1, 'swap', 15_000);
