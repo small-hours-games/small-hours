@@ -90,4 +90,72 @@ test.describe('Shithead Card Game - Multi-Player', () => {
     await ctx2.close();
   });
 
+  test('three players: verify turn order and state sync', async ({ request, browser }) => {
+    const code = await createRoom(request);
+    const ctx1 = await browser.newContext();
+    const ctx2 = await browser.newContext();
+    const ctx3 = await browser.newContext();
+    const p1 = await ctx1.newPage();
+    const p2 = await ctx2.newPage();
+    const p3 = await ctx3.newPage();
+
+    // Join 3 players
+    await joinRoom(p1, code, 'Alice');
+    await joinRoom(p2, code, 'Bob');
+    await joinRoom(p3, code, 'Charlie');
+
+    // Start game
+    await startMiniGame(p1, 'shithead');
+
+    // Navigate to game
+    await p1.waitForURL(/\/group\/[A-Z]{4}\/shithead/, { timeout: 15_000 });
+    await p2.waitForURL(/\/group\/[A-Z]{4}\/shithead/, { timeout: 15_000 });
+    await p3.waitForURL(/\/group\/[A-Z]{4}\/shithead/, { timeout: 15_000 });
+
+    // SWAP phase
+    await waitForAllPlayersInPhase([p1, p2, p3], 'swap', 15_000);
+
+    await performCardSwap(p1, 0, 0);
+    await confirmSwap(p1);
+
+    await performCardSwap(p2, 0, 0);
+    await confirmSwap(p2);
+
+    await performCardSwap(p3, 0, 0);
+    await confirmSwap(p3);
+
+    // REVEAL phase
+    await waitForAllPlayersInPhase([p1, p2, p3], 'reveal', 10_000);
+
+    // PLAY phase
+    await waitForAllPlayersInPhase([p1, p2, p3], 'playing', 10_000);
+
+    // Verify all 3 players see same game state
+    const state1 = await getGameState(p1);
+    const state2 = await getGameState(p2);
+    const state3 = await getGameState(p3);
+
+    // All should see same phase
+    expect(state1.phase).toBe('PLAY');
+    expect(state2.phase).toBe('PLAY');
+    expect(state3.phase).toBe('PLAY');
+
+    // All should see 3 players in game
+    expect(state1.players?.length).toBe(3);
+    expect(state2.players?.length).toBe(3);
+    expect(state3.players?.length).toBe(3);
+
+    // Player order should be consistent across all clients
+    expect(state1.players?.[0]?.username).toBe(state2.players?.[0]?.username);
+    expect(state2.players?.[0]?.username).toBe(state3.players?.[0]?.username);
+
+    // Current player should be the same across all clients
+    expect(state1.currentPlayerUsername).toBe(state2.currentPlayerUsername);
+    expect(state2.currentPlayerUsername).toBe(state3.currentPlayerUsername);
+
+    await ctx1.close();
+    await ctx2.close();
+    await ctx3.close();
+  });
+
 });
