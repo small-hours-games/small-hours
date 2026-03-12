@@ -1,6 +1,6 @@
 {
   "name": "quiz-trivia",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Local network party quiz game",
   "main": "server.js",
   "scripts": {
