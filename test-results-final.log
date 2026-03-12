@@ -1,0 +1,170 @@
+
+> quiz-trivia@1.0.1 test:e2e
+> playwright test tests/playwright/shithead.spec.js --timeout=120000
+
+
+Running 5 tests using 1 worker
+
+  ✘  1 [chromium] › tests/playwright/shithead.spec.js:13:3 › Shithead Card Game - Multi-Player › two players: setup → swap → reveal → play → game over (15.8s)
+  ✘  2 [chromium] › tests/playwright/shithead.spec.js:93:3 › Shithead Card Game - Multi-Player › three players: verify turn order and state sync (16.3s)
+  ✘  3 [chromium] › tests/playwright/shithead.spec.js:161:3 › Shithead Card Game - Multi-Player › five players: stress test with maximum players (16.7s)
+  ✘  4 [chromium] › tests/playwright/shithead.spec.js:224:3 › Shithead Card Game - Multi-Player › card swaps: verify swap mechanics during SWAP phase (16.0s)
+  ✘  5 [chromium] › tests/playwright/shithead.spec.js:273:3 › Shithead Card Game - Multi-Player › card playing: verify valid plays during PLAY phase (15.9s)
+
+
+  1) [chromium] › tests/playwright/shithead.spec.js:13:3 › Shithead Card Game - Multi-Player › two players: setup → swap → reveal → play → game over 
+
+    TimeoutError: locator.waitFor: Timeout 15000ms exceeded.
+    Call log:
+    [2m  - waiting for locator('#swap.active') to be visible[22m
+
+
+       at helpers/shithead.js:58
+
+      56 | async function waitForAllPlayersInPhase(playerPages, phaseScreenId, timeout = 20_000) {
+      57 |   const promises = playerPages.map(page =>
+    > 58 |     page.locator(`#${phaseScreenId}.active`).waitFor({ state: 'visible', timeout })
+         |                                              ^
+      59 |   );
+      60 |   await Promise.all(promises);
+      61 | }
+        at map (/home/dellvall/small-hours/tests/playwright/helpers/shithead.js:58:46)
+        at waitForAllPlayersInPhase (/home/dellvall/small-hours/tests/playwright/helpers/shithead.js:57:32)
+        at /home/dellvall/small-hours/tests/playwright/shithead.spec.js:33:11
+
+    Error Context: test-results/shithead-Shithead-Card-Gam-98d71-→-reveal-→-play-→-game-over-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/shithead-Shithead-Card-Gam-98d71-→-reveal-→-play-→-game-over-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace test-results/shithead-Shithead-Card-Gam-98d71-→-reveal-→-play-→-game-over-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  2) [chromium] › tests/playwright/shithead.spec.js:93:3 › Shithead Card Game - Multi-Player › three players: verify turn order and state sync 
+
+    TimeoutError: locator.waitFor: Timeout 15000ms exceeded.
+    Call log:
+    [2m  - waiting for locator('#swap.active') to be visible[22m
+
+
+       at helpers/shithead.js:58
+
+      56 | async function waitForAllPlayersInPhase(playerPages, phaseScreenId, timeout = 20_000) {
+      57 |   const promises = playerPages.map(page =>
+    > 58 |     page.locator(`#${phaseScreenId}.active`).waitFor({ state: 'visible', timeout })
+         |                                              ^
+      59 |   );
+      60 |   await Promise.all(promises);
+      61 | }
+        at map (/home/dellvall/small-hours/tests/playwright/helpers/shithead.js:58:46)
+        at waitForAllPlayersInPhase (/home/dellvall/small-hours/tests/playwright/helpers/shithead.js:57:32)
+        at /home/dellvall/small-hours/tests/playwright/shithead.spec.js:116:11
+
+    Error Context: test-results/shithead-Shithead-Card-Gam-4d21b-y-turn-order-and-state-sync-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/shithead-Shithead-Card-Gam-4d21b-y-turn-order-and-state-sync-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace test-results/shithead-Shithead-Card-Gam-4d21b-y-turn-order-and-state-sync-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  3) [chromium] › tests/playwright/shithead.spec.js:161:3 › Shithead Card Game - Multi-Player › five players: stress test with maximum players 
+
+    TimeoutError: locator.waitFor: Timeout 15000ms exceeded.
+    Call log:
+    [2m  - waiting for locator('#swap.active') to be visible[22m
+
+
+       at helpers/shithead.js:58
+
+      56 | async function waitForAllPlayersInPhase(playerPages, phaseScreenId, timeout = 20_000) {
+      57 |   const promises = playerPages.map(page =>
+    > 58 |     page.locator(`#${phaseScreenId}.active`).waitFor({ state: 'visible', timeout })
+         |                                              ^
+      59 |   );
+      60 |   await Promise.all(promises);
+      61 | }
+        at map (/home/dellvall/small-hours/tests/playwright/helpers/shithead.js:58:46)
+        at waitForAllPlayersInPhase (/home/dellvall/small-hours/tests/playwright/helpers/shithead.js:57:32)
+        at /home/dellvall/small-hours/tests/playwright/shithead.spec.js:189:11
+
+    Error Context: test-results/shithead-Shithead-Card-Gam-ff6b7-s-test-with-maximum-players-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/shithead-Shithead-Card-Gam-ff6b7-s-test-with-maximum-players-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace test-results/shithead-Shithead-Card-Gam-ff6b7-s-test-with-maximum-players-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  4) [chromium] › tests/playwright/shithead.spec.js:224:3 › Shithead Card Game - Multi-Player › card swaps: verify swap mechanics during SWAP phase 
+
+    TimeoutError: locator.waitFor: Timeout 15000ms exceeded.
+    Call log:
+    [2m  - waiting for locator('#swap.active') to be visible[22m
+
+
+       at helpers/shithead.js:58
+
+      56 | async function waitForAllPlayersInPhase(playerPages, phaseScreenId, timeout = 20_000) {
+      57 |   const promises = playerPages.map(page =>
+    > 58 |     page.locator(`#${phaseScreenId}.active`).waitFor({ state: 'visible', timeout })
+         |                                              ^
+      59 |   );
+      60 |   await Promise.all(promises);
+      61 | }
+        at map (/home/dellvall/small-hours/tests/playwright/helpers/shithead.js:58:46)
+        at waitForAllPlayersInPhase (/home/dellvall/small-hours/tests/playwright/helpers/shithead.js:57:32)
+        at /home/dellvall/small-hours/tests/playwright/shithead.spec.js:240:11
+
+    Error Context: test-results/shithead-Shithead-Card-Gam-e2ad0-mechanics-during-SWAP-phase-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/shithead-Shithead-Card-Gam-e2ad0-mechanics-during-SWAP-phase-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace test-results/shithead-Shithead-Card-Gam-e2ad0-mechanics-during-SWAP-phase-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  5) [chromium] › tests/playwright/shithead.spec.js:273:3 › Shithead Card Game - Multi-Player › card playing: verify valid plays during PLAY phase 
+
+    TimeoutError: locator.waitFor: Timeout 15000ms exceeded.
+    Call log:
+    [2m  - waiting for locator('#swap.active') to be visible[22m
+
+
+       at helpers/shithead.js:58
+
+      56 | async function waitForAllPlayersInPhase(playerPages, phaseScreenId, timeout = 20_000) {
+      57 |   const promises = playerPages.map(page =>
+    > 58 |     page.locator(`#${phaseScreenId}.active`).waitFor({ state: 'visible', timeout })
+         |                                              ^
+      59 |   );
+      60 |   await Promise.all(promises);
+      61 | }
+        at map (/home/dellvall/small-hours/tests/playwright/helpers/shithead.js:58:46)
+        at waitForAllPlayersInPhase (/home/dellvall/small-hours/tests/playwright/helpers/shithead.js:57:32)
+        at /home/dellvall/small-hours/tests/playwright/shithead.spec.js:288:11
+
+    Error Context: test-results/shithead-Shithead-Card-Gam-4235a-lid-plays-during-PLAY-phase-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/shithead-Shithead-Card-Gam-4235a-lid-plays-during-PLAY-phase-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace test-results/shithead-Shithead-Card-Gam-4235a-lid-plays-during-PLAY-phase-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  5 failed
+    [chromium] › tests/playwright/shithead.spec.js:13:3 › Shithead Card Game - Multi-Player › two players: setup → swap → reveal → play → game over 
+    [chromium] › tests/playwright/shithead.spec.js:93:3 › Shithead Card Game - Multi-Player › three players: verify turn order and state sync 
+    [chromium] › tests/playwright/shithead.spec.js:161:3 › Shithead Card Game - Multi-Player › five players: stress test with maximum players 
+    [chromium] › tests/playwright/shithead.spec.js:224:3 › Shithead Card Game - Multi-Player › card swaps: verify swap mechanics during SWAP phase 
+    [chromium] › tests/playwright/shithead.spec.js:273:3 › Shithead Card Game - Multi-Player › card playing: verify valid plays during PLAY phase 

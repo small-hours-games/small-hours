@@ -1183,7 +1183,7 @@
           document.getElementById('waiting-players').textContent = '';
         } else if (msg.phase === 'SWAP') {
           console.log(`[Client] SWAP phase received. myState=${myState ? 'exists' : 'null'}, hand=${myState?.hand?.length || 0}`);
-          if (myState && myState.hand) {
+          if (myState) {
             console.log('[Client] Showing SWAP screen and rendering cards');
             show('swap');
             renderSwap();
