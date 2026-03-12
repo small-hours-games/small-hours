@@ -705,8 +705,21 @@
 
   // ── Screens ────────────────────────────────────────────────────────────────
   function show(id) {
-    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-    document.getElementById(id).classList.add('active');
+    console.log(`[UI] show('${id}') called`);
+    document.querySelectorAll('.screen').forEach(s => {
+      if (s.classList.contains('active')) {
+        console.log(`[UI]   Removing .active from #${s.id}`);
+        s.classList.remove('active');
+      }
+    });
+    const elem = document.getElementById(id);
+    if (!elem) {
+      console.log(`[UI]   ERROR: Element #${id} not found in DOM!`);
+      return;
+    }
+    console.log(`[UI]   Adding .active to #${id}`);
+    elem.classList.add('active');
+    console.log(`[UI]   #${id}.active = ${elem.classList.contains('active')}`);
   }
 
   // ── Toast ──────────────────────────────────────────────────────────────────
@@ -731,11 +744,22 @@
   const sortCards = cards => [...cards].sort((a, b) => rankOrder.indexOf(a.rank) - rankOrder.indexOf(b.rank));
 
   function renderSwap() {
-    if (!myState) return;
+    console.log(`[Render] renderSwap() called. myState=${myState ? 'exists' : 'null'}`);
+    if (!myState) {
+      console.log('[Render] myState is null, returning early');
+      return;
+    }
     // Don't reset swapSelected - preserve selections across renders
 
     const handEl   = document.getElementById('swap-hand');
     const faceUpEl = document.getElementById('swap-faceup');
+
+    if (!handEl || !faceUpEl) {
+      console.log(`[Render] ERROR: Missing elements - hand=${!!handEl} faceUp=${!!faceUpEl}`);
+      return;
+    }
+
+    console.log(`[Render] Rendering ${myState.hand?.length || 0} hand cards and ${myState.faceUp?.length || 0} face-up cards`);
 
     // FIX: Use original indices, not sorted indices
     // Map sorted cards back to their original positions in myState.hand
