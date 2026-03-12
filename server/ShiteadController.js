@@ -61,7 +61,6 @@ class ShiteadController extends GameController {
         if (this.isPhaseExpired(5000)) {  // 5s setup time
           console.log(`[Shithead] SETUP phase expired (${setupElapsed}ms), transitioning to SWAP`)
           this.transitionTo('SWAP')
-          this.swapStartTime = this.phaseStartTime
         }
         break
 

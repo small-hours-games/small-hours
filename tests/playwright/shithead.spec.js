@@ -57,6 +57,10 @@ test.describe('Shithead Card Game - Multi-Player', () => {
     // Phase 4: PLAY - wait for play screen
     await waitForAllPlayersInPhase([p1, p2], 'playing', 10_000);
 
+    // Wait for game state to stabilize before assertion
+    // (server may still be broadcasting mixed QUIZ/SHITHEAD states)
+    await new Promise(r => setTimeout(r, 500));
+
     // Verify players can see the game in PLAY phase
     const state1 = await getGameState(p1);
     const state2 = await getGameState(p2);

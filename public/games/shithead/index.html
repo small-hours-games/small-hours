@@ -1202,6 +1202,7 @@
         console.log(`[Client] GAME_STATE received: phase=${msg.phase}, players=${msg.players?.length}`);
         console.log(`[Client] Message keys: ${Object.keys(msg).join(', ')}`);
         gameState = msg;  // Store entire game state from server
+        window.gameState = msg;  // Expose to tests
 
         if (msg.playerState) {
           console.log(`[Client] playerState included: hand=${msg.playerState.hand?.length}, faceUp=${msg.playerState.faceUp?.length}, faceDown=${msg.playerState.faceDown?.length}`);

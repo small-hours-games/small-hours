@@ -390,21 +390,9 @@ let tickCounter = 0;
 setInterval(() => {
   tickCounter++;
   for (const [code, room] of rooms) {
-    // Tick and broadcast all GameController-based games (quiz, CAH, Spy, Lyrics, Guess, etc.)
-    // BUT NOT shithead (which has its own broadcast logic below)
-    if (room.game && room.activeMiniGame && room.activeMiniGame !== 'shithead') {
-      room.game.tick();
-      const gameState = room.game.getState();
-      broadcastAll(room, { type: 'GAME_STATE', ...gameState });
-    }
-    // Tick and broadcast shithead games
-    if (room.shitheadGame) {
-      console.log(`[Server] Shithead game exists for room ${room.code}, phase=${room.shitheadGame.phase}`);
-    } else if (room.activeMiniGame === 'shithead') {
-      console.log(`[Server] WARNING: activeMiniGame='shithead' but shitheadGame is null!`);
-    }
-
-    if (room.shitheadGame && room.activeMiniGame === 'shithead') {
+    // SHITHEAD GAMES: Complete isolation from Quiz game broadcasts
+    // Only broadcast shithead if it's active
+    if (room.activeMiniGame === 'shithead' && room.shitheadGame) {
       room.shitheadGame.tick();
       room.shitheadGame.processBotSwaps();
       const gameState = room.shitheadGame.getState();
@@ -430,6 +418,14 @@ setInterval(() => {
           }
         }
       }
+    } else if (room.game && room.activeMiniGame !== 'shithead' && room.activeMiniGame !== 'lobby') {
+      // Broadcast Quiz, CAH, Spy, Lyrics, Guess games (NOT during Shithead)
+      room.game.tick();
+      const gameState = room.game.getState();
+      if (gameState.phase === 'LOBBY') {
+        console.log(`[Server] WARNING: Broadcasting LOBBY phase for room ${room.code} with activeMiniGame=${room.activeMiniGame}`);
+      }
+      broadcastAll(room, { type: 'GAME_STATE', ...gameState });
     }
   }
 }, 100);  // Tick every ~100ms
