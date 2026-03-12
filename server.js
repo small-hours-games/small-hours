@@ -402,6 +402,16 @@ setInterval(() => {
       room.shitheadGame.processBotSwaps();
       const gameState = room.shitheadGame.getState();
       broadcastAll(room, { type: 'GAME_STATE', ...gameState });
+
+      // Send individual player state for Shithead
+      for (const [username, player] of room.shitheadGame.players) {
+        if (player.ws) {
+          const playerState = room.shitheadGame.getPlayerState(username);
+          if (playerState) {
+            player.ws.send(JSON.stringify({ type: 'SHITHEAD_YOUR_STATE', ...playerState }));
+          }
+        }
+      }
     }
   }
 }, 100);  // Tick every ~100ms
