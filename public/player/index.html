@@ -496,13 +496,24 @@
 <div id="waiting" class="screen">
   <div class="big-emoji">👋</div>
   <h2 id="waiting-name">Hi there!</h2>
-  <p>Waiting for the host to start…</p>
-  <div>
+  <p id="waiting-status">Waiting for other players…</p>
+  <div id="waiting-spinner" style="display: flex; gap: 0.5rem; justify-content: center;">
     <span class="pulse-dot"></span>
     <span class="pulse-dot"></span>
     <span class="pulse-dot"></span>
   </div>
   <p id="waiting-players" style="color:#666; font-size:0.85rem;"></p>
+
+  <!-- Game menu for admin only -->
+  <div id="admin-game-menu" style="display: none; width: 100%; gap: 0.75rem; margin-top: 1rem;">
+    <p style="color:#999; font-size:0.9rem; text-align:center; margin:0;">Choose a game:</p>
+    <button onclick="startGame('quiz')" style="width:100%; padding:0.75rem; background:var(--accent); border:none; border-radius:0.5rem; color:#fff; font-weight:600; cursor:pointer;">🎯 Quiz</button>
+    <button onclick="startGame('shithead')" style="width:100%; padding:0.75rem; background:#e21b3c; border:none; border-radius:0.5rem; color:#fff; font-weight:600; cursor:pointer;">♠️ Shithead</button>
+    <button onclick="startGame('cah')" style="width:100%; padding:0.75rem; background:#1368ce; border:none; border-radius:0.5rem; color:#fff; font-weight:600; cursor:pointer;">🃏 Cards vs Humanity</button>
+    <button onclick="startGame('spy')" style="width:100%; padding:0.75rem; background:#26890c; border:none; border-radius:0.5rem; color:#fff; font-weight:600; cursor:pointer;">🕵️ Spy</button>
+    <button onclick="startGame('lyrics')" style="width:100%; padding:0.75rem; background:#d89e00; border:none; border-radius:0.5rem; color:#fff; font-weight:600; cursor:pointer;">🎵 Lyrics</button>
+    <button onclick="startGame('guess')" style="width:100%; padding:0.75rem; background:#9f44d3; border:none; border-radius:0.5rem; color:#fff; font-weight:600; cursor:pointer;">🔢 Number Guess</button>
+  </div>
 </div>
 
 <!-- QUESTION -->
@@ -809,6 +820,11 @@
     connect(); // creates new WS; connectGen guards old WS events
   }
 
+  // Start a game (admin only)
+  function startGame(gameType) {
+    send({ type: 'START_MINI_GAME', gameType });
+  }
+
   // ── Answer buttons ────────────────────────────────────────────────────────
   document.querySelectorAll('.ans-btn').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -847,7 +863,17 @@
       case 'JOIN_OK':
         myUsername = msg.username;
         document.getElementById('waiting-name').textContent = P('hiName', myUsername);
-        initVoteScreen();
+        show('waiting'); // Show lobby screen first, not vote screen
+
+        // Show game menu for admin only
+        if (msg.isAdmin) {
+          document.getElementById('admin-game-menu').style.display = 'flex';
+          document.getElementById('waiting-status').textContent = 'You are the host - choose a game:';
+          document.getElementById('waiting-spinner').style.display = 'none';
+        } else {
+          document.getElementById('admin-game-menu').style.display = 'none';
+          document.getElementById('waiting-status').textContent = 'Waiting for host to start a game…';
+        }
         break;
 
       case 'PLAYER_JOINED':
