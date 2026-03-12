@@ -10,12 +10,18 @@
 
 ## 📊 Session Summary
 
-### Accomplishments
+### Previous Session Accomplishments (March 12 AM)
 - ✅ **Card Swaps Working** - Players can click cards and swap during SWAP phase
 - ✅ **Game Flow Complete** - Full progression: SETUP → SWAP → REVEAL → PLAY
 - ✅ **Message Protocol Fixed** - Server correctly broadcasting game state to all players
 - ✅ **Test Infrastructure** - 5 comprehensive E2E tests with helper functions
 - ✅ **Git Release** - Version 1.0.2 tagged and pushed with all fixes
+
+### Continued Session Accomplishments (March 12 PM)
+- ✅ **Broadcast Isolation Fixed** - Separated Quiz and Shithead game state broadcasts
+- ✅ **GameState Exposed to Tests** - window.gameState now accessible to Playwright
+- ✅ **Phase Transitions Verified** - Tests correctly reach PLAY phase
+- ✅ **Root Cause Identified** - Remaining work is card playing handler (not test issue)
 
 ### Key Fixes Applied
 
@@ -99,7 +105,26 @@ if (room.activeMiniGame === 'shithead' && room.shitheadGame) {
 
 ---
 
-## 🐛 Known Issue (Final 1%)
+## 📊 Current Test Status
+
+### ✅ Tests Passing (Phase Flow)
+- ✅ Players join lobby correctly
+- ✅ Game starts and enters SETUP phase (5s wait)
+- ✅ SWAP phase begins and players perform card swaps ✅
+- ✅ REVEAL phase displays (3s showing swapped cards)
+- ✅ PLAY phase initiates with correct game state ✅
+
+### ⏳ Tests Stalling (Gameplay Loop)
+The tests reach PLAY phase successfully but cannot complete because:
+- **Server**: No `SHITHEAD_PLAY_CARD` handler implemented yet
+- **Test**: Tries to play cards but no server handler to process plays
+- **Result**: Game loop stalls waiting for card plays to process
+
+This is **expected and not a bug** - the previous sessions focused on phase transitions, not full gameplay implementation.
+
+---
+
+## 🐛 Remaining Work (For Full Gameplay)
 
 ### The Problem
 Test assertion fails: `expect(state.phase).toBe('PLAY')` returns `undefined`
@@ -247,9 +272,42 @@ Client receives and calls show('reveal')
 
 ---
 
-## 📋 Next Steps to Complete
+## 🎯 Implementation Checklist for Full Gameplay
 
-### IMMEDIATE (To Get Tests Passing)
+### Phase 1: Card Playing Handler (1-2 hours)
+```javascript
+// In server/handlers.js, add handler for SHITHEAD_PLAY_CARD
+case 'SHITHEAD_PLAY_CARD': {
+  const { cardRank, cardSuit, zone } = msg;
+  const shitheadGame = room.shitheadGame;
+  if (!shitheadGame) break;
+
+  // Validate card, check if legal play, remove from player's zone
+  const result = shitheadGame.playCard(username, cardRank, cardSuit, zone);
+
+  // Broadcast game state update
+  broadcastAll(room, { type: 'GAME_STATE', ...shitheadGame.getState() });
+
+  // If pile burns (same rank), broadcast special message
+  if (result.pileBurned) {
+    broadcastAll(room, { type: 'SHITHEAD_PILE_BURNED' });
+  }
+}
+```
+
+### Phase 2: Game State Verification (30 min)
+- [ ] Verify GAME_OVER phase triggers when all players finished
+- [ ] Verify winner determination logic
+- [ ] Verify leaderboard/final scores display
+
+### Phase 3: Update E2E Tests (30 min)
+- [ ] Update playCard() selector based on which zone player is in
+- [ ] Add proper waits for game state updates
+- [ ] Verify GAME_OVER phase is reached
+
+---
+
+## 📋 Next Steps to Complete (From Previous Session)
 
 1. **Apply Quick Fix** (5 min)
    ```bash
