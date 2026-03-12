@@ -28,8 +28,8 @@ async function joinRoom(page, code, name) {
   await page.locator('#username-input').fill(name);
   await page.locator('#username-submit').click();
 
-  // After JOIN_OK, waiting screen appears
-  await page.locator('#waiting.active').waitFor({ state: 'visible', timeout: 10_000 });
+  // After JOIN_OK, the lobby state should appear with the player list populated
+  await page.locator('#player-list').waitFor({ state: 'visible', timeout: 10_000 });
 }
 
 /**
