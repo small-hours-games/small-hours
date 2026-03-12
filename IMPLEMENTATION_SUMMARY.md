@@ -127,31 +127,38 @@ Unit Tests: ✅ 45/45 PASS
 
 ## 🐛 Remaining Issues
 
-### Issue #1: Card Swap Confirmation Not Progressing Game
-**Symptom:** Tests reach SWAP screen with proper card data, but timeout waiting for REVEAL phase
+### Issue #1: Client Not Showing REVEAL Phase (FINAL BLOCKER)
+**Symptom:** Server transitions to REVEAL and PLAY phases successfully, but client never shows REVEAL screen
 
 **Evidence:**
-- Console logs show `hand=3, faceUp=3` for both players (cards are there)
-- `#swap-hand .play-card` and `#swap-faceup .play-card` selectors are correct
-- Server logs show SWAP phase lasting 30 seconds without transitioning to REVEAL
-- No logs indicate card swaps are being processed (`SHITHEAD_SWAP_CARD` messages)
+- ✅ Client-side card clicks ARE working (using `dispatchEvent()` instead of Playwright `.click()`)
+- ✅ `SHITHEAD_SWAP_CARD` messages ARE being sent to server
+- ✅ Server logs show game transitioning: SETUP → SWAP → REVEAL → PLAY
+- ✅ Both players successfully perform card swaps
+- ❌ Client never receives or processes REVEAL phase message
 
-**Root Cause:** Likely one of:
-1. Card click events not being fired by Playwright (timing/interaction issue)
-2. performCardSwap() waiting for cards that exist but aren't being clicked
-3. Server not receiving SHITHEAD_CONFIRM_SWAP messages from clients
+**Root Cause Analysis:**
+1. After player confirms swap and sends `SHITHEAD_CONFIRM_SWAP`, server transitions phases
+2. Server broadcasts `GAME_STATE with phase='REVEAL'` message
+3. Client should receive this message and call `show('reveal')`
+4. But client is never showing the REVEAL screen (#reveal.active not appearing)
 
-**Investigation Needed:**
-1. Add logging to client's onSwapClick() to see if clicks are registering
-2. Check server logs for SHITHEAD_SWAP_CARD messages
-3. Verify performCardSwap() is actually clicking the right elements
-4. Increase test timeout to 40s to allow full SWAP → REVEAL transition
+**Potential Causes:**
+1. Client not receiving GAME_STATE message with phase='REVEAL'
+2. Client receiving message but condition in message handler not being met
+3. Client receiving message but show('reveal') throwing error
+4. Message not being broadcast to this specific client
+
+**Fix Required:**
+1. Add logging to client message handler for REVEAL phase case
+2. Verify GAME_STATE messages with phase='REVEAL' are reaching client
+3. Check if `show('reveal')` element exists in DOM
+4. Add error handling around phase transitions
 
 ### Issue #2: Test Timing - Bob Joining Before Game Start
-**Previously Fixed:** Added 500ms delays between Alice joining, Bob joining, and game start
-- Without delays, bot was being added instead of Bob
-- With delays, both Alice and Bob properly join before game starts
-- Both now receive proper card distributions
+**Status:** ✅ FIXED
+- Added 500ms delays between joins to ensure Bob joins before game start
+- Both players receive proper card distributions (hand=3, faceUp=3)
 
 ---
 
