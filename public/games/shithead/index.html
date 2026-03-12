@@ -1090,12 +1090,16 @@
         break;
 
       case 'SHITHEAD_YOUR_STATE':
+        console.log(`[Client] SHITHEAD_YOUR_STATE received: hand=${msg.hand?.length}, faceUp=${msg.faceUp?.length}`);
         myState = msg;
         if (document.getElementById('swap').classList.contains('active')) {
+          console.log('[Client] Already on SWAP screen, re-rendering cards');
           renderSwap();
         } else if (document.getElementById('playing').classList.contains('active')) {
+          console.log('[Client] Already on PLAY screen, re-rendering');
           renderPlaying();
         } else if (msg.hand && msg.hand.length > 0 && gameState && gameState.state === 'SWAP') {
+          console.log('[Client] SWAP phase and have cards, showing SWAP screen');
           show('swap');
           renderSwap();
         }
@@ -1138,42 +1142,44 @@
         break;
 
       case 'GAME_STATE':
-        // Handle the new state-based protocol from ShiteadController
-        console.log(`[Shithead] Received GAME_STATE: phase=${msg.phase}, playerState=${msg.playerState ? 'YES' : 'NO'}`);
+        console.log(`[Client] GAME_STATE received: phase=${msg.phase}, players=${msg.players?.length}`);
         gameState = { state: msg.phase };
 
-        // Extract player state if included in message (prevents race condition)
         if (msg.playerState) {
+          console.log(`[Client] playerState included: hand=${msg.playerState.hand?.length}, faceUp=${msg.playerState.faceUp?.length}`);
           myState = msg.playerState;
-          console.log(`[Shithead] myState updated:`, myState);
         } else {
-          console.log('[Shithead] ⚠️ No playerState in GAME_STATE message!');
+          console.log(`[Client] WARNING: playerState NOT in message!`);
         }
 
         if (msg.phase === 'SETUP') {
-          console.log('[Shithead] Showing waiting screen for SETUP');
+          console.log('[Client] Showing waiting screen for SETUP');
           show('waiting');
           document.getElementById('waiting-name').textContent = 'Game starting…';
           document.getElementById('waiting-players').textContent = '';
         } else if (msg.phase === 'SWAP') {
-          // Show swap screen and wait for myState to render it
-          show('swap');
-          console.log(`[Shithead] SWAP phase - myState=${myState ? 'SET' : 'NULL'}, hand=${myState?.hand ? 'YES' : 'NO'}`);
+          console.log(`[Client] SWAP phase received. myState=${myState ? 'exists' : 'null'}, hand=${myState?.hand?.length || 0}`);
           if (myState && myState.hand) {
-            console.log('[Shithead] Rendering swap screen with', myState.hand.length, 'hand cards');
+            console.log('[Client] Showing SWAP screen and rendering cards');
+            show('swap');
             renderSwap();
           } else {
-            console.log('[Shithead] ⚠️ Cannot render swap - myState missing or no hand');
+            console.log('[Client] SWAP phase but no myState, showing waiting instead');
+            show('waiting');
+            document.getElementById('waiting-name').textContent = 'Swap phase…';
           }
         } else if (msg.phase === 'REVEAL') {
+          console.log('[Client] Showing waiting screen for REVEAL');
           show('waiting');
           document.getElementById('waiting-name').textContent = 'Revealing cards…';
         } else if (msg.phase === 'PLAY') {
+          console.log('[Client] PLAY phase, rendering playing screen');
           if (!document.getElementById('playing').classList.contains('active')) {
             show('playing');
           }
           renderPlaying();
         } else if (msg.phase === 'GAME_OVER') {
+          console.log('[Client] GAME_OVER phase');
           show('gameover');
         }
         break;
