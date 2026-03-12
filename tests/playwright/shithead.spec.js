@@ -1,74 +1,90 @@
 const { test, expect } = require('@playwright/test');
 const { createRoom, joinRoom, startMiniGame, waitForScreen } = require('./helpers/room');
+const {
+  waitForAllPlayersInPhase,
+  performCardSwap,
+  confirmSwap,
+  getGameState,
+  playCard
+} = require('./helpers/shithead');
 
-test.describe('Shithead Card Game', () => {
+test.describe('Shithead Card Game - Multi-Player', () => {
 
-  test('shithead: setup and swap phase', async ({ request, browser }) => {
+  test('two players: setup → swap → reveal → play → game over', async ({ request, browser }) => {
+    // Create room and join 2 players
     const code = await createRoom(request);
     const ctx1 = await browser.newContext();
     const ctx2 = await browser.newContext();
     const p1 = await ctx1.newPage();
     const p2 = await ctx2.newPage();
 
-    // Setup: 2 players
+    // Join as Alice and Bob
     await joinRoom(p1, code, 'Alice');
     await joinRoom(p2, code, 'Bob');
 
-    // Start shithead game
+    // Start shithead game (as admin, usually first player)
     await startMiniGame(p1, 'shithead');
 
-    // Wait for players to navigate to shithead page
+    // Phase 1: SETUP - navigate to game
     await p1.waitForURL(/\/group\/[A-Z]{4}\/shithead/, { timeout: 15_000 });
     await p2.waitForURL(/\/group\/[A-Z]{4}\/shithead/, { timeout: 15_000 });
 
-    // Wait for swap screen
-    await waitForScreen(p1, 'swap', 15_000);
-    await waitForScreen(p2, 'swap', 15_000);
+    // Phase 2: SWAP - wait for swap screen and perform swaps
+    await waitForAllPlayersInPhase([p1, p2], 'swap', 15_000);
 
-    // Verify swap screen elements
-    await expect(p1.locator('.card')).not.toHaveCount(0);
+    // Perform card swaps for both players
+    await performCardSwap(p1, 0, 0);  // Alice swaps first hand card with first face-up
+    await confirmSwap(p1);
 
-    // Try to swap a card (hand card with face-up card)
-    const handCards = p1.locator('.hand .card');
-    const faceUpCards = p1.locator('.faceup .card');
+    await performCardSwap(p2, 0, 0);  // Bob swaps first hand card with first face-up
+    await confirmSwap(p2);
 
-    const handCount = await handCards.count();
-    const faceUpCount = await faceUpCards.count();
+    // Phase 3: REVEAL - wait for reveal screen (shows face-up cards)
+    await waitForAllPlayersInPhase([p1, p2], 'reveal', 10_000);
 
-    expect(handCount).toBeGreaterThan(0);
-    expect(faceUpCount).toBeGreaterThan(0);
+    // Phase 4: PLAY - wait for play screen
+    await waitForAllPlayersInPhase([p1, p2], 'playing', 10_000);
 
-    // Perform a swap
-    if (handCount > 0 && faceUpCount > 0) {
-      const handCard = handCards.first();
-      const faceUpCard = faceUpCards.first();
+    // Verify players can see the game in PLAY phase
+    const state1 = await getGameState(p1);
+    const state2 = await getGameState(p2);
 
-      await handCard.click();
-      await p1.waitForTimeout(300);
-      await faceUpCard.click();
-      await p1.waitForTimeout(500);
+    expect(state1.phase).toBe('PLAY');
+    expect(state2.phase).toBe('PLAY');
+    expect(state1.players?.length).toBe(2);
+    expect(state2.players?.length).toBe(2);
+
+    // Phase 5: GAME_OVER - play a few turns and wait for game to end
+    // Each player plays their valid card
+    let turn = 0;
+    const maxTurns = 50;  // Safety limit to prevent infinite loop
+
+    while (turn < maxTurns) {
+      const gameOverVisible1 = await p1.locator('#game-over.active').isVisible().catch(() => false);
+      const gameOverVisible2 = await p2.locator('#game-over.active').isVisible().catch(() => false);
+
+      if (gameOverVisible1 && gameOverVisible2) {
+        break;
+      }
+
+      // One of the players should be able to play
+      const state = await getGameState(p1);
+      const currentPlayer = state.currentPlayerUsername;
+      const targetPage = currentPlayer === 'Alice' ? p1 : p2;
+
+      // Play a card if it's this player's turn
+      await playCard(targetPage, 0);
+      await targetPage.waitForTimeout(500);
+
+      turn++;
     }
 
-    // Confirm swap
-    const confirmBtn = p1.locator('#confirm-swap-btn');
-    const isVisible = await confirmBtn.isVisible().catch(() => false);
+    // Verify game reached GAME_OVER phase
+    const finalState1 = await getGameState(p1);
+    const finalState2 = await getGameState(p2);
 
-    if (isVisible) {
-      await confirmBtn.click();
-    }
-
-    // Both players should confirm
-    await p2.locator('#confirm-swap-btn')
-      .click()
-      .catch(() => {});
-
-    // Wait a bit for game to transition
-    await p1.waitForTimeout(2_000);
-
-    // After swap phase, game phase should begin
-    // Should not still be on swap screen
-    const stillOnSwap = await p1.locator('#swap.active').isVisible().catch(() => false);
-    expect(stillOnSwap).toBe(false);
+    expect(finalState1.phase).toBe('GAME_OVER');
+    expect(finalState2.phase).toBe('GAME_OVER');
 
     await ctx1.close();
     await ctx2.close();
