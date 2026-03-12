@@ -29,12 +29,11 @@ test.describe('Cards Against Humanity (Bug 2 Detection)', () => {
 
     // Start CAH game
     await startMiniGame(p1, 'cah');
-    await p1.waitForTimeout(500);
 
-    // Navigate to CAH page (separate route)
-    await p1.waitForNavigation({ timeout: 5_000 }).catch(() => {});
-    await p2.waitForNavigation({ timeout: 5_000 }).catch(() => {});
-    await p3.waitForNavigation({ timeout: 5_000 }).catch(() => {});
+    // Wait for players to navigate to CAH page
+    await p1.waitForURL(/\/group\/[A-Z]{4}\/cah/, { timeout: 15_000 });
+    await p2.waitForURL(/\/group\/[A-Z]{4}\/cah/, { timeout: 15_000 });
+    await p3.waitForURL(/\/group\/[A-Z]{4}\/cah/, { timeout: 15_000 });
 
     // Wait for game to reach picking/submitting phase
     await p1.waitForTimeout(3_000);

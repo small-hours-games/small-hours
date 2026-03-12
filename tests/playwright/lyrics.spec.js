@@ -25,11 +25,10 @@ test.describe('Lyrics Game (Bug 3 Detection)', () => {
 
     // Start lyrics game
     await startMiniGame(p1, 'lyrics');
-    await p1.waitForTimeout(500);
 
-    // Navigate to lyrics page
-    await p1.waitForNavigation({ timeout: 5_000 }).catch(() => {});
-    await p2.waitForNavigation({ timeout: 5_000 }).catch(() => {});
+    // Wait for players to navigate to lyrics page
+    await p1.waitForURL(/\/group\/[A-Z]{4}\/lyrics/, { timeout: 15_000 });
+    await p2.waitForURL(/\/group\/[A-Z]{4}\/lyrics/, { timeout: 15_000 });
 
     // Wait for countdown to finish
     try {

@@ -13,10 +13,9 @@ test.describe('Number Guess Game', () => {
 
     // Start guess game
     await startMiniGame(p1, 'guess');
-    await p1.waitForTimeout(500);
 
-    // Navigate to guess page
-    await p1.waitForNavigation({ timeout: 5_000 }).catch(() => {});
+    // Wait for guess page to load
+    await p1.waitForURL(/\/group\/[A-Z]{4}\/guess/, { timeout: 15_000 });
 
     // Wait for game to start with countdown
     const countdownVisible = await p1.locator('#countdownDisplay', '[id*="countdown"]')
