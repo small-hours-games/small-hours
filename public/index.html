@@ -326,7 +326,7 @@
     try {
       const res = await fetch('/api/rooms', { method: 'POST' });
       const { code } = await res.json();
-      window.location.href = `/group/${code}`;
+      window.location.href = `/player/${code}`;
     } catch (e) {
       errorMsg.textContent = 'Could not create room. Try again.';
       createBtn.disabled = false;
@@ -343,7 +343,7 @@
       const res = await fetch('/api/rooms', { method: 'POST' });
       if (!res.ok) throw new Error(`Server error: ${res.status}`);
       const { code } = await res.json();
-      window.location.href = `/group/${code}/display`;
+      window.location.href = `/host/${code}`;
     } catch (e) {
       errorMsg.textContent = 'Could not create room. Try again.';
       tvBtn.disabled = false;
