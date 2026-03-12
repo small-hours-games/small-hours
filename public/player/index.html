@@ -264,40 +264,68 @@
     }
 
     .game-chips {
-      display: flex;
-      flex-wrap: wrap;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(clamp(140px, 40vw, 180px), 1fr));
       gap: 0.75rem;
     }
 
     .game-chip {
-      padding: 0.75rem clamp(1rem, 3vw, 1.25rem);
+      padding: 1rem;
       background: rgba(255, 255, 255, 0.04);
       border: 1px solid rgba(255, 255, 255, 0.12);
-      border-radius: 24px;
-      font-size: clamp(0.85rem, 3vw, 0.95rem);
-      font-weight: 600;
-      color: var(--text-dim);
+      border-radius: var(--radius);
       cursor: pointer;
       transition: all 0.2s;
       position: relative;
-      white-space: nowrap;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0.4rem;
+      text-align: left;
+    }
+
+    .game-chip:active {
+      transform: scale(0.97);
+    }
+
+    .game-chip-icon {
+      font-size: clamp(2rem, 8vw, 2.5rem);
+      line-height: 1;
+    }
+
+    .game-chip-name {
+      font-size: clamp(0.9rem, 3vw, 1rem);
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .game-chip-desc {
+      font-size: clamp(0.72rem, 2.5vw, 0.8rem);
+      color: var(--text-dim);
+      line-height: 1.35;
     }
 
     .game-chip.voted {
       background: linear-gradient(135deg, rgba(255, 137, 6, 0.2), rgba(0, 234, 255, 0.1));
       border-color: var(--accent);
-      color: var(--text);
       box-shadow: 0 0 12px var(--accent-glow);
     }
 
     .vote-count {
-      display: inline-block;
-      margin-left: 0.5rem;
-      padding: 0.25rem 0.5rem;
-      background: rgba(255, 255, 255, 0.1);
-      border-radius: 8px;
-      font-size: 0.8rem;
-      font-weight: 700;
+      position: absolute;
+      top: 0.5rem;
+      right: 0.5rem;
+      min-width: 20px;
+      height: 20px;
+      padding: 0 0.4rem;
+      background: var(--accent);
+      border-radius: 999px;
+      font-size: 0.72rem;
+      font-weight: 800;
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
 
     /* ─ Section: Chat ─ */
@@ -616,6 +644,10 @@
         grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
       }
 
+      .game-chips {
+        grid-template-columns: repeat(3, 1fr);
+      }
+
       .chat-drawer.expanded {
         max-height: 50vh;
       }
@@ -806,6 +838,33 @@
       lyrics: '🎵 Lyrics',
       cah: '😂 CAH',
       guess: '🎲 Guess'
+    };
+
+    const GAME_ICONS = {
+      quiz: '🧠',
+      shithead: '🎴',
+      spy: '🕵️',
+      lyrics: '🎵',
+      cah: '😂',
+      guess: '🎲'
+    };
+
+    const GAME_NAMES = {
+      quiz: 'Quiz',
+      shithead: 'Shithead',
+      spy: 'Spy',
+      lyrics: 'Lyrics',
+      cah: 'CAH',
+      guess: 'Guess'
+    };
+
+    const GAME_DESCRIPTIONS = {
+      quiz: 'Answer trivia questions. Use power-ups to crush the competition.',
+      shithead: 'Be the first to empty your hand. Fast-paced card game.',
+      spy: 'One player is the spy. Can they blend in before being caught?',
+      lyrics: 'Guess the song from lyrics. How well do you know your music?',
+      cah: 'Fill in the funniest blank. Adults only.',
+      guess: 'Guess the secret number. Closest guess wins each round.'
     };
 
     // ─── State ──────────────────────────────────────────────────────
@@ -1018,7 +1077,12 @@
         const count = lobbyState.gameSuggestions[game] || 0;
         const chip = document.createElement('button');
         chip.className = 'game-chip' + (selectedGame === game ? ' voted' : '');
-        chip.textContent = GAME_LABELS[game] + (count > 0 ? ` ${count}` : '');
+        chip.innerHTML = `
+          ${count > 0 ? `<span class="vote-count">${count}</span>` : ''}
+          <span class="game-chip-icon">${GAME_ICONS[game]}</span>
+          <span class="game-chip-name">${GAME_NAMES[game]}</span>
+          <span class="game-chip-desc">${GAME_DESCRIPTIONS[game]}</span>
+        `;
         chip.addEventListener('click', () => suggestGame(game));
         gameChipsEl.appendChild(chip);
       }
