@@ -314,3 +314,88 @@ test('ShiteadController - start() initializes deck and deals cards', () => {
   assert.strictEqual(alice.hand.length, 3, 'Alice should have 3 hand cards')
   assert.strictEqual(alice.faceUp.length, 3, 'Alice should have 3 face-up cards')
 })
+
+test('SWAP - confirmSwap transitions to REVEAL when all players confirm', () => {
+  const game = new ShiteadController()
+
+  game.addPlayer('alice', {username: 'alice', ws: null, isBot: false})
+  game.addPlayer('bob', {username: 'bob', ws: null, isBot: false})
+
+  game.start()
+
+  // Advance to SWAP phase by expiring SETUP (5s timeout)
+  game.phaseStartTime = Date.now() - 6000
+  game.tick()
+  assert.strictEqual(game.getPhase(), 'SWAP', 'Should be in SWAP phase after SETUP expires')
+
+  // Both players confirm
+  const alice_confirmed = game.confirmSwap('alice')
+  assert.strictEqual(alice_confirmed, true, 'Alice confirm should succeed')
+  assert.strictEqual(game.getPhase(), 'SWAP', 'Should still be SWAP after first confirm')
+
+  const bob_confirmed = game.confirmSwap('bob')
+  assert.strictEqual(bob_confirmed, true, 'Bob confirm should succeed')
+  assert.strictEqual(game.getPhase(), 'REVEAL', 'Should transition to REVEAL when all confirm')
+})
+
+test('SWAP - confirmSwap does NOT transition when only some players confirm', () => {
+  const game = new ShiteadController()
+
+  game.addPlayer('alice', {username: 'alice', ws: null, isBot: false})
+  game.addPlayer('bob', {username: 'bob', ws: null, isBot: false})
+
+  game.start()
+
+  // Advance to SWAP phase
+  game.phaseStartTime = Date.now() - 6000
+  game.tick()
+  assert.strictEqual(game.getPhase(), 'SWAP', 'Should be in SWAP phase')
+
+  // Only alice confirms
+  const alice_confirmed = game.confirmSwap('alice')
+  assert.strictEqual(alice_confirmed, true, 'Alice confirm should succeed')
+  assert.strictEqual(game.getPhase(), 'SWAP', 'Should remain in SWAP phase (bob not ready)')
+})
+
+test('SWAP - confirmSwap fails in wrong phase', () => {
+  const game = new ShiteadController()
+
+  game.addPlayer('alice', {username: 'alice', ws: null, isBot: false})
+  game.start()
+
+  assert.strictEqual(game.getPhase(), 'SETUP', 'Should be in SETUP phase')
+
+  const result = game.confirmSwap('alice')
+  assert.strictEqual(result, false, 'Should fail to confirm in SETUP phase')
+  assert.strictEqual(game.getPhase(), 'SETUP', 'Phase should not change')
+})
+
+test('SWAP - bot auto-confirms after swap via processBotSwaps', (t) => {
+  const game = new ShiteadController()
+
+  game.addPlayer('alice', {username: 'alice', ws: null, isBot: false})
+  game.addPlayer('bot_player', {username: 'bot_player', ws: null, isBot: true})
+
+  game.start()
+
+  // Advance to SWAP phase
+  game.phaseStartTime = Date.now() - 6000
+  game.tick()
+  assert.strictEqual(game.getPhase(), 'SWAP', 'Should be in SWAP phase')
+
+  // Bot should process swaps and confirm
+  game.processBotSwaps()
+
+  // Give async timeout 2s to execute
+  return new Promise(resolve => {
+    setTimeout(() => {
+      const botConfirmed = game.swapConfirmed.get('bot_player')
+      assert.ok(botConfirmed, 'Bot should have confirmed swap')
+
+      // Alice also confirms to complete the SWAP phase
+      game.confirmSwap('alice')
+      assert.strictEqual(game.getPhase(), 'REVEAL', 'Should transition to REVEAL when both confirm')
+      resolve()
+    }, 2000)
+  })
+})

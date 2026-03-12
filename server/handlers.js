@@ -616,6 +616,24 @@ function handleMessage(ws, role, msg, room) {
       break;
     }
 
+    case 'SHITHEAD_CONFIRM_SWAP': {
+      const username = room.wsToUsername.get(ws);
+      if (!username) {
+        console.log(`[Shithead][Room:${room.code}][CONFIRM_SWAP][FAIL]: WebSocket not mapped to username`);
+        break;
+      }
+      if (!room.shitheadGame) {
+        console.log(`[Shithead][Room:${room.code}][CONFIRM_SWAP][FAIL]: No shitheadGame instance`);
+        sendTo(ws, { type: 'SHITHEAD_ERROR', message: 'Game not active.' });
+        break;
+      }
+      const confirmed = room.shitheadGame.confirmSwap(username);
+      if (!confirmed) {
+        sendTo(ws, { type: 'SHITHEAD_ERROR', message: 'Cannot confirm swap at this time.' });
+      }
+      break;
+    }
+
     case 'SHITHEAD_PLAY_CARDS': {
       const username = room.wsToUsername.get(ws);
       if (!username) {

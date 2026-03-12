@@ -21,6 +21,7 @@ class ShiteadController extends GameController {
     this.playTimeout = 10000       // 10s per move
     this.swapStartTime = null
     this.currentPlayerTurnStart = null
+    this.swapConfirmed = new Map()  // username → true/false for early exit
 
     console.log('[Shithead] ShiteadController instance created')
   }
@@ -29,7 +30,7 @@ class ShiteadController extends GameController {
     // Auto-swap for bot players during SWAP phase
     if (this.phase === 'SWAP') {
       for (const [username, player] of this.players) {
-        if (player.isBot && !player._botSwapScheduled) {
+        if (player.isBot && !player._botSwapScheduled && !this.swapConfirmed.get(username)) {
           const swapChoice = this.getBotSwapChoice(username)
           if (swapChoice) {
             // Small random delay for natural feel (500-1500ms)
@@ -38,7 +39,11 @@ class ShiteadController extends GameController {
             setTimeout(() => {
               this.swapCard(username, swapChoice.handCardId, swapChoice.faceUpCardId)
               player._botSwapScheduled = false
+              this.confirmSwap(username)  // Bot confirms after swap
             }, delayMs)
+          } else {
+            // Nothing to swap — confirm immediately
+            this.confirmSwap(username)
           }
         }
       }
@@ -60,6 +65,7 @@ class ShiteadController extends GameController {
         console.log(`[Shithead] tick() SETUP: phaseStartTime=${this.phaseStartTime}, elapsed=${setupElapsed}ms, isPhaseExpired=${this.isPhaseExpired(5000)}, check=(${setupElapsed} >= 5000)`)
         if (this.isPhaseExpired(5000)) {  // 5s setup time
           console.log(`[Shithead] SETUP phase expired (${setupElapsed}ms), transitioning to SWAP`)
+          this.swapConfirmed = new Map()  // Reset confirmations for new phase
           this.transitionTo('SWAP')
         }
         break
@@ -266,6 +272,31 @@ class ShiteadController extends GameController {
     return true
   }
 
+  confirmSwap(username) {
+    // Player confirms they're ready to move from SWAP to REVEAL
+    if (this.phase !== 'SWAP') {
+      console.log(`[Shithead][CONFIRM_SWAP][FAIL]: ${username} attempted confirm in wrong phase (${this.phase})`)
+      return false
+    }
+
+    const player = this.players.get(username)
+    if (!player) {
+      console.log(`[Shithead][CONFIRM_SWAP][FAIL]: ${username} not found in players`)
+      return false
+    }
+
+    this.swapConfirmed.set(username, true)
+    const readyCount = [...this.swapConfirmed.values()].filter(Boolean).length
+    console.log(`[Shithead][CONFIRM_SWAP][SUCCESS]: ${username} confirmed (${readyCount}/${this.players.size} ready)`)
+
+    if (this._allPlayersConfirmedSwap()) {
+      console.log(`[Shithead][CONFIRM_SWAP]: All players confirmed, transitioning to REVEAL early`)
+      this._revealCards()
+      this.transitionTo('REVEAL')
+    }
+    return true
+  }
+
   /**
    * Gets bot's intelligent card choice for SWAP phase
    * Bot chooses the worst hand card and best face-up card to swap
@@ -313,6 +344,14 @@ class ShiteadController extends GameController {
   /**
    * Private helpers
    */
+
+  _allPlayersConfirmedSwap() {
+    // Check if all players have confirmed during SWAP phase
+    for (const [username] of this.players) {
+      if (!this.swapConfirmed.get(username)) return false
+    }
+    return true
+  }
 
   _initializeDeck() {
     this.deck = shuffle(createDeck())
