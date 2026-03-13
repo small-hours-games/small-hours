@@ -849,7 +849,7 @@
   }
 
   function onSwapClick(zone, el) {
-    const id = el.dataset.id;
+    const id = parseInt(el.dataset.id, 10);
     console.log(`[Click] onSwapClick: zone=${zone}, id=${id}, currentSelected=hand:${swapSelected.hand},faceUp:${swapSelected.faceUp}`);
     if (zone === 'hand') {
       if (swapSelected.hand === id) { swapSelected.hand = null; } else { swapSelected.hand = id; }
@@ -968,7 +968,7 @@
       handEl.innerHTML = sortCards(myState.hand).map((c, idx) => {
         const playable = myTurn && canPlayCard(c.rank, sevenActive, pt);
         return `<div class="play-card ${isRed(c) ? 'red-card' : 'black-card'} ${!myTurn ? 'not-my-turn' : (!playable ? 'unplayable' : '')}"
-          data-id="${c.rank}-${c.suit}-${idx}" data-zone="hand">
+          data-id="${c.id}" data-zone="hand">
           <span class="card-tl"><b>${c.rank}</b><span class="card-suit-sm">${c.suit}</span></span>
           <span class="card-center">${c.rank}</span>
           <span class="card-br"><b>${c.rank}</b><span class="card-suit-sm">${c.suit}</span></span>
@@ -985,7 +985,7 @@
       faceUpEl.innerHTML = sortCards(myState.faceUp).map((c, idx) => {
         const playable = myTurn && canPlayCard(c.rank, sevenActive, pt);
         return `<div class="play-card ${isRed(c) ? 'red-card' : 'black-card'} ${!myTurn ? 'not-my-turn' : (!playable ? 'unplayable' : '')}"
-          data-id="${c.rank}-${c.suit}-${idx}" data-zone="faceup">
+          data-id="${c.id}" data-zone="faceup">
           <span class="card-tl"><b>${c.rank}</b><span class="card-suit-sm">${c.suit}</span></span>
           <span class="card-center">${c.rank}</span>
           <span class="card-br"><b>${c.rank}</b><span class="card-suit-sm">${c.suit}</span></span>
@@ -1059,7 +1059,7 @@
   }
 
   function onPlayCardClick(el) {
-    const id = el.dataset.id;
+    const id = parseInt(el.dataset.id, 10);
     if (el.classList.contains('unplayable')) return;
     if (el.classList.contains('selected')) {
       el.classList.remove('selected');
@@ -1081,7 +1081,7 @@
   }
 
   function onFaceDownClick(el) {
-    send({ type: 'SHITHEAD_PLAY_FACEDOWN', cardId: el.dataset.id });
+    send({ type: 'SHITHEAD_PLAY_FACEDOWN', cardId: parseInt(el.dataset.id, 10) });
   }
 
   function updateActionButtons() {
@@ -1097,7 +1097,7 @@
   document.getElementById('play-btn').addEventListener('click', () => {
     if (selectedCardIds.size === 0) return;
     GNSound.whoosh(); GN.haptic('medium');
-    send({ type: 'SHITHEAD_PLAY_CARDS', cardIds: [...selectedCardIds] });
+    send({ type: 'SHITHEAD_PLAY_CARDS', cardIds: [...selectedCardIds].map(id => parseInt(id, 10)) });
     selectedCardIds.clear();
     document.getElementById('play-btn').disabled = true;
   });
