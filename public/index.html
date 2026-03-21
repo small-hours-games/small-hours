@@ -379,7 +379,7 @@
     // Auto-uppercase room code
     const roomCodeInput = document.getElementById('roomCode');
     roomCodeInput.addEventListener('input', (e) => {
-      e.target.value = e.target.value.toUpperCase().replace(/[^A-Z]/g, '');
+      e.target.value = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
     });
 
     // Create particles
