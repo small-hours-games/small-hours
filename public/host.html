@@ -1,0 +1,887 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Small Hours - Host</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+  <style>
+    body {
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+
+    .host-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 20px 32px;
+      border-bottom: 1px solid var(--glass-border);
+    }
+
+    .host-logo {
+      font-size: 1.4rem;
+      font-weight: 900;
+      background: linear-gradient(135deg, var(--neon-purple), var(--neon-blue));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .host-main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 32px;
+      gap: 32px;
+    }
+
+    /* Lobby view */
+    .lobby-layout {
+      display: grid;
+      grid-template-columns: 1fr 2fr;
+      gap: 40px;
+      width: 100%;
+      max-width: 1100px;
+      align-items: start;
+    }
+
+    .join-panel {
+      text-align: center;
+    }
+
+    .join-panel .room-code {
+      color: var(--neon-purple);
+      text-shadow:
+        0 0 10px rgba(179, 71, 217, 0.5),
+        0 0 40px rgba(179, 71, 217, 0.25),
+        0 0 80px rgba(179, 71, 217, 0.1);
+      margin-bottom: 16px;
+    }
+
+    .join-label {
+      font-size: 1rem;
+      color: var(--text-secondary);
+      margin-bottom: 8px;
+    }
+
+    .join-url {
+      font-size: 0.9rem;
+      color: var(--neon-blue);
+      word-break: break-all;
+      margin-top: 12px;
+    }
+
+    #qrCanvas {
+      border-radius: 12px;
+      margin-top: 16px;
+      background: white;
+      padding: 8px;
+    }
+
+    .players-panel h2 {
+      font-size: 1.5rem;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .player-count {
+      font-size: 0.9rem;
+      color: var(--text-secondary);
+      font-weight: 400;
+    }
+
+    .player-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 12px;
+    }
+
+    .player-card {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 16px;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      transition: all 0.3s;
+      animation: fadeIn 0.3s ease;
+    }
+
+    .player-card.ready {
+      border-color: rgba(57, 255, 20, 0.3);
+      background: rgba(57, 255, 20, 0.05);
+    }
+
+    .player-card .avatar {
+      font-size: 2rem;
+      width: 48px;
+      height: 48px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(179, 71, 217, 0.1);
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .player-card .info { flex: 1; }
+    .player-card .name {
+      font-weight: 600;
+      font-size: 1.1rem;
+    }
+
+    .player-card .status {
+      font-size: 0.8rem;
+      margin-top: 2px;
+    }
+
+    .player-card .admin-badge {
+      font-size: 0.7rem;
+      background: rgba(179, 71, 217, 0.2);
+      color: var(--neon-purple);
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-weight: 600;
+    }
+
+    .waiting-msg {
+      text-align: center;
+      color: var(--text-secondary);
+      font-size: 1.2rem;
+      padding: 40px;
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Game view */
+    .game-view {
+      width: 100%;
+      max-width: 1100px;
+      display: none;
+    }
+
+    .game-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 24px;
+    }
+
+    .game-title {
+      font-size: 1.6rem;
+      font-weight: 700;
+    }
+
+    .round-info {
+      color: var(--text-secondary);
+      font-size: 1rem;
+    }
+
+    .game-content {
+      min-height: 300px;
+    }
+
+    /* Number Guess game display */
+    .number-guess-display {
+      text-align: center;
+    }
+
+    .guess-round-label {
+      font-size: 1.2rem;
+      color: var(--text-secondary);
+      margin-bottom: 8px;
+    }
+
+    .guess-range {
+      font-size: 2rem;
+      font-weight: 700;
+      color: var(--neon-blue);
+      margin-bottom: 24px;
+    }
+
+    .guess-feedback {
+      font-size: 1.5rem;
+      font-weight: 600;
+      margin: 16px 0;
+      min-height: 2em;
+    }
+
+    /* Quiz game display */
+    .quiz-display { text-align: center; }
+
+    .quiz-question-text {
+      font-size: 2rem;
+      font-weight: 700;
+      margin-bottom: 16px;
+      line-height: 1.3;
+    }
+
+    .quiz-answers-display {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      max-width: 700px;
+      margin: 24px auto;
+    }
+
+    .quiz-answer-box {
+      padding: 24px;
+      border-radius: 12px;
+      font-size: 1.2rem;
+      font-weight: 600;
+      color: white;
+      text-align: center;
+    }
+
+    .quiz-answer-box.a { background: rgba(255, 71, 87, 0.6); }
+    .quiz-answer-box.b { background: rgba(77, 201, 246, 0.6); }
+    .quiz-answer-box.c { background: rgba(57, 255, 20, 0.4); }
+    .quiz-answer-box.d { background: rgba(255, 159, 67, 0.6); }
+
+    .quiz-answer-box.correct {
+      border: 3px solid var(--neon-green);
+      box-shadow: 0 0 20px rgba(57, 255, 20, 0.3);
+    }
+
+    .quiz-answer-box.eliminated {
+      opacity: 0.2;
+    }
+
+    .quiz-timer-large {
+      font-size: 4rem;
+      font-weight: 900;
+      margin: 16px 0;
+    }
+
+    /* Spy game display */
+    .spy-display { text-align: center; }
+
+    .spy-round-title {
+      font-size: 1.5rem;
+      margin-bottom: 16px;
+    }
+
+    .clue-list {
+      max-width: 500px;
+      margin: 16px auto;
+      text-align: left;
+    }
+
+    .clue-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px;
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.03);
+      margin-bottom: 8px;
+      animation: fadeIn 0.3s ease;
+    }
+
+    .clue-author {
+      font-weight: 600;
+      color: var(--neon-blue);
+      min-width: 100px;
+    }
+
+    .clue-text {
+      flex: 1;
+      font-style: italic;
+    }
+
+    /* Scoreboard sidebar */
+    .scoreboard-panel {
+      position: fixed;
+      right: 0;
+      top: 0;
+      bottom: 0;
+      width: 280px;
+      background: var(--bg-card);
+      border-left: 1px solid var(--glass-border);
+      padding: 20px;
+      overflow-y: auto;
+      backdrop-filter: blur(12px);
+    }
+
+    .scoreboard-panel h3 {
+      font-size: 1rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--text-secondary);
+      margin-bottom: 16px;
+    }
+
+    .score-entry {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px;
+      border-radius: 8px;
+      margin-bottom: 4px;
+    }
+
+    .score-entry:first-child {
+      background: rgba(179, 71, 217, 0.1);
+    }
+
+    .score-rank {
+      font-weight: 900;
+      min-width: 24px;
+      color: var(--text-secondary);
+    }
+
+    .score-entry:first-child .score-rank { color: var(--neon-purple); }
+
+    .score-name { flex: 1; font-weight: 500; }
+    .score-value {
+      font-weight: 700;
+      color: var(--neon-blue);
+    }
+
+    /* Chat panel */
+    .chat-panel {
+      position: fixed;
+      left: 0;
+      bottom: 0;
+      width: 300px;
+      max-height: 250px;
+      background: rgba(20, 20, 40, 0.9);
+      border-top: 1px solid var(--glass-border);
+      border-right: 1px solid var(--glass-border);
+      border-radius: 0 12px 0 0;
+      padding: 12px;
+      backdrop-filter: blur(12px);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .chat-panel .messages {
+      flex: 1;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      max-height: 180px;
+      padding-right: 4px;
+    }
+
+    .chat-msg {
+      font-size: 0.85rem;
+      padding: 2px 0;
+      animation: fadeIn 0.2s ease;
+    }
+
+    .chat-msg .author {
+      font-weight: 600;
+      color: var(--neon-blue);
+    }
+
+    /* Responsive for TV */
+    @media (max-width: 768px) {
+      .lobby-layout {
+        grid-template-columns: 1fr;
+      }
+      .scoreboard-panel {
+        position: static;
+        width: 100%;
+        border-left: none;
+        border-top: 1px solid var(--glass-border);
+      }
+      .chat-panel {
+        width: 100%;
+        position: static;
+        border: 1px solid var(--glass-border);
+        border-radius: 12px;
+        margin-top: 16px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="bg-animated"></div>
+
+  <!-- Connection status -->
+  <div class="connection-status disconnected" id="connStatus">
+    <span class="status-dot"></span>
+    <span id="connText">Connecting...</span>
+  </div>
+
+  <!-- Header -->
+  <header class="host-header">
+    <div class="host-logo">Small Hours</div>
+    <div id="headerInfo" style="color: var(--text-secondary); font-size: 0.9rem;"></div>
+  </header>
+
+  <!-- Main content -->
+  <main class="host-main">
+    <!-- Lobby View -->
+    <div id="lobbyView" class="lobby-layout">
+      <div class="join-panel card">
+        <div class="join-label">Join at</div>
+        <div class="join-url" id="joinUrl"></div>
+        <div class="room-code room-code-large neon" id="roomCode">----</div>
+        <canvas id="qrCanvas"></canvas>
+      </div>
+      <div class="players-panel">
+        <h2>Players <span class="player-count" id="playerCount">(0)</span></h2>
+        <div class="player-grid" id="playerGrid">
+          <div class="waiting-msg">Waiting for players to join...</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Game View -->
+    <div id="gameView" class="game-view">
+      <div class="game-header">
+        <div>
+          <div class="game-title" id="gameTitle">Game</div>
+          <div class="round-info" id="roundInfo"></div>
+        </div>
+      </div>
+      <div class="timer-bar-container" id="timerContainer" style="display:none;">
+        <div class="timer-bar" id="timerBar"></div>
+      </div>
+      <div class="game-content" id="gameContent"></div>
+    </div>
+  </main>
+
+  <!-- Chat overlay -->
+  <div class="chat-panel" id="chatPanel" style="display:none;">
+    <div class="messages" id="chatMessages"></div>
+  </div>
+
+  <!-- Scoreboard sidebar -->
+  <div class="scoreboard-panel" id="scorePanel" style="display:none;">
+    <h3>Scoreboard</h3>
+    <div id="scoreList"></div>
+  </div>
+
+  <!-- Toast container -->
+  <div class="toast-container" id="toasts"></div>
+
+  <script>
+    // --- State ---
+    const AVATARS = ['&#128056;', '&#128049;', '&#129412;', '&#128029;', '&#128025;', '&#129418;', '&#128039;', '&#129409;',
+                     '&#128011;', '&#128036;', '&#128035;', '&#129428;', '&#128024;', '&#128016;', '&#129433;', '&#128023;'];
+
+    const state = {
+      code: null,
+      ws: null,
+      players: [],
+      gameType: null,
+      gameState: null,
+      reconnectAttempts: 0,
+      maxReconnect: 10,
+      reconnectTimer: null,
+    };
+
+    // --- Init ---
+    (function init() {
+      const pathParts = window.location.pathname.split('/');
+      state.code = pathParts[2]?.toUpperCase();
+      if (!state.code || state.code.length !== 4) {
+        document.querySelector('.host-main').innerHTML =
+          '<div class="card text-center" style="max-width:400px;"><h2>Invalid Room</h2><p class="mt-2 text-secondary">No valid room code in URL.</p><a href="/" class="btn btn-primary mt-2">Go Home</a></div>';
+        return;
+      }
+
+      document.getElementById('roomCode').textContent = state.code;
+      document.getElementById('headerInfo').textContent = 'Room: ' + state.code;
+
+      const joinUrl = window.location.origin + '/?room=' + state.code;
+      document.getElementById('joinUrl').textContent = joinUrl;
+
+      // Generate QR code
+      if (typeof QRCode !== 'undefined') {
+        QRCode.toCanvas(document.getElementById('qrCanvas'), joinUrl, {
+          width: 180,
+          margin: 1,
+          color: { dark: '#0a0a1a', light: '#ffffff' }
+        }).catch(() => {});
+      }
+
+      connect();
+    })();
+
+    // --- WebSocket ---
+    function connect() {
+      const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const url = protocol + '//' + location.host + '/ws/host/' + state.code;
+
+      setConnectionStatus('reconnecting', 'Connecting...');
+
+      const ws = new WebSocket(url);
+      state.ws = ws;
+
+      ws.onopen = () => {
+        state.reconnectAttempts = 0;
+        setConnectionStatus('connected', 'Connected');
+      };
+
+      ws.onmessage = (e) => {
+        try {
+          const msg = JSON.parse(e.data);
+          handleMessage(msg);
+        } catch (err) {
+          console.error('Bad message:', err);
+        }
+      };
+
+      ws.onclose = () => {
+        setConnectionStatus('disconnected', 'Disconnected');
+        scheduleReconnect();
+      };
+
+      ws.onerror = () => {
+        ws.close();
+      };
+    }
+
+    function scheduleReconnect() {
+      if (state.reconnectAttempts >= state.maxReconnect) {
+        setConnectionStatus('disconnected', 'Connection lost');
+        showToast('Connection lost. Please refresh the page.', 'error');
+        return;
+      }
+      const delay = Math.min(1000 * Math.pow(2, state.reconnectAttempts), 30000);
+      state.reconnectAttempts++;
+      setConnectionStatus('reconnecting', 'Reconnecting (' + state.reconnectAttempts + ')...');
+      clearTimeout(state.reconnectTimer);
+      state.reconnectTimer = setTimeout(connect, delay);
+    }
+
+    function send(msg) {
+      if (state.ws?.readyState === WebSocket.OPEN) {
+        state.ws.send(JSON.stringify(msg));
+      }
+    }
+
+    // --- Message handling ---
+    function handleMessage(msg) {
+      switch (msg.type) {
+        case 'DISPLAY_OK':
+          showToast('Connected as host', 'success');
+          break;
+
+        case 'LOBBY_UPDATE':
+          state.players = msg.players || [];
+          renderPlayers();
+          break;
+
+        case 'PLAYER_JOINED':
+          showToast(msg.name + ' joined!', 'success');
+          break;
+
+        case 'PLAYER_REMOVED':
+          showToast(msg.name + ' left', 'info');
+          break;
+
+        case 'ADMIN_CHANGED':
+          showToast(msg.name + ' is now the admin');
+          break;
+
+        case 'MINI_GAME_STARTING':
+          state.gameType = msg.game;
+          showGameView(msg);
+          break;
+
+        case 'GAME_STATE':
+          state.gameState = msg;
+          renderGameState(msg);
+          break;
+
+        case 'CHAT_MESSAGE':
+          addChatMessage(msg.name, msg.text);
+          break;
+
+        case 'SERVER_RESTARTING':
+          showToast('Server restarting, please wait...', 'error');
+          break;
+
+        default:
+          console.log('Unknown message:', msg);
+      }
+    }
+
+    // --- Render: Lobby ---
+    function renderPlayers() {
+      const grid = document.getElementById('playerGrid');
+      const count = document.getElementById('playerCount');
+      count.textContent = '(' + state.players.length + ')';
+
+      if (state.players.length === 0) {
+        grid.innerHTML = '<div class="waiting-msg">Waiting for players to join...</div>';
+        return;
+      }
+
+      grid.innerHTML = state.players.map((p, i) => {
+        const avatar = AVATARS[i % AVATARS.length];
+        const readyClass = p.ready ? 'ready' : '';
+        const statusText = p.ready
+          ? '<span style="color: var(--neon-green);">Ready</span>'
+          : '<span style="color: var(--text-secondary);">Not ready</span>';
+        const adminBadge = p.isAdmin ? '<span class="admin-badge">ADMIN</span>' : '';
+
+        return '<div class="player-card ' + readyClass + '">' +
+          '<div class="avatar">' + avatar + '</div>' +
+          '<div class="info">' +
+            '<div class="name">' + escapeHtml(p.name) + ' ' + adminBadge + '</div>' +
+            '<div class="status">' + statusText + '</div>' +
+          '</div>' +
+        '</div>';
+      }).join('');
+    }
+
+    // --- Render: Game ---
+    function showGameView(msg) {
+      document.getElementById('lobbyView').style.display = 'none';
+      document.getElementById('gameView').style.display = 'block';
+      document.getElementById('scorePanel').style.display = 'block';
+      document.getElementById('chatPanel').style.display = 'block';
+
+      const titles = {
+        'number-guess': 'Number Guess',
+        'quiz': 'Quiz Time',
+        'spy': 'Spy Game'
+      };
+      document.getElementById('gameTitle').textContent = titles[msg.game] || msg.game;
+      document.getElementById('roundInfo').textContent = msg.description || '';
+    }
+
+    function renderGameState(msg) {
+      if (!state.gameType) return;
+
+      switch (state.gameType) {
+        case 'number-guess': renderNumberGuess(msg); break;
+        case 'quiz': renderQuiz(msg); break;
+        case 'spy': renderSpy(msg); break;
+      }
+
+      if (msg.scores) renderScoreboard(msg.scores);
+      if (msg.phase === 'lobby' || msg.phase === 'finished') returnToLobby(msg);
+    }
+
+    function renderNumberGuess(msg) {
+      const content = document.getElementById('gameContent');
+      const round = msg.round || '?';
+      const totalRounds = msg.totalRounds || '?';
+      const low = msg.rangeLow ?? 1;
+      const high = msg.rangeHigh ?? 100;
+      const feedback = msg.feedback || '';
+      const guesses = msg.recentGuesses || [];
+
+      let html = '<div class="number-guess-display">' +
+        '<div class="guess-round-label">Round ' + round + ' / ' + totalRounds + '</div>' +
+        '<div class="guess-range">' + low + ' &mdash; ' + high + '</div>';
+
+      if (feedback) {
+        html += '<div class="guess-feedback">' + escapeHtml(feedback) + '</div>';
+      }
+
+      if (guesses.length > 0) {
+        html += '<div class="card mt-2" style="max-width:400px;margin:0 auto;text-align:left;">';
+        guesses.forEach(g => {
+          const icon = g.direction === 'correct' ? '&#9989;' : (g.direction === 'higher' ? '&#11014;' : '&#11015;');
+          html += '<div class="clue-item"><span class="clue-author">' + escapeHtml(g.name) + '</span>' +
+            '<span>' + g.value + ' ' + icon + '</span></div>';
+        });
+        html += '</div>';
+      }
+
+      html += '</div>';
+      content.innerHTML = html;
+    }
+
+    function renderQuiz(msg) {
+      const content = document.getElementById('gameContent');
+      const timerContainer = document.getElementById('timerContainer');
+      const timerBar = document.getElementById('timerBar');
+
+      if (msg.phase === 'question') {
+        const q = msg.question || {};
+        let html = '<div class="quiz-display">' +
+          '<div class="quiz-question-text">' + escapeHtml(q.text || '') + '</div>' +
+          '<div class="quiz-answers-display">';
+
+        const labels = ['A', 'B', 'C', 'D'];
+        const classes = ['a', 'b', 'c', 'd'];
+        (q.answers || []).forEach((a, i) => {
+          const eliminated = (msg.eliminated || []).includes(i) ? ' eliminated' : '';
+          html += '<div class="quiz-answer-box ' + classes[i] + eliminated + '">' +
+            '<strong>' + labels[i] + '.</strong> ' + escapeHtml(a) + '</div>';
+        });
+
+        html += '</div>';
+
+        if (msg.timeLeft != null && msg.timeTotal) {
+          timerContainer.style.display = 'block';
+          const pct = (msg.timeLeft / msg.timeTotal) * 100;
+          timerBar.style.width = pct + '%';
+          timerBar.className = 'timer-bar' + (pct < 20 ? ' critical' : pct < 40 ? ' warning' : '');
+
+          html += '<div class="quiz-timer-large">' + Math.ceil(msg.timeLeft) + '</div>';
+        } else {
+          timerContainer.style.display = 'none';
+        }
+
+        html += '</div>';
+        content.innerHTML = html;
+      } else if (msg.phase === 'reveal') {
+        timerContainer.style.display = 'none';
+        const q = msg.question || {};
+        let html = '<div class="quiz-display">' +
+          '<div class="quiz-question-text">' + escapeHtml(q.text || '') + '</div>' +
+          '<div class="quiz-answers-display">';
+
+        const labels = ['A', 'B', 'C', 'D'];
+        const classes = ['a', 'b', 'c', 'd'];
+        (q.answers || []).forEach((a, i) => {
+          const isCorrect = i === msg.correctIndex ? ' correct' : '';
+          html += '<div class="quiz-answer-box ' + classes[i] + isCorrect + '">' +
+            '<strong>' + labels[i] + '.</strong> ' + escapeHtml(a) + '</div>';
+        });
+
+        html += '</div></div>';
+        content.innerHTML = html;
+      }
+    }
+
+    function renderSpy(msg) {
+      const content = document.getElementById('gameContent');
+      const round = msg.round || '?';
+      const clues = msg.clues || [];
+
+      let html = '<div class="spy-display">' +
+        '<div class="spy-round-title">Round ' + round + '</div>';
+
+      if (msg.phase === 'clue') {
+        html += '<p class="text-secondary">Players are giving clues...</p>';
+      } else if (msg.phase === 'guess') {
+        html += '<p class="text-secondary">The spy is guessing the word...</p>';
+      } else if (msg.phase === 'reveal') {
+        html += '<p style="font-size:1.5rem;margin:16px 0;">The word was: <strong style="color:var(--neon-green);">' +
+          escapeHtml(msg.word || '???') + '</strong></p>';
+        if (msg.spyName) {
+          html += '<p>The spy was: <strong style="color:var(--neon-pink);">' + escapeHtml(msg.spyName) + '</strong></p>';
+        }
+      }
+
+      if (clues.length > 0) {
+        html += '<div class="clue-list">';
+        clues.forEach(c => {
+          html += '<div class="clue-item">' +
+            '<span class="clue-author">' + escapeHtml(c.name) + '</span>' +
+            '<span class="clue-text">"' + escapeHtml(c.text) + '"</span></div>';
+        });
+        html += '</div>';
+      }
+
+      html += '</div>';
+      content.innerHTML = html;
+    }
+
+    function renderScoreboard(scores) {
+      const list = document.getElementById('scoreList');
+      const sorted = Object.entries(scores).sort((a, b) => b[1] - a[1]);
+
+      list.innerHTML = sorted.map(([name, score], i) => {
+        return '<div class="score-entry">' +
+          '<span class="score-rank">' + (i + 1) + '</span>' +
+          '<span class="score-name">' + escapeHtml(name) + '</span>' +
+          '<span class="score-value">' + score + '</span></div>';
+      }).join('');
+    }
+
+    function returnToLobby(msg) {
+      if (msg.phase === 'lobby' || msg.phase === 'finished') {
+        state.gameType = null;
+        document.getElementById('lobbyView').style.display = '';
+        document.getElementById('gameView').style.display = 'none';
+        document.getElementById('scorePanel').style.display = 'none';
+        document.getElementById('timerContainer').style.display = 'none';
+
+        if (msg.phase === 'finished' && msg.winner) {
+          showToast(msg.winner + ' wins!', 'success');
+          spawnConfetti();
+        }
+      }
+    }
+
+    // --- Chat ---
+    function addChatMessage(name, text) {
+      const panel = document.getElementById('chatPanel');
+      panel.style.display = 'flex';
+      const container = document.getElementById('chatMessages');
+      const el = document.createElement('div');
+      el.className = 'chat-msg';
+      el.innerHTML = '<span class="author">' + escapeHtml(name) + ':</span> ' + escapeHtml(text);
+      container.appendChild(el);
+      container.scrollTop = container.scrollHeight;
+
+      // Keep max 50 messages
+      while (container.children.length > 50) {
+        container.removeChild(container.firstChild);
+      }
+    }
+
+    // --- UI Helpers ---
+    function setConnectionStatus(status, text) {
+      const el = document.getElementById('connStatus');
+      el.className = 'connection-status ' + status;
+      document.getElementById('connText').textContent = text;
+    }
+
+    function showToast(message, type) {
+      const container = document.getElementById('toasts');
+      const toast = document.createElement('div');
+      toast.className = 'toast' + (type ? ' toast-' + type : '');
+      toast.textContent = message;
+      container.appendChild(toast);
+      setTimeout(() => {
+        toast.classList.add('toast-exit');
+        setTimeout(() => toast.remove(), 300);
+      }, 3000);
+    }
+
+    function spawnConfetti() {
+      const colors = ['#b347d9', '#4dc9f6', '#39ff14', '#ff6ec7', '#ff9f43', '#ff4757'];
+      for (let i = 0; i < 60; i++) {
+        const piece = document.createElement('div');
+        piece.className = 'confetti-piece';
+        piece.style.left = Math.random() * 100 + '%';
+        piece.style.background = colors[Math.floor(Math.random() * colors.length)];
+        piece.style.animationDuration = (2 + Math.random() * 3) + 's';
+        piece.style.animationDelay = (Math.random() * 0.5) + 's';
+        piece.style.borderRadius = Math.random() > 0.5 ? '50%' : '2px';
+        piece.style.width = (6 + Math.random() * 8) + 'px';
+        piece.style.height = (6 + Math.random() * 8) + 'px';
+        document.body.appendChild(piece);
+        setTimeout(() => piece.remove(), 5500);
+      }
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+  </script>
+</body>
+</html>

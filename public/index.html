@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Small Hours - Party Game</title>
+  <meta name="description" content="Real-time multiplayer party game. Create a room, invite friends, and play together.">
+  <style>
+    :root {
+      --bg-primary: #0a0a1a;
+      --bg-card: rgba(20, 20, 40, 0.8);
+      --neon-purple: #b347d9;
+      --neon-blue: #4dc9f6;
+      --neon-green: #39ff14;
+      --neon-pink: #ff6ec7;
+      --text-primary: #e0e0ff;
+      --text-secondary: #8888aa;
+      --glass-border: rgba(179, 71, 217, 0.3);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    /* Animated gradient background */
+    .bg-animated {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      z-index: 0;
+      background:
+        radial-gradient(ellipse 600px 600px at 20% 50%, rgba(179, 71, 217, 0.12) 0%, transparent 100%),
+        radial-gradient(ellipse 500px 500px at 80% 20%, rgba(77, 201, 246, 0.09) 0%, transparent 100%),
+        radial-gradient(ellipse 400px 400px at 50% 90%, rgba(255, 110, 199, 0.06) 0%, transparent 100%);
+      animation: bgFloat 15s ease-in-out infinite alternate;
+    }
+
+    @keyframes bgFloat {
+      0%   { filter: hue-rotate(0deg); transform: scale(1); }
+      50%  { filter: hue-rotate(15deg); transform: scale(1.05); }
+      100% { filter: hue-rotate(-10deg); transform: scale(1); }
+    }
+
+    /* Floating particles */
+    .particles {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      z-index: 0;
+      pointer-events: none;
+      overflow: hidden;
+    }
+
+    .particle {
+      position: absolute;
+      width: 2px;
+      height: 2px;
+      border-radius: 50%;
+      animation: float linear infinite;
+      opacity: 0;
+    }
+
+    @keyframes float {
+      0%   { transform: translateY(100vh) translateX(0); opacity: 0; }
+      10%  { opacity: 0.8; }
+      90%  { opacity: 0.8; }
+      100% { transform: translateY(-10vh) translateX(50px); opacity: 0; }
+    }
+
+    .container {
+      position: relative;
+      z-index: 1;
+      width: 100%;
+      max-width: 440px;
+      padding: 24px;
+    }
+
+    .logo-section {
+      text-align: center;
+      margin-bottom: 40px;
+    }
+
+    .logo-icon {
+      font-size: 3rem;
+      margin-bottom: 12px;
+      display: block;
+      animation: iconPulse 3s ease-in-out infinite;
+    }
+
+    @keyframes iconPulse {
+      0%, 100% { transform: scale(1); filter: drop-shadow(0 0 10px rgba(179,71,217,0.4)); }
+      50% { transform: scale(1.05); filter: drop-shadow(0 0 20px rgba(179,71,217,0.6)); }
+    }
+
+    .title {
+      font-size: 3rem;
+      font-weight: 900;
+      letter-spacing: -0.02em;
+      background: linear-gradient(135deg, var(--neon-purple), var(--neon-blue), var(--neon-pink));
+      background-size: 200% 200%;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      animation: gradientText 5s ease-in-out infinite;
+      text-shadow: none;
+    }
+
+    .title-glow {
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      font-size: 3rem;
+      font-weight: 900;
+      letter-spacing: -0.02em;
+      color: transparent;
+      text-shadow:
+        0 0 30px rgba(179, 71, 217, 0.3),
+        0 0 60px rgba(179, 71, 217, 0.15),
+        0 0 100px rgba(77, 201, 246, 0.1);
+      pointer-events: none;
+      z-index: -1;
+    }
+
+    .title-wrapper {
+      position: relative;
+      display: inline-block;
+    }
+
+    @keyframes gradientText {
+      0%, 100% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+    }
+
+    .subtitle {
+      color: var(--text-secondary);
+      font-size: 1rem;
+      margin-top: 8px;
+      font-weight: 400;
+    }
+
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--glass-border);
+      border-radius: 16px;
+      padding: 28px;
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      margin-bottom: 16px;
+    }
+
+    .card-title {
+      font-size: 0.85rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--text-secondary);
+      margin-bottom: 16px;
+    }
+
+    .btn {
+      padding: 14px 28px;
+      border: none;
+      border-radius: 12px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      min-height: 48px;
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      text-decoration: none;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .btn:active { transform: scale(0.97); }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--neon-purple), var(--neon-blue));
+      color: white;
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 25px rgba(179, 71, 217, 0.4);
+    }
+
+    .btn-secondary {
+      background: transparent;
+      color: var(--text-primary);
+      border: 1px solid var(--glass-border);
+    }
+
+    .btn-secondary:hover {
+      border-color: var(--neon-purple);
+      box-shadow: 0 0 15px rgba(179, 71, 217, 0.2);
+    }
+
+    .btn:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+      transform: none !important;
+      box-shadow: none !important;
+    }
+
+    .btn .spinner {
+      width: 18px;
+      height: 18px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+      display: none;
+    }
+
+    .btn.loading .spinner { display: block; }
+    .btn.loading .btn-text { display: none; }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    input {
+      background: rgba(10, 10, 26, 0.8);
+      border: 1px solid var(--glass-border);
+      border-radius: 8px;
+      padding: 14px 16px;
+      color: var(--text-primary);
+      font-size: 1rem;
+      width: 100%;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      font-family: inherit;
+    }
+
+    input:focus {
+      outline: none;
+      border-color: var(--neon-purple);
+      box-shadow: 0 0 10px rgba(179, 71, 217, 0.3);
+    }
+
+    input::placeholder { color: var(--text-secondary); }
+
+    .input-group {
+      margin-bottom: 12px;
+    }
+
+    .input-label {
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+      margin-bottom: 6px;
+      display: block;
+    }
+
+    .room-code-input {
+      text-align: center;
+      font-size: 1.5rem;
+      font-weight: 700;
+      letter-spacing: 0.3em;
+      text-transform: uppercase;
+      font-family: 'Courier New', monospace;
+    }
+
+    .divider {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin: 24px 0;
+      color: var(--text-secondary);
+      font-size: 0.85rem;
+    }
+
+    .divider::before, .divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--glass-border);
+    }
+
+    .error-msg {
+      color: #ff4757;
+      font-size: 0.85rem;
+      margin-top: 8px;
+      display: none;
+    }
+
+    .error-msg.visible { display: block; }
+
+    .footer {
+      text-align: center;
+      color: var(--text-secondary);
+      font-size: 0.8rem;
+      margin-top: 24px;
+      opacity: 0.6;
+    }
+
+    @media (max-width: 480px) {
+      .title { font-size: 2.4rem; }
+      .container { padding: 16px; }
+      .card { padding: 20px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="bg-animated"></div>
+  <div class="particles" id="particles"></div>
+
+  <div class="container">
+    <div class="logo-section">
+      <span class="logo-icon">&#127769;</span>
+      <div class="title-wrapper">
+        <h1 class="title">Small Hours</h1>
+      </div>
+      <p class="subtitle">Late-night party games with friends</p>
+    </div>
+
+    <!-- Create Room -->
+    <div class="card">
+      <div class="card-title">Start a Game</div>
+      <button class="btn btn-primary" id="createBtn" onclick="createRoom()">
+        <span class="spinner"></span>
+        <span class="btn-text">Create Room</span>
+      </button>
+      <div class="error-msg" id="createError"></div>
+    </div>
+
+    <div class="divider">or join an existing room</div>
+
+    <!-- Join Room -->
+    <div class="card">
+      <div class="card-title">Join a Room</div>
+      <form id="joinForm" onsubmit="joinRoom(event)">
+        <div class="input-group">
+          <label class="input-label" for="roomCode">Room Code</label>
+          <input
+            type="text"
+            id="roomCode"
+            class="room-code-input"
+            placeholder="ABCD"
+            maxlength="4"
+            autocomplete="off"
+            autocapitalize="characters"
+            spellcheck="false"
+            required
+          >
+        </div>
+        <div class="input-group">
+          <label class="input-label" for="username">Your Name</label>
+          <input
+            type="text"
+            id="username"
+            placeholder="Enter your name"
+            maxlength="20"
+            autocomplete="off"
+            spellcheck="false"
+            required
+          >
+        </div>
+        <button type="submit" class="btn btn-secondary" id="joinBtn">
+          <span class="spinner"></span>
+          <span class="btn-text">Join Room</span>
+        </button>
+        <div class="error-msg" id="joinError"></div>
+      </form>
+    </div>
+
+    <div class="footer">
+      Party games best played in the small hours
+    </div>
+  </div>
+
+  <script>
+    // Auto-uppercase room code
+    const roomCodeInput = document.getElementById('roomCode');
+    roomCodeInput.addEventListener('input', (e) => {
+      e.target.value = e.target.value.toUpperCase().replace(/[^A-Z]/g, '');
+    });
+
+    // Create particles
+    (function initParticles() {
+      const container = document.getElementById('particles');
+      const colors = ['#b347d9', '#4dc9f6', '#ff6ec7', '#39ff14'];
+      for (let i = 0; i < 30; i++) {
+        const p = document.createElement('div');
+        p.className = 'particle';
+        p.style.left = Math.random() * 100 + '%';
+        p.style.width = p.style.height = (1 + Math.random() * 2) + 'px';
+        p.style.background = colors[Math.floor(Math.random() * colors.length)];
+        p.style.animationDuration = (8 + Math.random() * 15) + 's';
+        p.style.animationDelay = (Math.random() * 10) + 's';
+        container.appendChild(p);
+      }
+    })();
+
+    async function createRoom() {
+      const btn = document.getElementById('createBtn');
+      const errEl = document.getElementById('createError');
+      errEl.classList.remove('visible');
+      btn.classList.add('loading');
+      btn.disabled = true;
+
+      try {
+        const res = await fetch('/api/rooms', { method: 'POST' });
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          throw new Error(data.error || 'Failed to create room');
+        }
+        const data = await res.json();
+        window.location.href = '/host/' + data.code;
+      } catch (err) {
+        errEl.textContent = err.message;
+        errEl.classList.add('visible');
+        btn.classList.remove('loading');
+        btn.disabled = false;
+      }
+    }
+
+    function joinRoom(e) {
+      e.preventDefault();
+      const code = document.getElementById('roomCode').value.trim().toUpperCase();
+      const name = document.getElementById('username').value.trim();
+      const errEl = document.getElementById('joinError');
+      errEl.classList.remove('visible');
+
+      if (code.length !== 4) {
+        errEl.textContent = 'Room code must be 4 characters';
+        errEl.classList.add('visible');
+        return;
+      }
+      if (!name || name.length < 1) {
+        errEl.textContent = 'Please enter your name';
+        errEl.classList.add('visible');
+        return;
+      }
+      if (name.length > 20) {
+        errEl.textContent = 'Name must be 20 characters or less';
+        errEl.classList.add('visible');
+        return;
+      }
+
+      window.location.href = '/player/' + code + '?name=' + encodeURIComponent(name);
+    }
+  </script>
+</body>
+</html>
