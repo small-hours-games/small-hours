@@ -27,6 +27,8 @@ export function setupWebSocket(server, manager) {
   const playerSockets = new Map();
   // playerId -> disconnect grace timer
   const graceTimers = new Map();
+  // roomCode -> Set of sockets (tracks all connections including displays)
+  const roomSockets = new Map();
 
   // --- Helpers ---
 
@@ -107,7 +109,7 @@ export function setupWebSocket(server, manager) {
     }
 
     const role = pathParts[1];  // 'host' or 'player'
-    const code = pathParts[2];
+    const code = pathParts[2].toUpperCase();
 
     if (role !== 'host' && role !== 'player') {
       send(ws, { type: 'ERROR', message: 'Invalid role. Use host or player.' });
@@ -132,11 +134,18 @@ export function setupWebSocket(server, manager) {
     };
     socketMeta.set(ws, meta);
 
+    // Track socket in room's socket set
+    if (!roomSockets.has(code)) roomSockets.set(code, new Set());
+    roomSockets.get(code).add(ws);
+
     ws.on('pong', () => {
       meta.alive = true;
     });
 
-    // Send current lobby state to new connection
+    // Send appropriate welcome message
+    if (role === 'host') {
+      send(ws, { type: 'DISPLAY_OK', roomCode: code, state: room.getState() });
+    }
     send(ws, { type: 'LOBBY_UPDATE', state: room.getState() });
 
     ws.on('message', (data) => {
@@ -166,6 +175,11 @@ export function setupWebSocket(server, manager) {
     ws.on('close', () => {
       handleDisconnect(ws, meta, room);
       socketMeta.delete(ws);
+      const sockets = roomSockets.get(code);
+      if (sockets) {
+        sockets.delete(ws);
+        if (sockets.size === 0) roomSockets.delete(code);
+      }
     });
 
     ws.on('error', () => {
@@ -383,5 +397,10 @@ export function setupWebSocket(server, manager) {
     graceTimers.set(playerId, timer);
   }
 
-  return { wss, broadcastToRoom, sendToPlayer };
+  function hasActiveSockets(code) {
+    const sockets = roomSockets.get(code);
+    return sockets ? sockets.size > 0 : false;
+  }
+
+  return { wss, broadcastToRoom, sendToPlayer, hasActiveSockets };
 }

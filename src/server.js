@@ -18,7 +18,10 @@ const server = http.createServer(app);
 setupRoutes(app, manager);
 
 // Set up WebSocket handling
-const { wss, broadcastToRoom } = setupWebSocket(server, manager);
+const { wss, broadcastToRoom, hasActiveSockets } = setupWebSocket(server, manager);
+
+// Tell the manager how to check for active sockets (avoids cleaning up rooms with connected displays)
+manager.hasActiveSockets = (code) => hasActiveSockets(code);
 
 // Start listening
 server.listen(PORT, () => {

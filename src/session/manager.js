@@ -59,12 +59,12 @@ class RoomManager {
   cleanup() {
     const now = Date.now();
     for (const [code, room] of this.rooms) {
-      const idleTooLong = (now - room.lastActivity) > IDLE_TIMEOUT_MS;
-
-      let connectedCount = 0;
-      for (const [, player] of room.players) {
-        if (player.connected) connectedCount++;
+      // Never clean up rooms that have active WebSocket connections (host display counts)
+      if (this.hasActiveSockets && this.hasActiveSockets(code)) {
+        continue;
       }
+
+      const idleTooLong = (now - room.lastActivity) > IDLE_TIMEOUT_MS;
       const emptyTooLong = room.players.size === 0 &&
         (now - room.lastActivity) > EMPTY_TIMEOUT_MS;
 
