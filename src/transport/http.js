@@ -53,15 +53,18 @@ export function setupRoutes(app, manager) {
   // Static files from public/
   app.use(express.static(PUBLIC_DIR));
 
-  // SPA fallback: serve index.html for non-API, non-static routes
-  // Express 5 requires named params; use a middleware instead of wildcard route
+  // Route /host/:code to host.html, /player/:code to player.html
   app.use((req, res) => {
-    // Don't intercept API routes or WebSocket paths
     if (req.path.startsWith('/api/') || req.path.startsWith('/ws/')) {
       res.status(404).json({ error: 'Not found' });
       return;
     }
-    res.sendFile(path.join(PUBLIC_DIR, 'index.html'), (err) => {
+
+    let file = 'index.html';
+    if (req.path.startsWith('/host/')) file = 'host.html';
+    else if (req.path.startsWith('/player/')) file = 'player.html';
+
+    res.sendFile(path.join(PUBLIC_DIR, file), (err) => {
       if (err) {
         res.status(404).json({ error: 'Not found' });
       }
