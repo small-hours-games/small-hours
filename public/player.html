@@ -590,7 +590,7 @@
         state.reconnectAttempts = 0;
         setConnectionStatus('connected', 'Connected');
         // Send join message
-        send({ type: 'JOIN', name: state.name });
+        send({ type: 'JOIN_LOBBY', username: state.name });
       };
 
       ws.onmessage = (e) => {
@@ -641,7 +641,7 @@
           break;
 
         case 'LOBBY_UPDATE':
-          state.players = msg.players || [];
+          state.players = (msg.state ? msg.state.players : msg.players) || [];
           renderLobbyPlayers();
           break;
 
@@ -716,10 +716,11 @@
         const readyText = p.ready
           ? '<span class="player-ready">Ready</span>'
           : '<span class="player-not-ready">Not ready</span>';
-        const isMe = p.name === state.name ? ' style="border-left:3px solid var(--neon-purple);padding-left:12px;"' : '';
+        const pName = p.username || p.name;
+        const isMe = pName === state.name ? ' style="border-left:3px solid var(--neon-purple);padding-left:12px;"' : '';
         return '<div class="player-item"' + isMe + '>' +
           '<span class="player-avatar">' + avatar + '</span>' +
-          '<span class="player-name">' + escapeHtml(p.name) + '</span>' +
+          '<span class="player-name">' + escapeHtml(pName) + '</span>' +
           readyText + '</div>';
       }).join('') + '</div>';
     }

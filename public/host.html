@@ -581,7 +581,7 @@
           break;
 
         case 'LOBBY_UPDATE':
-          state.players = msg.players || [];
+          state.players = (msg.state ? msg.state.players : msg.players) || [];
           renderPlayers();
           break;
 
@@ -642,7 +642,7 @@
         return '<div class="player-card ' + readyClass + '">' +
           '<div class="avatar">' + avatar + '</div>' +
           '<div class="info">' +
-            '<div class="name">' + escapeHtml(p.name) + ' ' + adminBadge + '</div>' +
+            '<div class="name">' + escapeHtml(p.username || p.name) + ' ' + adminBadge + '</div>' +
             '<div class="status">' + statusText + '</div>' +
           '</div>' +
         '</div>';
