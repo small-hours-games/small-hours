@@ -429,6 +429,13 @@
         </div>
       </div>
 
+      <!-- Admin: Start Game button -->
+      <div id="adminControls" style="display:none;">
+        <button class="btn btn-primary" id="startGameBtn" onclick="startGame()" style="font-size:1.1rem;padding:16px;">
+          Start Game
+        </button>
+      </div>
+
       <!-- Player list -->
       <div class="card" id="lobbyPlayers">
         <div style="color: var(--text-secondary); font-size: 0.9rem;">Waiting for players...</div>
@@ -656,24 +663,30 @@
     function handleMessage(msg) {
       switch (msg.type) {
         case 'JOIN_OK':
+          state.playerId = msg.playerId;
           state.myIndex = msg.index ?? 0;
-          document.getElementById('myAvatar').textContent = AVATARS[state.myIndex % AVATARS.length];
+          if (msg.avatar) document.getElementById('myAvatar').textContent = msg.avatar;
           showToast('Joined room ' + state.code, 'success');
           break;
 
-        case 'LOBBY_UPDATE':
-          state.players = (msg.state ? msg.state.players : msg.players) || [];
+        case 'LOBBY_UPDATE': {
+          const lobbyState = msg.state || msg;
+          state.players = lobbyState.players || [];
+          state.isAdmin = state.players.some(p => p.playerId === state.playerId && p.isAdmin);
+          state.gameSuggestions = lobbyState.gameSuggestions || {};
           renderLobbyPlayers();
+          renderAdminControls();
           break;
+        }
 
         case 'MINI_GAME_STARTING':
-          state.gameType = msg.game;
+          state.gameType = msg.gameType;
           state.selectedAnswer = null;
           state.eliminatedAnswers = [];
           state.guessHistory = [];
           state.powerupsUsed = { double: false, '5050': false, freeze: false };
-          showSection(getGameSectionId(msg.game));
-          showToast('Starting: ' + (msg.name || msg.game), 'success');
+          showSection(getGameSectionId(msg.gameType));
+          showToast('Game starting!', 'success');
           break;
 
         case 'GAME_STATE':
@@ -694,14 +707,26 @@
     }
 
     function handleGameState(msg) {
-      if (msg.phase === 'lobby' || msg.phase === 'finished') {
-        state.gameType = null;
-        state.ready = false;
-        updateReadyBtn();
-        showSection('lobbySection');
-        if (msg.phase === 'finished' && msg.winner) {
-          showToast(msg.winner + ' wins!', 'success');
+      // Track game type if provided
+      if (msg.gameType) state.gameType = msg.gameType;
+
+      if (msg.phase === 'finished') {
+        if (msg.winner) {
+          showToast('Game over! Winner decided!', 'success');
         }
+        // Show final state before returning to lobby
+        switch (state.gameType) {
+          case 'number-guess': renderNumberGuessState(msg); break;
+          case 'quiz': renderQuizState(msg); break;
+          case 'spy': renderSpyState(msg); break;
+        }
+        // Return to lobby after a delay
+        setTimeout(() => {
+          state.gameType = null;
+          state.ready = false;
+          updateReadyBtn();
+          showSection('lobbySection');
+        }, 3000);
         return;
       }
 
@@ -773,6 +798,26 @@
       if (el) el.classList.add('voted');
     }
 
+    function renderAdminControls() {
+      const controls = document.getElementById('adminControls');
+      if (!state.isAdmin) {
+        controls.style.display = 'none';
+        return;
+      }
+      controls.style.display = 'block';
+      // Determine which game to start based on suggestions or default
+      const suggestions = Object.values(state.gameSuggestions || {});
+      const topGame = suggestions.length > 0 ? suggestions[suggestions.length - 1] : 'number-guess';
+      state.gameToStart = topGame;
+      const names = { 'number-guess': 'Number Guess', 'quiz': 'Quiz', 'spy': 'Spy Game' };
+      document.getElementById('startGameBtn').textContent = 'Start ' + (names[topGame] || topGame);
+    }
+
+    function startGame() {
+      const gameType = state.gameToStart || 'number-guess';
+      send({ type: 'START_MINI_GAME', gameType });
+    }
+
     // --- Chat ---
     function sendChat() {
       const input = document.getElementById('chatInput');
@@ -794,42 +839,70 @@
 
     // --- Number Guess ---
     function renderNumberGuessState(msg) {
-      document.getElementById('ngRoundLabel').textContent = 'Round ' + (msg.round || '?') + ' / ' + (msg.totalRounds || '?');
-      document.getElementById('ngRange').textContent = (msg.rangeLow ?? 1) + ' - ' + (msg.rangeHigh ?? 100);
+      // msg has: phase, round, maxRounds, myGuesses: [{number, result}], otherPlayers, winner?, secret?
+      document.getElementById('ngRoundLabel').textContent = 'Guesses: ' + (msg.myGuesses ? msg.myGuesses.length : 0) + ' / ' + (msg.maxRounds || 10);
 
-      if (msg.feedback) {
-        document.getElementById('ngFeedback').innerHTML = msg.feedback;
+      // Show range hint based on guesses
+      let low = 1, high = 100;
+      if (msg.myGuesses) {
+        for (const g of msg.myGuesses) {
+          if (g.result === 'too_low' && g.number >= low) low = g.number + 1;
+          if (g.result === 'too_high' && g.number <= high) high = g.number - 1;
+        }
+      }
+      document.getElementById('ngRange').textContent = low + ' - ' + high;
+
+      // Show feedback from last guess
+      const fb = document.getElementById('ngFeedback');
+      if (msg.myGuesses && msg.myGuesses.length > 0) {
+        const last = msg.myGuesses[msg.myGuesses.length - 1];
+        if (last.result === 'correct') {
+          fb.innerHTML = '<span style="color:var(--neon-green);font-size:1.3rem;font-weight:700;">Correct! The number was ' + last.number + '!</span>';
+        } else if (last.result === 'too_high') {
+          fb.innerHTML = '<span style="color:var(--neon-pink);">Too high!</span>';
+        } else if (last.result === 'too_low') {
+          fb.innerHTML = '<span style="color:var(--neon-blue);">Too low!</span>';
+        }
       }
 
-      if (msg.myGuess) {
-        const exists = state.guessHistory.find(g => g.value === msg.myGuess.value);
-        if (!exists) state.guessHistory.push(msg.myGuess);
-        renderGuessHistory();
+      // Show secret on game end
+      if (msg.phase === 'finished' && msg.secret) {
+        fb.innerHTML = '<span style="color:var(--neon-green);font-size:1.3rem;font-weight:700;">The number was ' + msg.secret + '!</span>';
       }
 
-      if (msg.score != null) {
+      // Render guess history
+      const container = document.getElementById('ngHistory');
+      if (msg.myGuesses) {
+        container.innerHTML = msg.myGuesses.map(g => {
+          const icon = g.result === 'correct' ? ' &#9989;' : (g.result === 'too_high' ? ' &#11015;' : ' &#11014;');
+          const cls = g.result === 'correct' ? 'correct' : (g.result === 'too_high' ? 'high' : 'low');
+          return '<span class="guess-chip ' + cls + '">' + g.number + icon + '</span>';
+        }).join('');
+      }
+
+      // Disable input when game over
+      const isOver = msg.phase === 'finished';
+      document.getElementById('ngSubmitBtn').disabled = isOver;
+      document.getElementById('ngInput').disabled = isOver;
+
+      // Show score on finish
+      if (isOver && msg.scores) {
         document.getElementById('ngScore').style.display = 'block';
-        document.getElementById('ngScoreVal').textContent = msg.score;
+        // Find our score - scores is keyed by playerId, but we don't know our playerId on the client
+        // Just show the winner info
       }
-
-      document.getElementById('ngSubmitBtn').disabled = !!msg.locked;
     }
 
     function submitGuess() {
       const input = document.getElementById('ngInput');
       const val = parseInt(input.value, 10);
-      if (isNaN(val)) return;
+      if (isNaN(val) || val < 1 || val > 100) {
+        showToast('Enter a number between 1 and 100', 'error');
+        return;
+      }
       send({ type: 'GAME_ACTION', action: { type: 'guess', number: val } });
       input.value = '';
-    }
-
-    function renderGuessHistory() {
-      const container = document.getElementById('ngHistory');
-      container.innerHTML = state.guessHistory.map(g => {
-        const cls = g.direction || 'neutral';
-        const icon = g.direction === 'correct' ? ' &#9989;' : (g.direction === 'higher' ? ' &#11014;' : g.direction === 'lower' ? ' &#11015;' : '');
-        return '<span class="guess-chip ' + cls + '">' + g.value + icon + '</span>';
-      }).join('');
+      input.focus();
     }
 
     // --- Quiz ---

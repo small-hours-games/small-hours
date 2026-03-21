@@ -283,6 +283,14 @@ export function setupWebSocket(server, manager) {
         gameType: msg.gameType,
         gameId: game.id,
       });
+
+      // Send initial game state to each player
+      for (const [id] of room.players) {
+        const view = getView(room.game, id);
+        sendToPlayer(id, { type: 'GAME_STATE', ...view, gameType: msg.gameType });
+      }
+      // Also broadcast to host displays
+      broadcastToRoom(room.code, { type: 'GAME_STATE', gameType: msg.gameType, phase: room.game.state.phase });
     } catch (err) {
       send(ws, { type: 'ERROR', message: err.message });
     }
@@ -325,21 +333,28 @@ export function setupWebSocket(server, manager) {
     room.game = updatedGame;
     room.lastActivity = Date.now();
 
-    // Broadcast events to the room
-    for (const event of events) {
-      broadcastToRoom(room.code, { type: 'GAME_EVENT', event });
-    }
-
-    // Send per-player views
+    // Send per-player views (flattened into GAME_STATE)
     for (const [id] of room.players) {
       const view = getView(room.game, id);
-      sendToPlayer(id, { type: 'GAME_STATE', view });
+      sendToPlayer(id, { type: 'GAME_STATE', ...view });
     }
+
+    // Also broadcast shared state to host displays
+    const sharedState = { type: 'GAME_STATE', phase: room.game.state.phase };
+    if (events.length > 0) sharedState.events = events;
+    broadcastToRoom(room.code, sharedState);
 
     // Check for game end
     const endResult = checkEnd(room.game);
     if (endResult) {
-      broadcastToRoom(room.code, { type: 'GAME_OVER', result: endResult });
+      // Send final views with end result
+      for (const [id] of room.players) {
+        const view = getView(room.game, id);
+        sendToPlayer(id, { type: 'GAME_STATE', ...view, ...endResult });
+      }
+      broadcastToRoom(room.code, { type: 'GAME_STATE', phase: 'finished', ...endResult });
+      room.endGame();
+      broadcastToRoom(room.code, { type: 'LOBBY_UPDATE', state: room.getState() });
     }
   }
 

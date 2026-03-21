@@ -592,13 +592,24 @@
           break;
 
         case 'MINI_GAME_STARTING':
-          state.gameType = msg.game;
+          state.gameType = msg.gameType;
           showGameView(msg);
           break;
 
         case 'GAME_STATE':
+          if (msg.gameType) state.gameType = msg.gameType;
           state.gameState = msg;
+          // Track guess events for host display
+          if (msg.events) {
+            if (!state.gameEvents) state.gameEvents = [];
+            state.gameEvents.push(...msg.events);
+          }
           renderGameState(msg);
+          break;
+
+        case 'GAME_EVENT':
+          if (!state.gameEvents) state.gameEvents = [];
+          state.gameEvents.push(msg.event);
           break;
 
         case 'CHAT_MESSAGE':
@@ -645,6 +656,7 @@
 
     // --- Render: Game ---
     function showGameView(msg) {
+      state.gameEvents = [];
       document.getElementById('lobbyView').style.display = 'none';
       document.getElementById('gameView').style.display = 'block';
       document.getElementById('scorePanel').style.display = 'block';
@@ -655,8 +667,8 @@
         'quiz': 'Quiz Time',
         'spy': 'Spy Game'
       };
-      document.getElementById('gameTitle').textContent = titles[msg.game] || msg.game;
-      document.getElementById('roundInfo').textContent = msg.description || '';
+      document.getElementById('gameTitle').textContent = titles[msg.gameType] || msg.gameType;
+      document.getElementById('roundInfo').textContent = '';
     }
 
     function renderGameState(msg) {
@@ -674,29 +686,42 @@
 
     function renderNumberGuess(msg) {
       const content = document.getElementById('gameContent');
-      const round = msg.round || '?';
-      const totalRounds = msg.totalRounds || '?';
-      const low = msg.rangeLow ?? 1;
-      const high = msg.rangeHigh ?? 100;
-      const feedback = msg.feedback || '';
-      const guesses = msg.recentGuesses || [];
+      const events = state.gameEvents || [];
 
-      let html = '<div class="number-guess-display">' +
-        '<div class="guess-round-label">Round ' + round + ' / ' + totalRounds + '</div>' +
-        '<div class="guess-range">' + low + ' &mdash; ' + high + '</div>';
+      // Build guess log from events
+      const guessEvents = events.filter(e => e.type === 'guess_result');
 
-      if (feedback) {
-        html += '<div class="guess-feedback">' + escapeHtml(feedback) + '</div>';
+      let html = '<div class="number-guess-display">';
+
+      if (msg.phase === 'finished') {
+        html += '<div class="guess-feedback" style="color:var(--neon-green);font-size:2rem;">Number found!</div>';
+        if (msg.secret) {
+          html += '<div style="font-size:1.5rem;margin:12px 0;">The number was <strong style="color:var(--neon-blue);">' + msg.secret + '</strong></div>';
+        }
+      } else {
+        html += '<div class="guess-round-label">Guessing in progress...</div>' +
+          '<div class="guess-range" style="font-size:3rem;">1 &mdash; 100</div>';
       }
 
-      if (guesses.length > 0) {
-        html += '<div class="card mt-2" style="max-width:400px;margin:0 auto;text-align:left;">';
-        guesses.forEach(g => {
-          const icon = g.direction === 'correct' ? '&#9989;' : (g.direction === 'higher' ? '&#11014;' : '&#11015;');
-          html += '<div class="clue-item"><span class="clue-author">' + escapeHtml(g.name) + '</span>' +
-            '<span>' + g.value + ' ' + icon + '</span></div>';
+      if (guessEvents.length > 0) {
+        html += '<div class="card" style="max-width:500px;margin:16px auto;text-align:left;">';
+        // Show last 10 guesses
+        guessEvents.slice(-10).forEach(g => {
+          const icon = g.result === 'correct' ? '&#9989;' : (g.result === 'too_high' ? '&#11015; Too high' : '&#11014; Too low');
+          const color = g.result === 'correct' ? 'var(--neon-green)' : 'var(--text-secondary)';
+          // Look up player name
+          const player = state.players.find(p => p.playerId === g.playerId);
+          const name = player ? (player.username || player.name) : 'Player';
+          html += '<div class="clue-item"><span class="clue-author">' + escapeHtml(name) + '</span>' +
+            '<span style="color:' + color + ';">' + g.number + ' ' + icon + '</span></div>';
         });
         html += '</div>';
+      } else {
+        html += '<div style="color:var(--text-secondary);margin-top:24px;">Waiting for guesses...</div>';
+      }
+
+      if (msg.scores) {
+        renderScoreboard(msg.scores);
       }
 
       html += '</div>';
@@ -804,17 +829,29 @@
     }
 
     function returnToLobby(msg) {
-      if (msg.phase === 'lobby' || msg.phase === 'finished') {
+      if (msg.phase === 'finished') {
+        if (msg.winner) {
+          const player = state.players.find(p => p.playerId === msg.winner);
+          const name = player ? (player.username || player.name) : 'Someone';
+          showToast(name + ' wins!', 'success');
+          spawnConfetti();
+        }
+        // Show final state for a few seconds then return to lobby
+        setTimeout(() => {
+          state.gameType = null;
+          state.gameEvents = [];
+          document.getElementById('lobbyView').style.display = '';
+          document.getElementById('gameView').style.display = 'none';
+          document.getElementById('scorePanel').style.display = 'none';
+          document.getElementById('timerContainer').style.display = 'none';
+        }, 4000);
+      } else if (msg.phase === 'lobby') {
         state.gameType = null;
+        state.gameEvents = [];
         document.getElementById('lobbyView').style.display = '';
         document.getElementById('gameView').style.display = 'none';
         document.getElementById('scorePanel').style.display = 'none';
         document.getElementById('timerContainer').style.display = 'none';
-
-        if (msg.phase === 'finished' && msg.winner) {
-          showToast(msg.winner + ' wins!', 'success');
-          spawnConfetti();
-        }
       }
     }
 
