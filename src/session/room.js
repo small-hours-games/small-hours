@@ -3,6 +3,7 @@
 
 import { createGame, processAction, getView, checkEnd } from '../engine/engine.js';
 import numberGuess from '../engine/games/number-guess.js';
+import shithead from '../engine/games/shithead.js';
 
 const AVATAR_POOL = [
   '\u{1F98A}', '\u{1F438}', '\u{1F43C}', '\u{1F981}', '\u{1F42F}',
@@ -16,6 +17,7 @@ const CODE_CHARS = 'ABCDEFGHJKLMNPQRTUVWXYZ0123456789';
 
 const GAME_REGISTRY = {
   'number-guess': numberGuess,
+  'shithead': shithead,
 };
 
 let playerCounter = 0;

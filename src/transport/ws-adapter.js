@@ -339,8 +339,16 @@ export function setupWebSocket(server, manager) {
       sendToPlayer(id, { type: 'GAME_STATE', ...view });
     }
 
-    // Also broadcast shared state to host displays
-    const sharedState = { type: 'GAME_STATE', phase: room.game.state.phase };
+    // Also broadcast shared state to host displays (use first player's view as base, minus private data)
+    const hostView = getView(room.game, room.players.keys().next().value);
+    const sharedState = { type: 'GAME_STATE', ...hostView };
+    delete sharedState.myHand;
+    delete sharedState.myFaceUp;
+    delete sharedState.myFaceDownCount;
+    delete sharedState.myFaceDownIds;
+    delete sharedState.myGuesses;
+    delete sharedState.isMyTurn;
+    delete sharedState.swapConfirmed;
     if (events.length > 0) sharedState.events = events;
     broadcastToRoom(room.code, sharedState);
 

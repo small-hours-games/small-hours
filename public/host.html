@@ -665,7 +665,8 @@
       const titles = {
         'number-guess': 'Number Guess',
         'quiz': 'Quiz Time',
-        'spy': 'Spy Game'
+        'spy': 'Spy Game',
+        'shithead': 'Shithead'
       };
       document.getElementById('gameTitle').textContent = titles[msg.gameType] || msg.gameType;
       document.getElementById('roundInfo').textContent = '';
@@ -678,6 +679,7 @@
         case 'number-guess': renderNumberGuess(msg); break;
         case 'quiz': renderQuiz(msg); break;
         case 'spy': renderSpy(msg); break;
+        case 'shithead': renderShithead(msg); break;
       }
 
       if (msg.scores) renderScoreboard(msg.scores);
@@ -808,6 +810,73 @@
           html += '<div class="clue-item">' +
             '<span class="clue-author">' + escapeHtml(c.name) + '</span>' +
             '<span class="clue-text">"' + escapeHtml(c.text) + '"</span></div>';
+        });
+        html += '</div>';
+      }
+
+      html += '</div>';
+      content.innerHTML = html;
+    }
+
+    function renderShithead(msg) {
+      const content = document.getElementById('gameContent');
+      const events = state.gameEvents || [];
+
+      let html = '<div style="text-align:center;">';
+
+      if (msg.phase === 'swap') {
+        html += '<div style="font-size:1.5rem;margin:24px 0;">Swap Phase</div>' +
+          '<p style="color:var(--text-secondary);">Players are swapping cards...</p>';
+      } else if (msg.phase === 'play') {
+        html += '<div style="font-size:1.2rem;margin:16px 0;color:var(--text-secondary);">Game in progress</div>';
+        // Show pile
+        if (msg.pileTop) {
+          const ranks = {2:'2',3:'3',4:'4',5:'5',6:'6',7:'7',8:'8',9:'9',10:'10',11:'J',12:'Q',13:'K',14:'A'};
+          const suits = {h:'&#9829;',d:'&#9830;',c:'&#9827;',s:'&#9824;'};
+          const r = ranks[msg.pileTop.rank] || msg.pileTop.rank;
+          const s = suits[msg.pileTop.suit] || msg.pileTop.suit;
+          const color = (msg.pileTop.suit === 'h' || msg.pileTop.suit === 'd') ? '#ff4757' : '#e0e0ff';
+          html += '<div style="font-size:3rem;color:' + color + ';margin:16px 0;">' + r + s + '</div>' +
+            '<div style="color:var(--text-secondary);">Pile: ' + (msg.pileCount || 0) + ' cards</div>';
+        } else {
+          html += '<div style="font-size:2rem;color:var(--text-secondary);margin:16px 0;">Pile: Empty</div>';
+        }
+      } else if (msg.phase === 'finished') {
+        html += '<div style="font-size:2rem;color:var(--neon-green);margin:24px 0;">Game Over!</div>';
+        if (msg.loser) {
+          const p = state.players.find(pl => pl.playerId === msg.loser);
+          const name = p ? (p.username || p.name) : 'Someone';
+          html += '<div style="font-size:1.5rem;color:var(--neon-pink);">' + escapeHtml(name) + ' is the Shithead!</div>';
+        }
+      }
+
+      // Show recent events
+      const playEvents = events.filter(e => e.type !== 'error').slice(-5);
+      if (playEvents.length > 0) {
+        html += '<div class="card" style="max-width:500px;margin:16px auto;text-align:left;">';
+        playEvents.forEach(e => {
+          const p = state.players.find(pl => pl.playerId === e.playerId);
+          const name = p ? (p.username || p.name) : 'Player';
+          html += '<div class="clue-item"><span class="clue-author">' + escapeHtml(name) + '</span>' +
+            '<span>' + escapeHtml(e.message || e.type) + '</span></div>';
+        });
+        html += '</div>';
+      }
+
+      // Show player card counts
+      if (msg.players) {
+        html += '<div style="display:flex;gap:16px;justify-content:center;flex-wrap:wrap;margin-top:16px;">';
+        msg.players.forEach(p => {
+          const player = state.players.find(pl => pl.playerId === p.playerId);
+          const name = player ? (player.username || player.name) : p.playerId;
+          const isCurrent = p.playerId === msg.currentPlayer;
+          const border = isCurrent ? 'border:2px solid var(--neon-purple);' : '';
+          const total = p.handCount + p.faceUp.length + p.faceDownCount;
+          html += '<div class="card" style="padding:12px;min-width:120px;text-align:center;' + border + '">' +
+            '<div style="font-weight:600;">' + escapeHtml(name) + '</div>' +
+            '<div style="font-size:0.8rem;color:var(--text-secondary);">' +
+            (p.isOut ? '<span style="color:var(--neon-green);">Out!</span>' : total + ' cards') +
+            '</div></div>';
         });
         html += '</div>';
       }

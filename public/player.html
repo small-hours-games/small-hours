@@ -379,6 +379,51 @@
       to { opacity: 1; transform: translateY(0); }
     }
 
+    /* Shithead card game */
+    .card-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      min-height: 50px;
+    }
+
+    .playing-card {
+      width: 44px;
+      height: 62px;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.85rem;
+      font-weight: 700;
+      cursor: pointer;
+      border: 2px solid rgba(255,255,255,0.1);
+      transition: all 0.15s;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+      background: rgba(255,255,255,0.08);
+      flex-direction: column;
+      line-height: 1;
+    }
+
+    .playing-card.red { color: #ff4757; }
+    .playing-card.black { color: #e0e0ff; }
+
+    .playing-card.selected {
+      border-color: var(--neon-green);
+      box-shadow: 0 0 10px rgba(57, 255, 20, 0.3);
+      transform: translateY(-4px);
+    }
+
+    .playing-card.facedown {
+      background: linear-gradient(135deg, var(--neon-purple), var(--neon-blue));
+      color: white;
+      font-size: 1.2rem;
+    }
+
+    .playing-card .card-rank { font-size: 0.9rem; }
+    .playing-card .card-suit { font-size: 0.7rem; opacity: 0.8; }
+
     @media (max-width: 400px) {
       .answer-grid { grid-template-columns: 1fr; }
       .game-suggest-grid { grid-template-columns: 1fr 1fr; }
@@ -425,6 +470,10 @@
           <button class="suggest-btn" onclick="suggestGame('spy')" id="suggestSpy">
             <span class="icon">&#128373;</span>
             Spy
+          </button>
+          <button class="suggest-btn" onclick="suggestGame('shithead')" id="suggestShithead">
+            <span class="icon">&#127183;</span>
+            Shithead
           </button>
         </div>
       </div>
@@ -532,6 +581,64 @@
       </div>
     </div>
 
+    <!-- SHITHEAD SECTION -->
+    <div class="section" id="shitheadSection">
+      <div id="shPhaseInfo" class="card text-center" style="padding:12px;">
+        <span style="font-size:0.85rem;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.1em;">Shithead</span>
+      </div>
+
+      <!-- Swap Phase -->
+      <div id="shSwapView" style="display:none;">
+        <div class="card">
+          <div style="font-size:0.85rem;color:var(--text-secondary);margin-bottom:8px;">Swap hand cards with face-up cards</div>
+          <div style="margin-bottom:12px;">
+            <div style="font-size:0.8rem;color:var(--text-secondary);margin-bottom:4px;">Your Hand</div>
+            <div id="shSwapHand" class="card-row"></div>
+          </div>
+          <div style="margin-bottom:12px;">
+            <div style="font-size:0.8rem;color:var(--text-secondary);margin-bottom:4px;">Face Up</div>
+            <div id="shSwapFaceUp" class="card-row"></div>
+          </div>
+          <button class="btn btn-primary" onclick="confirmShSwap()" id="shConfirmSwapBtn">Done Swapping</button>
+        </div>
+      </div>
+
+      <!-- Play Phase -->
+      <div id="shPlayView" style="display:none;">
+        <!-- Pile -->
+        <div class="card text-center" style="padding:16px;">
+          <div style="font-size:0.8rem;color:var(--text-secondary);margin-bottom:4px;">Pile (<span id="shPileCount">0</span>)</div>
+          <div id="shPileTop" style="font-size:2.5rem;">-</div>
+          <div id="shTurnInfo" style="font-size:0.9rem;margin-top:8px;"></div>
+        </div>
+
+        <!-- My cards -->
+        <div class="card">
+          <div style="font-size:0.8rem;color:var(--text-secondary);margin-bottom:4px;">Your Hand</div>
+          <div id="shHand" class="card-row"></div>
+        </div>
+
+        <div class="card" id="shFaceUpSection">
+          <div style="font-size:0.8rem;color:var(--text-secondary);margin-bottom:4px;">Face Up</div>
+          <div id="shFaceUp" class="card-row"></div>
+        </div>
+
+        <div class="card" id="shFaceDownSection">
+          <div style="font-size:0.8rem;color:var(--text-secondary);margin-bottom:4px;">Face Down</div>
+          <div id="shFaceDown" class="card-row"></div>
+        </div>
+
+        <!-- Action buttons -->
+        <div id="shActions" style="display:flex;gap:8px;">
+          <button class="btn btn-primary" onclick="playSelectedCards()" id="shPlayBtn" disabled style="flex:1;">Play Selected</button>
+          <button class="btn btn-secondary" onclick="pickUpPile()" id="shPickUpBtn" style="flex:1;">Pick Up Pile</button>
+        </div>
+      </div>
+
+      <!-- Other players info -->
+      <div class="card" id="shOtherPlayers" style="margin-top:8px;"></div>
+    </div>
+
   </main>
 
   <!-- Toast container -->
@@ -560,6 +667,8 @@
       maxReconnect: 10,
       reconnectTimer: null,
       votedGame: null,
+      shSelectedCards: [],
+      shSwapSelected: { hand: null, faceUp: null },
     };
 
     // --- Init ---
@@ -719,6 +828,7 @@
           case 'number-guess': renderNumberGuessState(msg); break;
           case 'quiz': renderQuizState(msg); break;
           case 'spy': renderSpyState(msg); break;
+          case 'shithead': renderShitheadState(msg); break;
         }
         // Return to lobby after a delay
         setTimeout(() => {
@@ -734,6 +844,7 @@
         case 'number-guess': renderNumberGuessState(msg); break;
         case 'quiz': renderQuizState(msg); break;
         case 'spy': renderSpyState(msg); break;
+        case 'shithead': renderShitheadState(msg); break;
       }
     }
 
@@ -745,7 +856,7 @@
     }
 
     function getGameSectionId(game) {
-      const map = { 'number-guess': 'numberGuessSection', 'quiz': 'quizSection', 'spy': 'spySection' };
+      const map = { 'number-guess': 'numberGuessSection', 'quiz': 'quizSection', 'spy': 'spySection', 'shithead': 'shitheadSection' };
       return map[game] || 'lobbySection';
     }
 
@@ -809,7 +920,7 @@
       const suggestions = Object.values(state.gameSuggestions || {});
       const topGame = suggestions.length > 0 ? suggestions[suggestions.length - 1] : 'number-guess';
       state.gameToStart = topGame;
-      const names = { 'number-guess': 'Number Guess', 'quiz': 'Quiz', 'spy': 'Spy Game' };
+      const names = { 'number-guess': 'Number Guess', 'quiz': 'Quiz', 'spy': 'Spy Game', 'shithead': 'Shithead' };
       document.getElementById('startGameBtn').textContent = 'Start ' + (names[topGame] || topGame);
     }
 
@@ -1083,6 +1194,208 @@
       input.value = '';
       input.disabled = true;
       document.getElementById('spyGuessBtn').disabled = true;
+    }
+
+    // --- Shithead ---
+    function renderShitheadState(msg) {
+      // msg has: phase, currentPlayer, myHand, myFaceUp, myFaceDownCount, pileTop, pileCount, drawPileCount, players, finishOrder, isMyTurn, swapConfirmed
+
+      if (msg.phase === 'swap') {
+        document.getElementById('shSwapView').style.display = 'block';
+        document.getElementById('shPlayView').style.display = 'none';
+        renderShSwap(msg);
+      } else if (msg.phase === 'play') {
+        document.getElementById('shSwapView').style.display = 'none';
+        document.getElementById('shPlayView').style.display = 'block';
+        renderShPlay(msg);
+      }
+
+      // Show other players
+      renderShOtherPlayers(msg);
+    }
+
+    function renderShSwap(msg) {
+      const handDiv = document.getElementById('shSwapHand');
+      const faceUpDiv = document.getElementById('shSwapFaceUp');
+
+      handDiv.innerHTML = (msg.myHand || []).map(c =>
+        '<div class="playing-card ' + cardColor(c) + '" onclick="shSwapSelect(\'hand\',\'' + c.id + '\')" ' +
+        'id="shSwapH_' + c.id + '">' + cardDisplay(c) + '</div>'
+      ).join('');
+
+      faceUpDiv.innerHTML = (msg.myFaceUp || []).map(c =>
+        '<div class="playing-card ' + cardColor(c) + '" onclick="shSwapSelect(\'faceUp\',\'' + c.id + '\')" ' +
+        'id="shSwapF_' + c.id + '">' + cardDisplay(c) + '</div>'
+      ).join('');
+
+      // Highlight selected
+      if (state.shSwapSelected.hand) {
+        const el = document.getElementById('shSwapH_' + state.shSwapSelected.hand);
+        if (el) el.classList.add('selected');
+      }
+      if (state.shSwapSelected.faceUp) {
+        const el = document.getElementById('shSwapF_' + state.shSwapSelected.faceUp);
+        if (el) el.classList.add('selected');
+      }
+
+      const confirmed = msg.swapConfirmed && msg.swapConfirmed[state.playerId];
+      document.getElementById('shConfirmSwapBtn').disabled = !!confirmed;
+      document.getElementById('shConfirmSwapBtn').textContent = confirmed ? 'Confirmed' : 'Done Swapping';
+    }
+
+    function shSwapSelect(source, cardId) {
+      if (source === 'hand') {
+        state.shSwapSelected.hand = state.shSwapSelected.hand === cardId ? null : cardId;
+      } else {
+        state.shSwapSelected.faceUp = state.shSwapSelected.faceUp === cardId ? null : cardId;
+      }
+
+      // If both selected, do the swap
+      if (state.shSwapSelected.hand && state.shSwapSelected.faceUp) {
+        send({ type: 'GAME_ACTION', action: { type: 'swapCard', handCardId: state.shSwapSelected.hand, faceUpCardId: state.shSwapSelected.faceUp } });
+        state.shSwapSelected = { hand: null, faceUp: null };
+      }
+
+      // Re-render to show selection (will be overwritten by next GAME_STATE)
+      document.querySelectorAll('#shSwapHand .playing-card, #shSwapFaceUp .playing-card').forEach(el => el.classList.remove('selected'));
+      if (state.shSwapSelected.hand) {
+        const el = document.getElementById('shSwapH_' + state.shSwapSelected.hand);
+        if (el) el.classList.add('selected');
+      }
+      if (state.shSwapSelected.faceUp) {
+        const el = document.getElementById('shSwapF_' + state.shSwapSelected.faceUp);
+        if (el) el.classList.add('selected');
+      }
+    }
+
+    function confirmShSwap() {
+      send({ type: 'GAME_ACTION', action: { type: 'confirmSwap' } });
+    }
+
+    function renderShPlay(msg) {
+      // Pile
+      document.getElementById('shPileCount').textContent = msg.pileCount || 0;
+      if (msg.pileTop) {
+        document.getElementById('shPileTop').innerHTML = '<div class="playing-card ' + cardColor(msg.pileTop) + '" style="width:60px;height:84px;font-size:1.2rem;margin:0 auto;">' + cardDisplay(msg.pileTop) + '</div>';
+      } else {
+        document.getElementById('shPileTop').textContent = 'Empty';
+      }
+
+      // Turn info
+      const turnInfo = document.getElementById('shTurnInfo');
+      if (msg.isMyTurn) {
+        turnInfo.innerHTML = '<span style="color:var(--neon-green);font-weight:700;">Your turn!</span>';
+      } else {
+        turnInfo.innerHTML = '<span style="color:var(--text-secondary);">Waiting for other player...</span>';
+      }
+
+      // Hand
+      const handDiv = document.getElementById('shHand');
+      const hand = msg.myHand || [];
+      handDiv.innerHTML = hand.length > 0 ? hand.map(c =>
+        '<div class="playing-card ' + cardColor(c) + (state.shSelectedCards.includes(c.id) ? ' selected' : '') + '" ' +
+        'onclick="shToggleCard(\'' + c.id + '\')">' + cardDisplay(c) + '</div>'
+      ).join('') : '<span style="color:var(--text-secondary);font-size:0.85rem;">Empty</span>';
+
+      // Face up
+      const faceUpDiv = document.getElementById('shFaceUp');
+      const faceUp = msg.myFaceUp || [];
+      const faceUpSection = document.getElementById('shFaceUpSection');
+      if (hand.length === 0 && faceUp.length > 0) {
+        faceUpSection.style.display = 'block';
+        faceUpDiv.innerHTML = faceUp.map(c =>
+          '<div class="playing-card ' + cardColor(c) + (state.shSelectedCards.includes(c.id) ? ' selected' : '') + '" ' +
+          'onclick="shToggleCard(\'' + c.id + '\')">' + cardDisplay(c) + '</div>'
+        ).join('');
+      } else {
+        faceUpSection.style.display = faceUp.length > 0 ? 'block' : 'none';
+        faceUpDiv.innerHTML = faceUp.map(c =>
+          '<div class="playing-card ' + cardColor(c) + '" style="opacity:0.5;">' + cardDisplay(c) + '</div>'
+        ).join('');
+      }
+
+      // Face down
+      const faceDownSection = document.getElementById('shFaceDownSection');
+      const fdCount = msg.myFaceDownCount || 0;
+      const fdIds = msg.myFaceDownIds || [];
+      if (hand.length === 0 && faceUp.length === 0 && fdCount > 0) {
+        faceDownSection.style.display = 'block';
+        document.getElementById('shFaceDown').innerHTML = fdIds.map(id =>
+          '<div class="playing-card facedown" onclick="shPlayFaceDown(\'' + id + '\')">?</div>'
+        ).join('');
+      } else {
+        faceDownSection.style.display = fdCount > 0 ? 'block' : 'none';
+        document.getElementById('shFaceDown').innerHTML = Array.from({length: fdCount}, () =>
+          '<div class="playing-card facedown" style="opacity:0.5;">?</div>'
+        ).join('');
+      }
+
+      // Enable/disable action buttons
+      document.getElementById('shPlayBtn').disabled = !msg.isMyTurn || state.shSelectedCards.length === 0;
+      document.getElementById('shPickUpBtn').disabled = !msg.isMyTurn || (msg.pileCount || 0) === 0;
+    }
+
+    function shToggleCard(cardId) {
+      const idx = state.shSelectedCards.indexOf(cardId);
+      if (idx >= 0) {
+        state.shSelectedCards.splice(idx, 1);
+      } else {
+        state.shSelectedCards.push(cardId);
+      }
+      // Re-render selection visually without waiting for server
+      document.querySelectorAll('#shHand .playing-card, #shFaceUp .playing-card').forEach(el => {
+        const id = el.getAttribute('onclick')?.match(/'([^']+)'/)?.[1];
+        if (id && state.shSelectedCards.includes(id)) el.classList.add('selected');
+        else el.classList.remove('selected');
+      });
+      document.getElementById('shPlayBtn').disabled = state.shSelectedCards.length === 0;
+    }
+
+    function playSelectedCards() {
+      if (state.shSelectedCards.length === 0) return;
+      send({ type: 'GAME_ACTION', action: { type: 'playCards', cardIds: [...state.shSelectedCards] } });
+      state.shSelectedCards = [];
+    }
+
+    function shPlayFaceDown(cardId) {
+      showToast('Playing face-down card...', 'info');
+      send({ type: 'GAME_ACTION', action: { type: 'playFaceDown', cardId: cardId } });
+    }
+
+    function pickUpPile() {
+      send({ type: 'GAME_ACTION', action: { type: 'pickUpPile' } });
+    }
+
+    function renderShOtherPlayers(msg) {
+      const container = document.getElementById('shOtherPlayers');
+      const others = (msg.players || []).filter(p => p.playerId !== state.playerId);
+      if (others.length === 0) { container.style.display = 'none'; return; }
+      container.style.display = 'block';
+
+      container.innerHTML = '<div style="font-size:0.8rem;color:var(--text-secondary);margin-bottom:6px;">Other Players</div>' +
+        others.map(p => {
+          const status = p.isOut ? '<span style="color:var(--neon-green);">Out!</span>' :
+            'Hand: ' + p.handCount + ' | Up: ' + p.faceUp.length + ' | Down: ' + p.faceDownCount;
+          const isCurrent = p.playerId === msg.currentPlayer ? ' style="border-left:3px solid var(--neon-purple);padding-left:8px;"' : '';
+          return '<div class="player-item"' + isCurrent + '>' +
+            '<span class="player-name">' + escapeHtml(p.playerId) + '</span>' +
+            '<span style="font-size:0.8rem;color:var(--text-secondary);">' + status + '</span></div>';
+        }).join('');
+    }
+
+    // Card display helpers
+    function cardDisplay(c) {
+      if (!c) return '?';
+      const ranks = {2:'2',3:'3',4:'4',5:'5',6:'6',7:'7',8:'8',9:'9',10:'10',11:'J',12:'Q',13:'K',14:'A'};
+      const suits = {h:'\u2665',d:'\u2666',c:'\u2663',s:'\u2660'};
+      const r = ranks[c.rank] || c.rank;
+      const s = suits[c.suit] || c.suit;
+      return '<span class="card-rank">' + r + '</span><span class="card-suit">' + s + '</span>';
+    }
+
+    function cardColor(c) {
+      if (!c) return '';
+      return (c.suit === 'h' || c.suit === 'd') ? 'red' : 'black';
     }
 
     // --- UI Helpers ---
