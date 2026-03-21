@@ -748,7 +748,7 @@
 
     function toggleReady() {
       state.ready = !state.ready;
-      send({ type: 'READY', ready: state.ready });
+      send({ type: 'SET_READY', ready: state.ready });
       updateReadyBtn();
     }
 
@@ -765,7 +765,7 @@
 
     function suggestGame(game) {
       state.votedGame = game;
-      send({ type: 'SUGGEST_GAME', game });
+      send({ type: 'SUGGEST_GAME', gameType: game });
 
       document.querySelectorAll('.suggest-btn').forEach(b => b.classList.remove('voted'));
       const id = 'suggest' + game.split('-').map(w => w[0].toUpperCase() + w.slice(1)).join('');
@@ -778,7 +778,7 @@
       const input = document.getElementById('chatInput');
       const text = input.value.trim();
       if (!text) return;
-      send({ type: 'CHAT', text });
+      send({ type: 'CHAT_MESSAGE', text });
       input.value = '';
     }
 
@@ -819,7 +819,7 @@
       const input = document.getElementById('ngInput');
       const val = parseInt(input.value, 10);
       if (isNaN(val)) return;
-      send({ type: 'GUESS', value: val });
+      send({ type: 'GAME_ACTION', action: { type: 'guess', number: val } });
       input.value = '';
     }
 
@@ -901,7 +901,7 @@
     function selectAnswer(index) {
       if (state.selectedAnswer !== null) return;
       state.selectedAnswer = index;
-      send({ type: 'ANSWER', index });
+      send({ type: 'GAME_ACTION', action: { type: 'answer', answerId: index } });
       // Re-render to show selected state
       renderQuizState({ phase: 'question', question: state._lastQuestion, timeLeft: state._lastTimeLeft, timeTotal: state._lastTimeTotal });
     }
@@ -909,7 +909,7 @@
     function usePowerup(type) {
       if (state.powerupsUsed[type]) return;
       state.powerupsUsed[type] = true;
-      send({ type: 'POWERUP', powerup: type });
+      send({ type: 'GAME_ACTION', action: { type: 'answer', powerupType: type } });
       updatePowerupBtns();
     }
 
@@ -995,7 +995,7 @@
       const input = document.getElementById('clueInput');
       const text = input.value.trim();
       if (!text) return;
-      send({ type: 'CLUE', text });
+      send({ type: 'GAME_ACTION', action: { type: 'sendClue', text } });
       input.value = '';
       input.disabled = true;
       document.getElementById('clueSubmitBtn').disabled = true;
@@ -1006,7 +1006,7 @@
       const input = document.getElementById('spyGuessField');
       const text = input.value.trim();
       if (!text) return;
-      send({ type: 'SPY_GUESS', text });
+      send({ type: 'GAME_ACTION', action: { type: 'sendGuess', text } });
       input.value = '';
       input.disabled = true;
       document.getElementById('spyGuessBtn').disabled = true;
