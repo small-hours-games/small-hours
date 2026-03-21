@@ -562,16 +562,37 @@
       const params = new URLSearchParams(window.location.search);
       state.name = params.get('name')?.trim();
 
-      if (!state.code || state.code.length !== 4 || !state.name) {
+      if (!state.code || state.code.length !== 4) {
         document.querySelector('.player-main').innerHTML =
-          '<div class="error-screen"><div class="card"><h2 style="margin-bottom:12px;">Missing Info</h2>' +
-          '<p class="text-secondary">Room code or name is missing.</p>' +
+          '<div class="error-screen"><div class="card"><h2 style="margin-bottom:12px;">Invalid Room</h2>' +
+          '<p class="text-secondary">No valid room code in URL.</p>' +
           '<a href="/" class="btn btn-primary mt-2" style="display:inline-flex;">Go Home</a></div></div>';
         return;
       }
 
-      document.getElementById('myName').textContent = state.name;
       document.getElementById('roomBadge').textContent = state.code;
+
+      if (!state.name) {
+        // Show name entry form
+        document.querySelector('.player-main').innerHTML =
+          '<div style="display:flex;flex-direction:column;align-items:center;gap:16px;padding:20px;">' +
+          '<h2 style="font-size:1.5rem;">Join Room <span style="color:var(--neon-purple);font-family:monospace;letter-spacing:0.15em;">' + state.code + '</span></h2>' +
+          '<form id="nameForm" style="width:100%;max-width:360px;display:flex;flex-direction:column;gap:12px;">' +
+          '<input type="text" id="nameInput" placeholder="Enter your name" maxlength="20" autocomplete="off" spellcheck="false" autofocus ' +
+          'style="font-size:1.2rem;padding:16px;text-align:center;">' +
+          '<button type="submit" class="btn btn-primary" style="font-size:1.1rem;padding:16px;">Join Game</button>' +
+          '</form></div>';
+        document.getElementById('nameForm').addEventListener('submit', function(e) {
+          e.preventDefault();
+          const name = document.getElementById('nameInput').value.trim();
+          if (!name) return;
+          // Reload with name param
+          window.location.href = '/player/' + state.code + '?name=' + encodeURIComponent(name);
+        });
+        return;
+      }
+
+      document.getElementById('myName').textContent = state.name;
 
       connect();
     })();
