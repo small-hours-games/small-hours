@@ -26,23 +26,22 @@ function createDeck(deckCount = 1) {
 }
 
 function getTopRank(pile) {
-  // Walk from top of pile backwards, skipping 3s (transparent)
+  // Walk from top of pile backwards, skipping 2s (wild/reset — next player can play anything)
   for (let i = pile.length - 1; i >= 0; i--) {
-    if (pile[i].rank !== 3) {
+    if (pile[i].rank !== 2) {
       return pile[i].rank;
     }
   }
-  // Entire pile is 3s (or empty) — anything can be played
+  // Entire pile is 2s (or empty) — anything can be played
   return null;
 }
 
 function canPlayOnPile(cardRank, pile) {
   if (pile.length === 0) return true;
-  if (cardRank === 2) return true; // wild/reset
-  if (cardRank === 3) return true; // transparent, always playable
-  if (cardRank === 10) return true; // 10 always burns
+  if (cardRank === 2) return true; // wild/reset — always playable, resets pile
+  if (cardRank === 10) return true; // 10 always burns the pile
   const topRank = getTopRank(pile);
-  if (topRank === null) return true;
+  if (topRank === null) return true; // pile is all 2s or empty — anything goes
   if (topRank === 7) {
     return cardRank <= 7;
   }
