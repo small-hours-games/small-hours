@@ -3,24 +3,24 @@
 > vitest run
 
 
- RUN  v3.2.4 /home/dellvall/small-hours
+ RUN  v3.2.4 /home/skogix/small-hours
 
- ✓ tests/fetcher/opentrivia.test.js (9 tests) 9ms
- ✓ tests/fetcher/gemini-tts.test.js (8 tests) 10ms
- ✓ src/engine/games/shithead.test.js (14 tests) 10ms
+ ✓ tests/fetcher/opentrivia.test.js (9 tests) 7ms
+ ✓ tests/fetcher/gemini-tts.test.js (8 tests) 7ms
+ ✓ src/engine/games/shithead.test.js (14 tests) 8ms
 stdout | tests/fetcher/cached-tts.test.js > generateAudioForQuestions > processes a batch of questions sequentially
 [tts] generated audio for 2/2 questions
 
 stdout | tests/fetcher/cached-tts.test.js > generateAudioForQuestions > continues processing remaining questions when one fails
 [tts] generated audio for 1/2 questions
 
- ✓ tests/engine/question-form.test.js (22 tests) 11ms
- ✓ tests/fetcher/cached-tts.test.js (9 tests) 13ms
- ✓ tests/integration/quiz-start.test.js (7 tests) 15ms
- ✓ tests/fetcher/cached-fetcher.test.js (17 tests) 69ms
+ ✓ tests/engine/question-form.test.js (22 tests) 8ms
+ ✓ tests/fetcher/cached-tts.test.js (9 tests) 12ms
+ ✓ tests/integration/quiz-start.test.js (7 tests) 11ms
+ ✓ tests/fetcher/cached-fetcher.test.js (17 tests) 76ms
 
  Test Files  7 passed (7)
       Tests  86 passed (86)
-   Start at  08:51:19
-   Duration  557ms (transform 410ms, setup 0ms, collect 869ms, tests 137ms, environment 3ms, prepare 730ms)
+   Start at  09:00:19
+   Duration  462ms (transform 383ms, setup 0ms, collect 801ms, tests 130ms, environment 1ms, prepare 570ms)
 
