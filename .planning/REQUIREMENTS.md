@@ -54,22 +54,22 @@ Requirements for Quiz Question Pipeline milestone. Each maps to roadmap phases.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| QSRC-01 | -- | Pending |
-| QSRC-02 | -- | Pending |
-| QSRC-03 | -- | Pending |
-| QCACHE-01 | -- | Pending |
-| QCACHE-02 | -- | Pending |
-| QCACHE-03 | -- | Pending |
-| CVOTE-01 | -- | Pending |
-| CVOTE-02 | -- | Pending |
-| CVOTE-03 | -- | Pending |
-| CVOTE-04 | -- | Pending |
+| QSRC-01 | Phase 1 | Pending |
+| QSRC-02 | Phase 1 | Pending |
+| QSRC-03 | Phase 1 | Pending |
+| QCACHE-01 | Phase 2 | Pending |
+| QCACHE-02 | Phase 2 | Pending |
+| QCACHE-03 | Phase 2 | Pending |
+| CVOTE-01 | Phase 3 | Pending |
+| CVOTE-02 | Phase 3 | Pending |
+| CVOTE-03 | Phase 3 | Pending |
+| CVOTE-04 | Phase 3 | Pending |
 
 **Coverage:**
 - v2.1 requirements: 10 total
-- Mapped to phases: 0
-- Unmapped: 10
+- Mapped to phases: 10
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-22*
-*Last updated: 2026-03-22 after initial definition*
+*Last updated: 2026-03-22 after roadmap creation (traceability complete)*
