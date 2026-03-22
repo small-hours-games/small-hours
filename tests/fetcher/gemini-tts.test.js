@@ -62,8 +62,12 @@ describe('synthesizeSpeech', () => {
 
       expect(result.ok).toBe(true);
       expect(Buffer.isBuffer(result.audioData)).toBe(true);
-      expect(result.audioData.toString()).toBe('fake-audio-data');
-      expect(result.mimeType).toBe('audio/L16;codec=pcm;rate=24000');
+      // Audio is now wrapped in a WAV header — verify header and PCM payload
+      expect(result.audioData.subarray(0, 4).toString()).toBe('RIFF');
+      expect(result.audioData.subarray(8, 12).toString()).toBe('WAVE');
+      const pcmPayload = result.audioData.subarray(44);
+      expect(pcmPayload.toString()).toBe('fake-audio-data');
+      expect(result.mimeType).toBe('audio/wav');
     });
 
     it('sends correct request body with text and audio config', async () => {
