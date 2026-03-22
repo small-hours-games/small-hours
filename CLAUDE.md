@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **Small Hours Games** — a real-time multiplayer party game engine. One shared screen (TV/monitor) as the display, players join from phones via room code. This repo is a ground-up rewrite focused on building the engine first, not infrastructure.
 
-The full game spec lives in `SPEC.md`. Planning state is in `.planning/`.
+Planning state is in `.planning/`.
 
 ## Development
 
@@ -46,7 +46,7 @@ src/
 └── server.js            # Entry point: wires Express + WebSocket + RoomManager
 ```
 
-**Key rejected SPEC.md assumptions** (see `.planning/research/ARCHITECTURE.md` for rationale):
+**Key architecture decisions** (see `.planning/research/ARCHITECTURE.md` for rationale):
 - No 100ms tick loop — event-driven, broadcast on state change
 - No GameController base class — games are plain objects with `{setup, actions, view, endIf}`
 - No WebSocket-specific protocol — engine is transport-agnostic JSON in/out
@@ -132,7 +132,7 @@ The `question-form` game turns dev questions into an interactive polling experie
 
 ## WebSocket Protocol
 
-Clients connect to `/ws/host/:code` (display) or `/ws/player/:code` (phone). Messages are JSON with a `type` field. Game actions are wrapped as `{ type: 'GAME_ACTION', action: { type: '<action-name>', ...payload } }`. The full message protocol is in `SPEC.md` sections 6.1 and 6.2.
+Clients connect to `/ws/host/:code` (display) or `/ws/player/:code` (phone). Messages are JSON with a `type` field. Game actions are wrapped as `{ type: 'GAME_ACTION', action: { type: '<action-name>', ...payload } }`.
 
 ## GSD Workflow
 
