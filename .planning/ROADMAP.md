@@ -38,9 +38,9 @@ Plans:
   2. Starting a second quiz game in the same category does not trigger an API request — questions come from disk
   3. Questions used in a session are marked so the same question does not appear twice in the same session
   4. When the cache is cold (first run or cache deleted), the system fetches from API and populates the cache transparently
-**Plans:** 2 plans
+**Plans:** 1/2 plans executed
 Plans:
-- [ ] 02-01-PLAN.md — Cache-through wrapper (cached-fetcher.js) with disk persistence, content-hash IDs, and unit tests
+- [x] 02-01-PLAN.md — Cache-through wrapper (cached-fetcher.js) with disk persistence, content-hash IDs, and unit tests
 - [ ] 02-02-PLAN.md — Wire cached-fetcher into Room, add per-room used-question dedup, update integration tests
 
 ### Phase 3: Category Voting
@@ -60,5 +60,5 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Question Fetcher | 0/2 | Planning complete | - |
-| 2. Question Cache | 0/2 | Planning complete | - |
+| 2. Question Cache | 1/2 | In Progress|  |
 | 3. Category Voting | 0/? | Not started | - |

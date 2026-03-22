@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v2.1
 milestone_name: milestone
 status: unknown
-stopped_at: Phase 01 complete, ready to plan Phase 02
-last_updated: "2026-03-22T05:03:09.560Z"
+stopped_at: Completed 02-question-cache-01-PLAN.md
+last_updated: "2026-03-22T05:06:34.998Z"
 last_activity: 2026-03-22
 progress:
   total_phases: 3
   completed_phases: 1
   total_plans: 4
-  completed_plans: 2
+  completed_plans: 3
 ---
 
 # State: Small Hours Game Engine
@@ -27,7 +27,7 @@ progress:
 ## Current Position
 
 Phase: 02 (question-cache) — EXECUTING
-Plan: 1 of 2
+Plan: 2 of 2
 
 ## Performance Metrics
 
@@ -68,6 +68,9 @@ Plan: 1 of 2
 - [Phase 01]: Established result wrapper pattern {ok, data}/{ok, error} for fallible operations
 - [Phase 01]: Made startGame async rather than separate prepareGame method
 - [Phase 01]: Added .catch() at dispatch call site for async handler rather than making handleMessage async
+- [Phase 02-question-cache]: Content-hash IDs via sha1(question+NUL+correct_answer) replace timestamp-based IDs for cross-session deduplication
+- [Phase 02-question-cache]: ID normalization happens at write time so cache reads are zero-cost
+- [Phase 02-question-cache]: clearCache(undefined) removes entire data/questions/ directory; clearCache(null) removes any.json
 
 ### Pending Todos
 
@@ -79,8 +82,8 @@ Plan: 1 of 2
 
 ### To Resume
 
-Last session: 2026-03-22
-Stopped at: Phase 01 complete, ready to plan Phase 02
+Last session: 2026-03-22T05:06:34.994Z
+Stopped at: Completed 02-question-cache-01-PLAN.md
 Resume file: None
 
 ### Files
@@ -98,3 +101,4 @@ Resume file: None
 ---
 *State initialized: 2026-03-22*
 Last activity: 2026-03-22
+| Phase 02-question-cache P01 | 2 | 1 tasks | 2 files |

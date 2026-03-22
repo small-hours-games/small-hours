@@ -15,8 +15,8 @@ Requirements for Quiz Question Pipeline milestone. Each maps to roadmap phases.
 
 ### Question Cache
 
-- [ ] **QCACHE-01**: Fetched questions are saved to disk as JSON files organized by category
-- [ ] **QCACHE-02**: Subsequent games in the same category use cached questions before hitting API
+- [x] **QCACHE-01**: Fetched questions are saved to disk as JSON files organized by category
+- [x] **QCACHE-02**: Subsequent games in the same category use cached questions before hitting API
 - [ ] **QCACHE-03**: Cache tracks which questions have been used to avoid repeats within a session
 
 ### Category Voting
@@ -57,8 +57,8 @@ Requirements for Quiz Question Pipeline milestone. Each maps to roadmap phases.
 | QSRC-01 | Phase 1 | Complete |
 | QSRC-02 | Phase 1 | Complete |
 | QSRC-03 | Phase 1 | Complete |
-| QCACHE-01 | Phase 2 | Pending |
-| QCACHE-02 | Phase 2 | Pending |
+| QCACHE-01 | Phase 2 | Complete |
+| QCACHE-02 | Phase 2 | Complete |
 | QCACHE-03 | Phase 2 | Pending |
 | CVOTE-01 | Phase 3 | Pending |
 | CVOTE-02 | Phase 3 | Pending |
