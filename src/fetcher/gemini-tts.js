@@ -3,7 +3,7 @@
 
 const GEMINI_MODEL = 'gemini-2.5-flash-preview-tts';
 const GEMINI_ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
-const DEFAULT_VOICE = 'Kore';
+const DEFAULT_VOICE = 'Enceladus';
 
 function wrapPcmAsWav(pcm, sampleRate, channels, bitsPerSample) {
   const byteRate = sampleRate * channels * bitsPerSample / 8;
