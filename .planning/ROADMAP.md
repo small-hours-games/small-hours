@@ -3,13 +3,14 @@
 **Milestone:** v2.1 — Quiz Question Pipeline
 **Created:** 2026-03-22
 **Granularity:** Fine
-**Requirements covered:** 10/10
+**Requirements covered:** 10/10 (Phase 4 is quality, not feature requirements)
 
 ## Phases
 
 - [ ] **Phase 1: Question Fetcher** - Fetch and decode questions from OpenTrivia DB with graceful error handling
 - [ ] **Phase 2: Question Cache** - Persist questions to disk by category and avoid repeated questions within a session
 - [ ] **Phase 3: Category Voting** - Players vote on quiz category in lobby, admin starts quiz with winning category and real questions
+- [ ] **Phase 4: Test Coverage** - Comprehensive test coverage for untested core modules: engine, game definitions, session layer, and transport layer
 
 ## Phase Details
 
@@ -55,6 +56,21 @@ Plans:
   4. All players and the host display see the final vote tally before questions begin
 **Plans**: TBD
 
+### Phase 4: Test Coverage
+
+**Goal**: Achieve comprehensive test coverage across all untested core modules — engine core, game definitions, session management, and transport layer
+**Depends on**: Nothing (tests existing code, can run in parallel with Phase 3)
+**Requirements**: None (quality/reliability improvement, not feature work)
+**Success Criteria** (what must be TRUE):
+  1. `engine.js` has unit tests for all 4 core functions (createGame, processAction, getView, checkEnd) including error paths
+  2. `number-guess.js` has tests covering setup, guess validation (too high/too low/correct), view filtering, and endIf scoring
+  3. `spy.js` has tests covering setup (spy assignment), clue submission, guess scoring, timer phase transitions, and per-player view filtering
+  4. `quiz.js` has action tests for answer submission (with powerups), all 4 timerExpired phase transitions, scoring mechanics, and view filtering
+  5. `room.js` has tests for player lifecycle (add/remove), admin promotion, ready state, game suggestions, and game registry
+  6. `manager.js` has tests for room creation (code uniqueness), lookup, cleanup of stale rooms, and player-to-room mapping
+  7. `ws-adapter.js` has tests for message dispatch, rate limiting, and reconnection grace period
+**Plans**: TBD
+
 ## Progress
 
 | Phase | Plans Complete | Status | Completed |
@@ -62,3 +78,4 @@ Plans:
 | 1. Question Fetcher | 2/2 | Complete | 2026-03-22 |
 | 2. Question Cache | 2/2 | Complete | 2026-03-22 |
 | 3. Category Voting | 0/? | Not started | - |
+| 4. Test Coverage | 0/? | Not started | - |
