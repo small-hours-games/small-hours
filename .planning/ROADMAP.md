@@ -34,11 +34,14 @@ Plans:
 **Depends on**: Phase 1 (Question Fetcher must exist before cache can wrap it)
 **Requirements**: QCACHE-01, QCACHE-02, QCACHE-03
 **Success Criteria** (what must be TRUE):
-  1. After the first quiz game in a category, JSON files appear on disk organized by category (e.g. `cache/questions/9.json`)
+  1. After the first quiz game in a category, JSON files appear on disk organized by category (e.g. `data/questions/9.json`)
   2. Starting a second quiz game in the same category does not trigger an API request — questions come from disk
   3. Questions used in a session are marked so the same question does not appear twice in the same session
   4. When the cache is cold (first run or cache deleted), the system fetches from API and populates the cache transparently
-**Plans**: TBD
+**Plans:** 2 plans
+Plans:
+- [ ] 02-01-PLAN.md — Cache-through wrapper (cached-fetcher.js) with disk persistence, content-hash IDs, and unit tests
+- [ ] 02-02-PLAN.md — Wire cached-fetcher into Room, add per-room used-question dedup, update integration tests
 
 ### Phase 3: Category Voting
 
@@ -57,5 +60,5 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Question Fetcher | 0/2 | Planning complete | - |
-| 2. Question Cache | 0/? | Not started | - |
+| 2. Question Cache | 0/2 | Planning complete | - |
 | 3. Category Voting | 0/? | Not started | - |
