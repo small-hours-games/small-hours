@@ -76,9 +76,10 @@ Plan: Not started
 
 ### Pending Todos
 
-- 2 pending:
+- 3 pending:
   - `Add server deployment update script` (tooling)
   - `Run GSD commands via claude CLI as unix commands` (tooling)
+  - `Check if SPEC.md still is worth saving` (docs)
 
 ## Session Continuity
 
