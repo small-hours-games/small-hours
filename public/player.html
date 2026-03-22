@@ -434,6 +434,20 @@
     .playing-card.pile-card .card-rank { font-size: 1.8rem; }
     .playing-card.pile-card .card-suit { font-size: 1.3rem; }
 
+    .playing-card.playable {
+      border-color: rgba(57, 255, 20, 0.4);
+      box-shadow: 0 0 8px rgba(57, 255, 20, 0.15);
+    }
+    .playing-card.playable.red { border-color: rgba(255, 71, 87, 0.5); box-shadow: 0 0 8px rgba(255, 71, 87, 0.2); }
+    .playing-card.playable.black { border-color: rgba(77, 201, 246, 0.5); box-shadow: 0 0 8px rgba(77, 201, 246, 0.2); }
+
+    .playing-card.unplayable {
+      opacity: 0.35;
+      filter: grayscale(0.6);
+      cursor: not-allowed;
+      transform: none !important;
+    }
+
     @keyframes turnGlow {
       0%, 100% { box-shadow: inset 0 0 20px rgba(57, 255, 20, 0.15), 0 0 30px rgba(57, 255, 20, 0.1); }
       50% { box-shadow: inset 0 0 40px rgba(57, 255, 20, 0.25), 0 0 60px rgba(57, 255, 20, 0.2); }
@@ -1358,10 +1372,17 @@
       // Hand (sorted by rank, low to high)
       const handDiv = document.getElementById('shHand');
       const hand = (msg.myHand || []).slice().sort((a, b) => a.rank - b.rank);
-      handDiv.innerHTML = hand.length > 0 ? hand.map(c =>
-        '<div class="playing-card ' + cardColor(c) + (state.shSelectedCards.includes(c.id) ? ' selected' : '') + '" ' +
-        'onclick="shToggleCard(\'' + c.id + '\')">' + cardDisplay(c) + '</div>'
-      ).join('') : '<span style="color:var(--text-secondary);font-size:0.85rem;">Empty</span>';
+      const topRank = msg.pileTopRank;
+      const pileCount = msg.pileCount || 0;
+      handDiv.innerHTML = hand.length > 0 ? hand.map(c => {
+        const playable = msg.isMyTurn && canPlayCard(c.rank, topRank, pileCount);
+        const cls = cardColor(c) +
+          (state.shSelectedCards.includes(c.id) ? ' selected' : '') +
+          (msg.isMyTurn ? (playable ? ' playable' : ' unplayable') : '');
+        return '<div class="playing-card ' + cls + '" ' +
+          (playable || !msg.isMyTurn ? 'onclick="shToggleCard(\'' + c.id + '\')"' : '') +
+          '>' + cardDisplay(c) + '</div>';
+      }).join('') : '<span style="color:var(--text-secondary);font-size:0.85rem;">Empty</span>';
 
       // Face up (sorted by rank)
       const faceUpDiv = document.getElementById('shFaceUp');
@@ -1369,10 +1390,15 @@
       const faceUpSection = document.getElementById('shFaceUpSection');
       if (hand.length === 0 && faceUp.length > 0) {
         faceUpSection.style.display = 'block';
-        faceUpDiv.innerHTML = faceUp.map(c =>
-          '<div class="playing-card ' + cardColor(c) + (state.shSelectedCards.includes(c.id) ? ' selected' : '') + '" ' +
-          'onclick="shToggleCard(\'' + c.id + '\')">' + cardDisplay(c) + '</div>'
-        ).join('');
+        faceUpDiv.innerHTML = faceUp.map(c => {
+          const playable = msg.isMyTurn && canPlayCard(c.rank, topRank, pileCount);
+          const cls = cardColor(c) +
+            (state.shSelectedCards.includes(c.id) ? ' selected' : '') +
+            (msg.isMyTurn ? (playable ? ' playable' : ' unplayable') : '');
+          return '<div class="playing-card ' + cls + '" ' +
+            (playable || !msg.isMyTurn ? 'onclick="shToggleCard(\'' + c.id + '\')"' : '') +
+            '>' + cardDisplay(c) + '</div>';
+        }).join('');
       } else {
         faceUpSection.style.display = faceUp.length > 0 ? 'block' : 'none';
         faceUpDiv.innerHTML = faceUp.map(c =>
@@ -1464,6 +1490,16 @@
     function cardColor(c) {
       if (!c) return '';
       return (c.suit === 'h' || c.suit === 'd') ? 'red' : 'black';
+    }
+
+    // Check if a card rank can be played on the current pile
+    function canPlayCard(rank, pileTopRank, pileCount) {
+      if (pileCount === 0) return true;
+      if (rank === 2) return true;
+      if (rank === 10) return true;
+      if (pileTopRank === null || pileTopRank === undefined) return true;
+      if (pileTopRank === 7) return rank <= 7;
+      return rank >= pileTopRank;
     }
 
     // --- UI Helpers ---

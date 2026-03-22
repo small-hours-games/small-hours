@@ -405,6 +405,7 @@ function view(state, playerId) {
     myFaceDownCount: (state.faceDown[playerId] || []).length,
     myFaceDownIds: (state.faceDown[playerId] || []).map(c => c.id),
     pileTop,
+    pileTopRank: getTopRank(state.pile),
     pileCount: state.pile.length,
     drawPileCount: state.drawPile.length,
     players: state.players.map(id => ({
