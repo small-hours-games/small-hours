@@ -59,6 +59,6 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Question Fetcher | 0/2 | Planning complete | - |
-| 2. Question Cache | 1/2 | In Progress|  |
+| 1. Question Fetcher | 2/2 | Complete | 2026-03-22 |
+| 2. Question Cache | 2/2 | Complete | 2026-03-22 |
 | 3. Category Voting | 0/? | Not started | - |
