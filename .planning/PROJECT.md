@@ -66,7 +66,8 @@ The OpenTrivia DB API (opentdb.com) is the question source. It's free, has ~4,00
 | Express + WS over raw HTTP | Session/room management needed it | Validated |
 | Browser-first (skipped terminal client) | Faster to usable product | Validated |
 | OpenTrivia DB as question source | Free, sufficient variety, well-known API | Validated (Phase 01) |
-| Disk caching for questions | Offline resilience, reduce API load | -- Pending |
+| Disk caching for questions | Offline resilience, reduce API load | Validated (Phase 02) |
+| Content-hash IDs for questions | Stable cross-session dedup (timestamp IDs break dedup) | Validated (Phase 02) |
 
 ## Evolution
 
@@ -86,4 +87,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-03-22 after Phase 01 (Question Fetcher) complete*
+*Last updated: 2026-03-22 after Phase 02 (Question Cache) complete*
