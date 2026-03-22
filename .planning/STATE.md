@@ -81,6 +81,12 @@ Plan: Not started
 - `.planning/REQUIREMENTS.md` — milestone requirements (10 v2.1 requirements)
 - `.planning/ROADMAP.md` — 3-phase roadmap
 
+### Quick Tasks Completed
+
+| # | Description | Date | Commit | Directory |
+|---|-------------|------|--------|-----------|
+| 260322-7zr | Fix shithead card 2 not playable | 2026-03-22 | fe713d7 | [260322-7zr-fix-shithead-card-2-not-playable](./quick/260322-7zr-fix-shithead-card-2-not-playable/) |
+
 ---
 *State initialized: 2026-03-22*
-*Last updated: 2026-03-22 after roadmap creation*
+Last activity: 2026-03-22 - Completed quick task 260322-7zr: Fix shithead card 2 not playable
