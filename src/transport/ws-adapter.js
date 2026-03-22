@@ -4,6 +4,13 @@
 import { WebSocketServer } from 'ws';
 import { processAction, getView, checkEnd } from '../engine/engine.js';
 import { saveAnswers } from '../fetcher/question-file.js';
+import { PHASE_DURATIONS as QUIZ_DURATIONS } from '../engine/games/quiz.js';
+import { PHASE_DURATIONS as SPY_DURATIONS } from '../engine/games/spy.js';
+
+const GAME_PHASE_DURATIONS = {
+  quiz: QUIZ_DURATIONS,
+  spy: SPY_DURATIONS,
+};
 
 const HEARTBEAT_INTERVAL_MS = 30_000;
 const RATE_LIMIT_MAX = 30;          // messages per second
@@ -30,6 +37,10 @@ export function setupWebSocket(server, manager) {
   const graceTimers = new Map();
   // roomCode -> Set of sockets (tracks all connections including displays)
   const roomSockets = new Map();
+  // roomCode -> phase timer handle
+  const phaseTimers = new Map();
+  // roomCode -> active gameType string (for timer duration lookups)
+  const roomGameTypes = new Map();
 
   // --- Helpers ---
 
@@ -65,6 +76,80 @@ export function setupWebSocket(server, manager) {
       names[id] = p.username;
     }
     return names;
+  }
+
+  // --- Phase timers ---
+
+  function cancelPhaseTimer(roomCode) {
+    const existing = phaseTimers.get(roomCode);
+    if (existing) {
+      clearTimeout(existing);
+      phaseTimers.delete(roomCode);
+    }
+  }
+
+  function schedulePhaseTimer(room, gameType) {
+    cancelPhaseTimer(room.code);
+
+    if (!room.game) return;
+
+    const durations = GAME_PHASE_DURATIONS[gameType];
+    if (!durations) return;
+
+    const phase = room.game.state.phase;
+    const duration = durations[phase];
+    if (!duration) return;
+
+    const timer = setTimeout(() => {
+      phaseTimers.delete(room.code);
+      if (!room.game) return;
+
+      // Dispatch the synthetic timerExpired action
+      const action = { type: 'timerExpired', phase };
+      const { game: updatedGame, events } = processAction(room.game, action);
+      room.game = updatedGame;
+      room.lastActivity = Date.now();
+
+      const playerNames = getPlayerNames(room);
+
+      // Broadcast updated views to players
+      for (const [id] of room.players) {
+        const view = getView(room.game, id);
+        sendToPlayer(id, { type: 'GAME_STATE', ...view, playerNames });
+      }
+
+      // Broadcast to host displays
+      const hostView = getView(room.game, room.players.keys().next().value);
+      const sharedState = { type: 'GAME_STATE', ...hostView, playerNames };
+      if (events.length > 0) sharedState.events = events;
+      broadcastToRoom(room.code, sharedState, { hostsOnly: true });
+
+      // Check for game end
+      const endResult = checkEnd(room.game);
+      if (endResult) {
+        for (const [id] of room.players) {
+          const view = getView(room.game, id);
+          sendToPlayer(id, { type: 'GAME_STATE', ...view, ...endResult });
+        }
+        broadcastToRoom(room.code, { type: 'GAME_STATE', phase: 'finished', ...endResult, playerNames }, { hostsOnly: true });
+
+        const gameState = room.game?.state;
+        if (gameState?.questions && gameState?.responses && gameState?._sourceFile) {
+          saveAnswers(gameState._sourceFile, gameState.responses, playerNames).catch(() => {});
+        }
+
+        room.endGame();
+        cancelPhaseTimer(room.code);
+        broadcastToRoom(room.code, { type: 'LOBBY_UPDATE', state: room.getState() });
+        return;
+      }
+
+      // Schedule next phase timer
+      schedulePhaseTimer(room, gameType);
+    }, duration);
+
+    if (timer.unref) timer.unref();
+    phaseTimers.set(room.code, timer);
   }
 
   // --- Rate limiting ---
@@ -335,6 +420,10 @@ export function setupWebSocket(server, manager) {
       }
       // Also broadcast to host displays
       broadcastToRoom(room.code, { type: 'GAME_STATE', gameType: msg.gameType, phase: room.game.state.phase, playerNames: pNames }, { hostsOnly: true });
+
+      // Schedule phase timer for timer-driven games
+      roomGameTypes.set(room.code, msg.gameType);
+      schedulePhaseTimer(room, msg.gameType);
     } catch (err) {
       send(ws, { type: 'ERROR', message: err.message });
     }
@@ -352,6 +441,8 @@ export function setupWebSocket(server, manager) {
       return;
     }
 
+    cancelPhaseTimer(room.code);
+    roomGameTypes.delete(room.code);
     room.endGame();
     broadcastToRoom(room.code, { type: 'LOBBY_UPDATE', state: room.getState() });
   }
@@ -398,6 +489,12 @@ export function setupWebSocket(server, manager) {
     if (events.length > 0) sharedState.events = events;
     broadcastToRoom(room.code, sharedState, { hostsOnly: true });
 
+    // Reschedule phase timer if phase changed due to player action
+    const activeGameType = roomGameTypes.get(room.code);
+    if (activeGameType) {
+      schedulePhaseTimer(room, activeGameType);
+    }
+
     // Check for game end
     const endResult = checkEnd(room.game);
     if (endResult) {
@@ -415,6 +512,8 @@ export function setupWebSocket(server, manager) {
       }
 
       room.endGame();
+      cancelPhaseTimer(room.code);
+      roomGameTypes.delete(room.code);
       broadcastToRoom(room.code, { type: 'LOBBY_UPDATE', state: room.getState() });
     }
   }

@@ -9,6 +9,7 @@
 
 - [ ] **Phase 1: Question Fetcher** - Fetch and decode questions from OpenTrivia DB with graceful error handling
 - [ ] **Phase 2: Question Cache** - Persist questions to disk by category and avoid repeated questions within a session
+- [ ] **Phase 2.1: Quiz Timer Scheduling** - Wire up timerExpired action dispatch so quiz/spy phase transitions actually fire
 - [ ] **Phase 3: Category Voting** - Players vote on quiz category in lobby, admin starts quiz with winning category and real questions
 
 ## Phase Details
@@ -43,6 +44,19 @@ Plans:
 - [x] 02-01-PLAN.md — Cache-through wrapper (cached-fetcher.js) with disk persistence, content-hash IDs, and unit tests
 - [x] 02-02-PLAN.md — Wire cached-fetcher into Room, add per-room used-question dedup, update integration tests
 
+### Phase 2.1: Quiz Timer Scheduling
+
+**Goal**: The session/transport layer schedules `timerExpired` synthetic actions so quiz and spy games transition through phases automatically
+**Depends on**: Phase 1, Phase 2 (quiz must be startable with real questions)
+**Requirements**: TIMER-01, TIMER-02, TIMER-03, TIMER-04
+**Type**: Bug fix — games start but freeze in initial phase because timers were never wired up
+**Success Criteria** (what must be TRUE):
+  1. Starting a quiz game transitions from `countdown` → `question` after 3 seconds without any player action
+  2. The full phase cycle (`countdown` → `question` → `reveal` → `between` → `question` → ... → `finished`) runs automatically on timers
+  3. Returning to lobby or ending the game cancels any pending timers (no stale fires)
+  4. The spy game's timer phases also fire correctly
+**Plans**: TBD
+
 ### Phase 3: Category Voting
 
 **Goal**: Players see available categories, vote before the quiz starts, and the quiz launches with real questions for the winning category
@@ -61,4 +75,5 @@ Plans:
 |-------|----------------|--------|-----------|
 | 1. Question Fetcher | 2/2 | Complete | 2026-03-22 |
 | 2. Question Cache | 2/2 | Complete | 2026-03-22 |
+| 2.1 Quiz Timer Scheduling | 0/? | Not started | - |
 | 3. Category Voting | 0/? | Not started | - |

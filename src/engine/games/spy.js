@@ -286,5 +286,12 @@ const spy = {
   },
 };
 
-export { SPY_WORDS };
+const PHASE_DURATIONS = {
+  clues: 60000,
+  guess: 30000,
+  reveal: 5000,
+  score: 5000,
+};
+
+export { SPY_WORDS, PHASE_DURATIONS };
 export default spy;
