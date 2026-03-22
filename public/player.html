@@ -659,6 +659,10 @@
             <span class="icon">&#128203;</span>
             Questions
           </button>
+          <button class="suggest-btn" onclick="suggestGame('template')" id="suggestTemplate">
+            <span class="icon">&#128200;</span>
+            Template
+          </button>
         </div>
       </div>
 
@@ -828,6 +832,18 @@
       <div class="qf-progress" id="qfProgress"></div>
       <div id="qfContent"></div>
       <div class="qf-nav" id="qfNav"></div>
+    </div>
+
+    <!-- TEMPLATE SECTION -->
+    <div class="section" id="templateSection">
+      <div class="card text-center">
+        <div style="font-size:0.85rem;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.1em;" id="tplStatus">Playing</div>
+        <div style="font-size:2rem;font-weight:700;color:var(--neon-blue);margin:8px 0;" id="tplScore">0 / 3</div>
+      </div>
+      <button class="btn btn-primary" onclick="sendIncrement()" id="tplBtn" style="width:100%;font-size:1.2rem;padding:16px;margin-top:16px;">
+        +1 Increment
+      </button>
+      <div id="tplScoreboard" style="margin-top:16px;"></div>
     </div>
 
   </main>
@@ -1052,6 +1068,7 @@
         case 'spy': renderSpyState(msg); break;
         case 'shithead': renderShitheadState(msg); break;
         case 'question-form': renderQuestionFormState(msg); break;
+        case 'template': renderTemplateState(msg); break;
       }
     }
 
@@ -1063,7 +1080,7 @@
     }
 
     function getGameSectionId(game) {
-      const map = { 'number-guess': 'numberGuessSection', 'quiz': 'quizSection', 'spy': 'spySection', 'shithead': 'shitheadSection', 'question-form': 'questionFormSection' };
+      const map = { 'number-guess': 'numberGuessSection', 'quiz': 'quizSection', 'spy': 'spySection', 'shithead': 'shitheadSection', 'question-form': 'questionFormSection', 'template': 'templateSection' };
       return map[game] || 'lobbySection';
     }
 
@@ -1126,7 +1143,7 @@
       const suggestions = Object.values(state.gameSuggestions || {});
       const topGame = suggestions.length > 0 ? suggestions[suggestions.length - 1] : 'number-guess';
       state.gameToStart = topGame;
-      const names = { 'number-guess': 'Number Guess', 'quiz': 'Quiz', 'spy': 'Spy Game', 'shithead': 'Shithead', 'question-form': 'Questions' };
+      const names = { 'number-guess': 'Number Guess', 'quiz': 'Quiz', 'spy': 'Spy Game', 'shithead': 'Shithead', 'question-form': 'Questions', 'template': 'Template' };
 
       let html = '';
       if (topGame === 'shithead') {
@@ -1671,6 +1688,30 @@
       const el = document.getElementById('connStatus');
       el.className = 'connection-status ' + status;
       document.getElementById('connText').textContent = text;
+    }
+
+    // --- Template Game ---
+    function sendIncrement() {
+      send({ type: 'GAME_ACTION', action: { type: 'increment' } });
+    }
+
+    function renderTemplateState(msg) {
+      document.getElementById('tplStatus').textContent = msg.phase === 'finished' ? 'Finished!' : 'Playing';
+      document.getElementById('tplScore').textContent = (msg.myScore || 0) + ' / ' + (msg.target || 3);
+      document.getElementById('tplBtn').disabled = msg.phase === 'finished';
+
+      let sb = '';
+      if (msg.scores) {
+        const entries = Object.entries(msg.scores).sort((a, b) => b[1] - a[1]);
+        sb = '<div class="card" style="text-align:center;">';
+        for (const [id, score] of entries) {
+          const name = (state.playerNames && state.playerNames[id]) || id;
+          const isWinner = msg.winner === id ? ' style="color:var(--neon-green);font-weight:700;"' : '';
+          sb += '<div' + isWinner + '>' + escapeHtml(name) + ': ' + score + '</div>';
+        }
+        sb += '</div>';
+      }
+      document.getElementById('tplScoreboard').innerHTML = sb;
     }
 
     // --- Question Form ---
