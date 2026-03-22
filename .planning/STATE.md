@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v2.1
 milestone_name: milestone
 status: unknown
-stopped_at: Completed 02-question-cache-01-PLAN.md
-last_updated: "2026-03-22T05:06:34.998Z"
+stopped_at: Completed 02-question-cache-02-PLAN.md
+last_updated: "2026-03-22T05:10:10.204Z"
 last_activity: 2026-03-22
 progress:
   total_phases: 3
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 4
-  completed_plans: 3
+  completed_plans: 4
 ---
 
 # State: Small Hours Game Engine
@@ -71,6 +71,8 @@ Plan: 2 of 2
 - [Phase 02-question-cache]: Content-hash IDs via sha1(question+NUL+correct_answer) replace timestamp-based IDs for cross-session deduplication
 - [Phase 02-question-cache]: ID normalization happens at write time so cache reads are zero-cost
 - [Phase 02-question-cache]: clearCache(undefined) removes entire data/questions/ directory; clearCache(null) removes any.json
+- [Phase 02-question-cache]: usedQuestionIds lives on Room instance, garbage collected with Room destruction — no explicit cleanup
+- [Phase 02-question-cache]: Supplement fetch goes through cached-fetcher (not raw API) to maintain cache-through consistency
 
 ### Pending Todos
 
@@ -82,8 +84,8 @@ Plan: 2 of 2
 
 ### To Resume
 
-Last session: 2026-03-22T05:06:34.994Z
-Stopped at: Completed 02-question-cache-01-PLAN.md
+Last session: 2026-03-22T05:10:10.199Z
+Stopped at: Completed 02-question-cache-02-PLAN.md
 Resume file: None
 
 ### Files
@@ -102,3 +104,4 @@ Resume file: None
 *State initialized: 2026-03-22*
 Last activity: 2026-03-22
 | Phase 02-question-cache P01 | 2 | 1 tasks | 2 files |
+| Phase 02-question-cache P02 | 10 | 2 tasks | 2 files |

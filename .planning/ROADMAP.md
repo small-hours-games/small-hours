@@ -41,7 +41,7 @@ Plans:
 **Plans:** 1/2 plans executed
 Plans:
 - [x] 02-01-PLAN.md — Cache-through wrapper (cached-fetcher.js) with disk persistence, content-hash IDs, and unit tests
-- [ ] 02-02-PLAN.md — Wire cached-fetcher into Room, add per-room used-question dedup, update integration tests
+- [x] 02-02-PLAN.md — Wire cached-fetcher into Room, add per-room used-question dedup, update integration tests
 
 ### Phase 3: Category Voting
 
