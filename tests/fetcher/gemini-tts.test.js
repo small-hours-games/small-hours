@@ -83,7 +83,7 @@ describe('synthesizeSpeech', () => {
       const body = JSON.parse(options.body);
       expect(body.contents[0].parts[0].text).toBe('Test text');
       expect(body.generationConfig.responseModalities).toEqual(['AUDIO']);
-      expect(body.generationConfig.speechConfig.voiceConfig.prebuiltVoiceConfig.voiceName).toBe('Kore');
+      expect(body.generationConfig.speechConfig.voiceConfig.prebuiltVoiceConfig.voiceName).toBe('Enceladus');
     });
 
     it('uses custom voice when provided', async () => {
