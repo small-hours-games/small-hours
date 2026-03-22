@@ -820,63 +820,104 @@
 
     function renderShithead(msg) {
       const content = document.getElementById('gameContent');
-      const events = state.gameEvents || [];
+      const names = state.playerNames || msg.playerNames || {};
 
       let html = '<div style="text-align:center;">';
 
       if (msg.phase === 'swap') {
-        html += '<div style="font-size:1.5rem;margin:24px 0;">Swap Phase</div>' +
-          '<p style="color:var(--text-secondary);">Players are swapping cards...</p>';
-      } else if (msg.phase === 'play') {
-        html += '<div style="font-size:1.2rem;margin:16px 0;color:var(--text-secondary);">Game in progress</div>';
-        // Show pile
+        html += '<div style="font-size:2rem;margin:20px 0;color:var(--neon-purple);">Swap Phase</div>' +
+          '<p style="color:var(--text-secondary);font-size:1.2rem;margin-bottom:24px;">Players are arranging their cards...</p>';
+        // Show swap confirmation status
+        if (msg.swapConfirmed) {
+          html += '<div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">';
+          for (const [id, confirmed] of Object.entries(msg.swapConfirmed)) {
+            const name = names[id] || id;
+            const icon = confirmed ? '<span style="color:var(--neon-green);">✓</span>' : '<span style="color:var(--text-secondary);">...</span>';
+            html += '<div class="card" style="padding:12px 20px;min-width:120px;">' + icon + ' ' + escapeHtml(name) + '</div>';
+          }
+          html += '</div>';
+        }
+      } else if (msg.phase === 'play' || msg.phase === 'finished') {
+        // --- Central pile ---
+        html += '<div style="margin:16px 0;">';
         if (msg.pileTop) {
-          const ranks = {2:'2',3:'3',4:'4',5:'5',6:'6',7:'7',8:'8',9:'9',10:'10',11:'J',12:'Q',13:'K',14:'A'};
-          const suits = {h:'&#9829;',d:'&#9830;',c:'&#9827;',s:'&#9824;'};
-          const r = ranks[msg.pileTop.rank] || msg.pileTop.rank;
-          const s = suits[msg.pileTop.suit] || msg.pileTop.suit;
+          const r = {2:'2',3:'3',4:'4',5:'5',6:'6',7:'7',8:'8',9:'9',10:'10',11:'J',12:'Q',13:'K',14:'A'}[msg.pileTop.rank] || msg.pileTop.rank;
+          const s = {h:'♥',d:'♦',c:'♣',s:'♠'}[msg.pileTop.suit] || msg.pileTop.suit;
           const color = (msg.pileTop.suit === 'h' || msg.pileTop.suit === 'd') ? '#ff4757' : '#e0e0ff';
-          html += '<div style="font-size:3rem;color:' + color + ';margin:16px 0;">' + r + s + '</div>' +
-            '<div style="color:var(--text-secondary);">Pile: ' + (msg.pileCount || 0) + ' cards</div>';
+          const bg = (msg.pileTop.suit === 'h' || msg.pileTop.suit === 'd') ? 'rgba(255,71,87,0.15)' : 'rgba(224,224,255,0.1)';
+          html += '<div style="display:inline-block;width:100px;height:140px;border-radius:12px;border:3px solid ' + color + ';background:' + bg + ';display:inline-flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;">' +
+            '<span style="font-size:2.5rem;font-weight:900;color:' + color + ';">' + r + '</span>' +
+            '<span style="font-size:1.8rem;color:' + color + ';">' + s + '</span></div>';
+          html += '<div style="color:var(--text-secondary);margin-top:8px;font-size:1rem;">Pile: ' + (msg.pileCount || 0) + ' cards</div>';
         } else {
-          html += '<div style="font-size:2rem;color:var(--text-secondary);margin:16px 0;">Pile: Empty</div>';
+          html += '<div style="display:inline-block;width:100px;height:140px;border-radius:12px;border:3px dashed rgba(255,255,255,0.15);display:inline-flex;align-items:center;justify-content:center;color:var(--text-secondary);font-size:1.2rem;">Empty</div>';
         }
-      } else if (msg.phase === 'finished') {
-        html += '<div style="font-size:2rem;color:var(--neon-green);margin:24px 0;">Game Over!</div>';
-        if (msg.loser) {
-          const p = state.players.find(pl => pl.playerId === msg.loser);
-          const name = p ? (p.username || p.name) : 'Someone';
-          html += '<div style="font-size:1.5rem;color:var(--neon-pink);">' + escapeHtml(name) + ' is the Shithead!</div>';
-        }
-      }
-
-      // Show recent events
-      const playEvents = events.filter(e => e.type !== 'error').slice(-5);
-      if (playEvents.length > 0) {
-        html += '<div class="card" style="max-width:500px;margin:16px auto;text-align:left;">';
-        playEvents.forEach(e => {
-          const p = state.players.find(pl => pl.playerId === e.playerId);
-          const name = p ? (p.username || p.name) : 'Player';
-          html += '<div class="clue-item"><span class="clue-author">' + escapeHtml(name) + '</span>' +
-            '<span>' + escapeHtml(e.message || e.type) + '</span></div>';
-        });
         html += '</div>';
-      }
 
-      // Show player card counts
-      if (msg.players) {
-        html += '<div style="display:flex;gap:16px;justify-content:center;flex-wrap:wrap;margin-top:16px;">';
-        msg.players.forEach(p => {
-          const name = (state.playerNames || {})[p.playerId] || p.playerId;
-          const isCurrent = p.playerId === msg.currentPlayer;
-          const border = isCurrent ? 'border:2px solid var(--neon-purple);' : '';
-          const total = p.handCount + p.faceUp.length + p.faceDownCount;
-          html += '<div class="card" style="padding:12px;min-width:120px;text-align:center;' + border + '">' +
-            '<div style="font-weight:600;">' + escapeHtml(name) + '</div>' +
-            '<div style="font-size:0.8rem;color:var(--text-secondary);">' +
-            (p.isOut ? '<span style="color:var(--neon-green);">Out!</span>' : total + ' cards') +
-            '</div></div>';
-        });
+        // --- Info bar ---
+        html += '<div style="display:flex;gap:16px;justify-content:center;margin:12px 0;font-size:0.9rem;color:var(--text-secondary);">';
+        if (msg.drawPileCount != null) html += '<span>Draw: ' + msg.drawPileCount + '</span>';
+        html += '</div>';
+
+        if (msg.phase === 'finished') {
+          html += '<div style="font-size:2rem;color:var(--neon-green);margin:16px 0;">Game Over!</div>';
+          if (msg.loser) {
+            const loserName = names[msg.loser] || 'Someone';
+            html += '<div style="font-size:1.5rem;color:var(--neon-pink);margin-bottom:16px;">' + escapeHtml(loserName) + ' is the Shithead! 💩</div>';
+          }
+        }
+
+        // --- Player cards ---
+        html += '<div style="display:flex;gap:20px;justify-content:center;flex-wrap:wrap;margin-top:20px;">';
+        if (msg.players) {
+          msg.players.forEach(p => {
+            const name = names[p.playerId] || p.playerId;
+            const isCurrent = p.playerId === msg.currentPlayer;
+            const borderStyle = isCurrent ? 'border:2px solid var(--neon-green);box-shadow:0 0 20px rgba(57,255,20,0.3);' : 'border:1px solid var(--glass-border);';
+            const total = (p.handCount || 0) + (p.faceUp ? p.faceUp.length : 0) + (p.faceDownCount || 0);
+
+            html += '<div class="card" style="padding:16px;min-width:160px;max-width:220px;' + borderStyle + '">';
+            // Name header
+            html += '<div style="font-weight:700;font-size:1.1rem;margin-bottom:8px;' + (isCurrent ? 'color:var(--neon-green);' : '') + '">' +
+              escapeHtml(name) + (isCurrent ? ' ◀' : '') + '</div>';
+
+            if (p.isOut) {
+              html += '<div style="color:var(--neon-green);font-size:1rem;">✓ Out!</div>';
+            } else {
+              // Hand count
+              html += '<div style="font-size:0.8rem;color:var(--text-secondary);margin-bottom:4px;">Hand: ' + (p.handCount || 0) + ' | Down: ' + (p.faceDownCount || 0) + '</div>';
+
+              // Face-up cards (visible to all) — group by rank
+              if (p.faceUp && p.faceUp.length > 0) {
+                html += '<div style="font-size:0.75rem;color:var(--text-secondary);margin:6px 0 4px;">Face up:</div>';
+                html += '<div style="display:flex;gap:4px;flex-wrap:wrap;justify-content:center;">';
+
+                // Group cards by rank+suit
+                const groups = {};
+                p.faceUp.forEach(c => {
+                  const key = c.rank + c.suit;
+                  if (!groups[key]) groups[key] = { card: c, count: 0 };
+                  groups[key].count++;
+                });
+
+                Object.values(groups).sort((a, b) => a.card.rank - b.card.rank).forEach(g => {
+                  const c = g.card;
+                  const r = {2:'2',3:'3',4:'4',5:'5',6:'6',7:'7',8:'8',9:'9',10:'10',11:'J',12:'Q',13:'K',14:'A'}[c.rank] || c.rank;
+                  const s = {h:'♥',d:'♦',c:'♣',s:'♠'}[c.suit] || c.suit;
+                  const color = (c.suit === 'h' || c.suit === 'd') ? '#ff4757' : '#e0e0ff';
+                  const bg = (c.suit === 'h' || c.suit === 'd') ? 'rgba(255,71,87,0.12)' : 'rgba(224,224,255,0.08)';
+                  const prefix = g.count > 1 ? '<span style="font-size:0.65rem;position:absolute;top:-2px;right:-2px;background:var(--neon-purple);color:white;border-radius:50%;width:16px;height:16px;display:flex;align-items:center;justify-content:center;">' + g.count + '</span>' : '';
+                  html += '<div style="position:relative;width:40px;height:56px;border-radius:6px;border:1px solid ' + color + ';background:' + bg + ';display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;">' +
+                    prefix +
+                    '<span style="font-size:0.85rem;font-weight:700;color:' + color + ';">' + r + '</span>' +
+                    '<span style="font-size:0.7rem;color:' + color + ';">' + s + '</span></div>';
+                });
+                html += '</div>';
+              }
+            }
+            html += '</div>';
+          });
+        }
         html += '</div>';
       }
 

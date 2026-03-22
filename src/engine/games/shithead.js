@@ -12,12 +12,14 @@ function shuffleArray(arr) {
   return a;
 }
 
-function createDeck() {
+function createDeck(deckCount = 1) {
   const suits = ['h', 'd', 'c', 's'];
   const cards = [];
-  for (const suit of suits) {
-    for (let rank = 2; rank <= 14; rank++) {
-      cards.push({ id: `${rank}${suit}`, suit, rank });
+  for (let d = 0; d < deckCount; d++) {
+    for (const suit of suits) {
+      for (let rank = 2; rank <= 14; rank++) {
+        cards.push({ id: `${rank}${suit}_${d}`, suit, rank });
+      }
     }
   }
   return shuffleArray(cards);
@@ -37,8 +39,13 @@ function getTopRank(pile) {
 function canPlayOnPile(cardRank, pile) {
   if (pile.length === 0) return true;
   if (cardRank === 2) return true; // wild/reset
+  if (cardRank === 3) return true; // transparent, always playable
+  if (cardRank === 10) return true; // 10 always burns
   const topRank = getTopRank(pile);
-  if (topRank === null) return true; // pile is all 3s or empty
+  if (topRank === null) return true;
+  if (topRank === 7) {
+    return cardRank <= 7;
+  }
   return cardRank >= topRank;
 }
 
@@ -164,11 +171,12 @@ function getPlayableSource(state, playerId) {
 // --- Game Definition ---
 
 function setup({ players, config }) {
-  if (players.length < 2 || players.length > 6) {
-    throw new Error('Shithead requires 2-6 players');
+  if (players.length < 2) {
+    throw new Error('Shithead requires at least 2 players');
   }
 
-  const deck = createDeck();
+  const deckCount = (config && config.decks) || 1;
+  const deck = createDeck(deckCount);
   let deckIndex = 0;
 
   const hands = {};
@@ -191,6 +199,7 @@ function setup({ players, config }) {
   return {
     phase: 'swap',
     players: [...players],
+    deckCount,
     hands,
     faceUp,
     faceDown,
@@ -409,6 +418,7 @@ function view(state, playerId) {
     finishOrder: state.finishOrder,
     isMyTurn: state.players[state.currentPlayerIndex] === playerId,
     swapConfirmed: state.phase === 'swap' ? state.swapConfirmed : undefined,
+    deckCount: state.deckCount,
   };
 }
 
