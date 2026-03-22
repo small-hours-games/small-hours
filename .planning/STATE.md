@@ -67,6 +67,10 @@ Plan: Not started
 - [Phase 01]: Made startGame async rather than separate prepareGame method
 - [Phase 01]: Added .catch() at dispatch call site for async handler rather than making handleMessage async
 
+### Pending Todos
+
+- 1 pending: `Add server deployment update script` (tooling)
+
 ## Session Continuity
 
 ### To Resume
