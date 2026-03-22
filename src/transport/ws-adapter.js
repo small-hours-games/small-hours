@@ -3,6 +3,7 @@
 
 import { WebSocketServer } from 'ws';
 import { processAction, getView, checkEnd } from '../engine/engine.js';
+import { saveAnswers } from '../fetcher/question-file.js';
 
 const HEARTBEAT_INTERVAL_MS = 30_000;
 const RATE_LIMIT_MAX = 30;          // messages per second
@@ -406,6 +407,13 @@ export function setupWebSocket(server, manager) {
         sendToPlayer(id, { type: 'GAME_STATE', ...view, ...endResult });
       }
       broadcastToRoom(room.code, { type: 'GAME_STATE', phase: 'finished', ...endResult, playerNames }, { hostsOnly: true });
+
+      // Save question-form answers to file
+      const gameState = room.game?.state;
+      if (gameState?.questions && gameState?.responses && gameState?._sourceFile) {
+        saveAnswers(gameState._sourceFile, gameState.responses, playerNames).catch(() => {});
+      }
+
       room.endGame();
       broadcastToRoom(room.code, { type: 'LOBBY_UPDATE', state: room.getState() });
     }

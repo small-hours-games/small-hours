@@ -1,0 +1,52 @@
+{
+  "name": "Pending Todos Poll",
+  "created": "2026-03-22",
+  "questions": [
+    {
+      "text": "Should we add Gemini TTS via Vertex AI?",
+      "type": "yesno",
+      "source": "2026-03-22-add-gemini-tts-via-vertex-ai.md"
+    },
+    {
+      "text": "Should we create a server deployment/update script?",
+      "type": "yesno",
+      "source": "2026-03-22-add-server-deployment-update-script.md"
+    },
+    {
+      "text": "Should we brand the project with the Small Hours Games logo?",
+      "type": "yesno",
+      "source": "2026-03-22-brand-project-with-small-hours-games-logo.md"
+    },
+    {
+      "text": "What should we do with SPEC.md?",
+      "type": "choice",
+      "options": ["Update it", "Archive it", "Remove it"],
+      "source": "2026-03-22-check-if-spec-still-worth-saving.md"
+    },
+    {
+      "text": "Which TTS provider for quiz voice narration?",
+      "type": "choice",
+      "options": ["ElevenLabs", "Google Cloud TTS", "OpenAI TTS", "Browser Web Speech API"],
+      "source": "2026-03-22-research-ai-generated-voice-for-quiz-questions.md"
+    },
+    {
+      "text": "Should we enable running GSD commands as unix CLI commands?",
+      "type": "yesno",
+      "source": "2026-03-22-run-gsd-commands-via-claude-cli-as-unix-commands.md"
+    },
+    {
+      "text": "Rate overall project priority (1=low, 5=urgent)",
+      "type": "rating",
+      "min": 1,
+      "max": 5,
+      "source": "general"
+    },
+    {
+      "text": "Any other thoughts or ideas?",
+      "type": "text",
+      "label": "Feedback",
+      "source": "general"
+    }
+  ],
+  "answers": []
+}

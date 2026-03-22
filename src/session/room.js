@@ -7,6 +7,7 @@ import shithead from '../engine/games/shithead.js';
 import quiz from '../engine/games/quiz.js';
 import questionForm from '../engine/games/question-form.js';
 import { fetchQuestions } from '../fetcher/cached-fetcher.js';
+import { loadQuestionFile, saveAnswers } from '../fetcher/question-file.js';
 
 const AVATAR_POOL = [
   '\u{1F98A}', '\u{1F438}', '\u{1F43C}', '\u{1F981}', '\u{1F42F}',
@@ -237,6 +238,17 @@ export class Room {
         this.usedQuestionIds.add(q.id);
       }
       gameConfig.questions = selected;
+    }
+
+    // Question-form: load questions from file if none provided
+    if (gameType === 'question-form' && !gameConfig.questions?.length) {
+      const file = gameConfig.file || 'todo-poll.json';
+      const loaded = await loadQuestionFile(file);
+      if (!loaded.ok) {
+        throw new Error(`Failed to load questions: ${loaded.error}`);
+      }
+      gameConfig.questions = loaded.questions;
+      gameConfig._sourceFile = file;
     }
 
     this.lastActivity = Date.now();

@@ -5,21 +5,22 @@
 
  RUN  v3.2.4 /home/dellvall/small-hours
 
- ✓ tests/fetcher/gemini-tts.test.js (8 tests) 9ms
  ✓ tests/fetcher/opentrivia.test.js (9 tests) 9ms
- ✓ src/engine/games/shithead.test.js (14 tests) 10ms
+ ✓ src/engine/games/shithead.test.js (14 tests) 8ms
+ ✓ tests/fetcher/gemini-tts.test.js (8 tests) 13ms
 stdout | tests/fetcher/cached-tts.test.js > generateAudioForQuestions > processes a batch of questions sequentially
 [tts] generated audio for 2/2 questions
 
 stdout | tests/fetcher/cached-tts.test.js > generateAudioForQuestions > continues processing remaining questions when one fails
 [tts] generated audio for 1/2 questions
 
+ ✓ tests/engine/question-form.test.js (22 tests) 14ms
  ✓ tests/fetcher/cached-tts.test.js (9 tests) 13ms
- ✓ tests/integration/quiz-start.test.js (7 tests) 10ms
- ✓ tests/fetcher/cached-fetcher.test.js (17 tests) 70ms
+ ✓ tests/integration/quiz-start.test.js (7 tests) 15ms
+ ✓ tests/fetcher/cached-fetcher.test.js (17 tests) 64ms
 
- Test Files  6 passed (6)
-      Tests  64 passed (64)
-   Start at  07:59:47
-   Duration  530ms (transform 321ms, setup 0ms, collect 656ms, tests 121ms, environment 2ms, prepare 652ms)
+ Test Files  7 passed (7)
+      Tests  86 passed (86)
+   Start at  08:44:40
+   Duration  525ms (transform 402ms, setup 0ms, collect 831ms, tests 138ms, environment 2ms, prepare 805ms)
 

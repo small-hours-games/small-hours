@@ -21,6 +21,7 @@ const questionForm = {
       currentQuestion: 0,
       responses,                // { playerId: { questionIndex: answer } }
       submitted: {},            // { playerId: true } — who has submitted all answers
+      _sourceFile: config._sourceFile || null,  // track origin file for saving answers
     };
   },
 
