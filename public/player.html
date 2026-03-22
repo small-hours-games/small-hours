@@ -816,8 +816,9 @@
     }
 
     function handleGameState(msg) {
-      // Track game type if provided
+      // Track game type and player names if provided
       if (msg.gameType) state.gameType = msg.gameType;
+      if (msg.playerNames) state.playerNames = msg.playerNames;
 
       if (msg.phase === 'finished') {
         if (msg.winner) {
@@ -838,6 +839,15 @@
           showSection('lobbySection');
         }, 3000);
         return;
+      }
+
+      // Ensure game section is visible
+      if (state.gameType) {
+        const sectionId = getGameSectionId(state.gameType);
+        const section = document.getElementById(sectionId);
+        if (section && !section.classList.contains('active')) {
+          showSection(sectionId);
+        }
       }
 
       switch (state.gameType) {
@@ -1286,7 +1296,8 @@
       if (msg.isMyTurn) {
         turnInfo.innerHTML = '<span style="color:var(--neon-green);font-weight:700;">Your turn!</span>';
       } else {
-        turnInfo.innerHTML = '<span style="color:var(--text-secondary);">Waiting for other player...</span>';
+        const cpName = (msg.playerNames || {})[msg.currentPlayer] || 'other player';
+        turnInfo.innerHTML = '<span style="color:var(--text-secondary);">Waiting for ' + escapeHtml(cpName) + '...</span>';
       }
 
       // Hand
@@ -1368,17 +1379,19 @@
 
     function renderShOtherPlayers(msg) {
       const container = document.getElementById('shOtherPlayers');
+      const names = msg.playerNames || {};
       const others = (msg.players || []).filter(p => p.playerId !== state.playerId);
       if (others.length === 0) { container.style.display = 'none'; return; }
       container.style.display = 'block';
 
       container.innerHTML = '<div style="font-size:0.8rem;color:var(--text-secondary);margin-bottom:6px;">Other Players</div>' +
         others.map(p => {
+          const name = names[p.playerId] || p.playerId;
           const status = p.isOut ? '<span style="color:var(--neon-green);">Out!</span>' :
-            'Hand: ' + p.handCount + ' | Up: ' + p.faceUp.length + ' | Down: ' + p.faceDownCount;
+            'Hand: ' + p.handCount + ' | Up: ' + (p.faceUp ? p.faceUp.length : 0) + ' | Down: ' + p.faceDownCount;
           const isCurrent = p.playerId === msg.currentPlayer ? ' style="border-left:3px solid var(--neon-purple);padding-left:8px;"' : '';
           return '<div class="player-item"' + isCurrent + '>' +
-            '<span class="player-name">' + escapeHtml(p.playerId) + '</span>' +
+            '<span class="player-name">' + escapeHtml(name) + '</span>' +
             '<span style="font-size:0.8rem;color:var(--text-secondary);">' + status + '</span></div>';
         }).join('');
     }

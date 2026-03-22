@@ -598,6 +598,7 @@
 
         case 'GAME_STATE':
           if (msg.gameType) state.gameType = msg.gameType;
+          if (msg.playerNames) state.playerNames = msg.playerNames;
           state.gameState = msg;
           // Track guess events for host display
           if (msg.events) {
@@ -712,8 +713,7 @@
           const icon = g.result === 'correct' ? '&#9989;' : (g.result === 'too_high' ? '&#11015; Too high' : '&#11014; Too low');
           const color = g.result === 'correct' ? 'var(--neon-green)' : 'var(--text-secondary)';
           // Look up player name
-          const player = state.players.find(p => p.playerId === g.playerId);
-          const name = player ? (player.username || player.name) : 'Player';
+          const name = (state.playerNames || {})[g.playerId] || 'Player';
           html += '<div class="clue-item"><span class="clue-author">' + escapeHtml(name) + '</span>' +
             '<span style="color:' + color + ';">' + g.number + ' ' + icon + '</span></div>';
         });
@@ -867,8 +867,7 @@
       if (msg.players) {
         html += '<div style="display:flex;gap:16px;justify-content:center;flex-wrap:wrap;margin-top:16px;">';
         msg.players.forEach(p => {
-          const player = state.players.find(pl => pl.playerId === p.playerId);
-          const name = player ? (player.username || player.name) : p.playerId;
+          const name = (state.playerNames || {})[p.playerId] || p.playerId;
           const isCurrent = p.playerId === msg.currentPlayer;
           const border = isCurrent ? 'border:2px solid var(--neon-purple);' : '';
           const total = p.handCount + p.faceUp.length + p.faceDownCount;
@@ -900,8 +899,7 @@
     function returnToLobby(msg) {
       if (msg.phase === 'finished') {
         if (msg.winner) {
-          const player = state.players.find(p => p.playerId === msg.winner);
-          const name = player ? (player.username || player.name) : 'Someone';
+          const name = (state.playerNames || {})[msg.winner] || 'Someone';
           showToast(name + ' wins!', 'success');
           spawnConfetti();
         }

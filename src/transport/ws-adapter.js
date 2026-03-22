@@ -54,6 +54,17 @@ export function setupWebSocket(server, manager) {
     }
   }
 
+  // --- Helpers ---
+
+  /** Build a playerId → username map from room players */
+  function getPlayerNames(room) {
+    const names = {};
+    for (const [id, p] of room.players) {
+      names[id] = p.username;
+    }
+    return names;
+  }
+
   // --- Rate limiting ---
 
   function checkRateLimit(meta) {
@@ -223,11 +234,32 @@ export function setupWebSocket(server, manager) {
       return;
     }
 
-    const { playerId, avatar } = room.addPlayer(msg.username);
+    // Check if this username already exists (reconnection)
+    let existingId = null;
+    for (const [id, p] of room.players) {
+      if (p.username === msg.username) {
+        existingId = id;
+        break;
+      }
+    }
+
+    let playerId, avatar;
+    if (existingId) {
+      // Reconnect existing player
+      playerId = existingId;
+      const player = room.players.get(existingId);
+      avatar = player.avatar;
+      player.connected = true;
+      player.lastSeen = Date.now();
+    } else {
+      // New player
+      ({ playerId, avatar } = room.addPlayer(msg.username));
+    }
+
     meta.playerId = playerId;
     playerSockets.set(playerId, ws);
 
-    // Cancel any pending grace timer for a reconnecting player
+    // Cancel any pending grace timer
     if (graceTimers.has(playerId)) {
       clearTimeout(graceTimers.get(playerId));
       graceTimers.delete(playerId);
@@ -235,6 +267,13 @@ export function setupWebSocket(server, manager) {
 
     send(ws, { type: 'JOIN_OK', playerId, avatar });
     broadcastToRoom(room.code, { type: 'LOBBY_UPDATE', state: room.getState() });
+
+    // If a game is running, send current game state to the reconnecting player
+    if (room.game) {
+      const view = getView(room.game, playerId);
+      const playerNames = getPlayerNames(room);
+      sendToPlayer(playerId, { type: 'GAME_STATE', ...view, playerNames });
+    }
   }
 
   function handleSetReady(ws, meta, room, msg) {
@@ -285,12 +324,13 @@ export function setupWebSocket(server, manager) {
       });
 
       // Send initial game state to each player
+      const pNames = getPlayerNames(room);
       for (const [id] of room.players) {
         const view = getView(room.game, id);
-        sendToPlayer(id, { type: 'GAME_STATE', ...view, gameType: msg.gameType });
+        sendToPlayer(id, { type: 'GAME_STATE', ...view, gameType: msg.gameType, playerNames: pNames });
       }
       // Also broadcast to host displays
-      broadcastToRoom(room.code, { type: 'GAME_STATE', gameType: msg.gameType, phase: room.game.state.phase });
+      broadcastToRoom(room.code, { type: 'GAME_STATE', gameType: msg.gameType, phase: room.game.state.phase, playerNames: pNames });
     } catch (err) {
       send(ws, { type: 'ERROR', message: err.message });
     }
@@ -333,15 +373,17 @@ export function setupWebSocket(server, manager) {
     room.game = updatedGame;
     room.lastActivity = Date.now();
 
+    const playerNames = getPlayerNames(room);
+
     // Send per-player views (flattened into GAME_STATE)
     for (const [id] of room.players) {
       const view = getView(room.game, id);
-      sendToPlayer(id, { type: 'GAME_STATE', ...view });
+      sendToPlayer(id, { type: 'GAME_STATE', ...view, playerNames });
     }
 
-    // Also broadcast shared state to host displays (use first player's view as base, minus private data)
+    // Also broadcast shared state to host displays
     const hostView = getView(room.game, room.players.keys().next().value);
-    const sharedState = { type: 'GAME_STATE', ...hostView };
+    const sharedState = { type: 'GAME_STATE', ...hostView, playerNames };
     delete sharedState.myHand;
     delete sharedState.myFaceUp;
     delete sharedState.myFaceDownCount;
