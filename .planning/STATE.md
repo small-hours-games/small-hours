@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v2.1
 milestone_name: milestone
 status: unknown
-last_updated: "2026-03-22T04:23:42.957Z"
+last_updated: "2026-03-22T04:38:15.571Z"
 progress:
   total_phases: 3
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 2
-  completed_plans: 1
+  completed_plans: 2
 ---
 
 # State: Small Hours Game Engine
@@ -64,6 +64,8 @@ Plan: 2 of 2
 - Phase 3 adds the lobby voting flow and wires the full pipeline into `room.startGame()`
 - [Phase 01]: Used regex-based HTML entity decoder instead of external dependency
 - [Phase 01]: Established result wrapper pattern {ok, data}/{ok, error} for fallible operations
+- [Phase 01]: Made startGame async rather than separate prepareGame method
+- [Phase 01]: Added .catch() at dispatch call site for async handler rather than making handleMessage async
 
 ## Session Continuity
 
