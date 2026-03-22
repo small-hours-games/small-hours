@@ -8,14 +8,41 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 The full game spec lives in `SPEC.md`. Planning state is in `.planning/`.
 
+## Development
+
+```bash
+npm start               # start server (port 3001, or PORT env var)
+npm run dev             # start server with --watch (auto-restart on changes)
+npm test                # run all tests (vitest run)
+npm run test:watch      # vitest in watch mode
+npx vitest run <file>   # run a single test file
+```
+
+Server runs on `http://localhost:3001`. Health check at `/health`.
+
 ## Architecture (3 Layers)
 
 The engine is a pure function: `(state, action) => {newState, events}`. Everything else layers on top.
 
 ```
-Transport Layer  — WebSocket / HTTP / Terminal (adapts JSON to/from transport)
-Session Layer    — Rooms, timers, broadcast (calls engine functions)
-Engine Layer     — Pure functions, no I/O, no side effects
+src/
+├── transport/           # Layer 1: Transport
+│   ├── http.js          #   Express routes: /health, /api/rooms, static files
+│   └── ws-adapter.js    #   WebSocket server: message dispatch, rate limiting, heartbeat
+├── session/             # Layer 2: Session
+│   ├── manager.js       #   RoomManager singleton: creates/tracks/cleans up rooms
+│   └── room.js          #   Room class: players, lobby state, game lifecycle
+├── engine/              # Layer 3: Engine (pure functions, no I/O)
+│   ├── engine.js        #   Core: createGame, processAction, getView, checkEnd
+│   └── games/           #   Game definitions (plain objects, not classes)
+│       ├── index.js     #   Re-exports all games
+│       ├── number-guess.js
+│       ├── quiz.js
+│       ├── shithead.js
+│       └── spy.js
+├── fetcher/
+│   └── opentrivia.js    # OpenTrivia DB API client (quiz questions)
+└── server.js            # Entry point: wires Express + WebSocket + RoomManager
 ```
 
 **Key rejected SPEC.md assumptions** (see `.planning/research/ARCHITECTURE.md` for rationale):
@@ -25,27 +52,24 @@ Engine Layer     — Pure functions, no I/O, no side effects
 - No Display/Phone as engine concepts — presentation layer concern
 - Timers are synthetic actions fed to the engine by the session layer
 
+## How the Layers Connect
+
+1. **WebSocket message arrives** in `ws-adapter.js` → parsed, rate-limited, dispatched by `msg.type`
+2. **Session layer** (`room.js`) manages player join/leave, lobby state, and calls `room.startGame(gameType)`
+3. **Game actions** flow through: `ws-adapter.handleGameAction` → `engine.processAction(game, action)` → per-player views via `engine.getView` → broadcast back via WebSocket
+4. **Game registry** lives in `room.js` as `GAME_REGISTRY` object mapping type strings to game definitions. New games must be imported and added there.
+
 ## Tech Stack
 
 - **Runtime:** Node.js 22 LTS, JavaScript ESM (no TypeScript, no build step)
-- **Testing:** Vitest
-- **Dependencies:** Zero production npm deps initially — earn dependencies when needed (see `.planning/research/STACK.md`)
-- **Terminal client** is the first consumer (readline + optional chalk)
-
-## Development
-
-```bash
-# Tests (once source exists)
-npx vitest              # run all tests
-npx vitest run <file>   # run single test file
-npx vitest --watch      # watch mode
-```
+- **Server:** Express 5 + ws (WebSocket)
+- **Testing:** Vitest (globals: false — must import `describe`, `it`, `expect` explicitly)
+- **Dependencies philosophy:** Earn dependencies when needed (see `.planning/research/STACK.md`)
 
 ## Design Principles
 
 - **Engine-first, not infra-first.** Build games, let infrastructure needs emerge.
 - **No abstraction before the second use case.** Build 2-3 games, then extract shared patterns.
-- **Earn your dependencies.** Express, ws, Docker, etc. are added only when their trigger condition is met (see Stack research).
 - **JSON boundary.** Engine input/output is always JSON. Transport is someone else's problem.
 - **Players are ephemeral.** No auth, no accounts, no persistent identity — by design.
 
@@ -55,14 +79,18 @@ Each game exports a plain object (not a class):
 
 ```js
 export default {
-  setup(ctx)              // => initial state
-  actions: { move(state, action) } // => {state, events}
-  view(state, playerId)   // => visible state for that player
-  endIf(state)            // => truthy if game is over
+  setup(ctx)                        // => initial state  (ctx = { players, config })
+  actions: { guess(state, payload) } // => { state, events }  (payload includes playerId)
+  view(state, playerId)             // => visible state for that player
+  endIf(state)                      // => null if ongoing, or { winner, scores }
 }
 ```
 
-Reference implementation: Number Guess (simplest game, build first).
+Reference implementation: `src/engine/games/number-guess.js` (simplest game).
+
+## WebSocket Protocol
+
+Clients connect to `/ws/host/:code` (display) or `/ws/player/:code` (phone). Messages are JSON with a `type` field. Game actions are wrapped as `{ type: 'GAME_ACTION', action: { type: '<action-name>', ...payload } }`. The full message protocol is in `SPEC.md` sections 6.1 and 6.2.
 
 ## GSD Workflow
 
