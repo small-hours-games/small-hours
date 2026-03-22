@@ -26,14 +26,13 @@ function createDeck(deckCount = 1) {
 }
 
 function getTopRank(pile) {
-  // Walk from top of pile backwards, skipping 2s (wild/reset — next player can play anything)
-  for (let i = pile.length - 1; i >= 0; i--) {
-    if (pile[i].rank !== 2) {
-      return pile[i].rank;
-    }
-  }
-  // Entire pile is 2s (or empty) — anything can be played
-  return null;
+  // Returns the effective rank the next player must play on.
+  // A 2 on top resets the pile — next player can play anything (return null).
+  // An empty pile also allows anything (return null).
+  if (pile.length === 0) return null;
+  const topCard = pile[pile.length - 1];
+  if (topCard.rank === 2) return null; // 2 is a wild/reset — anything goes next
+  return topCard.rank;
 }
 
 function canPlayOnPile(cardRank, pile) {

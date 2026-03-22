@@ -1494,12 +1494,15 @@
 
     // Check if a card rank can be played on the current pile
     function canPlayCard(rank, pileTopRank, pileCount) {
+      // Coerce to numbers defensively — JSON may produce strings in edge cases
+      const r = Number(rank);
+      const top = pileTopRank == null ? null : Number(pileTopRank);
       if (pileCount === 0) return true;
-      if (rank === 2) return true;
-      if (rank === 10) return true;
-      if (pileTopRank === null || pileTopRank === undefined) return true;
-      if (pileTopRank === 7) return rank <= 7;
-      return rank >= pileTopRank;
+      if (r === 2) return true;  // 2 is a wild/reset — always playable
+      if (r === 10) return true; // 10 burns the pile — always playable
+      if (top === null || top === undefined || isNaN(top)) return true;
+      if (top === 7) return r <= 7;
+      return r >= top;
     }
 
     // --- UI Helpers ---
