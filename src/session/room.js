@@ -5,7 +5,7 @@ import { createGame, processAction, getView, checkEnd } from '../engine/engine.j
 import numberGuess from '../engine/games/number-guess.js';
 import shithead from '../engine/games/shithead.js';
 import quiz from '../engine/games/quiz.js';
-import { fetchQuestions } from '../fetcher/opentrivia.js';
+import { fetchQuestions } from '../fetcher/cached-fetcher.js';
 
 const AVATAR_POOL = [
   '\u{1F98A}', '\u{1F438}', '\u{1F43C}', '\u{1F981}', '\u{1F42F}',
@@ -73,6 +73,7 @@ export class Room {
     this.lastActivity = Date.now();
     this.language = 'en';
     this.gameSuggestions = new Map();
+    this.usedQuestionIds = new Set();
   }
 
   /**
@@ -201,7 +202,7 @@ export class Room {
       throw new Error('No connected players to start a game');
     }
 
-    // Quiz-specific: fetch questions from OpenTrivia DB
+    // Quiz-specific: fetch questions from cached-fetcher, deduplicate used questions
     let gameConfig = { ...config };
     if (gameType === 'quiz') {
       const amount = config.questionCount || 10;
@@ -209,7 +210,31 @@ export class Room {
       if (!result.ok) {
         throw new Error(`Failed to fetch questions: ${result.error.message}`);
       }
-      gameConfig.questions = result.questions;
+
+      // Filter out questions already used in this room (per D-09)
+      let unused = result.questions.filter(q => !this.usedQuestionIds.has(q.id));
+
+      // If not enough unused questions, fetch fresh from API to supplement (per D-11)
+      if (unused.length < amount) {
+        const supplement = await fetchQuestions(config.categoryId, amount);
+        if (supplement.ok) {
+          const existingIds = new Set(unused.map(q => q.id));
+          for (const q of supplement.questions) {
+            if (!this.usedQuestionIds.has(q.id) && !existingIds.has(q.id)) {
+              unused.push(q);
+              existingIds.add(q.id);
+            }
+            if (unused.length >= amount) break;
+          }
+        }
+      }
+
+      // Track the questions we are about to use
+      const selected = unused.slice(0, amount);
+      for (const q of selected) {
+        this.usedQuestionIds.add(q.id);
+      }
+      gameConfig.questions = selected;
     }
 
     this.lastActivity = Date.now();
