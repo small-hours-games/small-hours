@@ -5,6 +5,26 @@ const GEMINI_MODEL = 'gemini-2.5-flash-preview-tts';
 const GEMINI_ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
 const DEFAULT_VOICE = 'Kore';
 
+function wrapPcmAsWav(pcm, sampleRate, channels, bitsPerSample) {
+  const byteRate = sampleRate * channels * bitsPerSample / 8;
+  const blockAlign = channels * bitsPerSample / 8;
+  const header = Buffer.alloc(44);
+  header.write('RIFF', 0);
+  header.writeUInt32LE(36 + pcm.length, 4);
+  header.write('WAVE', 8);
+  header.write('fmt ', 12);
+  header.writeUInt32LE(16, 16);          // fmt chunk size
+  header.writeUInt16LE(1, 20);           // PCM format
+  header.writeUInt16LE(channels, 22);
+  header.writeUInt32LE(sampleRate, 24);
+  header.writeUInt32LE(byteRate, 28);
+  header.writeUInt16LE(blockAlign, 32);
+  header.writeUInt16LE(bitsPerSample, 34);
+  header.write('data', 36);
+  header.writeUInt32LE(pcm.length, 40);
+  return Buffer.concat([header, pcm]);
+}
+
 /**
  * Synthesize speech from text using the Gemini API.
  *
@@ -58,10 +78,10 @@ export async function synthesizeSpeech(text, options = {}) {
       return { ok: false, error: { code: 'NO_AUDIO', message: 'Response did not contain audio data' } };
     }
 
-    const audioData = Buffer.from(part.inlineData.data, 'base64');
-    const mimeType = part.inlineData.mimeType || 'audio/wav';
+    const pcm = Buffer.from(part.inlineData.data, 'base64');
+    const audioData = wrapPcmAsWav(pcm, 24000, 1, 16);
 
-    return { ok: true, audioData, mimeType };
+    return { ok: true, audioData, mimeType: 'audio/wav' };
   } catch (err) {
     return { ok: false, error: { code: 'NETWORK_ERROR', message: err.message } };
   }
