@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Small Hours: v1.0 → v1.1 Engine Pivot</title>
+<style>
+  :root {
+    --bg: #0d1117;
+    --surface: #161b22;
+    --border: #30363d;
+    --text: #c9d1d9;
+    --text-muted: #8b949e;
+    --red-bg: #3d1f28;
+    --red-text: #ffa198;
+    --red-border: #f8514966;
+    --green-bg: #1a3327;
+    --green-text: #7ee787;
+    --green-border: #3fb95066;
+    --blue: #58a6ff;
+    --yellow: #d29922;
+    --accent: #bc8cff;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    padding: 0;
+  }
+  .container { max-width: 900px; margin: 0 auto; padding: 2rem 1.5rem; }
+
+  /* Header */
+  .hero {
+    text-align: center;
+    padding: 3rem 1.5rem;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 2rem;
+  }
+  .hero h1 { font-size: 2rem; margin-bottom: 0.5rem; }
+  .hero .subtitle { color: var(--text-muted); font-size: 1.1rem; }
+  .hero .arrow { font-size: 1.5rem; margin: 0 0.5rem; color: var(--accent); }
+
+  /* Steps */
+  .step {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    margin-bottom: 2rem;
+    overflow: hidden;
+  }
+  .step-header {
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    user-select: none;
+  }
+  .step-header:hover { background: #1c2128; }
+  .step-number {
+    background: var(--accent);
+    color: var(--bg);
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700;
+    font-size: 0.9rem;
+    flex-shrink: 0;
+  }
+  .step-title { font-size: 1.1rem; font-weight: 600; }
+  .step-desc { color: var(--text-muted); font-size: 0.85rem; }
+  .step-toggle { margin-left: auto; color: var(--text-muted); font-size: 1.2rem; }
+
+  .step-body { padding: 1.5rem; display: none; }
+  .step.open .step-body { display: block; }
+  .step.open .step-toggle { transform: rotate(180deg); }
+
+  /* Explanation boxes */
+  .explanation {
+    background: #1c2128;
+    border-left: 3px solid var(--accent);
+    padding: 1rem 1.25rem;
+    margin-bottom: 1.5rem;
+    border-radius: 0 6px 6px 0;
+    font-size: 0.95rem;
+  }
+  .explanation strong { color: var(--accent); }
+
+  /* Diff blocks */
+  .diff-block { margin-bottom: 1.5rem; }
+  .diff-label {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.5rem;
+  }
+  .diff {
+    font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+    font-size: 0.82rem;
+    line-height: 1.5;
+    border-radius: 6px;
+    overflow-x: auto;
+    border: 1px solid var(--border);
+  }
+  .diff-line {
+    padding: 2px 12px;
+    white-space: pre-wrap;
+    word-break: break-all;
+  }
+  .diff-line.removed {
+    background: var(--red-bg);
+    color: var(--red-text);
+  }
+  .diff-line.added {
+    background: var(--green-bg);
+    color: var(--green-text);
+  }
+  .diff-line.context {
+    color: var(--text-muted);
+  }
+  .diff-line.header {
+    color: var(--blue);
+    background: #161b22;
+    font-style: italic;
+  }
+
+  /* Question boxes */
+  .question-box {
+    background: #1a1e24;
+    border: 1px solid var(--yellow);
+    border-radius: 6px;
+    padding: 1rem 1.25rem;
+    margin: 1rem 0;
+  }
+  .question-box .q-label {
+    color: var(--yellow);
+    font-weight: 600;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    margin-bottom: 0.5rem;
+  }
+
+  /* Summary table */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1rem 0;
+    font-size: 0.9rem;
+  }
+  th, td {
+    padding: 0.6rem 0.8rem;
+    border: 1px solid var(--border);
+    text-align: left;
+  }
+  th { background: #1c2128; color: var(--text-muted); font-weight: 600; }
+
+  .verdict-reject { color: var(--red-text); font-weight: 600; }
+  .verdict-keep { color: var(--green-text); font-weight: 600; }
+  .verdict-defer { color: var(--yellow); font-weight: 600; }
+
+  /* Footer */
+  .footer {
+    text-align: center;
+    padding: 2rem;
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    border-top: 1px solid var(--border);
+    margin-top: 2rem;
+  }
+
+  /* Expand all */
+  .controls {
+    text-align: right;
+    margin-bottom: 1rem;
+  }
+  .controls button {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    padding: 0.4rem 1rem;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.85rem;
+  }
+  .controls button:hover { border-color: var(--accent); color: var(--text); }
+
+  h3 { margin: 1.5rem 0 0.75rem; color: var(--blue); font-size: 1rem; }
+  p { margin-bottom: 0.75rem; }
+  ul, ol { margin-left: 1.5rem; margin-bottom: 0.75rem; }
+  li { margin-bottom: 0.3rem; }
+  code { background: #1c2128; padding: 2px 6px; border-radius: 3px; font-family: 'JetBrains Mono', monospace; font-size: 0.85em; }
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <h1>Small Hours <span class="arrow">→</span> Game Engine</h1>
+  <div class="subtitle">Why we're pivoting from "build the platform" to "build the engine"</div>
+  <p style="color: var(--text-muted); margin-top: 1rem; font-size: 0.9rem;">
+    Click each step to expand. Read in order — each builds on the last.
+  </p>
+</div>
+
+<div class="container">
+  <div class="controls">
+    <button onclick="toggleAll()">Expand / Collapse All</button>
+  </div>
+
+  <!-- STEP 1: The Problem -->
+  <div class="step open">
+    <div class="step-header" onclick="toggle(this)">
+      <div class="step-number">1</div>
+      <div>
+        <div class="step-title">The Problem: Infrastructure Before Games</div>
+        <div class="step-desc">Why the v1.0 roadmap was backwards</div>
+      </div>
+      <div class="step-toggle">▼</div>
+    </div>
+    <div class="step-body">
+      <div class="explanation">
+        The v1.0 roadmap had <strong>12 phases and 83 requirements</strong>. The first 5 phases were pure infrastructure: Docker, HTTPS, WebSockets, rooms, lobby. <strong>Not a single game was playable until Phase 6.</strong>
+        <br><br>
+        This is exactly what got the project stuck. We were building plumbing for games that didn't exist yet.
+      </div>
+
+      <table>
+        <tr><th>v1.0 Phase</th><th>What It Built</th><th>Games Playable?</th></tr>
+        <tr><td>Phase 1</td><td>Docker, HTTPS, Helmet, rate limiting</td><td>No</td></tr>
+        <tr><td>Phase 2</td><td>WebSocket server, heartbeat, dispatch</td><td>No</td></tr>
+        <tr><td>Phase 3</td><td>Room codes, admin, bots, reconnection</td><td>No</td></tr>
+        <tr><td>Phase 4</td><td>Lobby, chat, QR codes, ready status</td><td>No</td></tr>
+        <tr><td>Phase 5</td><td>Database, caching, stats, REST API</td><td>No</td></tr>
+        <tr><td>Phase 6</td><td>Game engine + Number Guess</td><td><strong>Finally, yes</strong></td></tr>
+      </table>
+
+      <div class="question-box">
+        <div class="q-label">The question that changed everything</div>
+        Is there any reason this can't start as terminal games talking to a simple API?
+        <br><br>
+        <strong>Answer: No.</strong> JSON in → process → JSON out. That's just functions.
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 2: The Name Change -->
+  <div class="step">
+    <div class="step-header" onclick="toggle(this)">
+      <div class="step-number">2</div>
+      <div>
+        <div class="step-title">Identity Shift: Platform → Engine</div>
+        <div class="step-desc">PROJECT.md — what this project actually is now</div>
+      </div>
+      <div class="step-toggle">▼</div>
+    </div>
+    <div class="step-body">
+      <div class="explanation">
+        The project name changed from <strong>"Small Hours Games"</strong> (a platform you deploy) to <strong>"Small Hours Game Engine"</strong> (a tool for creating games). The core value flipped from "players can join from their phones" to "creating a new game should be trivially simple."
+      </div>
+
+      <div class="diff-block">
+        <div class="diff-label">What This Is</div>
+        <div class="diff">
+          <div class="diff-line removed">-A real-time multiplayer party game platform for local gatherings. One shared</div>
+          <div class="diff-line removed">-screen (TV/monitor) acts as the "display" showing game state, and players join</div>
+          <div class="diff-line removed">-from their phones via a short room code or QR scan. The platform hosts multiple</div>
+          <div class="diff-line removed">-games — all played through a WebSocket-driven Display + Phones architecture.</div>
+          <div class="diff-line added">+A game engine for creating multiplayer party games. JSON in, process, JSON out —</div>
+          <div class="diff-line added">+the engine handles game logic (state, rules, phases, scoring) while remaining</div>
+          <div class="diff-line added">+completely agnostic about how games are presented or how players connect.</div>
+        </div>
+      </div>
+
+      <div class="diff-block">
+        <div class="diff-label">Core Value</div>
+        <div class="diff">
+          <div class="diff-line removed">-Players at a local gathering can instantly join a shared game from their phones</div>
+          <div class="diff-line removed">-and play together on a big screen — zero downloads, zero accounts, just a room code.</div>
+          <div class="diff-line added">+Creating a new party game should be trivially simple — define state and rules,</div>
+          <div class="diff-line added">+the engine handles everything else.</div>
+        </div>
+      </div>
+
+      <div class="question-box">
+        <div class="q-label">What this means</div>
+        The old core value describes the <em>user experience</em> of the finished product. The new core value describes the <em>developer experience</em> of making games. We build the engine first. The user experience comes from wrapping the engine in a UI later.
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 3: Requirements Collapse -->
+  <div class="step">
+    <div class="step-header" onclick="toggle(this)">
+      <div class="step-number">3</div>
+      <div>
+        <div class="step-title">83 Requirements → 4</div>
+        <div class="step-desc">Ruthless scoping — what actually matters right now</div>
+      </div>
+      <div class="step-toggle">▼</div>
+    </div>
+    <div class="step-body">
+      <div class="explanation">
+        The v1.0 had <strong>22 active requirements</strong> covering rooms, WebSockets, display roles, admin, bots, lobby, 6 games, caching, stats, API, rate limiting, security, frontend, Docker, and the game extension pattern. The v1.1 has <strong>4</strong>.
+      </div>
+
+      <div class="diff-block">
+        <div class="diff-label">Active Requirements</div>
+        <div class="diff">
+          <div class="diff-line removed">-- [ ] Room system with 4-char codes, lifecycle management, and capacity handling</div>
+          <div class="diff-line removed">-- [ ] WebSocket-based real-time communication with 100ms tick server broadcasts</div>
+          <div class="diff-line removed">-- [ ] Display role (shared TV screen) showing game state, lobby, leaderboards</div>
+          <div class="diff-line removed">-- [ ] Player role (phone controller) with per-player state</div>
+          <div class="diff-line removed">-- [ ] Player identity — username, deterministic emoji avatar, no auth</div>
+          <div class="diff-line removed">-- [ ] Admin system — first player becomes admin, can start/remove/set language</div>
+          <div class="diff-line removed">-- [ ] Bot system — auto-added for solo play, auto-removed when second human joins</div>
+          <div class="diff-line removed">-- [ ] Lobby — player list, ready status, game suggestion voting, QR code, chat</div>
+          <div class="diff-line removed">-- [ ] Quiz game — OpenTrivia DB, categories, difficulty, power-ups, scoring</div>
+          <div class="diff-line removed">-- [ ] Shithead card game — 52-card deck, swap phase, play rules, 2-6 players</div>
+          <div class="diff-line removed">-- [ ] Spy Game — social deduction, clue-giving, word guessing, 3+ players</div>
+          <div class="diff-line removed">-- [ ] Cards Against Humanity — card czar, black/white cards, blind judging</div>
+          <div class="diff-line removed">-- [ ] Lyrics Guessing game — match/guess song lyrics</div>
+          <div class="diff-line removed">-- [ ] Number Guess — reference/template game for extension pattern</div>
+          <div class="diff-line removed">-- [ ] Question cache — local JSON file caching from OpenTrivia DB</div>
+          <div class="diff-line removed">-- [ ] Game history — append-only JSONL log of completed games</div>
+          <div class="diff-line removed">-- [ ] Player statistics — aggregate stats per username</div>
+          <div class="diff-line removed">-- [ ] REST API — health, rooms, stats, history, DB management endpoints</div>
+          <div class="diff-line removed">-- [ ] Rate limiting — per-IP for routes, per-socket for WS, per-player for chat</div>
+          <div class="diff-line removed">-- [ ] Security — Helmet headers, input sanitization, payload limits</div>
+          <div class="diff-line removed">-- [ ] Frontend — responsive mobile-first, dark neon/glass theme, animations</div>
+          <div class="diff-line removed">-- [ ] Docker deployment with health checks, HTTPS support, CI/CD</div>
+          <div class="diff-line removed">-- [ ] Game extension pattern — base class, tick system, phase management</div>
+          <div class="diff-line added">+- [ ] Research and resolve fundamental design questions from SPEC.md analysis</div>
+          <div class="diff-line added">+- [ ] Game engine with clean JSON in/out boundary</div>
+          <div class="diff-line added">+- [ ] Terminal client for playing and testing games</div>
+          <div class="diff-line added">+- [ ] First 2-3 games proving the engine works</div>
+        </div>
+      </div>
+
+      <div class="question-box">
+        <div class="q-label">Nothing is deleted</div>
+        All the v1.0 features (rooms, WebSockets, frontend, Docker) still happen — they're just not this milestone's problem. The games are the same games. We're changing the <em>order</em>, not the <em>scope</em>. Build the engine and games first. Wrap them in infrastructure after.
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 4: Out of Scope Additions -->
+  <div class="step">
+    <div class="step-header" onclick="toggle(this)">
+      <div class="step-number">4</div>
+      <div>
+        <div class="step-title">New "Out of Scope" — Earning Infrastructure</div>
+        <div class="step-desc">Things that are deferred, not deleted</div>
+      </div>
+      <div class="step-toggle">▼</div>
+    </div>
+    <div class="step-body">
+      <div class="explanation">
+        Three items were added to "Out of Scope" for this milestone. Each has an <strong>earn trigger</strong> — a specific moment when it becomes justified.
+      </div>
+
+      <div class="diff-block">
+        <div class="diff-label">New Out of Scope Items</div>
+        <div class="diff">
+          <div class="diff-line added">+- Browser/phone/TV frontend — future milestone, consumes same JSON</div>
+          <div class="diff-line added">+- Docker/deployment infrastructure — earned after games work</div>
+          <div class="diff-line added">+- Security hardening (Helmet, rate limiting) — earned after there's something to secure</div>
+        </div>
+      </div>
+
+      <table>
+        <tr><th>Deferred Item</th><th>Earn Trigger</th></tr>
+        <tr><td>Browser/phone frontend</td><td>Engine works in terminal, games proven</td></tr>
+        <tr><td>Docker/deployment</td><td>First deployment to non-dev machine</td></tr>
+        <tr><td>Security (Helmet, rate limiting)</td><td>HTTP endpoints exist and are exposed</td></tr>
+        <tr><td>WebSocket server</td><td>First browser client needs real-time updates</td></tr>
+        <tr><td>HTTPS</td><td>First iOS device connects over network</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <!-- STEP 5: Constraints Simplified -->
+  <div class="step">
+    <div class="step-header" onclick="toggle(this)">
+      <div class="step-number">5</div>
+      <div>
+        <div class="step-title">6 Constraints → 3</div>
+        <div class="step-desc">Stripping constraints down to what the engine actually needs</div>
+      </div>
+      <div class="step-toggle">▼</div>
+    </div>
+    <div class="step-body">
+      <div class="diff-block">
+        <div class="diff-label">Constraints</div>
+        <div class="diff">
+          <div class="diff-line context"> - **No auth**: Players are ephemeral — no login, no accounts, by design</div>
+          <div class="diff-line removed">-- **Local network optimized**: Designed for same-network play (display + phones)</div>
+          <div class="diff-line removed">-- **WebSocket-only real-time**: All game state via WS, HTTP only for management APIs</div>
+          <div class="diff-line removed">-- **Docker deployment**: Must run in container with health checks</div>
+          <div class="diff-line removed">-- **External API dependency**: Quiz relies on OpenTrivia DB with cache fallback</div>
+          <div class="diff-line removed">-- **Mobile-first UI**: Phone controllers must work on all screen sizes with safe areas</div>
+          <div class="diff-line added">+- **JSON boundary**: Engine input/output is always JSON — transport is someone else's problem</div>
+          <div class="diff-line added">+- **Simplicity**: No abstraction before the second use case proves it's needed</div>
+        </div>
+      </div>
+
+      <div class="explanation">
+        The removed constraints aren't wrong — they're just <strong>not engine constraints</strong>. "Local network optimized" constrains the transport layer. "Docker deployment" constrains ops. "Mobile-first UI" constrains the frontend. None of these constrain <code>(state, action) => newState</code>.
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 6: Architecture Decisions -->
+  <div class="step">
+    <div class="step-header" onclick="toggle(this)">
+      <div class="step-number">6</div>
+      <div>
+        <div class="step-title">7 SPEC.md Assumptions Challenged</div>
+        <div class="step-desc">Research findings — what the spec got wrong</div>
+      </div>
+      <div class="step-toggle">▼</div>
+    </div>
+    <div class="step-body">
+      <div class="explanation">
+        Four parallel researchers analyzed the SPEC.md against first principles and existing frameworks (boardgame.io, Colyseus). Every architectural assumption was challenged. <strong>All 7 were rejected or made conditional.</strong>
+      </div>
+
+      <table>
+        <tr><th>SPEC.md Assumption</th><th>Verdict</th><th>Instead</th></tr>
+        <tr>
+          <td>100ms server tick loop</td>
+          <td class="verdict-reject">REJECT</td>
+          <td>Event-driven: broadcast when state changes. boardgame.io has no tick.</td>
+        </tr>
+        <tr>
+          <td>WebSocket-only transport</td>
+          <td class="verdict-defer">CONDITIONAL</td>
+          <td>Engine is transport-agnostic. WS is one adapter, added later.</td>
+        </tr>
+        <tr>
+          <td>Display + Phone roles</td>
+          <td class="verdict-reject">REJECT</td>
+          <td>Engine has participants + observers. TV vs phone is presentation.</td>
+        </tr>
+        <tr>
+          <td>GameController base class</td>
+          <td class="verdict-reject">REJECT</td>
+          <td>Plain objects with pure functions. Extract patterns after 2-3 games.</td>
+        </tr>
+        <tr>
+          <td>Rooms in engine</td>
+          <td class="verdict-reject">REJECT</td>
+          <td>Session layer concern. Engine has no "room" concept.</td>
+        </tr>
+        <tr>
+          <td>30+ typed message protocol</td>
+          <td class="verdict-reject">REJECT</td>
+          <td>3 generic types: action, state, event. Games define payloads.</td>
+        </tr>
+        <tr>
+          <td>Full state every tick</td>
+          <td class="verdict-reject">REJECT</td>
+          <td>State on change + events for effects.</td>
+        </tr>
+      </table>
+
+      <div class="question-box">
+        <div class="q-label">Key insight from research</div>
+        The engine is: <code>(state, action) => {newState, events}</code>
+        <br><br>
+        That's it. Pure function. No side effects, no I/O, no transport, no timers. Fully testable. Fully portable. Everything else is a layer above it.
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 7: Build Order Inversion -->
+  <div class="step">
+    <div class="step-header" onclick="toggle(this)">
+      <div class="step-number">7</div>
+      <div>
+        <div class="step-title">Build Order: Completely Inverted</div>
+        <div class="step-desc">Games first, infrastructure last</div>
+      </div>
+      <div class="step-toggle">▼</div>
+    </div>
+    <div class="step-body">
+      <table>
+        <tr><th>v1.0 Order</th><th>v1.1 Order</th></tr>
+        <tr><td>1. Docker / HTTPS / Security</td><td>1. Engine contract + first game</td></tr>
+        <tr><td>2. WebSocket transport</td><td>2. Second game (timers)</td></tr>
+        <tr><td>3. Room management</td><td>3. Pattern extraction</td></tr>
+        <tr><td>4. Lobby</td><td>4. Third game (roles/private state)</td></tr>
+        <tr><td>5. Persistence</td><td>5. Complex game (Shithead)</td></tr>
+        <tr><td>6. Game engine</td><td>6. Transport layer (WS/HTTP)</td></tr>
+        <tr><td>7–11. Individual games</td><td>7. Session layer (rooms)</td></tr>
+        <tr><td>12. Frontend polish</td><td>8. Browser / frontend</td></tr>
+      </table>
+
+      <div class="explanation">
+        The old Phase 6 (game engine) is now Phase 1. The old Phase 1 (Docker/HTTPS) is now Phase 7-8. <strong>Games are playable from Phase 1</strong>, not Phase 6.
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 8: Critical Pitfalls -->
+  <div class="step">
+    <div class="step-header" onclick="toggle(this)">
+      <div class="step-number">8</div>
+      <div>
+        <div class="step-title">Pitfalls We're Watching For</div>
+        <div class="step-desc">Over-engineering is one trap — under-engineering is another</div>
+      </div>
+      <div class="step-toggle">▼</div>
+    </div>
+    <div class="step-body">
+      <div class="explanation">
+        "Just build games and extract patterns" sounds simple but has known failure modes. The research identified <strong>7 under-engineering pitfalls</strong> specific to these games. Three are critical.
+      </div>
+
+      <h3>Critical: Private State (affects Shithead, Spy, CAH)</h3>
+      <p>Number Guess and Quiz have no private state — all players see the same thing. If we build the engine assuming that, Shithead (private card hands) forces a rewrite.</p>
+      <p><strong>Prevention:</strong> Engine contract includes <code>view(state, playerId)</code> from day 1. Number Guess returns the same view for everyone — that's fine. But the contract is ready for private state.</p>
+
+      <h3>Critical: Pattern Extraction Step</h3>
+      <p>Build 3 games with no extraction step → 3 divergent implementations with zero shared code. Game 4 starts from scratch.</p>
+      <p><strong>Prevention:</strong> After game 2 (Quiz), explicitly review both games and extract shared patterns <em>before</em> building game 3.</p>
+
+      <h3>Critical: Timers as Synthetic Actions</h3>
+      <p>If game code calls <code>setTimeout</code> directly, games become untestable. Timer state tied to wall clock breaks everything.</p>
+      <p><strong>Prevention:</strong> Session layer manages timers. When a timer expires, it sends <code>{type: 'TIMER_EXPIRED'}</code> to the engine like any other action. Engine stays pure.</p>
+    </div>
+  </div>
+
+  <!-- STEP 9: What Stays the Same -->
+  <div class="step">
+    <div class="step-header" onclick="toggle(this)">
+      <div class="step-number">9</div>
+      <div>
+        <div class="step-title">What Stays the Same</div>
+        <div class="step-desc">The games haven't changed — only how we get there</div>
+      </div>
+      <div class="step-toggle">▼</div>
+    </div>
+    <div class="step-body">
+      <div class="explanation">
+        The SPEC.md is still the reference for <strong>what the games are</strong>. Quiz still has categories, power-ups, and speed scoring. Shithead still has 52 cards and pile burns. Spy still has hidden roles and one-word clues. CAH still has a card czar.
+        <br><br>
+        <strong>Nothing about the games changed.</strong> What changed is that we build the games first and let infrastructure emerge from what they actually need — instead of guessing what infrastructure we'll need and building it before any game exists.
+      </div>
+
+      <table>
+        <tr><th>Unchanged</th><th>Changed</th></tr>
+        <tr><td>All 6 games and their rules</td><td>Build order (games first)</td></tr>
+        <tr><td>No auth, ephemeral players</td><td>Engine is transport-agnostic</td></tr>
+        <tr><td>The vision (party games on phones + TV)</td><td>No prescribed base class</td></tr>
+        <tr><td>Room codes, admin, bots (eventual)</td><td>Event-driven, not tick-based</td></tr>
+        <tr><td>WebSocket for browser (eventual)</td><td>Terminal client as first consumer</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <!-- STEP 10: What's Next -->
+  <div class="step">
+    <div class="step-header" onclick="toggle(this)">
+      <div class="step-number">10</div>
+      <div>
+        <div class="step-title">What Happens Next</div>
+        <div class="step-desc">The new milestone's build sequence</div>
+      </div>
+      <div class="step-toggle">▼</div>
+    </div>
+    <div class="step-body">
+      <ol style="font-size: 0.95rem;">
+        <li><strong>Define the engine contract</strong> — What does a game export? <code>setup()</code>, <code>action()</code>, <code>view()</code>, <code>endIf()</code>. Prove it with Number Guess.</li>
+        <li><strong>Build terminal client</strong> — readline-based, consumes engine JSON, permanent dev tool.</li>
+        <li><strong>Build Quiz</strong> — Adds timers (as synthetic actions), simultaneous play, external data.</li>
+        <li><strong>Extract patterns</strong> — What's shared between Number Guess and Quiz? Extract before game 3.</li>
+        <li><strong>Build Spy or CAH</strong> — Adds roles, private state, turn order.</li>
+        <li><strong>Build Shithead</strong> — Most complex rules. If the engine handles this cleanly, it handles anything.</li>
+        <li><strong>Add transport layer</strong> — WebSocket/HTTP adapters consuming the same JSON engine.</li>
+        <li><strong>Add session layer</strong> — Rooms, player tracking, browser client.</li>
+      </ol>
+
+      <div class="question-box">
+        <div class="q-label">The test</div>
+        If the engine is right, adding the WebSocket/browser layer in step 7 should require <strong>zero changes to any game code</strong>. The games don't know and don't care how they're being consumed.
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">
+    Generated 2026-03-15 · Small Hours Game Engine v1.1 Planning
+    <br>
+    Ask questions about any step — this is a conversation, not a decree.
+  </div>
+</div>
+
+<script>
+function toggle(header) {
+  header.parentElement.classList.toggle('open');
+}
+function toggleAll() {
+  const steps = document.querySelectorAll('.step');
+  const allOpen = [...steps].every(s => s.classList.contains('open'));
+  steps.forEach(s => {
+    if (allOpen) s.classList.remove('open');
+    else s.classList.add('open');
+  });
+}
+</script>
+</body>
+</html>
