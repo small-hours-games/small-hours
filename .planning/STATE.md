@@ -1,55 +1,51 @@
 # State: Small Hours Game Engine
 
-**Last updated:** 2026-03-15
-**Session:** Milestone v1.1 — Engine Foundation
+**Last updated:** 2026-03-22
+**Session:** Milestone v2.1 — Quiz Question Pipeline
 
 ## Project Reference
 
 **Core value:** Creating a new party game should be trivially simple — define state and rules, the engine handles everything else.
 
-**Current focus:** Research — challenging SPEC.md design assumptions
+**Current focus:** Defining requirements for quiz question pipeline
 
 ## Current Position
 
-Phase: Not started (researching design decisions)
-Plan: —
-Status: Researching
-Last activity: 2026-03-15 — Milestone v1.1 started
+Phase: Not started (defining requirements)
+Plan: --
+Status: Defining requirements
+Last activity: 2026-03-22 — Milestone v2.1 started
 
 ## Accumulated Context
 
-### Key Pivot
-- Shifted from "build the full platform" to "build the engine"
-- 10 fundamental design questions identified from SPEC.md analysis
-- Every architectural assumption being challenged before adoption
+### Existing Codebase
+- Engine: pure function contract with 4 games (Number Guess, Quiz, Spy, Shithead)
+- Transport: Express + WebSocket with rooms, reconnection, rate limiting
+- Frontend: Browser-based landing page, host display, player controller
+- Deployment: Docker with health checks
+- Total: ~2,200 lines backend, ~3,600 lines frontend
 
-### Design Questions Under Research
-1. 100ms tick vs event-driven
-2. WebSocket vs HTTP/SSE for turn-based games
-3. Display+Phone as architecture vs generic clients
-4. Room system scope — engine concern or session concern?
-5. Admin concept — platform or lobby concern?
-6. Bots — platform feature or game-specific logic?
-7. Message protocol — premature specificity?
-8. Persistence (history, stats) — v1 or later?
-9. Game extension pattern — prescribed or discovered?
-10. Security/rate limiting — for a local network party game?
+### Quiz Game Current State
+- Engine complete: phases (countdown/question/reveal/between/finished), powerups, streaks, scoring
+- Missing: question source — expects `config.questions` array passed at game start
+- No OpenTrivia DB integration, no caching, no category selection
 
-### Todos
-- [ ] Research all 10 design questions
-- [ ] Create phases from research findings
-- [ ] Define requirements based on resolved decisions
+### Key Design
+- Questions flow: source -> cache -> quiz engine `config.questions`
+- Category voting happens in lobby before game starts
+- Timer-based phase transitions via `timerExpired` synthetic actions
 
 ## Session Continuity
 
 ### To Resume
 1. Read this file to orient
-2. Check research status in .planning/research/
-3. Continue with requirement definition or phase planning
+2. Check .planning/ROADMAP.md for phase progress
+3. Continue with next phase
 
 ### Files
 - `.planning/PROJECT.md` — updated project context
-- `SPEC.md` — original functional specification (reference, not gospel)
+- `.planning/REQUIREMENTS.md` — milestone requirements
+- `SPEC.md` — original functional specification (reference)
 
 ---
-*State initialized: 2026-03-15*
+*State initialized: 2026-03-22*

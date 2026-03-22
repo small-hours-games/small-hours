@@ -2,72 +2,88 @@
 
 ## What This Is
 
-A game engine for creating multiplayer party games. JSON in, process, JSON out — the engine handles game logic (state, rules, phases, scoring) while remaining completely agnostic about how games are presented or how players connect. Terminal client is the first consumer; browser/phone/TV layers come later as presentation concerns.
+A real-time multiplayer party game platform. One shared screen (TV/monitor) as the display, players join from phones via room code — zero downloads, zero accounts. The engine is a pure function: `(state, action) => {newState, events}`, transport-agnostic with WebSocket as the current adapter.
 
 ## Core Value
 
 Creating a new party game should be trivially simple — define state and rules, the engine handles everything else.
 
-## Current Milestone: v1.1 Engine Foundation
+## Current Milestone: v2.1 Quiz Question Pipeline
 
-**Goal:** Challenge every design assumption from the v1.0 spec, make research-backed decisions, then build the simplest possible game engine with proven patterns.
+**Goal:** Make the quiz game playable with real questions from OpenTrivia DB, with disk caching and player category voting.
 
 **Target features:**
-- Research-validated architecture decisions (tick vs event-driven, WS vs HTTP, etc.)
-- Clean game engine with JSON in/out boundary
-- Terminal client as first consumer / dev tool
-- First games built to discover (not prescribe) shared patterns
+- OpenTrivia DB integration as question source
+- Disk-based question caching by category
+- Player category voting before quiz starts
 
 ## Requirements
 
 ### Validated
 
-(None yet — ship to validate)
+- Engine with pure function contract (setup/actions/view/endIf)
+- 4 working games: Number Guess, Quiz, Spy, Shithead
+- WebSocket transport with rooms, reconnection, chat, rate limiting
+- Browser frontend (landing page, host display, player controller)
+- Docker deployment with health checks
 
 ### Active
 
-- [ ] Research and resolve 10 fundamental design questions from SPEC.md analysis
-- [ ] Game engine with clean JSON in/out boundary
-- [ ] Terminal client for playing and testing games
-- [ ] First 2-3 games proving the engine works
+- [ ] OpenTrivia DB API integration for quiz questions
+- [ ] Disk-based question caching by category
+- [ ] Player category voting before quiz starts
 
 ### Out of Scope
 
 - Native mobile apps — web-first, phones use browser
 - User accounts/authentication — players are ephemeral per session
 - Persistent player identity across sessions — by design
-- Server-side rendering — SPA approach with WebSocket state
-- Browser/phone/TV frontend — future milestone, consumes same JSON
-- Docker/deployment infrastructure — earned after games work
-- Security hardening (Helmet, rate limiting) — earned after there's something to secure
+- Additional games (CAH, Lyrics) — future milestone
+- Bot system — future milestone
+- Game history/stats persistence — future milestone
+- HTTP rate limiting / security headers — future milestone
+- Terminal client — browser-first approach taken
 
 ## Context
 
-This is a ground-up rewrite of an existing party game platform. The original SPEC.md describes the full vision, but the v1.0 roadmap front-loaded infrastructure before any game logic was proven. This milestone inverts that: build games first, let infrastructure needs emerge from real usage.
+This is a ground-up rewrite of a party game platform. The codebase has ~2,200 lines of backend JS (engine + session + transport) and ~3,600 lines of frontend HTML/CSS/JS. The quiz game engine is complete with phases, powerups, and scoring — but expects questions to be passed in via config with no built-in source. This milestone adds that pipeline.
 
-The SPEC.md remains the reference for *what games exist and how they work*, but every architectural decision (100ms tick, WebSocket-first, Display+Phone roles, GameController base class) is being challenged through research before being adopted or rejected.
-
-Key pivot from v1.0:
-- Engine-first, not infrastructure-first
-- JSON in/out boundary, not WebSocket-specific
-- Discover patterns from building games, not prescribe them upfront
-- Terminal client as first consumer, not browser
+The OpenTrivia DB API (opentdb.com) is the question source. It's free, has ~4,000+ questions across 24 categories, and rate limits at roughly 1 req/5s per IP.
 
 ## Constraints
 
-- **No auth**: Players are ephemeral — no login, no accounts, by design
-- **JSON boundary**: Engine input/output is always JSON — transport is someone else's problem
+- **Zero auth**: Players are ephemeral — no login, no accounts
+- **JSON boundary**: Engine input/output is always JSON
 - **Simplicity**: No abstraction before the second use case proves it's needed
+- **Runtime**: Node.js 22, ESM, Express + ws as only production deps
 
 ## Key Decisions
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| Engine-first, not infra-first | v1.0 had 5 infra phases before any game logic | — Pending |
-| JSON in/out boundary | Decouples engine from transport (WS, HTTP, terminal) | — Pending |
-| Terminal as first client | Fastest path to playable games, permanent dev tool | — Pending |
-| Discover patterns, don't prescribe | Build 2-3 games, extract shared patterns after | — Pending |
-| Challenge every SPEC.md assumption | Previous "just build it" approach is why we're rewriting | — Pending |
+| Pure function engine | Testable, predictable, transport-agnostic | Validated |
+| Plain object game definitions | No class hierarchy needed for 4 games | Validated |
+| Express + WS over raw HTTP | Session/room management needed it | Validated |
+| Browser-first (skipped terminal client) | Faster to usable product | Validated |
+| OpenTrivia DB as question source | Free, sufficient variety, well-known API | -- Pending |
+| Disk caching for questions | Offline resilience, reduce API load | -- Pending |
+
+## Evolution
+
+This document evolves at phase transitions and milestone boundaries.
+
+**After each phase transition** (via `/gsd:transition`):
+1. Requirements invalidated? -> Move to Out of Scope with reason
+2. Requirements validated? -> Move to Validated with phase reference
+3. New requirements emerged? -> Add to Active
+4. Decisions to log? -> Add to Key Decisions
+5. "What This Is" still accurate? -> Update if drifted
+
+**After each milestone** (via `/gsd:complete-milestone`):
+1. Full review of all sections
+2. Core Value check — still the right priority?
+3. Audit Out of Scope — reasons still valid?
+4. Update Context with current state
 
 ---
-*Last updated: 2026-03-15 after milestone v1.1 start*
+*Last updated: 2026-03-22 after milestone v2.1 start*
