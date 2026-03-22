@@ -9,9 +9,9 @@ Requirements for Quiz Question Pipeline milestone. Each maps to roadmap phases.
 
 ### Question Source
 
-- [ ] **QSRC-01**: Quiz fetches questions from OpenTrivia DB API at game start
-- [ ] **QSRC-02**: Questions are HTML-decoded before use (API returns encoded entities)
-- [ ] **QSRC-03**: Quiz falls back gracefully when API is unreachable (error message, not crash)
+- [x] **QSRC-01**: Quiz fetches questions from OpenTrivia DB API at game start
+- [x] **QSRC-02**: Questions are HTML-decoded before use (API returns encoded entities)
+- [x] **QSRC-03**: Quiz falls back gracefully when API is unreachable (error message, not crash)
 
 ### Question Cache
 
@@ -54,9 +54,9 @@ Requirements for Quiz Question Pipeline milestone. Each maps to roadmap phases.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| QSRC-01 | Phase 1 | Pending |
-| QSRC-02 | Phase 1 | Pending |
-| QSRC-03 | Phase 1 | Pending |
+| QSRC-01 | Phase 1 | Complete |
+| QSRC-02 | Phase 1 | Complete |
+| QSRC-03 | Phase 1 | Complete |
 | QCACHE-01 | Phase 2 | Pending |
 | QCACHE-02 | Phase 2 | Pending |
 | QCACHE-03 | Phase 2 | Pending |

@@ -25,7 +25,7 @@
   4. The quiz game can be started with fetched questions via the existing `room.startGame()` path
 **Plans:** 2 plans
 Plans:
-- [ ] 01-01-PLAN.md — Standalone OpenTrivia DB fetcher module with HTML decoding, error handling, and tests
+- [x] 01-01-PLAN.md — Standalone OpenTrivia DB fetcher module with HTML decoding, error handling, and tests
 - [ ] 01-02-PLAN.md — Wire fetcher into session/transport layers (GAME_REGISTRY, async startGame, integration tests)
 
 ### Phase 2: Question Cache
