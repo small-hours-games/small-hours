@@ -38,10 +38,11 @@ export function setupWebSocket(server, manager) {
     }
   }
 
-  function broadcastToRoom(code, message) {
+  function broadcastToRoom(code, message, { hostsOnly = false } = {}) {
     const payload = JSON.stringify(message);
     for (const [ws, meta] of socketMeta) {
       if (meta.roomCode === code && ws.readyState === ws.OPEN) {
+        if (hostsOnly && meta.role !== 'host') continue;
         ws.send(payload);
       }
     }
@@ -330,7 +331,7 @@ export function setupWebSocket(server, manager) {
         sendToPlayer(id, { type: 'GAME_STATE', ...view, gameType: msg.gameType, playerNames: pNames });
       }
       // Also broadcast to host displays
-      broadcastToRoom(room.code, { type: 'GAME_STATE', gameType: msg.gameType, phase: room.game.state.phase, playerNames: pNames });
+      broadcastToRoom(room.code, { type: 'GAME_STATE', gameType: msg.gameType, phase: room.game.state.phase, playerNames: pNames }, { hostsOnly: true });
     } catch (err) {
       send(ws, { type: 'ERROR', message: err.message });
     }
@@ -381,7 +382,7 @@ export function setupWebSocket(server, manager) {
       sendToPlayer(id, { type: 'GAME_STATE', ...view, playerNames });
     }
 
-    // Also broadcast shared state to host displays
+    // Broadcast shared state to host displays only (not players — they got personal views above)
     const hostView = getView(room.game, room.players.keys().next().value);
     const sharedState = { type: 'GAME_STATE', ...hostView, playerNames };
     delete sharedState.myHand;
@@ -392,7 +393,7 @@ export function setupWebSocket(server, manager) {
     delete sharedState.isMyTurn;
     delete sharedState.swapConfirmed;
     if (events.length > 0) sharedState.events = events;
-    broadcastToRoom(room.code, sharedState);
+    broadcastToRoom(room.code, sharedState, { hostsOnly: true });
 
     // Check for game end
     const endResult = checkEnd(room.game);
@@ -402,7 +403,7 @@ export function setupWebSocket(server, manager) {
         const view = getView(room.game, id);
         sendToPlayer(id, { type: 'GAME_STATE', ...view, ...endResult });
       }
-      broadcastToRoom(room.code, { type: 'GAME_STATE', phase: 'finished', ...endResult });
+      broadcastToRoom(room.code, { type: 'GAME_STATE', phase: 'finished', ...endResult, playerNames }, { hostsOnly: true });
       room.endGame();
       broadcastToRoom(room.code, { type: 'LOBBY_UPDATE', state: room.getState() });
     }
