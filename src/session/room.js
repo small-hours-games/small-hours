@@ -4,6 +4,8 @@
 import { createGame, processAction, getView, checkEnd } from '../engine/engine.js';
 import numberGuess from '../engine/games/number-guess.js';
 import shithead from '../engine/games/shithead.js';
+import quiz from '../engine/games/quiz.js';
+import { fetchQuestions } from '../fetcher/opentrivia.js';
 
 const AVATAR_POOL = [
   '\u{1F98A}', '\u{1F438}', '\u{1F43C}', '\u{1F981}', '\u{1F42F}',
@@ -18,6 +20,7 @@ const CODE_CHARS = 'ABCDEFGHJKLMNPQRTUVWXYZ0123456789';
 const GAME_REGISTRY = {
   'number-guess': numberGuess,
   'shithead': shithead,
+  'quiz': quiz,
 };
 
 let playerCounter = 0;
@@ -183,7 +186,7 @@ export class Room {
    * Start a mini-game in this room.
    * Creates a game instance via the engine.
    */
-  startGame(gameType, config = {}) {
+  async startGame(gameType, config = {}) {
     const definition = GAME_REGISTRY[gameType];
     if (!definition) {
       throw new Error(`Unknown game type: ${gameType}`);
@@ -198,8 +201,19 @@ export class Room {
       throw new Error('No connected players to start a game');
     }
 
+    // Quiz-specific: fetch questions from OpenTrivia DB
+    let gameConfig = { ...config };
+    if (gameType === 'quiz') {
+      const amount = config.questionCount || 10;
+      const result = await fetchQuestions(config.categoryId, amount);
+      if (!result.ok) {
+        throw new Error(`Failed to fetch questions: ${result.error.message}`);
+      }
+      gameConfig.questions = result.questions;
+    }
+
     this.lastActivity = Date.now();
-    this.game = createGame(definition, { players: playerIds, config });
+    this.game = createGame(definition, { players: playerIds, config: gameConfig });
     this.gameSuggestions.clear();
     return this.game;
   }

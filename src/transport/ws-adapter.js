@@ -213,7 +213,9 @@ export function setupWebSocket(server, manager) {
         handleSuggestGame(ws, meta, room, msg);
         break;
       case 'START_MINI_GAME':
-        handleStartMiniGame(ws, meta, room, msg);
+        handleStartMiniGame(ws, meta, room, msg).catch(err => {
+          send(ws, { type: 'ERROR', message: err.message });
+        });
         break;
       case 'RETURN_TO_LOBBY':
         handleReturnToLobby(ws, meta, room, msg);
@@ -299,7 +301,7 @@ export function setupWebSocket(server, manager) {
     broadcastToRoom(room.code, { type: 'LOBBY_UPDATE', state: room.getState() });
   }
 
-  function handleStartMiniGame(ws, meta, room, msg) {
+  async function handleStartMiniGame(ws, meta, room, msg) {
     if (!meta.playerId) {
       send(ws, { type: 'ERROR', message: 'Not joined yet' });
       return;
@@ -317,7 +319,7 @@ export function setupWebSocket(server, manager) {
     }
 
     try {
-      const game = room.startGame(msg.gameType, msg.config || {});
+      const game = await room.startGame(msg.gameType, msg.config || {});
       broadcastToRoom(room.code, {
         type: 'MINI_GAME_STARTING',
         gameType: msg.gameType,
