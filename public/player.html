@@ -458,6 +458,152 @@
       border: 2px solid rgba(57, 255, 20, 0.4) !important;
     }
 
+    /* Question Form */
+    .qf-progress {
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+      text-align: center;
+    }
+
+    .qf-question-card {
+      padding: 16px;
+      border-left: 3px solid var(--neon-purple);
+    }
+
+    .qf-question-card .qf-label {
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin-bottom: 6px;
+    }
+
+    .qf-question-card .qf-text {
+      font-size: 1.05rem;
+      font-weight: 600;
+      margin-bottom: 12px;
+    }
+
+    .qf-input-text {
+      width: 100%;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid var(--glass-border);
+      border-radius: 10px;
+      color: var(--text-primary);
+      padding: 12px;
+      font-size: 0.95rem;
+      resize: vertical;
+      min-height: 60px;
+    }
+
+    .qf-choices {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .qf-choice-btn {
+      padding: 12px 16px;
+      border-radius: 10px;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid var(--glass-border);
+      color: var(--text-primary);
+      font-size: 0.95rem;
+      cursor: pointer;
+      text-align: left;
+      transition: all 0.15s;
+    }
+
+    .qf-choice-btn:hover { background: rgba(255,255,255,0.1); }
+    .qf-choice-btn.selected {
+      border-color: var(--neon-purple);
+      background: rgba(179, 71, 217, 0.15);
+      color: var(--neon-purple);
+      font-weight: 600;
+    }
+
+    .qf-yesno-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .qf-yesno-btn {
+      padding: 16px;
+      border-radius: 12px;
+      font-size: 1.1rem;
+      font-weight: 700;
+      cursor: pointer;
+      border: 2px solid var(--glass-border);
+      transition: all 0.15s;
+    }
+
+    .qf-yesno-btn.yes { background: rgba(57, 255, 20, 0.08); color: var(--neon-green); }
+    .qf-yesno-btn.no { background: rgba(255, 71, 87, 0.08); color: var(--neon-pink); }
+    .qf-yesno-btn.selected { border-width: 3px; }
+    .qf-yesno-btn.yes.selected { border-color: var(--neon-green); background: rgba(57, 255, 20, 0.2); }
+    .qf-yesno-btn.no.selected { border-color: var(--neon-pink); background: rgba(255, 71, 87, 0.2); }
+
+    .qf-rating-row {
+      display: flex;
+      gap: 6px;
+      justify-content: center;
+    }
+
+    .qf-rating-btn {
+      width: 48px;
+      height: 48px;
+      border-radius: 12px;
+      font-size: 1.1rem;
+      font-weight: 700;
+      cursor: pointer;
+      border: 2px solid var(--glass-border);
+      background: rgba(255,255,255,0.06);
+      color: var(--text-primary);
+      transition: all 0.15s;
+    }
+
+    .qf-rating-btn.selected {
+      border-color: var(--neon-blue);
+      background: rgba(77, 201, 246, 0.2);
+      color: var(--neon-blue);
+    }
+
+    .qf-nav {
+      display: flex;
+      gap: 10px;
+      justify-content: space-between;
+    }
+
+    .qf-submitted-banner {
+      text-align: center;
+      padding: 20px;
+      color: var(--neon-green);
+      font-weight: 700;
+      font-size: 1.1rem;
+    }
+
+    .qf-review-answer {
+      padding: 10px 14px;
+      border-radius: 8px;
+      background: rgba(255,255,255,0.04);
+      margin-bottom: 6px;
+      font-size: 0.9rem;
+    }
+
+    .qf-tally-bar {
+      height: 28px;
+      border-radius: 6px;
+      background: rgba(179, 71, 217, 0.3);
+      display: flex;
+      align-items: center;
+      padding: 0 10px;
+      margin-bottom: 4px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      transition: width 0.3s;
+    }
+
     @media (max-width: 400px) {
       .answer-grid { grid-template-columns: 1fr; }
       .game-suggest-grid { grid-template-columns: 1fr 1fr; }
@@ -508,6 +654,10 @@
           <button class="suggest-btn" onclick="suggestGame('shithead')" id="suggestShithead">
             <span class="icon">&#127183;</span>
             Shithead
+          </button>
+          <button class="suggest-btn" onclick="suggestGame('question-form')" id="suggestQuestionForm">
+            <span class="icon">&#128203;</span>
+            Questions
           </button>
         </div>
       </div>
@@ -671,6 +821,13 @@
 
       <!-- Other players info -->
       <div class="card" id="shOtherPlayers" style="margin-top:8px;"></div>
+    </div>
+
+    <!-- QUESTION FORM SECTION -->
+    <div class="section" id="questionFormSection">
+      <div class="qf-progress" id="qfProgress"></div>
+      <div id="qfContent"></div>
+      <div class="qf-nav" id="qfNav"></div>
     </div>
 
   </main>
@@ -866,11 +1023,14 @@
           case 'quiz': renderQuizState(msg); break;
           case 'spy': renderSpyState(msg); break;
           case 'shithead': renderShitheadState(msg); break;
+          case 'question-form': renderQuestionFormState(msg); break;
         }
         // Return to lobby after a delay
         setTimeout(() => {
           state.gameType = null;
           state.ready = false;
+          state.qfIndex = 0;
+          state._lastQfMsg = null;
           updateReadyBtn();
           showSection('lobbySection');
         }, 3000);
@@ -891,6 +1051,7 @@
         case 'quiz': renderQuizState(msg); break;
         case 'spy': renderSpyState(msg); break;
         case 'shithead': renderShitheadState(msg); break;
+        case 'question-form': renderQuestionFormState(msg); break;
       }
     }
 
@@ -902,7 +1063,7 @@
     }
 
     function getGameSectionId(game) {
-      const map = { 'number-guess': 'numberGuessSection', 'quiz': 'quizSection', 'spy': 'spySection', 'shithead': 'shitheadSection' };
+      const map = { 'number-guess': 'numberGuessSection', 'quiz': 'quizSection', 'spy': 'spySection', 'shithead': 'shitheadSection', 'question-form': 'questionFormSection' };
       return map[game] || 'lobbySection';
     }
 
@@ -965,7 +1126,7 @@
       const suggestions = Object.values(state.gameSuggestions || {});
       const topGame = suggestions.length > 0 ? suggestions[suggestions.length - 1] : 'number-guess';
       state.gameToStart = topGame;
-      const names = { 'number-guess': 'Number Guess', 'quiz': 'Quiz', 'spy': 'Spy Game', 'shithead': 'Shithead' };
+      const names = { 'number-guess': 'Number Guess', 'quiz': 'Quiz', 'spy': 'Spy Game', 'shithead': 'Shithead', 'question-form': 'Questions' };
 
       let html = '';
       if (topGame === 'shithead') {
@@ -1511,6 +1672,169 @@
       el.className = 'connection-status ' + status;
       document.getElementById('connText').textContent = text;
     }
+
+    // --- Question Form ---
+    function renderQuestionFormState(msg) {
+      const content = document.getElementById('qfContent');
+      const nav = document.getElementById('qfNav');
+      const progress = document.getElementById('qfProgress');
+
+      if (msg.phase === 'answering') {
+        if (msg.isSubmitted) {
+          progress.textContent = msg.submittedCount + ' / ' + msg.totalPlayers + ' submitted';
+          content.innerHTML = '<div class="qf-submitted-banner">Answers submitted! Waiting for others...</div>';
+          nav.innerHTML = '';
+          return;
+        }
+
+        // Store questions in state for navigation
+        if (!state.qfIndex && state.qfIndex !== 0) state.qfIndex = 0;
+        const questions = msg.questions || [];
+        const myResponses = msg.myResponses || {};
+        const q = questions[state.qfIndex];
+
+        progress.textContent = 'Question ' + (state.qfIndex + 1) + ' of ' + questions.length +
+          ' \u00B7 ' + msg.submittedCount + '/' + msg.totalPlayers + ' submitted';
+
+        if (!q) {
+          content.innerHTML = '<div class="card text-center">No questions</div>';
+          nav.innerHTML = '';
+          return;
+        }
+
+        let html = '<div class="qf-question-card card">' +
+          '<div class="qf-label">' + escapeHtml(q.label || ('Question ' + (state.qfIndex + 1))) + '</div>' +
+          '<div class="qf-text">' + escapeHtml(q.text) + '</div>';
+
+        const currentVal = myResponses[state.qfIndex];
+        const type = q.type || 'text';
+
+        if (type === 'text') {
+          html += '<textarea class="qf-input-text" id="qfTextInput" placeholder="Type your answer..." ' +
+            'oninput="qfSaveText()">' + escapeHtml(currentVal || '') + '</textarea>';
+        } else if (type === 'choice') {
+          html += '<div class="qf-choices">';
+          (q.options || []).forEach(function(opt) {
+            const sel = currentVal === opt ? ' selected' : '';
+            html += '<button class="qf-choice-btn' + sel + '" onclick="qfSelectChoice(' + state.qfIndex + ', \'' + escapeHtml(opt).replace(/'/g, "\\'") + '\')">' +
+              escapeHtml(opt) + '</button>';
+          });
+          html += '</div>';
+        } else if (type === 'yesno') {
+          html += '<div class="qf-yesno-row">' +
+            '<button class="qf-yesno-btn yes' + (currentVal === 'yes' ? ' selected' : '') + '" onclick="qfSelectYesNo(' + state.qfIndex + ', \'yes\')">Yes</button>' +
+            '<button class="qf-yesno-btn no' + (currentVal === 'no' ? ' selected' : '') + '" onclick="qfSelectYesNo(' + state.qfIndex + ', \'no\')">No</button>' +
+            '</div>';
+        } else if (type === 'rating') {
+          const min = q.min || 1;
+          const max = q.max || 5;
+          html += '<div class="qf-rating-row">';
+          for (let i = min; i <= max; i++) {
+            const sel = currentVal === i ? ' selected' : '';
+            html += '<button class="qf-rating-btn' + sel + '" onclick="qfSelectRating(' + state.qfIndex + ', ' + i + ')">' + i + '</button>';
+          }
+          html += '</div>';
+        }
+
+        html += '</div>';
+        content.innerHTML = html;
+
+        // Navigation
+        let navHtml = '';
+        if (state.qfIndex > 0) {
+          navHtml += '<button class="btn btn-secondary" onclick="qfPrev()" style="flex:1;">Previous</button>';
+        } else {
+          navHtml += '<div style="flex:1;"></div>';
+        }
+        if (state.qfIndex < questions.length - 1) {
+          navHtml += '<button class="btn btn-primary" onclick="qfNext()" style="flex:1;">Next</button>';
+        } else {
+          navHtml += '<button class="btn btn-primary" onclick="qfSubmit()" style="flex:1;background:var(--neon-green);color:#000;">Submit All</button>';
+        }
+        nav.innerHTML = navHtml;
+
+      } else if (msg.phase === 'review' || msg.phase === 'finished') {
+        const rq = msg.reviewQuestion || {};
+        const questions = msg.questions || [];
+        progress.textContent = 'Reviewing: ' + (msg.currentQuestion + 1) + ' / ' + questions.length;
+
+        let html = '<div class="qf-question-card card">' +
+          '<div class="qf-label">Results</div>' +
+          '<div class="qf-text">' + escapeHtml(rq.text || '') + '</div>';
+
+        if (msg.tally) {
+          const maxCount = Math.max(...Object.values(msg.tally), 1);
+          const options = rq.type === 'yesno' ? ['yes', 'no'] : (rq.options || Object.keys(msg.tally));
+          html += '<div style="margin-top:12px;">';
+          options.forEach(function(opt) {
+            const count = msg.tally[opt] || 0;
+            const pct = Math.round((count / maxCount) * 100);
+            html += '<div class="qf-tally-bar" style="width:' + Math.max(pct, 20) + '%;">' +
+              escapeHtml(opt) + ' (' + count + ')</div>';
+          });
+          html += '</div>';
+        } else if (msg.average != null) {
+          html += '<div style="text-align:center;margin-top:12px;">' +
+            '<div style="font-size:2.5rem;font-weight:900;color:var(--neon-blue);">' + msg.average + '</div>' +
+            '<div style="font-size:0.8rem;color:var(--text-secondary);">Average rating</div></div>';
+        } else {
+          // Text responses
+          (msg.allResponses || []).forEach(function(r) {
+            const name = (state.playerNames || {})[r.playerId] || 'Player';
+            html += '<div class="qf-review-answer"><strong>' + escapeHtml(name) + ':</strong> ' + escapeHtml(String(r.value)) + '</div>';
+          });
+        }
+
+        html += '</div>';
+        content.innerHTML = html;
+        nav.innerHTML = '';
+      }
+    }
+
+    function qfSaveText() {
+      const input = document.getElementById('qfTextInput');
+      if (input) {
+        send({ type: 'GAME_ACTION', action: { type: 'answer', questionIndex: state.qfIndex, value: input.value } });
+      }
+    }
+
+    function qfSelectChoice(qi, val) {
+      send({ type: 'GAME_ACTION', action: { type: 'answer', questionIndex: qi, value: val } });
+    }
+
+    function qfSelectYesNo(qi, val) {
+      send({ type: 'GAME_ACTION', action: { type: 'answer', questionIndex: qi, value: val } });
+    }
+
+    function qfSelectRating(qi, val) {
+      send({ type: 'GAME_ACTION', action: { type: 'answer', questionIndex: qi, value: val } });
+    }
+
+    function qfPrev() {
+      if (state.qfIndex > 0) {
+        state.qfIndex--;
+        // Re-request current state to re-render
+        renderQuestionFormState(state._lastQfMsg || { phase: 'answering', questions: [], myResponses: {}, submittedCount: 0, totalPlayers: 0 });
+      }
+    }
+
+    function qfNext() {
+      state.qfIndex++;
+      renderQuestionFormState(state._lastQfMsg || { phase: 'answering', questions: [], myResponses: {}, submittedCount: 0, totalPlayers: 0 });
+    }
+
+    function qfSubmit() {
+      // Save any pending text answer first
+      qfSaveText();
+      send({ type: 'GAME_ACTION', action: { type: 'submit' } });
+    }
+
+    // Wrap the render to cache last msg
+    const _origRenderQF = renderQuestionFormState;
+    renderQuestionFormState = function(msg) {
+      state._lastQfMsg = msg;
+      _origRenderQF(msg);
+    };
 
     function showToast(message, type) {
       const container = document.getElementById('toasts');
