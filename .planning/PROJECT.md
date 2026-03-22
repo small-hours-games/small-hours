@@ -30,7 +30,7 @@ Creating a new party game should be trivially simple — define state and rules,
 ### Active
 
 - [x] OpenTrivia DB API integration for quiz questions — Validated in Phase 01: Question Fetcher
-- [ ] Disk-based question caching by category
+- [x] Disk-based question caching by category — Validated in Phase 02: Question Cache
 - [ ] Player category voting before quiz starts
 
 ### Out of Scope
