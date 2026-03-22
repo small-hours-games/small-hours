@@ -29,7 +29,7 @@ Creating a new party game should be trivially simple — define state and rules,
 
 ### Active
 
-- [ ] OpenTrivia DB API integration for quiz questions
+- [x] OpenTrivia DB API integration for quiz questions — Validated in Phase 01: Question Fetcher
 - [ ] Disk-based question caching by category
 - [ ] Player category voting before quiz starts
 
@@ -65,7 +65,7 @@ The OpenTrivia DB API (opentdb.com) is the question source. It's free, has ~4,00
 | Plain object game definitions | No class hierarchy needed for 4 games | Validated |
 | Express + WS over raw HTTP | Session/room management needed it | Validated |
 | Browser-first (skipped terminal client) | Faster to usable product | Validated |
-| OpenTrivia DB as question source | Free, sufficient variety, well-known API | -- Pending |
+| OpenTrivia DB as question source | Free, sufficient variety, well-known API | Validated (Phase 01) |
 | Disk caching for questions | Offline resilience, reduce API load | -- Pending |
 
 ## Evolution
@@ -86,4 +86,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-03-22 after milestone v2.1 start*
+*Last updated: 2026-03-22 after Phase 01 (Question Fetcher) complete*
