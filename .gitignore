@@ -5,3 +5,4 @@ node_modules/
 /.claude/worktrees
 /tmp
 /package-lock.json
+/tests/latest-test-results.txt
