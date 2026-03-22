@@ -5,6 +5,7 @@ import { createGame, processAction, getView, checkEnd } from '../engine/engine.j
 import numberGuess from '../engine/games/number-guess.js';
 import shithead from '../engine/games/shithead.js';
 import quiz from '../engine/games/quiz.js';
+import questionForm from '../engine/games/question-form.js';
 import { fetchQuestions } from '../fetcher/cached-fetcher.js';
 
 const AVATAR_POOL = [
@@ -21,6 +22,7 @@ const GAME_REGISTRY = {
   'number-guess': numberGuess,
   'shithead': shithead,
   'quiz': quiz,
+  'question-form': questionForm,
 };
 
 let playerCounter = 0;

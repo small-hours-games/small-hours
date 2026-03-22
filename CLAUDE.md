@@ -38,6 +38,7 @@ src/
 │       ├── index.js     #   Re-exports all games
 │       ├── number-guess.js
 │       ├── quiz.js
+│       ├── question-form.js
 │       ├── shithead.js
 │       └── spy.js
 ├── fetcher/
@@ -87,6 +88,47 @@ export default {
 ```
 
 Reference implementation: `src/engine/games/number-guess.js` (simplest game).
+
+## Question Form Game (Dev Workflow Tool)
+
+The `question-form` game turns dev questions into an interactive polling experience on the shared screen. Instead of answering questions via CLI, they appear as a game that players answer on their phones.
+
+**Game type:** `question-form`
+
+**Question types supported:**
+- `text` — free-form text input (max 500 chars)
+- `choice` — multiple choice from predefined options
+- `yesno` — yes/no toggle
+- `rating` — numeric scale (configurable `min`/`max`, default 1-5)
+
+**Starting the game via WebSocket:**
+```js
+{
+  type: 'START_MINI_GAME',
+  gameType: 'question-form',
+  config: {
+    questions: [
+      { text: 'Should we use TypeScript?', type: 'yesno' },
+      { text: 'Preferred framework?', type: 'choice', options: ['React', 'Vue', 'Svelte'] },
+      { text: 'Rate the DX (1-5)', type: 'rating', min: 1, max: 5 },
+      { text: 'Any other feedback?', type: 'text', label: 'Feedback' }
+    ]
+  }
+}
+```
+
+**Phases:** `answering` → `review` → `finished`
+- **answering:** Players swipe through questions on phones, answers auto-save, then submit all at once. Phase auto-advances to review when all players have submitted.
+- **review:** Host navigates between questions viewing aggregated results (tally bars for choice/yesno, average for rating, individual text responses). Any player can trigger `reviewQuestion` to navigate, `finishReview` to end.
+- **finished:** Game ends (no winner/scores — it's a form, not a competition).
+
+**Actions:**
+- `answer` — `{ questionIndex, value }` — save an answer (can overwrite before submit)
+- `submit` — lock in all answers
+- `reviewQuestion` — `{ questionIndex }` — navigate review to a specific question
+- `finishReview` — end the game
+
+**Files:** `src/engine/games/question-form.js`, tests in `tests/engine/question-form.test.js`
 
 ## WebSocket Protocol
 
