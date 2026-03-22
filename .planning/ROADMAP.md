@@ -23,7 +23,10 @@
   2. Questions have the correct shape expected by the quiz engine: question text, correct answer, wrong answers
   3. When OpenTrivia DB is unreachable or returns an error code, the fetcher returns a structured error (not a crash or unhandled rejection)
   4. The quiz game can be started with fetched questions via the existing `room.startGame()` path
-**Plans**: TBD
+**Plans:** 2 plans
+Plans:
+- [ ] 01-01-PLAN.md — Standalone OpenTrivia DB fetcher module with HTML decoding, error handling, and tests
+- [ ] 01-02-PLAN.md — Wire fetcher into session/transport layers (GAME_REGISTRY, async startGame, integration tests)
 
 ### Phase 2: Question Cache
 
@@ -53,6 +56,6 @@
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Question Fetcher | 0/? | Not started | - |
+| 1. Question Fetcher | 0/2 | Planning complete | - |
 | 2. Question Cache | 0/? | Not started | - |
 | 3. Category Voting | 0/? | Not started | - |
