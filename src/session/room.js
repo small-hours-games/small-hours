@@ -6,6 +6,7 @@ import numberGuess from '../engine/games/number-guess.js';
 import shithead from '../engine/games/shithead.js';
 import quiz from '../engine/games/quiz.js';
 import questionForm from '../engine/games/question-form.js';
+import template from '../engine/games/template.js';
 import { fetchQuestions } from '../fetcher/cached-fetcher.js';
 import { loadQuestionFile, saveAnswers } from '../fetcher/question-file.js';
 
@@ -24,6 +25,7 @@ const GAME_REGISTRY = {
   'shithead': shithead,
   'quiz': quiz,
   'question-form': questionForm,
+  'template': template,
 };
 
 let playerCounter = 0;
