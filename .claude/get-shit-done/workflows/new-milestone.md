@@ -43,6 +43,38 @@ If the flag is absent, keep the current behavior of continuing phase numbering f
 - Suggest next version (v1.0 → v1.1, or v2.0 for major)
 - Confirm with user
 
+## 3.5. Verify Milestone Understanding
+
+Before writing any files, present a summary of what was gathered and ask for confirmation.
+
+```
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ GSD ► MILESTONE SUMMARY
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+**Milestone v[X.Y]: [Name]**
+
+**Goal:** [One sentence]
+
+**Target features:**
+- [Feature 1]
+- [Feature 2]
+- [Feature 3]
+
+**Key context:** [Any important constraints, decisions, or notes from questioning]
+```
+
+AskUserQuestion:
+- header: "Confirm?"
+- question: "Does this capture what you want to build in this milestone?"
+- options:
+  - "Looks good" — Proceed to write PROJECT.md
+  - "Adjust" — Let me correct or add details
+
+**If "Adjust":** Ask what needs changing (plain text, NOT AskUserQuestion). Incorporate changes, re-present the summary. Loop until "Looks good" is selected.
+
+**If "Looks good":** Proceed to Step 4.
+
 ## 4. Update PROJECT.md
 
 Add/update:
@@ -99,13 +131,13 @@ Keep Accumulated Context section from previous milestone.
 Delete MILESTONE-CONTEXT.md if exists (consumed).
 
 ```bash
-node "/home/skogix/claude/.claude/get-shit-done/bin/gsd-tools.cjs" commit "docs: start milestone v[X.Y] [Name]" --files .planning/PROJECT.md .planning/STATE.md
+node "/home/skogix/dev/small-hours/.claude/get-shit-done/bin/gsd-tools.cjs" commit "docs: start milestone v[X.Y] [Name]" --files .planning/PROJECT.md .planning/STATE.md
 ```
 
 ## 7. Load Context and Resolve Models
 
 ```bash
-INIT=$(node "/home/skogix/claude/.claude/get-shit-done/bin/gsd-tools.cjs" init new-milestone)
+INIT=$(node "/home/skogix/dev/small-hours/.claude/get-shit-done/bin/gsd-tools.cjs" init new-milestone)
 if [[ "$INIT" == @file:* ]]; then INIT=$(cat "${INIT#@file:}"); fi
 ```
 
@@ -129,7 +161,7 @@ Then verify `.planning/phases/` no longer contains old milestone directories bef
 
 If `phase_dir_count > 0` but `phase_archive_path` is missing:
 - Stop and explain that reset numbering is unsafe without a completed milestone archive target.
-- Tell the user to complete/archive the previous milestone first, then rerun `/gsd:new-milestone --reset-phase-numbers`.
+- Tell the user to complete/archive the previous milestone first, then rerun `/gsd:new-milestone --reset-phase-numbers ${GSD_WS}`.
 
 ## 8. Research Decision
 
@@ -189,7 +221,7 @@ Focus ONLY on what's needed for the NEW features.
 
 <output>
 Write to: .planning/research/{FILE}
-Use template: /home/skogix/claude/.claude/get-shit-done/templates/research-project/{FILE}
+Use template: /home/skogix/dev/small-hours/.claude/get-shit-done/templates/research-project/{FILE}
 </output>
 ", subagent_type="gsd-project-researcher", model="{researcher_model}", description="{DIMENSION} research")
 ```
@@ -218,7 +250,7 @@ Synthesize research outputs into SUMMARY.md.
 </files_to_read>
 
 Write to: .planning/research/SUMMARY.md
-Use template: /home/skogix/claude/.claude/get-shit-done/templates/research-project/SUMMARY.md
+Use template: /home/skogix/dev/small-hours/.claude/get-shit-done/templates/research-project/SUMMARY.md
 Commit after writing.
 ", subagent_type="gsd-research-synthesizer", model="{synthesizer_model}", description="Synthesize research")
 ```
@@ -304,7 +336,7 @@ If "adjust": Return to scoping.
 
 **Commit requirements:**
 ```bash
-node "/home/skogix/claude/.claude/get-shit-done/bin/gsd-tools.cjs" commit "docs: define milestone v[X.Y] requirements" --files .planning/REQUIREMENTS.md
+node "/home/skogix/dev/small-hours/.claude/get-shit-done/bin/gsd-tools.cjs" commit "docs: define milestone v[X.Y] requirements" --files .planning/REQUIREMENTS.md
 ```
 
 ## 10. Create Roadmap
@@ -385,7 +417,7 @@ Success criteria:
 
 **Commit roadmap** (after approval):
 ```bash
-node "/home/skogix/claude/.claude/get-shit-done/bin/gsd-tools.cjs" commit "docs: create milestone v[X.Y] roadmap ([N] phases)" --files .planning/ROADMAP.md .planning/STATE.md .planning/REQUIREMENTS.md
+node "/home/skogix/dev/small-hours/.claude/get-shit-done/bin/gsd-tools.cjs" commit "docs: create milestone v[X.Y] roadmap ([N] phases)" --files .planning/ROADMAP.md .planning/STATE.md .planning/REQUIREMENTS.md
 ```
 
 ## 11. Done
@@ -410,11 +442,11 @@ node "/home/skogix/claude/.claude/get-shit-done/bin/gsd-tools.cjs" commit "docs:
 
 **Phase [N]: [Phase Name]** — [Goal]
 
-`/gsd:discuss-phase [N]` — gather context and clarify approach
+`/gsd:discuss-phase [N] ${GSD_WS}` — gather context and clarify approach
 
 <sub>`/clear` first → fresh context window</sub>
 
-Also: `/gsd:plan-phase [N]` — skip discussion, plan directly
+Also: `/gsd:plan-phase [N] ${GSD_WS}` — skip discussion, plan directly
 ```
 
 </process>
@@ -431,7 +463,7 @@ Also: `/gsd:plan-phase [N]` — skip discussion, plan directly
 - [ ] User feedback incorporated (if any)
 - [ ] Phase numbering mode respected (continued or reset)
 - [ ] All commits made (if planning docs committed)
-- [ ] User knows next step: `/gsd:discuss-phase [N]`
+- [ ] User knows next step: `/gsd:discuss-phase [N] ${GSD_WS}`
 
 **Atomic commits:** Each phase commits its artifacts immediately.
 </success_criteria>

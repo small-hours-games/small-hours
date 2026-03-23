@@ -16,9 +16,9 @@ Designed for rapid multi-project workflows where remembering which phase/step yo
 </objective>
 
 <execution_context>
-@/home/dellvall/dot-claude/game/.claude/get-shit-done/workflows/next.md
+@/home/skogix/dev/small-hours/.claude/get-shit-done/workflows/next.md
 </execution_context>
 
 <process>
-Execute the next workflow from @/home/dellvall/dot-claude/game/.claude/get-shit-done/workflows/next.md end-to-end.
+Execute the next workflow from @/home/skogix/dev/small-hours/.claude/get-shit-done/workflows/next.md end-to-end.
 </process>

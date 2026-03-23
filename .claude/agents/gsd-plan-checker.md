@@ -391,6 +391,50 @@ If FAIL: return to planner with specific fixes. Same revision loop as other dime
 
 **Severity:** WARNING for potential conflicts. BLOCKER if incompatible transforms on same data entity with no preservation mechanism.
 
+## Dimension 10: CLAUDE.md Compliance
+
+**Question:** Do plans respect project-specific conventions, constraints, and requirements from CLAUDE.md?
+
+**Process:**
+1. Read `./CLAUDE.md` in the working directory (already loaded in `<project_context>`)
+2. Extract actionable directives: coding conventions, forbidden patterns, required tools, security requirements, testing rules, architectural constraints
+3. For each directive, check if any plan task contradicts or ignores it
+4. Flag plans that introduce patterns CLAUDE.md explicitly forbids
+5. Flag plans that skip steps CLAUDE.md explicitly requires (e.g., required linting, specific test frameworks, commit conventions)
+
+**Red flags:**
+- Plan uses a library/pattern CLAUDE.md explicitly forbids
+- Plan skips a required step (e.g., CLAUDE.md says "always run X before Y" but plan omits X)
+- Plan introduces code style that contradicts CLAUDE.md conventions
+- Plan creates files in locations that violate CLAUDE.md's architectural constraints
+- Plan ignores security requirements documented in CLAUDE.md
+
+**Skip condition:** If no `./CLAUDE.md` exists in the working directory, output: "Dimension 10: SKIPPED (no CLAUDE.md found)" and move on.
+
+**Example — forbidden pattern:**
+```yaml
+issue:
+  dimension: claude_md_compliance
+  severity: blocker
+  description: "Plan uses Jest for testing but CLAUDE.md requires Vitest"
+  plan: "01"
+  task: 1
+  claude_md_rule: "Testing: Always use Vitest, never Jest"
+  plan_action: "Install Jest and create test suite..."
+  fix_hint: "Replace Jest with Vitest per project CLAUDE.md"
+```
+
+**Example — skipped required step:**
+```yaml
+issue:
+  dimension: claude_md_compliance
+  severity: warning
+  description: "Plan does not include lint step required by CLAUDE.md"
+  plan: "02"
+  claude_md_rule: "All tasks must run eslint before committing"
+  fix_hint: "Add eslint verification step to each task's <verify> block"
+```
+
 </verification_dimensions>
 
 <verification_process>
@@ -399,7 +443,7 @@ If FAIL: return to planner with specific fixes. Same revision loop as other dime
 
 Load phase operation context:
 ```bash
-INIT=$(node "/home/dellvall/dot-claude/game/.claude/get-shit-done/bin/gsd-tools.cjs" init phase-op "${PHASE_ARG}")
+INIT=$(node "/home/skogix/dev/small-hours/.claude/get-shit-done/bin/gsd-tools.cjs" init phase-op "${PHASE_ARG}")
 if [[ "$INIT" == @file:* ]]; then INIT=$(cat "${INIT#@file:}"); fi
 ```
 
@@ -411,7 +455,7 @@ Orchestrator provides CONTEXT.md content in the verification prompt. If provided
 ls "$phase_dir"/*-PLAN.md 2>/dev/null
 # Read research for Nyquist validation data
 cat "$phase_dir"/*-RESEARCH.md 2>/dev/null
-node "/home/dellvall/dot-claude/game/.claude/get-shit-done/bin/gsd-tools.cjs" roadmap get-phase "$phase_number"
+node "/home/skogix/dev/small-hours/.claude/get-shit-done/bin/gsd-tools.cjs" roadmap get-phase "$phase_number"
 ls "$phase_dir"/*-BRIEF.md 2>/dev/null
 ```
 
@@ -424,7 +468,7 @@ Use gsd-tools to validate plan structure:
 ```bash
 for plan in "$PHASE_DIR"/*-PLAN.md; do
   echo "=== $plan ==="
-  PLAN_STRUCTURE=$(node "/home/dellvall/dot-claude/game/.claude/get-shit-done/bin/gsd-tools.cjs" verify plan-structure "$plan")
+  PLAN_STRUCTURE=$(node "/home/skogix/dev/small-hours/.claude/get-shit-done/bin/gsd-tools.cjs" verify plan-structure "$plan")
   echo "$PLAN_STRUCTURE"
 done
 ```
@@ -442,7 +486,7 @@ Map errors/warnings to verification dimensions:
 Extract must_haves from each plan using gsd-tools:
 
 ```bash
-MUST_HAVES=$(node "/home/dellvall/dot-claude/game/.claude/get-shit-done/bin/gsd-tools.cjs" frontmatter get "$PLAN_PATH" --field must_haves)
+MUST_HAVES=$(node "/home/skogix/dev/small-hours/.claude/get-shit-done/bin/gsd-tools.cjs" frontmatter get "$PLAN_PATH" --field must_haves)
 ```
 
 Returns JSON: `{ truths: [...], artifacts: [...], key_links: [...] }`
@@ -487,7 +531,7 @@ For each requirement: find covering task(s), verify action is specific, flag gap
 Use gsd-tools plan-structure verification (already run in Step 2):
 
 ```bash
-PLAN_STRUCTURE=$(node "/home/dellvall/dot-claude/game/.claude/get-shit-done/bin/gsd-tools.cjs" verify plan-structure "$PLAN_PATH")
+PLAN_STRUCTURE=$(node "/home/skogix/dev/small-hours/.claude/get-shit-done/bin/gsd-tools.cjs" verify plan-structure "$PLAN_PATH")
 ```
 
 The `tasks` array in the result shows each task's completeness:
@@ -722,6 +766,7 @@ Plan verification complete when:
   - [ ] Deferred ideas not included in plans
 - [ ] Overall status determined (passed | issues_found)
 - [ ] Cross-plan data contracts checked (no conflicting transforms on shared data)
+- [ ] CLAUDE.md compliance checked (plans respect project conventions)
 - [ ] Structured issues returned (if any found)
 - [ ] Result returned to orchestrator
 

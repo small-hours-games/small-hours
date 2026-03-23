@@ -19,8 +19,8 @@ Routes to the profile-user workflow which orchestrates the full flow: consent ga
 </objective>
 
 <execution_context>
-@/home/dellvall/dot-claude/game/.claude/get-shit-done/workflows/profile-user.md
-@/home/dellvall/dot-claude/game/.claude/get-shit-done/references/ui-brand.md
+@/home/skogix/dev/small-hours/.claude/get-shit-done/workflows/profile-user.md
+@/home/skogix/dev/small-hours/.claude/get-shit-done/references/ui-brand.md
 </execution_context>
 
 <context>

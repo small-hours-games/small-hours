@@ -14,8 +14,8 @@ Orchestrator coordinates, not executes. Each subagent loads the full execute-pla
   instead of spawning parallel agents. Only attempt parallel spawning if the user
   explicitly requests it — and in that case, rely on the spot-check fallback in step 3
   to detect completion.
-- **Other runtimes (Gemini, Codex, OpenCode):** If Task/subagent API is unavailable, use sequential
-  inline execution as the fallback.
+- **Other runtimes:** If `Task`/`task` tool is unavailable, use sequential inline execution as the
+  fallback. Check for tool availability at runtime rather than assuming based on runtime name.
 
 **Fallback rule:** If a spawned agent completes its work (commits visible, SUMMARY.md exists) but
 the orchestrator never receives the completion signal, treat it as successful based on spot-checks
@@ -47,11 +47,21 @@ Always use the exact name from this list — do not fall back to 'general-purpos
 
 <process>
 
+<step name="parse_args" priority="first">
+Parse `$ARGUMENTS` before loading any context:
+
+- First positional token → `PHASE_ARG`
+- Optional `--wave N` → `WAVE_FILTER`
+- Optional `--gaps-only` keeps its current meaning
+
+If `--wave` is absent, preserve the current behavior of executing all incomplete waves in the phase.
+</step>
+
 <step name="initialize" priority="first">
 Load all context in one call:
 
 ```bash
-INIT=$(node "/home/skogix/claude/.claude/get-shit-done/bin/gsd-tools.cjs" init execute-phase "${PHASE_ARG}")
+INIT=$(node "/home/skogix/dev/small-hours/.claude/get-shit-done/bin/gsd-tools.cjs" init execute-phase "${PHASE_ARG}")
 if [[ "$INIT" == @file:* ]]; then INIT=$(cat "${INIT#@file:}"); fi
 ```
 
@@ -75,7 +85,7 @@ inline path for each plan.
 ```bash
 # REQUIRED: prevents stale auto-chain from previous --auto runs
 if [[ ! "$ARGUMENTS" =~ --auto ]]; then
-  node "/home/skogix/claude/.claude/get-shit-done/bin/gsd-tools.cjs" config-set workflow._auto_chain_active false 2>/dev/null
+  node "/home/skogix/dev/small-hours/.claude/get-shit-done/bin/gsd-tools.cjs" config-set workflow._auto_chain_active false 2>/dev/null
 fi
 ```
 </step>
@@ -109,7 +119,7 @@ checkpoints between tasks. The user can review, modify, or redirect work at any 
 
    b. **If "Review first":** Read and display the full plan file. Ask again: Execute, Modify, Skip.
 
-   c. **If "Execute":** Read and follow `/home/skogix/claude/.claude/get-shit-done/workflows/execute-plan.md` **inline**
+   c. **If "Execute":** Read and follow `/home/skogix/dev/small-hours/.claude/get-shit-done/workflows/execute-plan.md` **inline**
       (do NOT spawn a subagent). Execute tasks one at a time.
 
    d. **After each task:** Pause briefly. If the user intervenes (types anything), stop and address
@@ -148,7 +158,7 @@ Report: "Found {plan_count} plans in {phase_dir} ({incomplete_count} incomplete)
 
 **Update STATE.md for phase start:**
 ```bash
-node "/home/skogix/claude/.claude/get-shit-done/bin/gsd-tools.cjs" state begin-phase --phase "${PHASE_NUMBER}" --name "${PHASE_NAME}" --plans "${PLAN_COUNT}"
+node "/home/skogix/dev/small-hours/.claude/get-shit-done/bin/gsd-tools.cjs" state begin-phase --phase "${PHASE_NUMBER}" --name "${PHASE_NAME}" --plans "${PLAN_COUNT}"
 ```
 This updates Status, Last Activity, Current focus, Current Position, and plan counts in STATE.md so frontmatter and body text reflect the active phase immediately.
 </step>
@@ -157,18 +167,24 @@ This updates Status, Last Activity, Current focus, Current Position, and plan co
 Load plan inventory with wave grouping in one call:
 
 ```bash
-PLAN_INDEX=$(node "/home/skogix/claude/.claude/get-shit-done/bin/gsd-tools.cjs" phase-plan-index "${PHASE_NUMBER}")
+PLAN_INDEX=$(node "/home/skogix/dev/small-hours/.claude/get-shit-done/bin/gsd-tools.cjs" phase-plan-index "${PHASE_NUMBER}")
 ```
 
 Parse JSON for: `phase`, `plans[]` (each with `id`, `wave`, `autonomous`, `objective`, `files_modified`, `task_count`, `has_summary`), `waves` (map of wave number → plan IDs), `incomplete`, `has_checkpoints`.
 
-**Filtering:** Skip plans where `has_summary: true`. If `--gaps-only`: also skip non-gap_closure plans. If all filtered: "No matching incomplete plans" → exit.
+**Filtering:** Skip plans where `has_summary: true`. If `--gaps-only`: also skip non-gap_closure plans. If `WAVE_FILTER` is set: also skip plans whose `wave` does not equal `WAVE_FILTER`.
+
+**Wave safety check:** If `WAVE_FILTER` is set and there are still incomplete plans in any lower wave that match the current execution mode, STOP and tell the user to finish earlier waves first. Do not let Wave 2+ execute while prerequisite earlier-wave plans remain incomplete.
+
+If all filtered: "No matching incomplete plans" → exit.
 
 Report:
 ```
 ## Execution Plan
 
-**Phase {X}: {Name}** — {total_plans} plans across {wave_count} waves
+**Phase {X}: {Name}** — {total_plans} matching plans across {wave_count} wave(s)
+
+{If WAVE_FILTER is set: `Wave filter active: executing only Wave {WAVE_FILTER}`.}
 
 | Wave | Plans | What it builds |
 |------|-------|----------------|
@@ -178,7 +194,7 @@ Report:
 </step>
 
 <step name="execute_waves">
-Execute each wave in sequence. Within a wave: parallel if `PARALLELIZATION=true`, sequential if `false`.
+Execute each selected wave in sequence. Within a wave: parallel if `PARALLELIZATION=true`, sequential if `false`.
 
 **For each wave:**
 
@@ -210,6 +226,7 @@ Execute each wave in sequence. Within a wave: parallel if `PARALLELIZATION=true`
    Task(
      subagent_type="gsd-executor",
      model="{executor_model}",
+     isolation="worktree",
      prompt="
        <objective>
        Execute plan {plan_number} of phase {phase_number}-{phase_name}.
@@ -225,10 +242,10 @@ Execute each wave in sequence. Within a wave: parallel if `PARALLELIZATION=true`
        </parallel_execution>
 
        <execution_context>
-       @/home/skogix/claude/.claude/get-shit-done/workflows/execute-plan.md
-       @/home/skogix/claude/.claude/get-shit-done/templates/summary.md
-       @/home/skogix/claude/.claude/get-shit-done/references/checkpoints.md
-       @/home/skogix/claude/.claude/get-shit-done/references/tdd.md
+       @/home/skogix/dev/small-hours/.claude/get-shit-done/workflows/execute-plan.md
+       @/home/skogix/dev/small-hours/.claude/get-shit-done/templates/summary.md
+       @/home/skogix/dev/small-hours/.claude/get-shit-done/references/checkpoints.md
+       @/home/skogix/dev/small-hours/.claude/get-shit-done/references/tdd.md
        </execution_context>
 
        <files_to_read>
@@ -328,7 +345,7 @@ Execute each wave in sequence. Within a wave: parallel if `PARALLELIZATION=true`
 
     Before spawning wave N+1, for each plan in the upcoming wave:
     ```bash
-    node "/home/skogix/claude/.claude/get-shit-done/bin/gsd-tools.cjs" verify key-links {phase_dir}/{plan}-PLAN.md
+    node "/home/skogix/dev/small-hours/.claude/get-shit-done/bin/gsd-tools.cjs" verify key-links {phase_dir}/{plan}-PLAN.md
     ```
 
     If any key-link from a PRIOR wave's artifact fails verification:
@@ -357,8 +374,8 @@ Plans with `autonomous: false` require user interaction.
 
 Read auto-advance config (chain flag + user preference):
 ```bash
-AUTO_CHAIN=$(node "/home/skogix/claude/.claude/get-shit-done/bin/gsd-tools.cjs" config-get workflow._auto_chain_active 2>/dev/null || echo "false")
-AUTO_CFG=$(node "/home/skogix/claude/.claude/get-shit-done/bin/gsd-tools.cjs" config-get workflow.auto_advance 2>/dev/null || echo "false")
+AUTO_CHAIN=$(node "/home/skogix/dev/small-hours/.claude/get-shit-done/bin/gsd-tools.cjs" config-get workflow._auto_chain_active 2>/dev/null || echo "false")
+AUTO_CFG=$(node "/home/skogix/dev/small-hours/.claude/get-shit-done/bin/gsd-tools.cjs" config-get workflow.auto_advance 2>/dev/null || echo "false")
 ```
 
 When executor returns a checkpoint AND (`AUTO_CHAIN` is `"true"` OR `AUTO_CFG` is `"true"`):
@@ -418,6 +435,37 @@ After all waves:
 ```
 </step>
 
+<step name="handle_partial_wave_execution">
+If `WAVE_FILTER` was used, re-run plan discovery after execution:
+
+```bash
+POST_PLAN_INDEX=$(node "/home/skogix/dev/small-hours/.claude/get-shit-done/bin/gsd-tools.cjs" phase-plan-index "${PHASE_NUMBER}")
+```
+
+Apply the same "incomplete" filtering rules as earlier:
+- ignore plans with `has_summary: true`
+- if `--gaps-only`, only consider `gap_closure: true` plans
+
+**If incomplete plans still remain anywhere in the phase:**
+- STOP here
+- Do NOT run phase verification
+- Do NOT mark the phase complete in ROADMAP/STATE
+- Present:
+
+```markdown
+## Wave {WAVE_FILTER} Complete
+
+Selected wave finished successfully. This phase still has incomplete plans, so phase-level verification and completion were intentionally skipped.
+
+/gsd:execute-phase {phase} ${GSD_WS}                # Continue remaining waves
+/gsd:execute-phase {phase} --wave {next} ${GSD_WS}  # Run the next wave explicitly
+```
+
+**If no incomplete plans remain after the selected wave finishes:**
+- continue with the normal phase-level verification and completion flow below
+- this means the selected wave happened to be the last remaining work in the phase
+</step>
+
 <step name="close_parent_artifacts">
 **For decimal/polish phases only (X.Y pattern):** Close the feedback loop by resolving parent UAT and debug artifacts.
 
@@ -433,7 +481,7 @@ fi
 
 **2. Find parent UAT file:**
 ```bash
-PARENT_INFO=$(node "/home/skogix/claude/.claude/get-shit-done/bin/gsd-tools.cjs" find-phase "${PARENT_PHASE}" --raw)
+PARENT_INFO=$(node "/home/skogix/dev/small-hours/.claude/get-shit-done/bin/gsd-tools.cjs" find-phase "${PARENT_PHASE}" --raw)
 # Extract directory from PARENT_INFO JSON, then find UAT file in that directory
 ```
 
@@ -464,7 +512,7 @@ mv .planning/debug/{slug}.md .planning/debug/resolved/
 
 **6. Commit updated artifacts:**
 ```bash
-node "/home/skogix/claude/.claude/get-shit-done/bin/gsd-tools.cjs" commit "docs(phase-${PARENT_PHASE}): resolve UAT gaps and debug sessions after ${PHASE_NUMBER} gap closure" --files .planning/phases/*${PARENT_PHASE}*/*-UAT.md .planning/debug/resolved/*.md
+node "/home/skogix/dev/small-hours/.claude/get-shit-done/bin/gsd-tools.cjs" commit "docs(phase-${PARENT_PHASE}): resolve UAT gaps and debug sessions after ${PHASE_NUMBER} gap closure" --files .planning/phases/*${PARENT_PHASE}*/*-UAT.md .planning/debug/resolved/*.md
 ```
 </step>
 
@@ -555,7 +603,7 @@ grep "^status:" "$PHASE_DIR"/*-VERIFICATION.md | cut -d: -f2 | tr -d ' '
 |--------|--------|
 | `passed` | → update_roadmap |
 | `human_needed` | Present items for human testing, get approval or feedback |
-| `gaps_found` | Present gap summary, offer `/gsd:plan-phase {phase} --gaps` |
+| `gaps_found` | Present gap summary, offer `/gsd:plan-phase {phase} --gaps ${GSD_WS}` |
 
 **If human_needed:**
 
@@ -598,7 +646,7 @@ blocked: 0
 
 Commit the file:
 ```bash
-node "/home/skogix/claude/.claude/get-shit-done/bin/gsd-tools.cjs" commit "test({phase_num}): persist human verification items as UAT" --files "{phase_dir}/{phase_num}-HUMAN-UAT.md"
+node "/home/skogix/dev/small-hours/.claude/get-shit-done/bin/gsd-tools.cjs" commit "test({phase_num}): persist human verification items as UAT" --files "{phase_dir}/{phase_num}-HUMAN-UAT.md"
 ```
 
 **Step B: Present to user:**
@@ -632,22 +680,22 @@ Items saved to `{phase_num}-HUMAN-UAT.md` — they will appear in `/gsd:progress
 ---
 ## ▶ Next Up
 
-`/gsd:plan-phase {X} --gaps`
+`/gsd:plan-phase {X} --gaps ${GSD_WS}`
 
 <sub>`/clear` first → fresh context window</sub>
 
 Also: `cat {phase_dir}/{phase_num}-VERIFICATION.md` — full report
-Also: `/gsd:verify-work {X}` — manual testing first
+Also: `/gsd:verify-work {X} ${GSD_WS}` — manual testing first
 ```
 
-Gap closure cycle: `/gsd:plan-phase {X} --gaps` reads VERIFICATION.md → creates gap plans with `gap_closure: true` → user runs `/gsd:execute-phase {X} --gaps-only` → verifier re-runs.
+Gap closure cycle: `/gsd:plan-phase {X} --gaps ${GSD_WS}` reads VERIFICATION.md → creates gap plans with `gap_closure: true` → user runs `/gsd:execute-phase {X} --gaps-only ${GSD_WS}` → verifier re-runs.
 </step>
 
 <step name="update_roadmap">
 **Mark phase complete and update all tracking files:**
 
 ```bash
-COMPLETION=$(node "/home/skogix/claude/.claude/get-shit-done/bin/gsd-tools.cjs" phase complete "${PHASE_NUMBER}")
+COMPLETION=$(node "/home/skogix/dev/small-hours/.claude/get-shit-done/bin/gsd-tools.cjs" phase complete "${PHASE_NUMBER}")
 ```
 
 The CLI handles:
@@ -670,7 +718,7 @@ These items are tracked and will appear in `/gsd:progress` and `/gsd:audit-uat`.
 ```
 
 ```bash
-node "/home/skogix/claude/.claude/get-shit-done/bin/gsd-tools.cjs" commit "docs(phase-{X}): complete phase execution" --files .planning/ROADMAP.md .planning/STATE.md .planning/REQUIREMENTS.md {phase_dir}/*-VERIFICATION.md
+node "/home/skogix/dev/small-hours/.claude/get-shit-done/bin/gsd-tools.cjs" commit "docs(phase-{X}): complete phase execution" --files .planning/ROADMAP.md .planning/STATE.md .planning/REQUIREMENTS.md {phase_dir}/*-VERIFICATION.md
 ```
 </step>
 
@@ -690,7 +738,7 @@ PROJECT.md falls behind silently over multiple phases.
 5. Commit the change:
 
 ```bash
-node "/home/skogix/claude/.claude/get-shit-done/bin/gsd-tools.cjs" commit "docs(phase-{X}): evolve PROJECT.md after phase completion" --files .planning/PROJECT.md
+node "/home/skogix/dev/small-hours/.claude/get-shit-done/bin/gsd-tools.cjs" commit "docs(phase-{X}): evolve PROJECT.md after phase completion" --files .planning/PROJECT.md
 ```
 
 **Skip this step if** `.planning/PROJECT.md` does not exist.
@@ -728,8 +776,8 @@ STOP. Do not proceed to auto-advance or transition.
 1. Parse `--auto` flag from $ARGUMENTS
 2. Read both the chain flag and user preference (chain flag already synced in init step):
    ```bash
-   AUTO_CHAIN=$(node "/home/skogix/claude/.claude/get-shit-done/bin/gsd-tools.cjs" config-get workflow._auto_chain_active 2>/dev/null || echo "false")
-   AUTO_CFG=$(node "/home/skogix/claude/.claude/get-shit-done/bin/gsd-tools.cjs" config-get workflow.auto_advance 2>/dev/null || echo "false")
+   AUTO_CHAIN=$(node "/home/skogix/dev/small-hours/.claude/get-shit-done/bin/gsd-tools.cjs" config-get workflow._auto_chain_active 2>/dev/null || echo "false")
+   AUTO_CFG=$(node "/home/skogix/dev/small-hours/.claude/get-shit-done/bin/gsd-tools.cjs" config-get workflow.auto_advance 2>/dev/null || echo "false")
    ```
 
 **If `--auto` flag present OR `AUTO_CHAIN` is true OR `AUTO_CFG` is true (AND verification passed with no gaps):**
@@ -743,7 +791,7 @@ STOP. Do not proceed to auto-advance or transition.
 
 Execute the transition workflow inline (do NOT use Task — orchestrator context is ~10-15%, transition needs phase completion data already in context):
 
-Read and follow `/home/skogix/claude/.claude/get-shit-done/workflows/transition.md`, passing through the `--auto` flag so it propagates to the next phase invocation.
+Read and follow `/home/skogix/dev/small-hours/.claude/get-shit-done/workflows/transition.md`, passing through the `--auto` flag so it propagates to the next phase invocation.
 
 **If none of `--auto`, `AUTO_CHAIN`, or `AUTO_CFG` is true:**
 
@@ -754,10 +802,10 @@ Read and follow `/home/skogix/claude/.claude/get-shit-done/workflows/transition.
 ```
 ## ✓ Phase {X}: {Name} Complete
 
-/gsd:progress — see updated roadmap
-/gsd:discuss-phase {next} — discuss next phase before planning
-/gsd:plan-phase {next} — plan next phase
-/gsd:execute-phase {next} — execute next phase
+/gsd:progress ${GSD_WS} — see updated roadmap
+/gsd:discuss-phase {next} ${GSD_WS} — discuss next phase before planning
+/gsd:plan-phase {next} ${GSD_WS} — plan next phase
+/gsd:execute-phase {next} ${GSD_WS} — execute next phase
 ```
 
 Only suggest the commands listed above. Do not invent or hallucinate command names.

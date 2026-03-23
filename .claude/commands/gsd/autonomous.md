@@ -25,8 +25,8 @@ Uses ROADMAP.md phase discovery and Skill() flat invocations for each phase comm
 </objective>
 
 <execution_context>
-@/home/dellvall/dot-claude/game/.claude/get-shit-done/workflows/autonomous.md
-@/home/dellvall/dot-claude/game/.claude/get-shit-done/references/ui-brand.md
+@/home/skogix/dev/small-hours/.claude/get-shit-done/workflows/autonomous.md
+@/home/skogix/dev/small-hours/.claude/get-shit-done/references/ui-brand.md
 </execution_context>
 
 <context>
@@ -36,6 +36,6 @@ Project context, phase list, and state are resolved inside the workflow using in
 </context>
 
 <process>
-Execute the autonomous workflow from @/home/dellvall/dot-claude/game/.claude/get-shit-done/workflows/autonomous.md end-to-end.
+Execute the autonomous workflow from @/home/skogix/dev/small-hours/.claude/get-shit-done/workflows/autonomous.md end-to-end.
 Preserve all workflow gates (phase discovery, per-phase execution, blocker handling, progress display).
 </process>

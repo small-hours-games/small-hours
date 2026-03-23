@@ -9,10 +9,10 @@ Use when `.planning/phases/` has accumulated directories from past milestones.
 </objective>
 
 <execution_context>
-@/home/dellvall/dot-claude/game/.claude/get-shit-done/workflows/cleanup.md
+@/home/skogix/dev/small-hours/.claude/get-shit-done/workflows/cleanup.md
 </execution_context>
 
 <process>
-Follow the cleanup workflow at @/home/dellvall/dot-claude/game/.claude/get-shit-done/workflows/cleanup.md.
+Follow the cleanup workflow at @/home/skogix/dev/small-hours/.claude/get-shit-done/workflows/cleanup.md.
 Identify completed milestones, show a dry-run summary, and archive on confirmation.
 </process>

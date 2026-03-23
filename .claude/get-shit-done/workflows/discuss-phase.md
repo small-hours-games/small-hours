@@ -132,7 +132,7 @@ Text mode applies to ALL workflows in the session, not just discuss-phase.
 Phase number from argument (required).
 
 ```bash
-INIT=$(node "/home/skogix/claude/.claude/get-shit-done/bin/gsd-tools.cjs" init phase-op "${PHASE}")
+INIT=$(node "/home/skogix/dev/small-hours/.claude/get-shit-done/bin/gsd-tools.cjs" init phase-op "${PHASE}")
 if [[ "$INIT" == @file:* ]]; then INIT=$(cat "${INIT#@file:}"); fi
 ```
 
@@ -142,7 +142,7 @@ Parse JSON for: `commit_docs`, `phase_found`, `phase_dir`, `phase_number`, `phas
 ```
 Phase [X] not found in roadmap.
 
-Use /gsd:progress to see available phases.
+Use /gsd:progress ${GSD_WS} to see available phases.
 ```
 Exit workflow.
 
@@ -189,7 +189,7 @@ Check `has_plans` and `plan_count` from init. **If `has_plans` is true:**
 - header: "Plans exist"
 - question: "Phase [X] already has {plan_count} plan(s) created without user context. Your decisions here won't affect existing plans unless you replan."
 - options:
-  - "Continue and replan after" — Capture context, then run /gsd:plan-phase {X} to replan
+  - "Continue and replan after" — Capture context, then run /gsd:plan-phase {X} ${GSD_WS} to replan
   - "View existing plans" — Show plans before deciding
   - "Cancel" — Skip discuss-phase
 
@@ -259,7 +259,7 @@ Check if any pending todos are relevant to this phase's scope. Surfaces backlog 
 
 **Load and match todos:**
 ```bash
-TODO_MATCHES=$(node "/home/skogix/claude/.claude/get-shit-done/bin/gsd-tools.cjs" todo match-phase "${PHASE_NUMBER}")
+TODO_MATCHES=$(node "/home/skogix/dev/small-hours/.claude/get-shit-done/bin/gsd-tools.cjs" todo match-phase "${PHASE_NUMBER}")
 ```
 
 Parse JSON for: `todo_count`, `matches[]` (each with `file`, `title`, `area`, `score`, `reasons`).
@@ -368,7 +368,7 @@ Check if advisor mode should activate:
 
 1. Check for USER-PROFILE.md:
    ```bash
-   PROFILE_PATH="/home/skogix/claude/.claude/get-shit-done/USER-PROFILE.md"
+   PROFILE_PATH="/home/skogix/dev/small-hours/.claude/get-shit-done/USER-PROFILE.md"
    ```
    ADVISOR_MODE = file exists at PROFILE_PATH → true, otherwise → false
 
@@ -384,7 +384,7 @@ Check if advisor mode should activate:
 
 3. Resolve model for advisor agents:
    ```bash
-   ADVISOR_MODEL=$(node "/home/skogix/claude/.claude/get-shit-done/bin/gsd-tools.cjs" resolve-model gsd-advisor-researcher --raw)
+   ADVISOR_MODEL=$(node "/home/skogix/dev/small-hours/.claude/get-shit-done/bin/gsd-tools.cjs" resolve-model gsd-advisor-researcher --raw)
    ```
 
 If ADVISOR_MODE is false, skip all advisor-specific steps — workflow proceeds with existing conversational flow unchanged.
@@ -491,7 +491,7 @@ After user selects gray areas in present_gray_areas, spawn parallel research age
 2. For EACH user-selected gray area, spawn a Task() in parallel:
 
    Task(
-     prompt="First, read @/home/skogix/claude/.claude/agents/gsd-advisor-researcher.md for your role and instructions.
+     prompt="First, read @/home/skogix/dev/small-hours/.claude/agents/gsd-advisor-researcher.md for your role and instructions.
 
      <gray_area>{area_name}: {area_description from gray area identification}</gray_area>
      <phase_context>{phase_goal and description from ROADMAP.md}</phase_context>
@@ -570,7 +570,7 @@ Track deferred ideas internally.
 
 For each selected area, conduct a focused discussion loop.
 
-**Research-before-questions mode:** Check if `research_questions` is enabled in config (from init context or `.planning/config.json`). When enabled, before presenting questions for each area:
+**Research-before-questions mode:** Check if `workflow.research_before_questions` is enabled in config (from init context or `.planning/config.json`). When enabled, before presenting questions for each area:
 1. Do a brief web search for best practices related to the area topic
 2. Summarize the top findings in 2-3 bullet points
 3. Present the research alongside the question so the user can make a more informed decision
@@ -871,15 +871,15 @@ Created: .planning/phases/${PADDED_PHASE}-${SLUG}/${PADDED_PHASE}-CONTEXT.md
 
 **Phase ${PHASE}: [Name]** — [Goal from ROADMAP.md]
 
-`/gsd:plan-phase ${PHASE}`
+`/gsd:plan-phase ${PHASE} ${GSD_WS}`
 
 <sub>`/clear` first → fresh context window</sub>
 
 ---
 
 **Also available:**
-- `/gsd:plan-phase ${PHASE} --skip-research` — plan without research
-- `/gsd:ui-phase ${PHASE}` — generate UI design contract before planning (if phase has frontend work)
+- `/gsd:plan-phase ${PHASE} --skip-research ${GSD_WS}` — plan without research
+- `/gsd:ui-phase ${PHASE} ${GSD_WS}` — generate UI design contract before planning (if phase has frontend work)
 - Review/edit CONTEXT.md before continuing
 
 ---
@@ -934,7 +934,7 @@ Write file.
 Commit phase context and discussion log:
 
 ```bash
-node "/home/skogix/claude/.claude/get-shit-done/bin/gsd-tools.cjs" commit "docs(${padded_phase}): capture phase context" --files "${phase_dir}/${padded_phase}-CONTEXT.md" "${phase_dir}/${padded_phase}-DISCUSSION-LOG.md"
+node "/home/skogix/dev/small-hours/.claude/get-shit-done/bin/gsd-tools.cjs" commit "docs(${padded_phase}): capture phase context" --files "${phase_dir}/${padded_phase}-CONTEXT.md" "${phase_dir}/${padded_phase}-DISCUSSION-LOG.md"
 ```
 
 Confirm: "Committed: docs(${padded_phase}): capture phase context"
@@ -944,7 +944,7 @@ Confirm: "Committed: docs(${padded_phase}): capture phase context"
 Update STATE.md with session info:
 
 ```bash
-node "/home/skogix/claude/.claude/get-shit-done/bin/gsd-tools.cjs" state record-session \
+node "/home/skogix/dev/small-hours/.claude/get-shit-done/bin/gsd-tools.cjs" state record-session \
   --stopped-at "Phase ${PHASE} context gathered" \
   --resume-file "${phase_dir}/${padded_phase}-CONTEXT.md"
 ```
@@ -952,7 +952,7 @@ node "/home/skogix/claude/.claude/get-shit-done/bin/gsd-tools.cjs" state record-
 Commit STATE.md:
 
 ```bash
-node "/home/skogix/claude/.claude/get-shit-done/bin/gsd-tools.cjs" commit "docs(state): record phase ${PHASE} context session" --files .planning/STATE.md
+node "/home/skogix/dev/small-hours/.claude/get-shit-done/bin/gsd-tools.cjs" commit "docs(state): record phase ${PHASE} context session" --files .planning/STATE.md
 ```
 </step>
 
@@ -963,18 +963,18 @@ Check for auto-advance trigger:
 2. **Sync chain flag with intent** — if user invoked manually (no `--auto`), clear the ephemeral chain flag from any previous interrupted `--auto` chain. This does NOT touch `workflow.auto_advance` (the user's persistent settings preference):
    ```bash
    if [[ ! "$ARGUMENTS" =~ --auto ]]; then
-     node "/home/skogix/claude/.claude/get-shit-done/bin/gsd-tools.cjs" config-set workflow._auto_chain_active false 2>/dev/null
+     node "/home/skogix/dev/small-hours/.claude/get-shit-done/bin/gsd-tools.cjs" config-set workflow._auto_chain_active false 2>/dev/null
    fi
    ```
 3. Read both the chain flag and user preference:
    ```bash
-   AUTO_CHAIN=$(node "/home/skogix/claude/.claude/get-shit-done/bin/gsd-tools.cjs" config-get workflow._auto_chain_active 2>/dev/null || echo "false")
-   AUTO_CFG=$(node "/home/skogix/claude/.claude/get-shit-done/bin/gsd-tools.cjs" config-get workflow.auto_advance 2>/dev/null || echo "false")
+   AUTO_CHAIN=$(node "/home/skogix/dev/small-hours/.claude/get-shit-done/bin/gsd-tools.cjs" config-get workflow._auto_chain_active 2>/dev/null || echo "false")
+   AUTO_CFG=$(node "/home/skogix/dev/small-hours/.claude/get-shit-done/bin/gsd-tools.cjs" config-get workflow.auto_advance 2>/dev/null || echo "false")
    ```
 
 **If `--auto` flag present AND `AUTO_CHAIN` is not true:** Persist chain flag to config (handles direct `--auto` usage without new-project):
 ```bash
-node "/home/skogix/claude/.claude/get-shit-done/bin/gsd-tools.cjs" config-set workflow._auto_chain_active true
+node "/home/skogix/dev/small-hours/.claude/get-shit-done/bin/gsd-tools.cjs" config-set workflow._auto_chain_active true
 ```
 
 **If `--auto` flag present OR `AUTO_CHAIN` is true OR `AUTO_CFG` is true:**
@@ -990,7 +990,7 @@ Context captured. Launching plan-phase...
 
 Launch plan-phase using the Skill tool to avoid nested Task sessions (which cause runtime freezes due to deep agent nesting — see #686):
 ```
-Skill(skill="gsd:plan-phase", args="${PHASE} --auto")
+Skill(skill="gsd:plan-phase", args="${PHASE} --auto ${GSD_WS}")
 ```
 
 This keeps the auto-advance chain flat — discuss, plan, and execute all run at the same nesting level rather than spawning increasingly deep Task agents.
@@ -1004,23 +1004,23 @@ This keeps the auto-advance chain flat — discuss, plan, and execute all run at
 
   Auto-advance pipeline finished: discuss → plan → execute
 
-  Next: /gsd:discuss-phase ${NEXT_PHASE} --auto
+  Next: /gsd:discuss-phase ${NEXT_PHASE} --auto ${GSD_WS}
   <sub>/clear first → fresh context window</sub>
   ```
 - **PLANNING COMPLETE** → Planning done, execution didn't complete:
   ```
   Auto-advance partial: Planning complete, execution did not finish.
-  Continue: /gsd:execute-phase ${PHASE}
+  Continue: /gsd:execute-phase ${PHASE} ${GSD_WS}
   ```
 - **PLANNING INCONCLUSIVE / CHECKPOINT** → Stop chain:
   ```
   Auto-advance stopped: Planning needs input.
-  Continue: /gsd:plan-phase ${PHASE}
+  Continue: /gsd:plan-phase ${PHASE} ${GSD_WS}
   ```
 - **GAPS FOUND** → Stop chain:
   ```
   Auto-advance stopped: Gaps found during execution.
-  Continue: /gsd:plan-phase ${PHASE} --gaps
+  Continue: /gsd:plan-phase ${PHASE} --gaps ${GSD_WS}
   ```
 
 **If neither `--auto` nor config enabled:**

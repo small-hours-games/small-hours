@@ -28,7 +28,7 @@ fi
 Bootstrap via milestone-level init:
 
 ```bash
-INIT=$(node "/home/skogix/claude/.claude/get-shit-done/bin/gsd-tools.cjs" init milestone-op)
+INIT=$(node "/home/skogix/dev/small-hours/.claude/get-shit-done/bin/gsd-tools.cjs" init milestone-op)
 ```
 
 Parse JSON for: `milestone_version`, `milestone_name`, `phase_count`, `completed_phases`, `roadmap_exists`, `state_exists`, `commit_docs`.
@@ -58,7 +58,7 @@ If `FROM_PHASE` is set, display: `Starting from phase ${FROM_PHASE}`
 Run phase discovery:
 
 ```bash
-ROADMAP=$(node "/home/skogix/claude/.claude/get-shit-done/bin/gsd-tools.cjs" roadmap analyze)
+ROADMAP=$(node "/home/skogix/dev/small-hours/.claude/get-shit-done/bin/gsd-tools.cjs" roadmap analyze)
 ```
 
 Parse the JSON `phases` array.
@@ -97,7 +97,7 @@ Exit cleanly.
 **Fetch details for each phase:**
 
 ```bash
-DETAIL=$(node "/home/skogix/claude/.claude/get-shit-done/bin/gsd-tools.cjs" roadmap get-phase ${PHASE_NUM})
+DETAIL=$(node "/home/skogix/dev/small-hours/.claude/get-shit-done/bin/gsd-tools.cjs" roadmap get-phase ${PHASE_NUM})
 ```
 
 Extract `phase_name`, `goal`, `success_criteria` from each. Store for use in execute_phase and transition messages.
@@ -123,7 +123,7 @@ Where N = current phase number (from the ROADMAP, e.g., 6), T = total milestone 
 Check if CONTEXT.md already exists for this phase:
 
 ```bash
-PHASE_STATE=$(node "/home/skogix/claude/.claude/get-shit-done/bin/gsd-tools.cjs" init phase-op ${PHASE_NUM})
+PHASE_STATE=$(node "/home/skogix/dev/small-hours/.claude/get-shit-done/bin/gsd-tools.cjs" init phase-op ${PHASE_NUM})
 ```
 
 Parse `has_context` from JSON.
@@ -136,12 +136,84 @@ Phase ${PHASE_NUM}: Context exists — skipping discuss.
 
 Proceed to 3b.
 
-**If has_context is false:** Execute the smart_discuss step for this phase.
+**If has_context is false:** Check if discuss is disabled via settings:
+
+```bash
+SKIP_DISCUSS=$(node "/home/skogix/dev/small-hours/.claude/get-shit-done/bin/gsd-tools.cjs" config-get workflow.skip_discuss 2>/dev/null || echo "false")
+```
+
+**If SKIP_DISCUSS is `true`:** Skip discuss entirely — the ROADMAP phase description is the spec. Display:
+
+```
+Phase ${PHASE_NUM}: Discuss skipped (workflow.skip_discuss=true) — using ROADMAP phase goal as spec.
+```
+
+Write a minimal CONTEXT.md so downstream plan-phase has valid input. Get phase details:
+
+```bash
+DETAIL=$(node "/home/skogix/dev/small-hours/.claude/get-shit-done/bin/gsd-tools.cjs" roadmap get-phase ${PHASE_NUM})
+```
+
+Extract `goal` and `requirements` from JSON. Write `${phase_dir}/${padded_phase}-CONTEXT.md` with:
+
+```markdown
+# Phase {PHASE_NUM}: {Phase Name} - Context
+
+**Gathered:** {date}
+**Status:** Ready for planning
+**Mode:** Auto-generated (discuss skipped via workflow.skip_discuss)
+
+<domain>
+## Phase Boundary
+
+{goal from ROADMAP phase description}
+
+</domain>
+
+<decisions>
+## Implementation Decisions
+
+### Claude's Discretion
+All implementation choices are at Claude's discretion — discuss phase was skipped per user setting. Use ROADMAP phase goal, success criteria, and codebase conventions to guide decisions.
+
+</decisions>
+
+<code_context>
+## Existing Code Insights
+
+Codebase context will be gathered during plan-phase research.
+
+</code_context>
+
+<specifics>
+## Specific Ideas
+
+No specific requirements — discuss phase skipped. Refer to ROADMAP phase description and success criteria.
+
+</specifics>
+
+<deferred>
+## Deferred Ideas
+
+None — discuss phase skipped.
+
+</deferred>
+```
+
+Commit the minimal context:
+
+```bash
+node "/home/skogix/dev/small-hours/.claude/get-shit-done/bin/gsd-tools.cjs" commit "docs(${PADDED_PHASE}): auto-generated context (discuss skipped)" --files "${phase_dir}/${padded_phase}-CONTEXT.md"
+```
+
+Proceed to 3b.
+
+**If SKIP_DISCUSS is `false` (or unset):** Execute the smart_discuss step for this phase.
 
 After smart_discuss completes, verify context was written:
 
 ```bash
-PHASE_STATE=$(node "/home/skogix/claude/.claude/get-shit-done/bin/gsd-tools.cjs" init phase-op ${PHASE_NUM})
+PHASE_STATE=$(node "/home/skogix/dev/small-hours/.claude/get-shit-done/bin/gsd-tools.cjs" init phase-op ${PHASE_NUM})
 ```
 
 Check `has_context`. If false → go to handle_blocker: "Smart discuss for phase ${PHASE_NUM} did not produce CONTEXT.md."
@@ -171,7 +243,7 @@ VERIFY_STATUS=$(grep "^status:" "${PHASE_DIR}"/*-VERIFICATION.md 2>/dev/null | h
 Where `PHASE_DIR` comes from the `init phase-op` call already made in step 3a. If the variable is not in scope, re-fetch:
 
 ```bash
-PHASE_STATE=$(node "/home/skogix/claude/.claude/get-shit-done/bin/gsd-tools.cjs" init phase-op ${PHASE_NUM})
+PHASE_STATE=$(node "/home/skogix/dev/small-hours/.claude/get-shit-done/bin/gsd-tools.cjs" init phase-op ${PHASE_NUM})
 ```
 
 Parse `phase_dir` from the JSON.
@@ -265,7 +337,7 @@ Run smart discuss for the current phase. Proposes grey area answers in batch tab
 **Inputs:** `PHASE_NUM` from execute_phase. Run init to get phase paths:
 
 ```bash
-PHASE_STATE=$(node "/home/skogix/claude/.claude/get-shit-done/bin/gsd-tools.cjs" init phase-op ${PHASE_NUM})
+PHASE_STATE=$(node "/home/skogix/dev/small-hours/.claude/get-shit-done/bin/gsd-tools.cjs" init phase-op ${PHASE_NUM})
 ```
 
 Parse from JSON: `phase_dir`, `phase_slug`, `padded_phase`, `phase_name`.
@@ -354,7 +426,7 @@ Read the 3-5 most relevant files to understand existing patterns.
 **Get phase details:**
 
 ```bash
-DETAIL=$(node "/home/skogix/claude/.claude/get-shit-done/bin/gsd-tools.cjs" roadmap get-phase ${PHASE_NUM})
+DETAIL=$(node "/home/skogix/dev/small-hours/.claude/get-shit-done/bin/gsd-tools.cjs" roadmap get-phase ${PHASE_NUM})
 ```
 
 Extract `goal`, `requirements`, `success_criteria` from the JSON response.
@@ -526,7 +598,7 @@ Write the file.
 **Commit:**
 
 ```bash
-node "/home/skogix/claude/.claude/get-shit-done/bin/gsd-tools.cjs" commit "docs(${PADDED_PHASE}): smart discuss context" --files "${phase_dir}/${padded_phase}-CONTEXT.md"
+node "/home/skogix/dev/small-hours/.claude/get-shit-done/bin/gsd-tools.cjs" commit "docs(${PADDED_PHASE}): smart discuss context" --files "${phase_dir}/${padded_phase}-CONTEXT.md"
 ```
 
 Display confirmation:
@@ -545,7 +617,7 @@ Decisions captured: {count} across {area_count} areas
 After each phase completes, re-read ROADMAP.md to catch phases inserted mid-execution (decimal phases like 5.1):
 
 ```bash
-ROADMAP=$(node "/home/skogix/claude/.claude/get-shit-done/bin/gsd-tools.cjs" roadmap analyze)
+ROADMAP=$(node "/home/skogix/dev/small-hours/.claude/get-shit-done/bin/gsd-tools.cjs" roadmap analyze)
 ```
 
 Re-filter incomplete phases using the same logic as discover_phases:

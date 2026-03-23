@@ -5,7 +5,7 @@ Create executable phase prompts (PLAN.md files) for a roadmap phase with integra
 <required_reading>
 Read all files referenced by the invoking prompt's execution_context before starting.
 
-@/home/skogix/claude/.claude/get-shit-done/references/ui-brand.md
+@/home/skogix/dev/small-hours/.claude/get-shit-done/references/ui-brand.md
 </required_reading>
 
 <available_agent_types>
@@ -22,19 +22,21 @@ Valid GSD subagent types (use exact names — do not fall back to 'general-purpo
 Load all context in one call (paths only to minimize orchestrator context):
 
 ```bash
-INIT=$(node "/home/skogix/claude/.claude/get-shit-done/bin/gsd-tools.cjs" init plan-phase "$PHASE")
+INIT=$(node "/home/skogix/dev/small-hours/.claude/get-shit-done/bin/gsd-tools.cjs" init plan-phase "$PHASE")
 if [[ "$INIT" == @file:* ]]; then INIT=$(cat "${INIT#@file:}"); fi
 ```
 
-Parse JSON for: `researcher_model`, `planner_model`, `checker_model`, `research_enabled`, `plan_checker_enabled`, `nyquist_validation_enabled`, `commit_docs`, `phase_found`, `phase_dir`, `phase_number`, `phase_name`, `phase_slug`, `padded_phase`, `has_research`, `has_context`, `has_plans`, `plan_count`, `planning_exists`, `roadmap_exists`, `phase_req_ids`.
+Parse JSON for: `researcher_model`, `planner_model`, `checker_model`, `research_enabled`, `plan_checker_enabled`, `nyquist_validation_enabled`, `commit_docs`, `text_mode`, `phase_found`, `phase_dir`, `phase_number`, `phase_name`, `phase_slug`, `padded_phase`, `has_research`, `has_context`, `has_reviews`, `has_plans`, `plan_count`, `planning_exists`, `roadmap_exists`, `phase_req_ids`.
 
-**File paths (for <files_to_read> blocks):** `state_path`, `roadmap_path`, `requirements_path`, `context_path`, `research_path`, `verification_path`, `uat_path`. These are null if files don't exist.
+**File paths (for <files_to_read> blocks):** `state_path`, `roadmap_path`, `requirements_path`, `context_path`, `research_path`, `verification_path`, `uat_path`, `reviews_path`. These are null if files don't exist.
 
 **If `planning_exists` is false:** Error — run `/gsd:new-project` first.
 
 ## 2. Parse and Normalize Arguments
 
-Extract from $ARGUMENTS: phase number (integer or decimal like `2.1`), flags (`--research`, `--skip-research`, `--gaps`, `--skip-verify`, `--prd <filepath>`).
+Extract from $ARGUMENTS: phase number (integer or decimal like `2.1`), flags (`--research`, `--skip-research`, `--gaps`, `--skip-verify`, `--prd <filepath>`, `--reviews`, `--text`).
+
+Set `TEXT_MODE=true` if `--text` is present in $ARGUMENTS OR `text_mode` from init JSON is `true`. When `TEXT_MODE` is active, replace every `AskUserQuestion` call with a plain-text numbered list and ask the user to type their choice number. This is required for Claude Code remote sessions (`/rc` mode) where TUI menus don't work through the Claude App.
 
 Extract `--prd <filepath>` from $ARGUMENTS. If present, set PRD_FILE to the filepath.
 
@@ -47,10 +49,28 @@ mkdir -p ".planning/phases/${padded_phase}-${phase_slug}"
 
 **Existing artifacts from init:** `has_research`, `has_plans`, `plan_count`.
 
+## 2.5. Validate `--reviews` Prerequisite
+
+**Skip if:** No `--reviews` flag.
+
+**If `--reviews` AND `--gaps`:** Error — cannot combine `--reviews` with `--gaps`. These are conflicting modes.
+
+**If `--reviews` AND `has_reviews` is false (no REVIEWS.md in phase dir):**
+
+Error:
+```
+No REVIEWS.md found for Phase {N}. Run reviews first:
+
+/gsd:review --phase {N}
+
+Then re-run /gsd:plan-phase {N} --reviews
+```
+Exit workflow.
+
 ## 3. Validate Phase
 
 ```bash
-PHASE_INFO=$(node "/home/skogix/claude/.claude/get-shit-done/bin/gsd-tools.cjs" roadmap get-phase "${PHASE}")
+PHASE_INFO=$(node "/home/skogix/dev/small-hours/.claude/get-shit-done/bin/gsd-tools.cjs" roadmap get-phase "${PHASE}")
 ```
 
 **If `found` is false:** Error with available phases. **If `found` is true:** Extract `phase_number`, `phase_name`, `goal` from JSON.
@@ -152,7 +172,7 @@ Use full relative paths. Group by topic area.]
 
 5. Commit:
 ```bash
-node "/home/skogix/claude/.claude/get-shit-done/bin/gsd-tools.cjs" commit "docs(${padded_phase}): generate context from PRD" --files "${phase_dir}/${padded_phase}-CONTEXT.md"
+node "/home/skogix/dev/small-hours/.claude/get-shit-done/bin/gsd-tools.cjs" commit "docs(${padded_phase}): generate context from PRD" --files "${phase_dir}/${padded_phase}-CONTEXT.md"
 ```
 
 6. Set `context_content` to the generated CONTEXT.md content and continue to step 5 (Handle Research).
@@ -169,11 +189,32 @@ If `context_path` is not null, display: `Using phase context from: ${context_pat
 
 **If `context_path` is null (no CONTEXT.md exists):**
 
-Use AskUserQuestion:
+Read discuss mode for context gate label:
+```bash
+DISCUSS_MODE=$(node "/home/skogix/dev/small-hours/.claude/get-shit-done/bin/gsd-tools.cjs" config-get workflow.discuss_mode 2>/dev/null || echo "discuss")
+```
+
+If `TEXT_MODE` is true, present as a plain-text numbered list:
+```
+No CONTEXT.md found for Phase {X}. Plans will use research and requirements only — your design preferences won't be included.
+
+1. Continue without context — Plan using research + requirements only
+[If DISCUSS_MODE is "assumptions":]
+2. Gather context (assumptions mode) — Analyze codebase and surface assumptions before planning
+[If DISCUSS_MODE is "discuss" or unset:]
+2. Run discuss-phase first — Capture design decisions before planning
+
+Enter number:
+```
+
+Otherwise use AskUserQuestion:
 - header: "No context"
 - question: "No CONTEXT.md found for Phase {X}. Plans will use research and requirements only — your design preferences won't be included. Continue or capture context first?"
 - options:
   - "Continue without context" — Plan using research + requirements only
+  If `DISCUSS_MODE` is `"assumptions"`:
+  - "Gather context (assumptions mode)" — Analyze codebase and surface assumptions before planning
+  If `DISCUSS_MODE` is `"discuss"` (or unset):
   - "Run discuss-phase first" — Capture design decisions before planning
 
 If "Continue without context": Proceed to step 5.
@@ -182,15 +223,15 @@ If "Run discuss-phase first":
   does not work correctly in nested subcontexts (#1009). Instead, display the command
   and exit so the user runs it as a top-level command:
   ```
-  Run this command first, then re-run /gsd:plan-phase {X}:
+  Run this command first, then re-run /gsd:plan-phase {X} ${GSD_WS}:
 
-  /gsd:discuss-phase {X}
+  /gsd:discuss-phase {X} ${GSD_WS}
   ```
   **Exit the plan-phase workflow. Do not continue.**
 
 ## 5. Handle Research
 
-**Skip if:** `--gaps` flag or `--skip-research` flag.
+**Skip if:** `--gaps` flag or `--skip-research` flag or `--reviews` flag.
 
 **If `has_research` is true (from init) AND no `--research` flag:** Use existing, skip to step 6.
 
@@ -199,6 +240,17 @@ If "Run discuss-phase first":
 **If no explicit flag (`--research` or `--skip-research`) and not `--auto`:**
 Ask the user whether to research, with a contextual recommendation based on the phase:
 
+If `TEXT_MODE` is true, present as a plain-text numbered list:
+```
+Research before planning Phase {X}: {phase_name}?
+
+1. Research first (Recommended) — Investigate domain, patterns, and dependencies before planning. Best for new features, unfamiliar integrations, or architectural changes.
+2. Skip research — Plan directly from context and requirements. Best for bug fixes, simple refactors, or well-understood tasks.
+
+Enter number:
+```
+
+Otherwise use AskUserQuestion:
 ```
 AskUserQuestion([
   {
@@ -229,7 +281,7 @@ Display banner:
 ### Spawn gsd-phase-researcher
 
 ```bash
-PHASE_DESC=$(node "/home/skogix/claude/.claude/get-shit-done/bin/gsd-tools.cjs" roadmap get-phase "${PHASE}" | jq -r '.section')
+PHASE_DESC=$(node "/home/skogix/dev/small-hours/.claude/get-shit-done/bin/gsd-tools.cjs" roadmap get-phase "${PHASE}" --pick section)
 ```
 
 Research prompt:
@@ -291,7 +343,7 @@ grep -l "## Validation Architecture" "${PHASE_DIR}"/*-RESEARCH.md 2>/dev/null
 ```
 
 **If found:**
-1. Read template: `/home/skogix/claude/.claude/get-shit-done/templates/VALIDATION.md`
+1. Read template: `/home/skogix/dev/small-hours/.claude/get-shit-done/templates/VALIDATION.md`
 2. Write to `${PHASE_DIR}/${PADDED_PHASE}-VALIDATION.md` (use Write tool)
 3. Fill frontmatter: `{N}` → phase number, `{phase-slug}` → slug, `{date}` → current date
 4. Verify:
@@ -308,8 +360,8 @@ test -f "${PHASE_DIR}/${PADDED_PHASE}-VALIDATION.md" && echo "VALIDATION_CREATED
 > Skip if `workflow.ui_phase` is explicitly `false` AND `workflow.ui_safety_gate` is explicitly `false` in `.planning/config.json`. If keys are absent, treat as enabled.
 
 ```bash
-UI_PHASE_CFG=$(node "/home/skogix/claude/.claude/get-shit-done/bin/gsd-tools.cjs" config-get workflow.ui_phase 2>/dev/null || echo "true")
-UI_GATE_CFG=$(node "/home/skogix/claude/.claude/get-shit-done/bin/gsd-tools.cjs" config-get workflow.ui_safety_gate 2>/dev/null || echo "true")
+UI_PHASE_CFG=$(node "/home/skogix/dev/small-hours/.claude/get-shit-done/bin/gsd-tools.cjs" config-get workflow.ui_phase 2>/dev/null || echo "true")
+UI_GATE_CFG=$(node "/home/skogix/dev/small-hours/.claude/get-shit-done/bin/gsd-tools.cjs" config-get workflow.ui_safety_gate 2>/dev/null || echo "true")
 ```
 
 **If both are `false`:** Skip to step 6.
@@ -317,7 +369,7 @@ UI_GATE_CFG=$(node "/home/skogix/claude/.claude/get-shit-done/bin/gsd-tools.cjs"
 Check if phase has frontend indicators:
 
 ```bash
-PHASE_SECTION=$(node "/home/skogix/claude/.claude/get-shit-done/bin/gsd-tools.cjs" roadmap get-phase "${PHASE}" 2>/dev/null)
+PHASE_SECTION=$(node "/home/skogix/dev/small-hours/.claude/get-shit-done/bin/gsd-tools.cjs" roadmap get-phase "${PHASE}" 2>/dev/null)
 echo "$PHASE_SECTION" | grep -iE "UI|interface|frontend|component|layout|page|screen|view|form|dashboard|widget" > /dev/null 2>&1
 HAS_UI=$?
 ```
@@ -333,11 +385,22 @@ UI_SPEC_FILE=$(ls "${PHASE_DIR}"/*-UI-SPEC.md 2>/dev/null | head -1)
 
 **If UI-SPEC.md missing AND `UI_GATE_CFG` is `true`:**
 
-Use AskUserQuestion:
+If `TEXT_MODE` is true, present as a plain-text numbered list:
+```
+Phase {N} has frontend indicators but no UI-SPEC.md. Generate a design contract before planning?
+
+1. Generate UI-SPEC first — Run /gsd:ui-phase {N} then re-run /gsd:plan-phase {N}
+2. Continue without UI-SPEC
+3. Not a frontend phase
+
+Enter number:
+```
+
+Otherwise use AskUserQuestion:
 - header: "UI Design Contract"
 - question: "Phase {N} has frontend indicators but no UI-SPEC.md. Generate a design contract before planning?"
 - options:
-  - "Generate UI-SPEC first" → Display: "Run `/gsd:ui-phase {N}` then re-run `/gsd:plan-phase {N}`". Exit workflow.
+  - "Generate UI-SPEC first" → Display: "Run `/gsd:ui-phase {N} ${GSD_WS}` then re-run `/gsd:plan-phase {N} ${GSD_WS}`". Exit workflow.
   - "Continue without UI-SPEC" → Continue to step 6.
   - "Not a frontend phase" → Continue to step 6.
 
@@ -349,20 +412,24 @@ Use AskUserQuestion:
 ls "${PHASE_DIR}"/*-PLAN.md 2>/dev/null
 ```
 
-**If exists:** Offer: 1) Add more plans, 2) View existing, 3) Replan from scratch.
+**If exists AND `--reviews` flag:** Skip prompt — go straight to replanning (the purpose of `--reviews` is to replan with review feedback).
+
+**If exists AND no `--reviews` flag:** Offer: 1) Add more plans, 2) View existing, 3) Replan from scratch.
 
 ## 7. Use Context Paths from INIT
 
 Extract from INIT JSON:
 
 ```bash
-STATE_PATH=$(printf '%s\n' "$INIT" | jq -r '.state_path // empty')
-ROADMAP_PATH=$(printf '%s\n' "$INIT" | jq -r '.roadmap_path // empty')
-REQUIREMENTS_PATH=$(printf '%s\n' "$INIT" | jq -r '.requirements_path // empty')
-RESEARCH_PATH=$(printf '%s\n' "$INIT" | jq -r '.research_path // empty')
-VERIFICATION_PATH=$(printf '%s\n' "$INIT" | jq -r '.verification_path // empty')
-UAT_PATH=$(printf '%s\n' "$INIT" | jq -r '.uat_path // empty')
-CONTEXT_PATH=$(printf '%s\n' "$INIT" | jq -r '.context_path // empty')
+_gsd_field() { node -e "const o=JSON.parse(process.argv[1]); const v=o[process.argv[2]]; process.stdout.write(v==null?'':String(v))" "$1" "$2"; }
+STATE_PATH=$(_gsd_field "$INIT" state_path)
+ROADMAP_PATH=$(_gsd_field "$INIT" roadmap_path)
+REQUIREMENTS_PATH=$(_gsd_field "$INIT" requirements_path)
+RESEARCH_PATH=$(_gsd_field "$INIT" research_path)
+VERIFICATION_PATH=$(_gsd_field "$INIT" verification_path)
+UAT_PATH=$(_gsd_field "$INIT" uat_path)
+CONTEXT_PATH=$(_gsd_field "$INIT" context_path)
+REVIEWS_PATH=$(_gsd_field "$INIT" reviews_path)
 ```
 
 ## 7.5. Verify Nyquist Artifacts
@@ -381,9 +448,9 @@ VALIDATION_EXISTS=$(ls "${PHASE_DIR}"/*-VALIDATION.md 2>/dev/null | head -1)
 ```
 
 If missing and Nyquist is still enabled/applicable — ask user:
-1. Re-run: `/gsd:plan-phase {PHASE} --research`
+1. Re-run: `/gsd:plan-phase {PHASE} --research ${GSD_WS}`
 2. Disable Nyquist with the exact command:
-   `node "/home/skogix/claude/.claude/get-shit-done/bin/gsd-tools.cjs" config-set workflow.nyquist_validation false`
+   `node "/home/skogix/dev/small-hours/.claude/get-shit-done/bin/gsd-tools.cjs" config-set workflow.nyquist_validation false`
 3. Continue anyway (plans fail Dimension 8)
 
 Proceed to Step 8 only if user selects 2 or 3.
@@ -404,7 +471,7 @@ Planner prompt:
 ```markdown
 <planning_context>
 **Phase:** {phase_number}
-**Mode:** {standard | gap_closure}
+**Mode:** {standard | gap_closure | reviews}
 
 <files_to_read>
 - {state_path} (Project State)
@@ -414,6 +481,7 @@ Planner prompt:
 - {research_path} (Technical Research)
 - {verification_path} (Verification Gaps - if --gaps)
 - {uat_path} (UAT Gaps - if --gaps)
+- {reviews_path} (Cross-AI Review Feedback - if --reviews)
 - {UI_SPEC_PATH} (UI Design Contract — visual/interaction specs, if exists)
 </files_to_read>
 
@@ -636,7 +704,7 @@ Options:
 3. Proceed anyway — accept coverage gaps
 ```
 
-Use AskUserQuestion to present the options.
+If `TEXT_MODE` is true, present as a plain-text numbered list (options already shown in the block above). Otherwise use AskUserQuestion to present the options.
 
 ## 14. Present Final Status
 
@@ -650,13 +718,13 @@ Check for auto-advance trigger:
 2. **Sync chain flag with intent** — if user invoked manually (no `--auto`), clear the ephemeral chain flag from any previous interrupted `--auto` chain. This does NOT touch `workflow.auto_advance` (the user's persistent settings preference):
    ```bash
    if [[ ! "$ARGUMENTS" =~ --auto ]]; then
-     node "/home/skogix/claude/.claude/get-shit-done/bin/gsd-tools.cjs" config-set workflow._auto_chain_active false 2>/dev/null
+     node "/home/skogix/dev/small-hours/.claude/get-shit-done/bin/gsd-tools.cjs" config-set workflow._auto_chain_active false 2>/dev/null
    fi
    ```
 3. Read both the chain flag and user preference:
    ```bash
-   AUTO_CHAIN=$(node "/home/skogix/claude/.claude/get-shit-done/bin/gsd-tools.cjs" config-get workflow._auto_chain_active 2>/dev/null || echo "false")
-   AUTO_CFG=$(node "/home/skogix/claude/.claude/get-shit-done/bin/gsd-tools.cjs" config-get workflow.auto_advance 2>/dev/null || echo "false")
+   AUTO_CHAIN=$(node "/home/skogix/dev/small-hours/.claude/get-shit-done/bin/gsd-tools.cjs" config-get workflow._auto_chain_active 2>/dev/null || echo "false")
+   AUTO_CFG=$(node "/home/skogix/dev/small-hours/.claude/get-shit-done/bin/gsd-tools.cjs" config-get workflow.auto_advance 2>/dev/null || echo "false")
    ```
 
 **If `--auto` flag present OR `AUTO_CHAIN` is true OR `AUTO_CFG` is true:**
@@ -672,7 +740,7 @@ Plans ready. Launching execute-phase...
 
 Launch execute-phase using the Skill tool to avoid nested Task sessions (which cause runtime freezes due to deep agent nesting):
 ```
-Skill(skill="gsd:execute-phase", args="${PHASE} --auto --no-transition")
+Skill(skill="gsd:execute-phase", args="${PHASE} --auto --no-transition ${GSD_WS}")
 ```
 
 The `--no-transition` flag tells execute-phase to return status after verification instead of chaining further. This keeps the auto-advance chain flat — each phase runs at the same nesting level rather than spawning deeper Task agents.
@@ -686,14 +754,14 @@ The `--no-transition` flag tells execute-phase to return status after verificati
 
   Auto-advance pipeline finished.
 
-  Next: /gsd:discuss-phase ${NEXT_PHASE} --auto
+  Next: /gsd:discuss-phase ${NEXT_PHASE} --auto ${GSD_WS}
   ```
 - **GAPS FOUND / VERIFICATION FAILED** → Display result, stop chain:
   ```
   Auto-advance stopped: Execution needs review.
 
   Review the output above and continue manually:
-  /gsd:execute-phase ${PHASE}
+  /gsd:execute-phase ${PHASE} ${GSD_WS}
   ```
 
 **If neither `--auto` nor config enabled:**
@@ -724,7 +792,7 @@ Verification: {Passed | Passed with override | Skipped}
 
 **Execute Phase {X}** — run all {N} plans
 
-/gsd:execute-phase {X}
+/gsd:execute-phase {X} ${GSD_WS}
 
 <sub>/clear first → fresh context window</sub>
 
@@ -733,6 +801,8 @@ Verification: {Passed | Passed with override | Skipped}
 **Also available:**
 - cat .planning/phases/{phase-dir}/*-PLAN.md — review plans
 - /gsd:plan-phase {X} --research — re-research first
+- /gsd:review --phase {X} --all — peer review plans with external AIs
+- /gsd:plan-phase {X} --reviews — replan incorporating review feedback
 
 ───────────────────────────────────────────────────────────────
 </offer_next>

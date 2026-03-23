@@ -107,7 +107,7 @@ If `$FULL_MODE` only:
 **Step 2: Initialize**
 
 ```bash
-INIT=$(node "/home/skogix/claude/.claude/get-shit-done/bin/gsd-tools.cjs" init quick "$DESCRIPTION")
+INIT=$(node "/home/skogix/dev/small-hours/.claude/get-shit-done/bin/gsd-tools.cjs" init quick "$DESCRIPTION")
 if [[ "$INIT" == @file:* ]]; then INIT=$(cat "${INIT#@file:}"); fi
 ```
 
@@ -536,6 +536,7 @@ Execute quick task ${quick_id}.
 ",
   subagent_type="gsd-executor",
   model="{executor_model}",
+  isolation="worktree",
   description="Execute: ${DESCRIPTION}"
 )
 ```
@@ -666,7 +667,7 @@ Build file list:
 - If `$FULL_MODE` and verification file exists: `${QUICK_DIR}/${quick_id}-VERIFICATION.md`
 
 ```bash
-node "/home/skogix/claude/.claude/get-shit-done/bin/gsd-tools.cjs" commit "docs(quick-${quick_id}): ${DESCRIPTION}" --files ${file_list}
+node "/home/skogix/dev/small-hours/.claude/get-shit-done/bin/gsd-tools.cjs" commit "docs(quick-${quick_id}): ${DESCRIPTION}" --files ${file_list}
 ```
 
 Get final commit hash:
@@ -691,7 +692,7 @@ Commit: ${commit_hash}
 
 ---
 
-Ready for next task: /gsd:quick
+Ready for next task: /gsd:quick ${GSD_WS}
 ```
 
 **If NOT `$FULL_MODE`:**
@@ -708,7 +709,7 @@ Commit: ${commit_hash}
 
 ---
 
-Ready for next task: /gsd:quick
+Ready for next task: /gsd:quick ${GSD_WS}
 ```
 
 </process>
