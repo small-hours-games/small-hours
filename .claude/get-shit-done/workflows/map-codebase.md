@@ -26,7 +26,7 @@ Documents are reference material for Claude when planning/executing. Always incl
 Load codebase mapping context:
 
 ```bash
-INIT=$(node "/home/dellvall/dot-claude/game/.claude/get-shit-done/bin/gsd-tools.cjs" init map-codebase)
+INIT=$(node "/home/skogix/claude/.claude/get-shit-done/bin/gsd-tools.cjs" init map-codebase)
 if [[ "$INIT" == @file:* ]]; then INIT=$(cat "${INIT#@file:}"); fi
 ```
 
@@ -305,7 +305,7 @@ Continue to commit_codebase_map.
 Commit the codebase map:
 
 ```bash
-node "/home/dellvall/dot-claude/game/.claude/get-shit-done/bin/gsd-tools.cjs" commit "docs: map existing codebase" --files .planning/codebase/*.md
+node "/home/skogix/claude/.claude/get-shit-done/bin/gsd-tools.cjs" commit "docs: map existing codebase" --files .planning/codebase/*.md
 ```
 
 Continue to offer_next.
