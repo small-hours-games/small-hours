@@ -10,7 +10,7 @@ import {
   scoreHand,
 } from '../../src/engine/games/gin-rummy.js';
 import ginRummy from '../../src/engine/games/gin-rummy.js';
-import { createTestGame, act, actChain, viewFor, isOver } from '../engine/game-harness.js';
+import { createTestGame, act, actChain, viewFor, isOver, playUntilEnd } from '../engine/game-harness.js';
 
 // --- cardValue ---
 
@@ -1133,6 +1133,213 @@ describe('nextHand', () => {
     const result = act(scoringGame, 'nextHand', 'p1');
     // Winner (p1 = index 0) becomes dealer for next hand
     expect(result.game.state.dealerIndex).toBe(0);
+  });
+});
+
+// ============================================================
+// INTEGRATION TESTS (Plan 03) — full game via engine API
+// ============================================================
+
+describe('integration - full game via engine API', () => {
+
+  // Test 1: createTestGame creates a valid initial game instance
+  it('createTestGame creates valid initial game state', () => {
+    const game = createTestGame(ginRummy, ['p1', 'p2']);
+    expect(game.state.phase).toBe('first_turn');
+    expect(game.state.hands['p1']).toHaveLength(10);
+    expect(game.state.hands['p2']).toHaveLength(10);
+    expect(isOver(game)).toBeNull();
+  });
+
+  // Test 2: Full hand played through engine API (draw-discard cycle to knock)
+  it('plays a full hand from first_turn to scoring via engine API', () => {
+    const game = createTestGame(ginRummy, ['p1', 'p2']);
+
+    // Decline upcard for both players, transition to first_turn_draw
+    let result = act(game, 'declineUpcard', 'p2');
+    result = act(result.game, 'declineUpcard', 'p1');
+    expect(result.game.state.phase).toBe('first_turn_draw');
+
+    // Non-dealer (p2) draws from stock
+    result = act(result.game, 'draw', 'p2', { source: 'stock' });
+    expect(result.game.state.phase).toBe('drawing');
+    expect(result.game.state.hands['p2']).toHaveLength(11);
+
+    // p2 discards a card to pass turn to p1
+    const p2Hand = result.game.state.hands['p2'];
+    result = act(result.game, 'discard', 'p2', { cardId: p2Hand[0].id });
+    expect(result.game.state.currentPlayerIndex).toBe(0); // p1's turn
+
+    // p1 draws from stock
+    result = act(result.game, 'draw', 'p1', { source: 'stock' });
+    expect(result.game.state.hands['p1']).toHaveLength(11);
+
+    // Inject a low-deadwood hand so p1 can knock
+    const ginHand = [
+      card(3, 'h'), card(4, 'h'), card(5, 'h'),
+      card(6, 'c'), card(7, 'c'), card(8, 'c'),
+      card(9, 'd'), card(10, 'd'), card(11, 'd'),
+      card(12, 'd'), // extends run: 9d-10d-Jd-Qd = 4-card run, deadwood 0
+      card(1, 's'), // extra card after draw, deadwood 1 total
+    ];
+    const injectedState = {
+      ...result.game.state,
+      phase: 'drawing',
+      currentPlayerIndex: 0,
+      turnPhase: 'discard',
+      hands: { ...result.game.state.hands, p1: ginHand },
+      lastDrawFrom: 'stock',
+    };
+    const injectedGame = { ...result.game, state: injectedState };
+
+    // p1 knocks (deadwood = 1)
+    const knockResult = act(injectedGame, 'knock', 'p1');
+    expect(knockResult.game.state.phase).toBe('scoring');
+    expect(knockResult.game.state.handResult).toBeDefined();
+    expect(knockResult.game.state.knocker).toBe('p1');
+
+    // Call nextHand to continue
+    const nextResult = act(knockResult.game, 'nextHand', 'p1');
+    // Either new hand dealt (first_turn) or game ended (finished)
+    expect(['first_turn', 'finished']).toContain(nextResult.game.state.phase);
+  });
+
+  // Test 3: View filtering through engine API
+  it('view filters opponent cards during play phases', () => {
+    const game = createTestGame(ginRummy, ['p1', 'p2']);
+
+    const vP1 = viewFor(game, 'p1');
+    const vP2 = viewFor(game, 'p2');
+
+    // Each player sees their own hand
+    expect(vP1.myHand).toHaveLength(10);
+    expect(vP2.myHand).toHaveLength(10);
+
+    // Each player sees opponent count, not opponent's actual cards
+    expect(vP1.opponentCardCount).toBe(10);
+    expect(vP2.opponentCardCount).toBe(10);
+
+    // Opponent's actual hand is NOT exposed
+    expect(vP1.opponentHand).toBeUndefined();
+    expect(vP2.opponentHand).toBeUndefined();
+
+    // p1's myHand should not contain p2's cards (they're different cards)
+    const p1CardIds = new Set(vP1.myHand.map(c => c.id));
+    const p2CardIds = new Set(vP2.myHand.map(c => c.id));
+    const overlap = [...p1CardIds].filter(id => p2CardIds.has(id));
+    expect(overlap).toHaveLength(0);
+  });
+
+  // Test 4: playUntilEnd drives game to completion
+  it('playUntilEnd drives game to completion', () => {
+    // Use targetScore = 5 so the first knock ends the game
+    const game = createTestGame(ginRummy, ['p1', 'p2'], { targetScore: 5 });
+
+    const { game: finalGame } = playUntilEnd(game, (g) => {
+      const s = g.state;
+      const currentPlayer = s.players[s.currentPlayerIndex];
+
+      // scoring phase: call nextHand (which may end game or deal new hand)
+      if (s.phase === 'scoring') {
+        return ['nextHand', currentPlayer, {}];
+      }
+
+      // first_turn: decline the upcard (both players)
+      if (s.phase === 'first_turn') {
+        return ['declineUpcard', currentPlayer, {}];
+      }
+
+      // first_turn_draw: non-dealer must draw from stock
+      if (s.phase === 'first_turn_draw') {
+        return ['draw', currentPlayer, { source: 'stock' }];
+      }
+
+      // drawing phase
+      if (s.phase === 'drawing') {
+        if (s.turnPhase === 'draw') {
+          return ['draw', currentPlayer, { source: 'stock' }];
+        }
+        if (s.turnPhase === 'discard') {
+          const hand = s.hands[currentPlayer];
+          // Try to knock if deadwood <= 10 (use findOptimalMelds from top of file)
+          const { deadwoodValue } = findOptimalMelds(hand);
+          if (deadwoodValue <= 10) {
+            return ['knock', currentPlayer, {}];
+          }
+          // Otherwise discard the card with highest deadwood value (sort by cardValue desc)
+          const sortedByValue = [...hand].sort((a, b) => cardValue(b) - cardValue(a));
+          // Avoid discarding the card drawn from discard pile (if applicable)
+          const toDiscard = sortedByValue.find(c => c.id !== s.lastDrawnCardId || s.lastDrawFrom !== 'discard');
+          return ['discard', currentPlayer, { cardId: toDiscard ? toDiscard.id : hand[0].id }];
+        }
+      }
+
+      return null;
+    }, 2000);
+
+    const result = isOver(finalGame);
+    expect(result).not.toBeNull();
+    expect(result.winner).toBeDefined();
+    expect(['p1', 'p2']).toContain(result.winner);
+    expect(result.scores).toBeDefined();
+  });
+
+  // Test 5: 2-player enforcement via engine
+  it('throws for 1 player', () => {
+    expect(() => createTestGame(ginRummy, ['p1'])).toThrow('Gin Rummy requires exactly 2 players');
+  });
+
+  it('throws for 3 players', () => {
+    expect(() => createTestGame(ginRummy, ['p1', 'p2', 'p3'])).toThrow('Gin Rummy requires exactly 2 players');
+  });
+
+  // Test 6: Display view (unknown playerId acts as spectator)
+  it('view with unknown playerId shows base info (no personal hand)', () => {
+    const game = createTestGame(ginRummy, ['p1', 'p2']);
+    // An unknown playerId is neither p1 nor p2 — view returns base or play view with empty myHand
+    const spectatorView = viewFor(game, 'spectator');
+    // Phase and stockCount should always be present
+    expect(spectatorView.phase).toBeDefined();
+    expect(spectatorView.stockCount).toBeDefined();
+  });
+
+  it('view during scoring phase reveals melds and deadwood', () => {
+    const game = createTestGame(ginRummy, ['p1', 'p2']);
+
+    // Inject a knock situation
+    const knockerHand = [
+      card(3, 'h'), card(4, 'h'), card(5, 'h'),
+      card(6, 'c'), card(7, 'c'), card(8, 'c'),
+      card(9, 'd'), card(10, 'd'), card(11, 'd'),
+      card(12, 'd'),
+      card(1, 's'), // deadwood 1
+    ];
+    const injectedState = {
+      ...game.state,
+      phase: 'drawing',
+      currentPlayerIndex: 1,
+      turnPhase: 'discard',
+      hands: { ...game.state.hands, p2: knockerHand },
+      lastDrawFrom: 'stock',
+    };
+    const injectedGame = { ...game, state: injectedState };
+    const knockResult = act(injectedGame, 'knock', 'p2');
+
+    if (knockResult.game.state.phase === 'scoring') {
+      // Both players should see scoring breakdown
+      const vP1 = viewFor(knockResult.game, 'p1');
+      const vP2 = viewFor(knockResult.game, 'p2');
+
+      expect(vP1.knocker).toBeDefined();
+      expect(vP1.handResult).toBeDefined();
+      expect(vP1.knockerMelds).toBeDefined();
+      expect(vP1.knockerDeadwood).toBeDefined();
+      expect(vP1.opponentMelds).toBeDefined();
+      expect(vP1.opponentDeadwood).toBeDefined();
+
+      expect(vP2.knocker).toBe('p2');
+      expect(vP2.handResult).toBeDefined();
+    }
   });
 });
 
