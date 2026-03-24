@@ -773,6 +773,7 @@
         'spy': 'Spy Game',
         'shithead': 'Shithead',
         'question-form': 'Question Form',
+        'gin-rummy': 'Gin Rummy',
         'template': 'Template'
       };
       document.getElementById('gameTitle').textContent = titles[msg.gameType] || msg.gameType;
@@ -788,6 +789,7 @@
         case 'spy': renderSpy(msg); break;
         case 'shithead': renderShithead(msg); break;
         case 'question-form': renderQuestionForm(msg); break;
+        case 'gin-rummy': renderGinRummy(msg); break;
         case 'template': renderTemplate(msg); break;
       }
 
@@ -1021,6 +1023,117 @@
         html += '</div>';
         content.innerHTML = html;
       }
+    }
+
+    function renderGinRummy(msg) {
+      const content = document.getElementById('gameContent');
+      const names = state.playerNames || msg.playerNames || {};
+      const cum = msg.cumulative || {};
+      const boxes = msg.boxes || {};
+      const pids = Object.keys(cum);
+
+      function hostCard(c) {
+        if (!c) return '';
+        const r = {1:'A',2:'2',3:'3',4:'4',5:'5',6:'6',7:'7',8:'8',9:'9',10:'10',11:'J',12:'Q',13:'K'}[c.rank] || c.rank;
+        const s = {h:'\u2665',d:'\u2666',c:'\u2663',s:'\u2660'}[c.suit] || c.suit;
+        const color = (c.suit === 'h' || c.suit === 'd') ? '#ff4757' : '#e0e0ff';
+        const bg = (c.suit === 'h' || c.suit === 'd') ? 'rgba(255,71,87,0.12)' : 'rgba(224,224,255,0.08)';
+        return '<div style="display:inline-flex;flex-direction:column;align-items:center;justify-content:center;width:48px;height:64px;border-radius:8px;border:1px solid ' + color + ';background:' + bg + ';margin:2px;">' +
+          '<span style="font-size:1rem;font-weight:700;color:' + color + ';">' + r + '</span>' +
+          '<span style="font-size:0.8rem;color:' + color + ';">' + s + '</span></div>';
+      }
+
+      let html = '<div style="text-align:center;">';
+
+      // Scores bar
+      html += '<div style="display:flex;justify-content:center;gap:40px;margin:16px 0;">';
+      pids.forEach(pid => {
+        html += '<div>' +
+          '<div style="font-size:1.1rem;font-weight:700;color:var(--text-primary);">' + escapeHtml(names[pid] || pid) + '</div>' +
+          '<div style="font-size:2rem;font-weight:900;color:var(--neon-blue);">' + (cum[pid] || 0) + '</div>' +
+          '<div style="font-size:0.8rem;color:var(--text-secondary);">' + (boxes[pid] || 0) + ' boxes</div>' +
+        '</div>';
+      });
+      html += '</div>';
+
+      // Hand info
+      if (msg.handNumber) {
+        html += '<div style="color:var(--text-secondary);font-size:1rem;margin:8px 0;">Hand ' + msg.handNumber + '</div>';
+      }
+
+      // Table: stock + discard
+      html += '<div style="display:flex;justify-content:center;gap:40px;margin:16px 0;align-items:center;">';
+      html += '<div><div style="font-size:0.85rem;color:var(--text-secondary);">Stock</div><div style="font-size:1.8rem;font-weight:700;">' + (msg.stockCount || 0) + '</div></div>';
+      if (msg.discardTop) {
+        html += '<div><div style="font-size:0.85rem;color:var(--text-secondary);">Discard</div>' + hostCard(msg.discardTop) + '</div>';
+      } else {
+        html += '<div><div style="font-size:0.85rem;color:var(--text-secondary);">Discard</div><div style="color:var(--text-secondary);">Empty</div></div>';
+      }
+      html += '</div>';
+
+      // Phase / turn
+      if (msg.phase === 'scoring') {
+        const hr = msg.handResult || {};
+        if (hr.type === 'cancelled') {
+          html += '<div style="font-size:1.5rem;color:var(--text-secondary);margin:16px 0;">Hand cancelled (stock exhausted)</div>';
+        } else if (hr.type) {
+          const winnerName = names[hr.winner] || hr.winner;
+          const typeLabels = { knock: 'Knock', undercut: 'Undercut!', gin: 'GIN!', bigGin: 'BIG GIN!' };
+          const typeColors = { knock: 'var(--neon-blue)', undercut: 'var(--neon-pink)', gin: 'var(--neon-green)', bigGin: 'var(--neon-green)' };
+          html += '<div style="font-size:1.8rem;font-weight:700;color:' + (typeColors[hr.type] || 'var(--text-primary)') + ';margin:12px 0;">' + (typeLabels[hr.type] || hr.type) + '</div>';
+          html += '<div style="font-size:1.3rem;">' + escapeHtml(winnerName) + ' wins +' + (hr.points || 0) + '</div>';
+        }
+
+        // Show melds
+        if (msg.knockerMelds) {
+          const knockerName = names[msg.knocker] || msg.knocker;
+          const oppId = pids.find(id => id !== msg.knocker);
+          const oppName = names[oppId] || oppId;
+
+          html += '<div style="display:flex;gap:24px;justify-content:center;flex-wrap:wrap;margin-top:16px;">';
+          // Knocker melds
+          html += '<div class="card" style="padding:12px;min-width:200px;"><div style="font-size:0.85rem;color:var(--text-secondary);margin-bottom:8px;">' + escapeHtml(knockerName) + '</div>';
+          (msg.knockerMelds || []).forEach(m => {
+            html += '<div style="display:flex;gap:2px;margin-bottom:4px;">' + m.cards.map(c => hostCard(c)).join('') + '</div>';
+          });
+          if (msg.knockerDeadwood && msg.knockerDeadwood.length > 0) {
+            html += '<div style="font-size:0.75rem;color:var(--text-secondary);margin-top:6px;">Deadwood: ' + msg.knockerDeadwood.map(c => hostCard(c)).join('') + '</div>';
+          }
+          html += '</div>';
+
+          // Opponent melds
+          html += '<div class="card" style="padding:12px;min-width:200px;"><div style="font-size:0.85rem;color:var(--text-secondary);margin-bottom:8px;">' + escapeHtml(oppName) + '</div>';
+          (msg.opponentMelds || []).forEach(m => {
+            html += '<div style="display:flex;gap:2px;margin-bottom:4px;">' + m.cards.map(c => hostCard(c)).join('') + '</div>';
+          });
+          if (msg.opponentDeadwood && msg.opponentDeadwood.length > 0) {
+            html += '<div style="font-size:0.75rem;color:var(--text-secondary);margin-top:6px;">Deadwood: ' + msg.opponentDeadwood.map(c => hostCard(c)).join('') + '</div>';
+          }
+          html += '</div>';
+          html += '</div>';
+        }
+      } else if (msg.phase === 'finished' && msg.finalScores) {
+        html += '<div style="font-size:2rem;color:var(--neon-green);margin:16px 0;">Game Over!</div>';
+        const winner = msg.winner;
+        if (winner) {
+          html += '<div style="font-size:1.5rem;color:var(--neon-blue);">' + escapeHtml(names[winner] || winner) + ' wins!</div>';
+        }
+      } else {
+        // Playing phase — show whose turn
+        const events = msg.events || [];
+        const lastEvent = events.length > 0 ? events[events.length - 1] : null;
+        if (lastEvent) {
+          const evName = names[lastEvent.playerId] || lastEvent.playerId || '';
+          if (lastEvent.type === 'draw') {
+            html += '<div style="color:var(--text-secondary);font-size:1rem;margin:8px 0;">' + escapeHtml(evName) + ' drew from ' + lastEvent.source + '</div>';
+          } else if (lastEvent.type === 'discard') {
+            html += '<div style="color:var(--text-secondary);font-size:1rem;margin:8px 0;">' + escapeHtml(evName) + ' discarded</div>';
+          }
+        }
+      }
+
+      html += '</div>';
+      content.innerHTML = html;
     }
 
     function renderShithead(msg) {

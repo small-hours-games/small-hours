@@ -660,6 +660,10 @@
             <span class="icon">&#128203;</span>
             Questions
           </button>
+          <button class="suggest-btn" onclick="suggestGame('gin-rummy')" id="suggestGinRummy">
+            <span class="icon">&#127183;</span>
+            Gin Rummy
+          </button>
           <button class="suggest-btn" onclick="suggestGame('template')" id="suggestTemplate">
             <span class="icon">&#128200;</span>
             Template
@@ -835,6 +839,53 @@
       <div class="qf-nav" id="qfNav"></div>
     </div>
 
+    <!-- GIN RUMMY SECTION -->
+    <div class="section" id="ginRummySection">
+      <div id="grPhaseInfo" class="card text-center" style="padding:12px;">
+        <span style="font-size:0.85rem;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.1em;">Gin Rummy</span>
+        <span id="grHandNum" style="font-size:0.75rem;color:var(--text-secondary);margin-left:8px;"></span>
+      </div>
+
+      <!-- Scores -->
+      <div class="card" style="display:flex;justify-content:space-around;padding:10px;" id="grScores"></div>
+
+      <!-- Table info: stock + discard -->
+      <div class="card text-center" style="padding:12px;">
+        <div style="display:flex;justify-content:space-around;align-items:center;">
+          <div>
+            <div style="font-size:0.75rem;color:var(--text-secondary);">Stock</div>
+            <div style="font-size:1.5rem;font-weight:700;" id="grStockCount">0</div>
+          </div>
+          <div>
+            <div style="font-size:0.75rem;color:var(--text-secondary);">Discard</div>
+            <div id="grDiscardTop" style="font-size:1.5rem;">-</div>
+          </div>
+          <div>
+            <div style="font-size:0.75rem;color:var(--text-secondary);">Opponent</div>
+            <div style="font-size:1.5rem;font-weight:700;" id="grOpponentCount">0</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Turn info -->
+      <div id="grTurnInfo" class="card text-center" style="padding:8px;font-size:0.9rem;"></div>
+
+      <!-- My hand -->
+      <div class="card" id="grHandSection">
+        <div style="font-size:0.8rem;color:var(--text-secondary);margin-bottom:4px;">Your Hand</div>
+        <div id="grHand" class="card-row"></div>
+      </div>
+
+      <!-- Action buttons -->
+      <div id="grActions" style="display:flex;gap:8px;flex-wrap:wrap;"></div>
+
+      <!-- Scoring reveal -->
+      <div id="grScoringView" style="display:none;">
+        <div class="card" id="grHandResult" style="text-align:center;padding:16px;"></div>
+        <div class="card" id="grMeldsDisplay"></div>
+      </div>
+    </div>
+
     <!-- TEMPLATE SECTION -->
     <div class="section" id="templateSection">
       <div class="card text-center">
@@ -879,6 +930,7 @@
       shSwapSelected: { hand: null, faceUp: null },
       shitheadDecks: 1,
       shWasTurn: false,
+      grSelectedCard: null,
     };
 
     // --- Init ---
@@ -1041,6 +1093,7 @@
           case 'spy': renderSpyState(msg); break;
           case 'shithead': renderShitheadState(msg); break;
           case 'question-form': renderQuestionFormState(msg); break;
+          case 'gin-rummy': renderGinRummyState(msg); break;
         }
         // Return to lobby after a delay
         setTimeout(() => {
@@ -1048,6 +1101,7 @@
           state.ready = false;
           state.qfIndex = 0;
           state._lastQfMsg = null;
+          state.grSelectedCard = null;
           updateReadyBtn();
           showSection('lobbySection');
         }, 3000);
@@ -1069,6 +1123,7 @@
         case 'spy': renderSpyState(msg); break;
         case 'shithead': renderShitheadState(msg); break;
         case 'question-form': renderQuestionFormState(msg); break;
+        case 'gin-rummy': renderGinRummyState(msg); break;
         case 'template': renderTemplateState(msg); break;
       }
     }
@@ -1081,7 +1136,7 @@
     }
 
     function getGameSectionId(game) {
-      const map = { 'number-guess': 'numberGuessSection', 'quiz': 'quizSection', 'spy': 'spySection', 'shithead': 'shitheadSection', 'question-form': 'questionFormSection', 'template': 'templateSection' };
+      const map = { 'number-guess': 'numberGuessSection', 'quiz': 'quizSection', 'spy': 'spySection', 'shithead': 'shitheadSection', 'question-form': 'questionFormSection', 'gin-rummy': 'ginRummySection', 'template': 'templateSection' };
       return map[game] || 'lobbySection';
     }
 
@@ -1144,7 +1199,7 @@
       const suggestions = Object.values(state.gameSuggestions || {});
       const topGame = suggestions.length > 0 ? suggestions[suggestions.length - 1] : 'number-guess';
       state.gameToStart = topGame;
-      const names = { 'number-guess': 'Number Guess', 'quiz': 'Quiz', 'spy': 'Spy Game', 'shithead': 'Shithead', 'question-form': 'Questions', 'template': 'Template' };
+      const names = { 'number-guess': 'Number Guess', 'quiz': 'Quiz', 'spy': 'Spy Game', 'shithead': 'Shithead', 'question-form': 'Questions', 'gin-rummy': 'Gin Rummy', 'template': 'Template' };
 
       let html = '';
       if (topGame === 'shithead') {
@@ -1659,7 +1714,7 @@
     // Card display helpers
     function cardDisplay(c) {
       if (!c) return '?';
-      const ranks = {2:'2',3:'3',4:'4',5:'5',6:'6',7:'7',8:'8',9:'9',10:'10',11:'J',12:'Q',13:'K',14:'A'};
+      const ranks = {1:'A',2:'2',3:'3',4:'4',5:'5',6:'6',7:'7',8:'8',9:'9',10:'10',11:'J',12:'Q',13:'K',14:'A'};
       const suits = {h:'\u2665',d:'\u2666',c:'\u2663',s:'\u2660'};
       const r = ranks[c.rank] || c.rank;
       const s = suits[c.suit] || c.suit;
@@ -1689,6 +1744,210 @@
       const el = document.getElementById('connStatus');
       el.className = 'connection-status ' + status;
       document.getElementById('connText').textContent = text;
+    }
+
+    // --- Gin Rummy ---
+    function renderGinRummyState(msg) {
+      const section = document.getElementById('ginRummySection');
+      const scoringView = document.getElementById('grScoringView');
+      const handSection = document.getElementById('grHandSection');
+      const actionsDiv = document.getElementById('grActions');
+
+      // Hand number
+      document.getElementById('grHandNum').textContent = msg.handNumber ? 'Hand ' + msg.handNumber : '';
+
+      // Scores
+      const scoresDiv = document.getElementById('grScores');
+      const pNames = state.playerNames || {};
+      const cum = msg.cumulative || {};
+      const boxes = msg.boxes || {};
+      const pids = Object.keys(cum);
+      scoresDiv.innerHTML = pids.map(pid =>
+        '<div style="text-align:center;">' +
+          '<div style="font-size:0.75rem;color:var(--text-secondary);">' + escapeHtml(pNames[pid] || pid) + '</div>' +
+          '<div style="font-size:1.3rem;font-weight:700;color:' + (pid === state.playerId ? 'var(--neon-blue)' : 'var(--text-primary)') + ';">' + (cum[pid] || 0) + '</div>' +
+          '<div style="font-size:0.65rem;color:var(--text-secondary);">' + (boxes[pid] || 0) + ' boxes</div>' +
+        '</div>'
+      ).join('');
+
+      // Stock / discard / opponent
+      document.getElementById('grStockCount').textContent = msg.stockCount || 0;
+      document.getElementById('grOpponentCount').textContent = msg.opponentCardCount || 0;
+      if (msg.discardTop) {
+        document.getElementById('grDiscardTop').innerHTML = '<div class="playing-card pile-card ' + cardColor(msg.discardTop) + '" style="margin:0 auto;font-size:0.9rem;">' + cardDisplay(msg.discardTop) + '</div>';
+      } else {
+        document.getElementById('grDiscardTop').innerHTML = '<span style="color:var(--text-secondary);">Empty</span>';
+      }
+
+      // Turn info
+      const turnInfo = document.getElementById('grTurnInfo');
+      if (msg.phase === 'scoring') {
+        turnInfo.innerHTML = '<span style="color:var(--neon-pink);font-weight:700;">Scoring</span>';
+      } else if (msg.phase === 'finished') {
+        turnInfo.innerHTML = '<span style="color:var(--neon-green);font-weight:700;">Game Over!</span>';
+      } else if (msg.isMyTurn) {
+        const phaseHint = msg.turnPhase === 'draw' ? 'Draw a card' : 'Discard or knock';
+        if (msg.phase === 'first_turn') {
+          turnInfo.innerHTML = '<span style="color:var(--neon-green);font-weight:700;">Take or decline the upcard</span>';
+        } else {
+          turnInfo.innerHTML = '<span style="color:var(--neon-green);font-weight:700;">Your turn — ' + phaseHint + '</span>';
+        }
+        if (navigator.vibrate) navigator.vibrate([50, 30, 50]);
+      } else {
+        turnInfo.innerHTML = '<span style="color:var(--text-secondary);">Opponent\'s turn...</span>';
+      }
+
+      // Turn glow
+      if (msg.isMyTurn && msg.phase !== 'scoring' && msg.phase !== 'finished') {
+        section.classList.add('my-turn-glow');
+      } else {
+        section.classList.remove('my-turn-glow');
+      }
+
+      // Scoring view
+      if (msg.phase === 'scoring' || msg.phase === 'finished') {
+        scoringView.style.display = 'block';
+        renderGrScoring(msg);
+      } else {
+        scoringView.style.display = 'none';
+      }
+
+      // Hand display
+      handSection.style.display = (msg.phase === 'scoring' || msg.phase === 'finished') ? 'none' : 'block';
+      const hand = (msg.myHand || []).slice().sort((a, b) => a.rank - b.rank);
+      const handDiv = document.getElementById('grHand');
+      handDiv.innerHTML = hand.map(c => {
+        const cls = cardColor(c) + (state.grSelectedCard === c.id ? ' selected' : '');
+        return '<div class="playing-card ' + cls + '" onclick="grSelectCard(\'' + c.id + '\')">' + cardDisplay(c) + '</div>';
+      }).join('');
+
+      // Actions
+      actionsDiv.innerHTML = '';
+      if (msg.phase === 'first_turn' && msg.isMyTurn) {
+        actionsDiv.innerHTML =
+          '<button class="btn btn-primary" onclick="grAction(\'takeUpcard\')" style="flex:1;">Take Upcard</button>' +
+          '<button class="btn btn-secondary" onclick="grAction(\'declineUpcard\')" style="flex:1;">Decline</button>';
+      } else if (msg.phase === 'first_turn_draw' && msg.isMyTurn && msg.turnPhase === 'discard') {
+        actionsDiv.innerHTML = grDiscardKnockButtons(msg);
+      } else if (msg.phase === 'drawing' && msg.isMyTurn) {
+        if (msg.turnPhase === 'draw') {
+          actionsDiv.innerHTML =
+            '<button class="btn btn-primary" onclick="grDraw(\'stock\')" style="flex:1;">Draw from Stock</button>' +
+            '<button class="btn btn-secondary" onclick="grDraw(\'discard\')" style="flex:1;">Draw from Discard</button>';
+        } else if (msg.turnPhase === 'discard') {
+          actionsDiv.innerHTML = grDiscardKnockButtons(msg);
+        }
+      } else if (msg.phase === 'scoring') {
+        actionsDiv.innerHTML = '<button class="btn btn-primary" onclick="grAction(\'nextHand\')" style="flex:1;">Next Hand</button>';
+      }
+    }
+
+    function grDiscardKnockButtons(msg) {
+      const selected = state.grSelectedCard;
+      let html = '<button class="btn btn-primary" onclick="grDiscard()" id="grDiscardBtn" style="flex:1;"' +
+        (!selected ? ' disabled' : '') + '>Discard' + (selected ? '' : ' (select a card)') + '</button>';
+      if (msg.canKnock) {
+        html += '<button class="btn btn-secondary" onclick="grAction(\'knock\')" style="flex:1;border-color:var(--neon-pink);color:var(--neon-pink);">Knock!</button>';
+      }
+      return html;
+    }
+
+    function grSelectCard(cardId) {
+      state.grSelectedCard = state.grSelectedCard === cardId ? null : cardId;
+      // Re-render hand selection
+      document.querySelectorAll('#grHand .playing-card').forEach(el => el.classList.remove('selected'));
+      if (state.grSelectedCard) {
+        const cards = document.querySelectorAll('#grHand .playing-card');
+        cards.forEach(el => {
+          if (el.getAttribute('onclick')?.includes(state.grSelectedCard)) el.classList.add('selected');
+        });
+      }
+      // Update discard button state
+      const btn = document.getElementById('grDiscardBtn');
+      if (btn) {
+        btn.disabled = !state.grSelectedCard;
+        btn.textContent = state.grSelectedCard ? 'Discard' : 'Discard (select a card)';
+      }
+    }
+
+    function grDraw(source) {
+      state.grSelectedCard = null;
+      send({ type: 'GAME_ACTION', action: { type: 'draw', source } });
+    }
+
+    function grDiscard() {
+      if (!state.grSelectedCard) return;
+      const cardId = state.grSelectedCard;
+      state.grSelectedCard = null;
+      send({ type: 'GAME_ACTION', action: { type: 'discard', cardId } });
+    }
+
+    function grAction(actionType) {
+      state.grSelectedCard = null;
+      send({ type: 'GAME_ACTION', action: { type: actionType } });
+    }
+
+    function renderGrScoring(msg) {
+      const pNames = state.playerNames || {};
+      const resultDiv = document.getElementById('grHandResult');
+      const meldsDiv = document.getElementById('grMeldsDisplay');
+      const hr = msg.handResult || {};
+
+      let resultHtml = '';
+      if (hr.type === 'cancelled') {
+        resultHtml = '<div style="font-size:1.2rem;color:var(--text-secondary);">Hand cancelled (stock exhausted)</div>';
+      } else if (hr.type) {
+        const winnerName = pNames[hr.winner] || hr.winner;
+        const typeLabels = { knock: 'Knock', undercut: 'Undercut!', gin: 'GIN!', bigGin: 'BIG GIN!' };
+        const typeColors = { knock: 'var(--neon-blue)', undercut: 'var(--neon-pink)', gin: 'var(--neon-green)', bigGin: 'var(--neon-green)' };
+        resultHtml = '<div style="font-size:0.85rem;color:var(--text-secondary);text-transform:uppercase;">' + (typeLabels[hr.type] || hr.type) + '</div>' +
+          '<div style="font-size:1.3rem;font-weight:700;color:' + (typeColors[hr.type] || 'var(--text-primary)') + ';">' + escapeHtml(winnerName) + ' wins +' + (hr.points || 0) + '</div>';
+      }
+
+      if (msg.phase === 'finished' && msg.finalScores) {
+        resultHtml += '<div style="margin-top:12px;font-size:1rem;color:var(--neon-green);font-weight:700;">GAME OVER</div>';
+        const fs = msg.finalScores;
+        resultHtml += '<div style="margin-top:4px;">' + Object.entries(fs).map(([pid, score]) =>
+          '<span style="margin:0 8px;">' + escapeHtml(pNames[pid] || pid) + ': ' + score + '</span>'
+        ).join('') + '</div>';
+      }
+      resultDiv.innerHTML = resultHtml;
+
+      // Show melds
+      let meldsHtml = '';
+      const knockerName = pNames[msg.knocker] || msg.knocker || 'Knocker';
+      const opponentId = Object.keys(msg.cumulative || {}).find(id => id !== msg.knocker);
+      const opponentName = pNames[opponentId] || opponentId || 'Opponent';
+
+      if (msg.knockerMelds) {
+        meldsHtml += '<div style="margin-bottom:8px;"><div style="font-size:0.8rem;color:var(--text-secondary);margin-bottom:4px;">' + escapeHtml(knockerName) + '\'s Melds</div>';
+        meldsHtml += '<div class="card-row" style="flex-wrap:wrap;gap:4px;">' + (msg.knockerMelds || []).map(m =>
+          '<div style="display:flex;gap:2px;margin-right:8px;padding:4px;border:1px solid var(--glass-border);border-radius:6px;">' +
+          m.cards.map(c => '<div class="playing-card ' + cardColor(c) + '" style="font-size:0.7rem;padding:4px 6px;">' + cardDisplay(c) + '</div>').join('') +
+          '</div>'
+        ).join('') + '</div>';
+        if (msg.knockerDeadwood && msg.knockerDeadwood.length > 0) {
+          meldsHtml += '<div style="font-size:0.7rem;color:var(--text-secondary);margin-top:4px;">Deadwood: ' +
+            msg.knockerDeadwood.map(c => '<span class="playing-card ' + cardColor(c) + '" style="font-size:0.65rem;padding:2px 4px;display:inline-block;">' + cardDisplay(c) + '</span>').join(' ') + '</div>';
+        }
+        meldsHtml += '</div>';
+      }
+
+      if (msg.opponentMelds) {
+        meldsHtml += '<div><div style="font-size:0.8rem;color:var(--text-secondary);margin-bottom:4px;">' + escapeHtml(opponentName) + '\'s Melds</div>';
+        meldsHtml += '<div class="card-row" style="flex-wrap:wrap;gap:4px;">' + (msg.opponentMelds || []).map(m =>
+          '<div style="display:flex;gap:2px;margin-right:8px;padding:4px;border:1px solid var(--glass-border);border-radius:6px;">' +
+          m.cards.map(c => '<div class="playing-card ' + cardColor(c) + '" style="font-size:0.7rem;padding:4px 6px;">' + cardDisplay(c) + '</div>').join('') +
+          '</div>'
+        ).join('') + '</div>';
+        if (msg.opponentDeadwood && msg.opponentDeadwood.length > 0) {
+          meldsHtml += '<div style="font-size:0.7rem;color:var(--text-secondary);margin-top:4px;">Deadwood: ' +
+            msg.opponentDeadwood.map(c => '<span class="playing-card ' + cardColor(c) + '" style="font-size:0.65rem;padding:2px 4px;display:inline-block;">' + cardDisplay(c) + '</span>').join(' ') + '</div>';
+        }
+        meldsHtml += '</div>';
+      }
+
+      meldsDiv.innerHTML = meldsHtml;
     }
 
     // --- Template Game ---
