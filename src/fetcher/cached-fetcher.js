@@ -8,11 +8,12 @@ import { readFile, writeFile, mkdir, rm, unlink } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { dirname, join, resolve } from 'node:path';
-import { fetchQuestions as fetchFromApi } from './opentrivia.js';
+import { fetchQuestions as fetchFromApi, fetchCategories as fetchCategoriesFromApi } from './opentrivia.js';
 import { generateAudioForQuestions } from './cached-tts.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const CACHE_DIR = resolve(__dirname, '../../data/questions');
+const CATEGORY_CACHE_PATH = resolve(__dirname, '../../data/categories.json');
 
 /**
  * Compute a stable, content-based question ID.
@@ -91,6 +92,43 @@ export async function fetchQuestions(categoryId, amount = 10) {
   );
 
   return { ok: true, questions: normalized };
+}
+
+/**
+ * Fetch quiz categories, using disk cache when available.
+ *
+ * Cache hit: reads from data/categories.json, returns without API call.
+ * Cache miss: calls the raw API fetcher, writes to disk, returns result.
+ * Cache never expires — categories are stable and rarely change.
+ * Disk write errors are non-fatal: returns API result without writing.
+ *
+ * @returns {Promise<{ok: true, categories: Array<{id: number, name: string}>} | {ok: false, error: {code, message}}>}
+ */
+export async function fetchCategories() {
+  // Try disk cache first (never expires)
+  try {
+    const raw = await readFile(CATEGORY_CACHE_PATH, 'utf8');
+    return { ok: true, categories: JSON.parse(raw) };
+  } catch (err) {
+    if (err.code !== 'ENOENT') {
+      console.warn('[cache] category read error:', err.message);
+    }
+    // ENOENT = normal cache miss, fall through silently
+  }
+
+  // Cache miss: fetch from API
+  const result = await fetchCategoriesFromApi();
+  if (!result.ok) return result;
+
+  // Write to disk (non-fatal on error)
+  try {
+    await mkdir(dirname(CATEGORY_CACHE_PATH), { recursive: true });
+    await writeFile(CATEGORY_CACHE_PATH, JSON.stringify(result.categories), 'utf8');
+  } catch (err) {
+    console.warn('[cache] category write error:', err.message);
+  }
+
+  return result;
 }
 
 /**
