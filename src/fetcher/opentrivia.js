@@ -80,3 +80,19 @@ export async function fetchQuestions(categoryId, amount = 10) {
     return { ok: false, error: { code: 'NETWORK_ERROR', message: err.message } };
   }
 }
+
+/**
+ * Fetch available quiz categories from OpenTrivia DB.
+ *
+ * @returns {Promise<{ok: true, categories: Array<{id: number, name: string}>} | {ok: false, error: {code: string, message: string}}>}
+ */
+export async function fetchCategories() {
+  try {
+    const response = await fetch('https://opentdb.com/api_category.php');
+    const data = await response.json();
+    const categories = data.trivia_categories.map(c => ({ id: c.id, name: c.name }));
+    return { ok: true, categories };
+  } catch (err) {
+    return { ok: false, error: { code: 'NETWORK_ERROR', message: err.message } };
+  }
+}
