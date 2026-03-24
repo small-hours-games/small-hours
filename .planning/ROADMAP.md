@@ -68,7 +68,10 @@ Plans:
   2. A player can tap a category to cast their vote, and their vote is reflected on the host display in real time
   3. When the admin starts the quiz, it launches with questions from the category that received the most votes (admin breaks ties)
   4. All players and the host display see the final vote tally before questions begin
-**Plans**: TBD
+**Plans:** 2 plans
+Plans:
+- [ ] 03-01-PLAN.md — Category fetcher and disk cache (opentrivia.js + cached-fetcher.js)
+- [ ] 03-02-PLAN.md — Room voting state, resolution logic, and WebSocket transport wiring
 
 ### Phase 4: Test Coverage
 
@@ -92,5 +95,5 @@ Plans:
 | 1. Question Fetcher | 2/2 | Complete | 2026-03-22 |
 | 2. Question Cache | 2/2 | Complete | 2026-03-22 |
 | 2.1 Quiz Timer Scheduling | 0/? | Not started | - |
-| 3. Category Voting | 0/? | Not started | - |
+| 3. Category Voting | 0/2 | Planning complete | - |
 | 4. Test Coverage | 0/? | Not started | - |
