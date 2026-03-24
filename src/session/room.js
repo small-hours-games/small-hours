@@ -7,6 +7,7 @@ import shithead from '../engine/games/shithead.js';
 import quiz from '../engine/games/quiz.js';
 import questionForm from '../engine/games/question-form.js';
 import template from '../engine/games/template.js';
+import ginRummy from '../engine/games/gin-rummy.js';
 import { fetchQuestions } from '../fetcher/cached-fetcher.js';
 import { loadQuestionFile, saveAnswers } from '../fetcher/question-file.js';
 
@@ -26,6 +27,7 @@ const GAME_REGISTRY = {
   'quiz': quiz,
   'question-form': questionForm,
   'template': template,
+  'gin-rummy': ginRummy,
 };
 
 let playerCounter = 0;
