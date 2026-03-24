@@ -22,9 +22,9 @@ Requirements for Quiz Question Pipeline milestone. Each maps to roadmap phases.
 ### Category Voting
 
 - [x] **CVOTE-01**: Available categories are fetched from OpenTrivia DB and presented to players
-- [ ] **CVOTE-02**: Players can vote for a category in the lobby before quiz starts
-- [ ] **CVOTE-03**: Admin starts quiz with the winning category (or admin's choice on tie)
-- [ ] **CVOTE-04**: Category vote results are broadcast to all players and host display
+- [x] **CVOTE-02**: Players can vote for a category in the lobby before quiz starts
+- [x] **CVOTE-03**: Admin starts quiz with the winning category (or admin's choice on tie)
+- [x] **CVOTE-04**: Category vote results are broadcast to all players and host display
 
 ## Future Requirements
 
@@ -61,9 +61,9 @@ Requirements for Quiz Question Pipeline milestone. Each maps to roadmap phases.
 | QCACHE-02 | Phase 2 | Complete |
 | QCACHE-03 | Phase 2 | Complete |
 | CVOTE-01 | Phase 3 | Complete |
-| CVOTE-02 | Phase 3 | Pending |
-| CVOTE-03 | Phase 3 | Pending |
-| CVOTE-04 | Phase 3 | Pending |
+| CVOTE-02 | Phase 3 | Complete |
+| CVOTE-03 | Phase 3 | Complete |
+| CVOTE-04 | Phase 3 | Complete |
 
 **Coverage:**
 - v2.1 requirements: 10 total

@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v2.1
 milestone_name: milestone
-status: Ready to execute
-stopped_at: Completed 03-01-PLAN.md
-last_updated: "2026-03-24T12:42:43.419Z"
+status: Phase complete — ready for verification
+stopped_at: Completed 03-02-PLAN.md
+last_updated: "2026-03-24T12:48:17.248Z"
 last_activity: 2026-03-24
 progress:
   total_phases: 5
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 6
-  completed_plans: 5
+  completed_plans: 6
 ---
 
 # State: Small Hours Game Engine
@@ -75,6 +75,8 @@ Plan: 2 of 2
 - [Phase 02-question-cache]: Supplement fetch goes through cached-fetcher (not raw API) to maintain cache-through consistency
 - [Phase 03-category-voting]: Split test file into two (opentrivia-categories.test.js and cached-categories.test.js) because vi.mock hoisting in Vitest prevents testing real and mocked opentrivia.js in same file
 - [Phase 03-category-voting]: CATEGORY_CACHE_PATH stored at data/categories.json (flat file) separate from CACHE_DIR data/questions/ — category cache never expires per D-03
+- [Phase 03-02]: Test 7 required 4 players to correctly produce 2-way tie without admin — 3-player setup caused 3-way tie including admin, contradicting test intent
+- [Phase 03-02]: handleStartCategoryVote and handleCategoryVote placed before return in setupWebSocket() matching existing handler layout
 
 ### Pending Todos
 
@@ -86,8 +88,8 @@ Plan: 2 of 2
 
 ### To Resume
 
-Last session: 2026-03-24T12:42:43.410Z
-Stopped at: Completed 03-01-PLAN.md
+Last session: 2026-03-24T12:48:17.240Z
+Stopped at: Completed 03-02-PLAN.md
 Resume file: None
 
 ### Files
@@ -108,3 +110,4 @@ Last activity: 2026-03-24
 | Phase 02-question-cache P01 | 2 | 1 tasks | 2 files |
 | Phase 02-question-cache P02 | 10 | 2 tasks | 2 files |
 | Phase 03-category-voting P01 | 3 | 2 tasks | 4 files |
+| Phase 03-category-voting P02 | 3min | 2 tasks | 3 files |

@@ -71,7 +71,7 @@ Plans:
 **Plans:** 1/2 plans executed
 Plans:
 - [x] 03-01-PLAN.md — Category fetcher and disk cache (opentrivia.js + cached-fetcher.js)
-- [ ] 03-02-PLAN.md — Room voting state, resolution logic, and WebSocket transport wiring
+- [x] 03-02-PLAN.md — Room voting state, resolution logic, and WebSocket transport wiring
 
 ### Phase 4: Test Coverage
 
