@@ -67,7 +67,7 @@ completed: "2026-03-24"
 1. **RED phase (failing tests)** - `a429d4d` (test)
 2. **GREEN phase (implementation)** - `b23818d` (feat)
 
-**Plan metadata:** (pending)
+**Plan metadata:** `28a96ed` (docs: complete plan)
 
 ## Files Created/Modified
 
@@ -115,6 +115,20 @@ None — all actions are fully implemented, view function wires real state, no p
 - game definition exports default object with setup/actions/view/endIf — engine contract satisfied
 
 ---
+
+## Self-Check: PASSED
+
+Files exist:
+- src/engine/games/gin-rummy.js: FOUND
+- tests/engine/gin-rummy.test.js: FOUND
+- .planning/phases/gin-rummy/gin-rummy-02-SUMMARY.md: FOUND
+
+Commits exist:
+- a429d4d (RED - failing tests): FOUND
+- b23818d (GREEN - implementation): FOUND
+- 28a96ed (docs - metadata): FOUND
+
+All 436 project tests pass.
 
 *Phase: gin-rummy*
 *Completed: 2026-03-24*
