@@ -231,27 +231,23 @@ describe('findOptimalMelds', () => {
     expect(result.deadwoodValue).toBe(1 + 5 + 9);
   });
 
-  it('greedy-buster: prefers 3 sets of 3 over 1 set of 4 + leftover', () => {
-    // Cards: 7h,7d,7s,7c, 8h,8d,8s, 9h,9d,9s
-    // Greedy might pick 4-card set of 7s first, then only one more set of 3 → 3 leftover
-    // Optimal: 3-card set of 7s + set of 8s + set of 9s → 1 leftover (the 4th 7)
+  it('greedy-buster: prefers 2 melds of 3 over 1 set of 4 + deadwood', () => {
+    // Cards: Kh, Kd, Ks (set), Kc, Qc, Jc (run K-Q-J clubs)
+    // A greedy approach might pick 4-card set of Kings (Kh,Kd,Ks,Kc) first → Qc,Jc leftover (deadwood 20)
+    // Optimal: 3-card set of Kings (Kh,Kd,Ks) + run Kc-Qc-Jc → deadwood 0
     const hand = [
-      { id: '7h_0', rank: 7, suit: 'h' },
-      { id: '7d_0', rank: 7, suit: 'd' },
-      { id: '7s_0', rank: 7, suit: 's' },
-      { id: '7c_0', rank: 7, suit: 'c' },
-      { id: '8h_0', rank: 8, suit: 'h' },
-      { id: '8d_0', rank: 8, suit: 'd' },
-      { id: '8s_0', rank: 8, suit: 's' },
-      { id: '9h_0', rank: 9, suit: 'h' },
-      { id: '9d_0', rank: 9, suit: 'd' },
-      { id: '9s_0', rank: 9, suit: 's' },
+      { id: '13h_0', rank: 13, suit: 'h' },
+      { id: '13d_0', rank: 13, suit: 'd' },
+      { id: '13s_0', rank: 13, suit: 's' },
+      { id: '13c_0', rank: 13, suit: 'c' },
+      { id: '12c_0', rank: 12, suit: 'c' },
+      { id: '11c_0', rank: 11, suit: 'c' },
     ];
     const result = findOptimalMelds(hand);
-    // Best possible: 3 sets of 3 = 9 cards in melds, 1 leftover (value 7)
-    expect(result.deadwoodValue).toBe(7);
-    expect(result.deadwood).toHaveLength(1);
-    expect(result.melds).toHaveLength(3);
+    // Best possible: 3-card set of kings + run of K-Q-J clubs = 6 cards in melds, deadwood 0
+    expect(result.deadwoodValue).toBe(0);
+    expect(result.deadwood).toHaveLength(0);
+    expect(result.melds).toHaveLength(2);
   });
 
   it('finds structure with result having melds, deadwood, deadwoodValue', () => {
