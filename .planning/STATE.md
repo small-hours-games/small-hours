@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v2.1
 milestone_name: milestone
-status: unknown
-stopped_at: Phase 3 UI-SPEC approved
-last_updated: "2026-03-24T10:23:33.248Z"
-last_activity: 2026-03-22
+status: Ready to execute
+stopped_at: Completed 03-01-PLAN.md
+last_updated: "2026-03-24T12:42:43.419Z"
+last_activity: 2026-03-24
 progress:
   total_phases: 5
   completed_phases: 2
-  total_plans: 4
-  completed_plans: 4
+  total_plans: 6
+  completed_plans: 5
 ---
 
 # State: Small Hours Game Engine
@@ -22,12 +22,12 @@ progress:
 
 **Core value:** Creating a new party game should be trivially simple — define state and rules, the engine handles everything else.
 
-**Current focus:** Phase 02 — question-cache
+**Current focus:** Phase 03 — Category Voting
 
 ## Current Position
 
-Phase: 3
-Plan: Not started
+Phase: 03 (Category Voting) — EXECUTING
+Plan: 2 of 2
 
 ## Performance Metrics
 
@@ -73,6 +73,8 @@ Plan: Not started
 - [Phase 02-question-cache]: clearCache(undefined) removes entire data/questions/ directory; clearCache(null) removes any.json
 - [Phase 02-question-cache]: usedQuestionIds lives on Room instance, garbage collected with Room destruction — no explicit cleanup
 - [Phase 02-question-cache]: Supplement fetch goes through cached-fetcher (not raw API) to maintain cache-through consistency
+- [Phase 03-category-voting]: Split test file into two (opentrivia-categories.test.js and cached-categories.test.js) because vi.mock hoisting in Vitest prevents testing real and mocked opentrivia.js in same file
+- [Phase 03-category-voting]: CATEGORY_CACHE_PATH stored at data/categories.json (flat file) separate from CACHE_DIR data/questions/ — category cache never expires per D-03
 
 ### Pending Todos
 
@@ -84,9 +86,9 @@ Plan: Not started
 
 ### To Resume
 
-Last session: 2026-03-24T10:23:33.241Z
-Stopped at: Phase 3 UI-SPEC approved
-Resume file: .planning/phases/03-category-voting/03-UI-SPEC.md
+Last session: 2026-03-24T12:42:43.410Z
+Stopped at: Completed 03-01-PLAN.md
+Resume file: None
 
 ### Files
 
@@ -102,6 +104,7 @@ Resume file: .planning/phases/03-category-voting/03-UI-SPEC.md
 
 ---
 *State initialized: 2026-03-22*
-Last activity: 2026-03-22
+Last activity: 2026-03-24
 | Phase 02-question-cache P01 | 2 | 1 tasks | 2 files |
 | Phase 02-question-cache P02 | 10 | 2 tasks | 2 files |
+| Phase 03-category-voting P01 | 3 | 2 tasks | 4 files |
