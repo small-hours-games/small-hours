@@ -31,7 +31,7 @@ src/
 │   └── ws-adapter.js    #   WebSocket server: message dispatch, rate limiting, heartbeat
 ├── session/             # Layer 2: Session
 │   ├── manager.js       #   RoomManager singleton: creates/tracks/cleans up rooms
-│   └── room.js          #   Room class: players, lobby state, game lifecycle
+│   └── room.js          #   Room class: players, lobby state, game lifecycle, GAME_REGISTRY
 ├── engine/              # Layer 3: Engine (pure functions, no I/O)
 │   ├── engine.js        #   Core: createGame, processAction, getView, checkEnd
 │   └── games/           #   Game definitions (plain objects, not classes)
@@ -40,9 +40,14 @@ src/
 │       ├── quiz.js
 │       ├── question-form.js
 │       ├── shithead.js
-│       └── spy.js
-├── fetcher/
-│   └── opentrivia.js    # OpenTrivia DB API client (quiz questions)
+│       ├── spy.js
+│       └── template.js  #   Minimal reference game (use as starting point for new games)
+├── fetcher/             # External data fetching with caching
+│   ├── opentrivia.js    #   OpenTrivia DB API client
+│   ├── cached-fetcher.js #  Disk-cached wrapper around opentrivia (data/questions/)
+│   ├── cached-tts.js    #   Disk-cached TTS audio generation
+│   ├── gemini-tts.js    #   Gemini API TTS (text-to-speech for quiz questions)
+│   └── question-file.js #   Load/save question JSON files from questions/ directory
 └── server.js            # Entry point: wires Express + WebSocket + RoomManager
 ```
 
@@ -58,7 +63,7 @@ src/
 1. **WebSocket message arrives** in `ws-adapter.js` → parsed, rate-limited, dispatched by `msg.type`
 2. **Session layer** (`room.js`) manages player join/leave, lobby state, and calls `room.startGame(gameType)`
 3. **Game actions** flow through: `ws-adapter.handleGameAction` → `engine.processAction(game, action)` → per-player views via `engine.getView` → broadcast back via WebSocket
-4. **Game registry** lives in `room.js` as `GAME_REGISTRY` object mapping type strings to game definitions. New games must be imported and added there.
+4. **Game registry** lives in `room.js` as `GAME_REGISTRY` object mapping type strings to game definitions. New games must be imported and added there **and** re-exported from `src/engine/games/index.js`.
 
 ## Tech Stack
 
@@ -87,7 +92,17 @@ export default {
 }
 ```
 
-Reference implementation: `src/engine/games/number-guess.js` (simplest game).
+Reference implementations: `src/engine/games/number-guess.js` (simplest game), `src/engine/games/template.js` (minimal starting point for new games).
+
+## Test Harness
+
+`tests/engine/game-harness.js` provides helpers for testing game definitions:
+- `createTestGame(gameDef, players, config)` — set up a game via the engine
+- `act(game, type, playerId, payload)` — process a single action
+- `actChain(game, actions)` — process a sequence of `[type, playerId, payload]` tuples
+- `viewFor(game, playerId)` — get a player's view
+- `isOver(game)` — check if game has ended
+- `playUntilEnd(game, actionFn, maxTurns)` — drive a game to completion
 
 ## Question Form Game (Dev Workflow Tool)
 
