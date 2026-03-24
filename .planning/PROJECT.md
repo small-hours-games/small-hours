@@ -22,7 +22,7 @@ Creating a new party game should be trivially simple — define state and rules,
 ### Validated
 
 - Engine with pure function contract (setup/actions/view/endIf)
-- 4 working games: Number Guess, Quiz, Spy, Shithead
+- 5 working games: Number Guess, Quiz, Spy, Shithead, Gin Rummy
 - WebSocket transport with rooms, reconnection, chat, rate limiting
 - Browser frontend (landing page, host display, player controller)
 - Docker deployment with health checks
@@ -38,7 +38,7 @@ Creating a new party game should be trivially simple — define state and rules,
 - Native mobile apps — web-first, phones use browser
 - User accounts/authentication — players are ephemeral per session
 - Persistent player identity across sessions — by design
-- Additional games (CAH, Lyrics) — future milestone
+- Additional games (CAH, Lyrics) — future milestone (Gin Rummy completed in Phase Gin Rummy)
 - Bot system — future milestone
 - Game history/stats persistence — future milestone
 - HTTP rate limiting / security headers — future milestone
@@ -46,7 +46,7 @@ Creating a new party game should be trivially simple — define state and rules,
 
 ## Context
 
-This is a ground-up rewrite of a party game platform. The codebase has ~2,200 lines of backend JS (engine + session + transport) and ~3,600 lines of frontend HTML/CSS/JS. The quiz game engine is complete with phases, powerups, and scoring — but expects questions to be passed in via config with no built-in source. This milestone adds that pipeline.
+This is a ground-up rewrite of a party game platform. The codebase has ~2,200 lines of backend JS (engine + session + transport) and ~3,600 lines of frontend HTML/CSS/JS. The quiz game engine is complete with phases, powerups, and scoring — but expects questions to be passed in via config with no built-in source. This milestone adds that pipeline. Gin Rummy was added as the first 2-player card game with multi-hand scoring, auto-computed melds/layoffs, and proper view filtering.
 
 The OpenTrivia DB API (opentdb.com) is the question source. It's free, has ~4,000+ questions across 24 categories, and rate limits at roughly 1 req/5s per IP.
 
@@ -62,7 +62,7 @@ The OpenTrivia DB API (opentdb.com) is the question source. It's free, has ~4,00
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
 | Pure function engine | Testable, predictable, transport-agnostic | Validated |
-| Plain object game definitions | No class hierarchy needed for 4 games | Validated |
+| Plain object game definitions | No class hierarchy needed for 5 games | Validated |
 | Express + WS over raw HTTP | Session/room management needed it | Validated |
 | Browser-first (skipped terminal client) | Faster to usable product | Validated |
 | OpenTrivia DB as question source | Free, sufficient variety, well-known API | Validated (Phase 01) |
@@ -87,4 +87,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-03-22 after Phase 02 (Question Cache) complete*
+*Last updated: 2026-03-24 after Phase Gin Rummy complete*
