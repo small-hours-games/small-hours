@@ -12,6 +12,7 @@
 - [ ] **Phase 2.1: Quiz Timer Scheduling** - Wire up timerExpired action dispatch so quiz/spy phase transitions actually fire
 - [ ] **Phase 3: Category Voting** - Players vote on quiz category in lobby, admin starts quiz with winning category and real questions
 - [ ] **Phase 4: Test Coverage** - Comprehensive test coverage for untested core modules: engine, game definitions, session layer, and transport layer
+- [ ] **Phase Gin Rummy** - Implement Gin Rummy as a new 2-player card game in the engine
 
 ## Phase Details
 
@@ -85,6 +86,25 @@ Plans:
   7. `ws-adapter.js` has tests for message dispatch, rate limiting, and reconnection grace period
 **Plans**: TBD
 
+### Phase Gin Rummy
+
+**Goal**: A fully playable 2-player Gin Rummy card game registered in the engine, with multi-hand scoring to 100 points, auto-computed melds and layoffs, and proper view filtering for phone and TV display
+**Depends on**: Nothing (standalone game, uses existing engine infrastructure)
+**Requirements**: None (standalone game implementation, no mapped requirement IDs)
+**Success Criteria** (what must be TRUE):
+  1. Starting a gin-rummy game with 2 players deals 10 cards each, sets up stock and discard piles correctly
+  2. Players can draw from stock or discard, discard cards, and knock when deadwood is 10 or fewer
+  3. Engine auto-computes optimal melds on knock and auto-applies layoffs for opponent
+  4. Scoring correctly handles knock, undercut (+10 bonus), gin (+20 bonus), and big gin (+31 bonus)
+  5. Multi-hand loop continues until a player reaches 100 cumulative points (configurable)
+  6. Phone view shows own cards but only opponent card count; TV scoreboard during play, full reveal during scoring
+  7. Game is registered in GAME_REGISTRY and playable via room.startGame('gin-rummy')
+**Plans:** 3 plans
+Plans:
+- [ ] gin-rummy-01-PLAN.md — Core utility functions TDD (cardValue, meld detection, optimal meld finder, layoffs, scoring)
+- [ ] gin-rummy-02-PLAN.md — Game definition TDD (setup, actions, view, endIf, state machine, multi-hand loop)
+- [ ] gin-rummy-03-PLAN.md — Registration in GAME_REGISTRY and integration tests via game harness
+
 ## Progress
 
 | Phase | Plans Complete | Status | Completed |
@@ -94,3 +114,4 @@ Plans:
 | 2.1 Quiz Timer Scheduling | 0/? | Not started | - |
 | 3. Category Voting | 0/? | Not started | - |
 | 4. Test Coverage | 0/? | Not started | - |
+| Gin Rummy | 0/3 | Not started | - |
