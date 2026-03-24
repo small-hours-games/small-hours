@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Small Hours - Host</title>
+  <link rel="icon" type="image/png" href="/images/Shg-gemeni-trans.png">
   <link rel="stylesheet" href="/css/style.css">
   <style>
     body {
@@ -21,6 +22,17 @@
     }
 
     .host-logo {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .host-logo img {
+      height: 36px;
+      width: auto;
+    }
+
+    .host-logo-text {
       font-size: 1.4rem;
       font-weight: 900;
       background: linear-gradient(135deg, var(--neon-purple), var(--neon-blue));
@@ -516,7 +528,7 @@
 
   <!-- Header -->
   <header class="host-header">
-    <div class="host-logo">Small Hours</div>
+    <div class="host-logo"><img src="/images/Shg-gemeni-trans.png" alt="Small Hours Games"><span class="host-logo-text">Small Hours</span></div>
     <div id="headerInfo" style="color: var(--text-secondary); font-size: 0.9rem;"></div>
   </header>
 
