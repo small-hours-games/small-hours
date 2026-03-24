@@ -52,7 +52,7 @@ Output: Updated `index.js` and `room.js` with gin-rummy registration, integratio
 </execution_context>
 
 <context>
-@.planning/phases/gin-rummy-research/gin-rummy-CONTEXT.md
+@.planning/phases/gin-rummy/gin-rummy-CONTEXT.md
 @.planning/phases/gin-rummy/gin-rummy-02-SUMMARY.md
 
 <interfaces>

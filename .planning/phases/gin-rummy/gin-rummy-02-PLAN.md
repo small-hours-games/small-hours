@@ -56,8 +56,8 @@ Output: Complete `src/engine/games/gin-rummy.js` with default export, updated `t
 </execution_context>
 
 <context>
-@.planning/phases/gin-rummy-research/RESEARCH.md
-@.planning/phases/gin-rummy-research/gin-rummy-CONTEXT.md
+@.planning/phases/gin-rummy/RESEARCH.md
+@.planning/phases/gin-rummy/gin-rummy-CONTEXT.md
 @.planning/phases/gin-rummy/gin-rummy-01-SUMMARY.md
 
 <interfaces>
