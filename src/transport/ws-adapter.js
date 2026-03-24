@@ -4,6 +4,7 @@
 import { WebSocketServer } from 'ws';
 import { processAction, getView, checkEnd } from '../engine/engine.js';
 import { saveAnswers } from '../fetcher/question-file.js';
+import { fetchCategories } from '../fetcher/cached-fetcher.js';
 import { PHASE_DURATIONS as QUIZ_DURATIONS } from '../engine/games/quiz.js';
 import { PHASE_DURATIONS as SPY_DURATIONS } from '../engine/games/spy.js';
 
@@ -312,6 +313,14 @@ export function setupWebSocket(server, manager) {
       case 'CHAT_MESSAGE':
         handleChatMessage(ws, meta, room, msg);
         break;
+      case 'START_CATEGORY_VOTE':
+        handleStartCategoryVote(ws, meta, room, msg).catch(err => {
+          send(ws, { type: 'ERROR', message: err.message });
+        });
+        break;
+      case 'CATEGORY_VOTE':
+        handleCategoryVote(ws, meta, room, msg);
+        break;
       default:
         send(ws, { type: 'ERROR', message: `Unknown message type: ${msg.type}` });
     }
@@ -404,8 +413,15 @@ export function setupWebSocket(server, manager) {
       return;
     }
 
+    let config = msg.config || {};
+
+    // Quiz: resolve winning category from votes if no explicit override (per D-12, D-16)
+    if (msg.gameType === 'quiz' && room.votingActive && !config.categoryId) {
+      config = { ...config, categoryId: room.resolveWinningCategory() };
+    }
+
     try {
-      const game = await room.startGame(msg.gameType, msg.config || {});
+      const game = await room.startGame(msg.gameType, config);
       broadcastToRoom(room.code, {
         type: 'MINI_GAME_STARTING',
         gameType: msg.gameType,
@@ -575,6 +591,51 @@ export function setupWebSocket(server, manager) {
   function hasActiveSockets(code) {
     const sockets = roomSockets.get(code);
     return sockets ? sockets.size > 0 : false;
+  }
+
+  async function handleStartCategoryVote(ws, meta, room) {
+    if (!meta.playerId) {
+      send(ws, { type: 'ERROR', message: 'Not joined yet' });
+      return;
+    }
+    const player = room.players.get(meta.playerId);
+    if (!player || !player.isAdmin) {
+      send(ws, { type: 'ERROR', message: 'Only admin can start voting' });
+      return;
+    }
+    const result = await fetchCategories();
+    if (!result.ok) {
+      send(ws, { type: 'ERROR', message: result.error.message });
+      return;
+    }
+    room.availableCategories = result.categories;
+    room.votingActive = true;
+    room.categoryVotes.clear();
+    broadcastToRoom(room.code, { type: 'LOBBY_UPDATE', state: room.getState() });
+  }
+
+  function handleCategoryVote(ws, meta, room, msg) {
+    if (!meta.playerId) {
+      send(ws, { type: 'ERROR', message: 'Not joined yet' });
+      return;
+    }
+    if (!room.votingActive) {
+      send(ws, { type: 'ERROR', message: 'Voting not active' });
+      return;
+    }
+    const categoryId = Number(msg.categoryId);
+    if (!Number.isFinite(categoryId)) {
+      send(ws, { type: 'ERROR', message: 'Invalid categoryId' });
+      return;
+    }
+    const valid = room.availableCategories.some(c => c.id === categoryId);
+    if (!valid) {
+      send(ws, { type: 'ERROR', message: 'Invalid categoryId' });
+      return;
+    }
+    room.categoryVotes.set(meta.playerId, categoryId);
+    room.lastActivity = Date.now();
+    broadcastToRoom(room.code, { type: 'LOBBY_UPDATE', state: room.getState() });
   }
 
   return { wss, broadcastToRoom, sendToPlayer, hasActiveSockets };
