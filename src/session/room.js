@@ -79,6 +79,9 @@ export class Room {
     this.language = 'en';
     this.gameSuggestions = new Map();
     this.usedQuestionIds = new Set();
+    this.categoryVotes = new Map();      // Map<playerId, categoryId>
+    this.availableCategories = [];       // [{id, name}]
+    this.votingActive = false;
   }
 
   /**
@@ -118,6 +121,7 @@ export class Room {
     const wasAdmin = player.isAdmin;
     this.players.delete(playerId);
     this.gameSuggestions.delete(playerId);
+    this.categoryVotes.delete(playerId);
 
     if (wasAdmin && this.players.size > 0) {
       // Promote the first connected player, or first player if none connected
@@ -158,6 +162,38 @@ export class Room {
   }
 
   /**
+   * Resolve the winning category from player votes using plurality with tie-breaking.
+   * Tie-break 1: admin's vote wins if admin voted for a tied category.
+   * Tie-break 2: lowest category ID wins.
+   * If no votes cast, returns first available category ID (or null).
+   */
+  resolveWinningCategory() {
+    if (this.categoryVotes.size === 0) {
+      return this.availableCategories[0]?.id ?? null;
+    }
+    const tallies = new Map();
+    for (const [, catId] of this.categoryVotes) {
+      tallies.set(catId, (tallies.get(catId) || 0) + 1);
+    }
+    const maxCount = Math.max(...tallies.values());
+    const tied = [...tallies.entries()]
+      .filter(([, count]) => count === maxCount)
+      .map(([catId]) => catId);
+    if (tied.length === 1) return tied[0];
+    // Tie-break: admin's vote
+    let adminId = null;
+    for (const [id, p] of this.players) {
+      if (p.isAdmin) { adminId = id; break; }
+    }
+    if (adminId && this.categoryVotes.has(adminId)) {
+      const adminVote = this.categoryVotes.get(adminId);
+      if (tied.includes(adminVote)) return adminVote;
+    }
+    // Final fallback: lowest ID
+    return tied.sort((a, b) => a - b)[0];
+  }
+
+  /**
    * Get the current lobby state suitable for broadcast.
    */
   getState() {
@@ -179,13 +215,25 @@ export class Room {
       suggestions[id] = gameType;
     }
 
-    return {
+    const state = {
       code: this.code,
       players,
       gameRunning: this.game !== null,
       gameSuggestions: suggestions,
       language: this.language,
     };
+
+    if (this.votingActive) {
+      const tallies = {};
+      for (const categoryId of this.categoryVotes.values()) {
+        tallies[categoryId] = (tallies[categoryId] || 0) + 1;
+      }
+      state.votingActive = true;
+      state.availableCategories = this.availableCategories;
+      state.voteTallies = tallies;
+    }
+
+    return state;
   }
 
   /**
@@ -256,6 +304,9 @@ export class Room {
     this.lastActivity = Date.now();
     this.game = createGame(definition, { players: playerIds, config: gameConfig });
     this.gameSuggestions.clear();
+    this.categoryVotes.clear();
+    this.availableCategories = [];
+    this.votingActive = false;
     return this.game;
   }
 
@@ -269,6 +320,9 @@ export class Room {
     for (const [, player] of this.players) {
       player.ready = false;
     }
+    this.categoryVotes.clear();
+    this.availableCategories = [];
+    this.votingActive = false;
   }
 
   /**
