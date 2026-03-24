@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v2.1
 milestone_name: milestone
 status: Ready to execute
-stopped_at: Completed gin-rummy-01-PLAN.md
-last_updated: "2026-03-24T11:31:16.144Z"
+stopped_at: Completed gin-rummy-02-PLAN.md
+last_updated: "2026-03-24T11:39:41.069Z"
 last_activity: 2026-03-24
 progress:
   total_phases: 5
@@ -27,7 +27,7 @@ progress:
 ## Current Position
 
 Phase: gin-rummy (Gin Rummy) — EXECUTING
-Plan: 2 of 3
+Plan: 3 of 3
 
 ## Performance Metrics
 
@@ -75,6 +75,9 @@ Plan: 2 of 3
 - [Phase 02-question-cache]: Supplement fetch goes through cached-fetcher (not raw API) to maintain cache-through consistency
 - [Phase gin-rummy]: Recursive exhaustive search for optimal melds (not greedy) to handle cases where greedy would fail
 - [Phase gin-rummy]: Ace is always low in gin rummy (rank 1): A-2-3 is valid run, K-A-2 is not
+- [Phase gin-rummy]: first_turn_draw sub-phase for both-decline case: non-dealer forced to draw from stock before normal play begins
+- [Phase gin-rummy]: config stored in state (state.config) so actions can access targetScore/bigGinBonus without closures
+- [Phase gin-rummy]: Stock exhaustion checked in both draw and discard actions (both code paths)
 
 ### Pending Todos
 
@@ -86,8 +89,8 @@ Plan: 2 of 3
 
 ### To Resume
 
-Last session: 2026-03-24T11:31:16.137Z
-Stopped at: Completed gin-rummy-01-PLAN.md
+Last session: 2026-03-24T11:39:41.065Z
+Stopped at: Completed gin-rummy-02-PLAN.md
 Resume file: None
 
 ### Files
@@ -108,3 +111,4 @@ Last activity: 2026-03-24
 | Phase 02-question-cache P01 | 2 | 1 tasks | 2 files |
 | Phase 02-question-cache P02 | 10 | 2 tasks | 2 files |
 | Phase gin-rummy P01 | 15 | 1 tasks | 2 files |
+| Phase gin-rummy P02 | 6 | 1 tasks | 4 files |
