@@ -103,7 +103,7 @@ Plans:
 Plans:
 - [x] gin-rummy-01-PLAN.md — Core utility functions TDD (cardValue, meld detection, optimal meld finder, layoffs, scoring)
 - [x] gin-rummy-02-PLAN.md — Game definition TDD (setup, actions, view, endIf, state machine, multi-hand loop)
-- [ ] gin-rummy-03-PLAN.md — Registration in GAME_REGISTRY and integration tests via game harness
+- [x] gin-rummy-03-PLAN.md — Registration in GAME_REGISTRY and integration tests via game harness
 
 ## Progress
 

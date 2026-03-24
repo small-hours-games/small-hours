@@ -2,9 +2,9 @@
 gsd_state_version: 1.0
 milestone: v2.1
 milestone_name: milestone
-status: Ready to execute
-stopped_at: Completed gin-rummy-02-PLAN.md
-last_updated: "2026-03-24T11:39:41.069Z"
+status: Phase complete — ready for verification
+stopped_at: Completed gin-rummy-03-PLAN.md
+last_updated: "2026-03-24T11:47:38.749Z"
 last_activity: 2026-03-24
 progress:
   total_phases: 5
@@ -78,6 +78,7 @@ Plan: 3 of 3
 - [Phase gin-rummy]: first_turn_draw sub-phase for both-decline case: non-dealer forced to draw from stock before normal play begins
 - [Phase gin-rummy]: config stored in state (state.config) so actions can access targetScore/bigGinBonus without closures
 - [Phase gin-rummy]: Stock exhaustion checked in both draw and discard actions (both code paths)
+- [Phase gin-rummy]: State injection for testing: inject specific hands directly into game.state to test knock/scoring deterministically without mocking shuffle
 
 ### Pending Todos
 
@@ -89,8 +90,8 @@ Plan: 3 of 3
 
 ### To Resume
 
-Last session: 2026-03-24T11:39:41.065Z
-Stopped at: Completed gin-rummy-02-PLAN.md
+Last session: 2026-03-24T11:47:38.745Z
+Stopped at: Completed gin-rummy-03-PLAN.md
 Resume file: None
 
 ### Files
@@ -112,3 +113,4 @@ Last activity: 2026-03-24
 | Phase 02-question-cache P02 | 10 | 2 tasks | 2 files |
 | Phase gin-rummy P01 | 15 | 1 tasks | 2 files |
 | Phase gin-rummy P02 | 6 | 1 tasks | 4 files |
+| Phase gin-rummy P03 | 3 | 1 tasks | 1 files |
