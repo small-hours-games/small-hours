@@ -3,11 +3,11 @@ gsd_state_version: 1.0
 milestone: v2.1
 milestone_name: milestone
 status: Ready to plan
-stopped_at: Phase 4 context gathered
-last_updated: "2026-03-24T13:10:30.799Z"
+stopped_at: Phase 5 UI-SPEC approved
+last_updated: "2026-03-27T06:49:25.398Z"
 last_activity: 2026-03-24
 progress:
-  total_phases: 5
+  total_phases: 6
   completed_phases: 3
   total_plans: 6
   completed_plans: 6
@@ -59,6 +59,10 @@ Plan: Not started
 - Timer-based phase transitions via `timerExpired` synthetic actions
 - OpenTrivia DB: free, ~4,000+ questions, 24 categories, rate limit ~1 req/5s per IP
 
+### Roadmap Evolution
+
+- Phase 5 added: Card Game GUI - Port rendering, card visuals, physics, and sounds from JLogical-Apps/cards to all card games
+
 ### Decisions
 
 - Phase 1 builds the fetcher as a standalone module callable independently of the quiz engine
@@ -90,9 +94,9 @@ Plan: Not started
 
 ### To Resume
 
-Last session: 2026-03-24T13:10:30.790Z
-Stopped at: Phase 4 context gathered
-Resume file: .planning/phases/04-test-coverage/04-CONTEXT.md
+Last session: 2026-03-27T06:49:25.387Z
+Stopped at: Phase 5 UI-SPEC approved
+Resume file: .planning/phases/05-card-game-gui-port-rendering-card-visuals-physics-and-sounds-from-jlogical-apps-cards-to-all-card-games/05-UI-SPEC.md
 
 ### Files
 
