@@ -124,9 +124,9 @@ Plans:
 **Goal:** Replace text/Unicode card rendering in Shithead and Gin Rummy with SVG card face images from JLogical-Apps/cards, add Web Audio sound effects on host display, and add CSS card animations (flip, fan, deal)
 **Requirements**: None (quality/visual improvement, not feature work)
 **Depends on:** Phase 4
-**Plans:** 3 plans
+**Plans:** 1/3 plans executed
 
 Plans:
-- [ ] 05-01-PLAN.md — Download SVG/WAV assets, create shared cards.js module, add card CSS, unit tests
+- [x] 05-01-PLAN.md — Download SVG/WAV assets, create shared cards.js module, add card CSS, unit tests
 - [ ] 05-02-PLAN.md — Wire SVG cards into player.html and host.html, add sound effects
 - [ ] 05-03-PLAN.md — Visual verification checkpoint (human-verify)
