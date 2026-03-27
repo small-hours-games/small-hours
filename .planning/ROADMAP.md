@@ -128,5 +128,5 @@ Plans:
 
 Plans:
 - [x] 05-01-PLAN.md — Download SVG/WAV assets, create shared cards.js module, add card CSS, unit tests
-- [ ] 05-02-PLAN.md — Wire SVG cards into player.html and host.html, add sound effects
+- [x] 05-02-PLAN.md — Wire SVG cards into player.html and host.html, add sound effects
 - [ ] 05-03-PLAN.md — Visual verification checkpoint (human-verify)
