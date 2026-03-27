@@ -611,3 +611,110 @@ input::placeholder {
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(179, 71, 217, 0.5);
 }
+
+/* === Card Game SVG Styles === */
+.playing-card {
+  border-radius: 8px;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  user-select: none;
+  -webkit-user-drag: none;
+  display: inline-block;
+  vertical-align: top;
+}
+
+.playing-card.selected {
+  transform: translateY(-12px);
+  box-shadow: 0 0 12px rgba(57, 255, 20, 0.4);
+  outline: 2px solid var(--neon-green);
+  border-radius: 8px;
+}
+
+.playing-card.playable {
+  box-shadow: 0 0 8px rgba(57, 255, 20, 0.15);
+}
+
+.playing-card.unplayable {
+  opacity: 0.35;
+  filter: grayscale(0.6);
+  cursor: not-allowed;
+}
+
+.playing-card.unplayable:hover {
+  transform: none;
+}
+
+.playing-card.facedown {
+  /* facedown cards use back.svg — no special visual needed */
+}
+
+.playing-card.pile-card {
+  /* Pile cards are larger — dimensions set via HTML attributes */
+}
+
+/* Card Flip Animation (for gin rummy scoring reveal) */
+.card-flip-container {
+  perspective: 600px;
+  display: inline-block;
+}
+
+.card-flip-inner {
+  position: relative;
+  transition: transform 0.4s ease;
+  transform-style: preserve-3d;
+}
+
+.card-flip-container.flipped .card-flip-inner {
+  transform: rotateY(180deg);
+}
+
+.card-face, .card-back {
+  position: absolute;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+.card-back {
+  transform: rotateY(180deg);
+}
+
+/* Card Fan Layout (phone hand display) */
+.card-hand {
+  display: flex;
+  position: relative;
+  padding-bottom: 12px;
+  justify-content: center;
+}
+
+.card-hand .playing-card {
+  margin-left: -20px;
+  transition: transform 0.15s ease, margin 0.15s ease;
+  cursor: pointer;
+}
+
+.card-hand .playing-card:first-child {
+  margin-left: 0;
+}
+
+.card-hand .playing-card.selected {
+  transform: translateY(-12px);
+}
+
+.card-hand .playing-card:hover {
+  transform: translateY(-6px);
+  z-index: 10;
+}
+
+.card-hand .playing-card.selected:hover {
+  transform: translateY(-12px);
+}
+
+/* Deal Animation (host display) */
+@keyframes cardDeal {
+  from { transform: translateY(-20px) scale(0.9); opacity: 0; }
+  to   { transform: translateY(0) scale(1); opacity: 1; }
+}
+
+.card-deal-in {
+  animation: cardDeal 0.2s ease forwards;
+}
