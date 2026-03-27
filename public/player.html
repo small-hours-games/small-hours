@@ -903,6 +903,7 @@
   <!-- Toast container -->
   <div class="toast-container" id="toasts"></div>
 
+  <script src="/js/cards.js"></script>
   <script>
     // --- Avatars ---
     const AVATARS = ['\u{1F438}', '\u{1F431}', '\u{1F984}', '\u{1F41D}', '\u{1F419}', '\u{1F99A}', '\u{1F427}', '\u{1F981}',
@@ -1519,13 +1520,11 @@
       const faceUpDiv = document.getElementById('shSwapFaceUp');
 
       handDiv.innerHTML = (msg.myHand || []).slice().sort((a, b) => a.rank - b.rank).map(c =>
-        '<div class="playing-card ' + cardColor(c) + '" onclick="shSwapSelect(\'hand\',\'' + c.id + '\')" ' +
-        'id="shSwapH_' + c.id + '">' + cardDisplay(c) + '</div>'
+        renderCardImg(c, {onclick: "shSwapSelect('hand','" + c.id + "')", id: 'shSwapH_' + c.id})
       ).join('');
 
       faceUpDiv.innerHTML = (msg.myFaceUp || []).slice().sort((a, b) => a.rank - b.rank).map(c =>
-        '<div class="playing-card ' + cardColor(c) + '" onclick="shSwapSelect(\'faceUp\',\'' + c.id + '\')" ' +
-        'id="shSwapF_' + c.id + '">' + cardDisplay(c) + '</div>'
+        renderCardImg(c, {onclick: "shSwapSelect('faceUp','" + c.id + "')", id: 'shSwapF_' + c.id})
       ).join('');
 
       // Highlight selected
@@ -1576,7 +1575,7 @@
       // Pile
       document.getElementById('shPileCount').textContent = msg.pileCount || 0;
       if (msg.pileTop) {
-        document.getElementById('shPileTop').innerHTML = '<div class="playing-card pile-card ' + cardColor(msg.pileTop) + '" style="margin:0 auto;">' + cardDisplay(msg.pileTop) + '</div>';
+        document.getElementById('shPileTop').innerHTML = renderCardImg(msg.pileTop, {width: 80, height: 112, pileCard: true, style: 'margin:0 auto'});
       } else {
         document.getElementById('shPileTop').innerHTML = '<div style="font-size:1.5rem;color:var(--text-secondary);padding:20px 0;">Empty</div>';
       }
@@ -1610,12 +1609,12 @@
       const pileCount = msg.pileCount || 0;
       handDiv.innerHTML = hand.length > 0 ? hand.map(c => {
         const playable = msg.isMyTurn && canPlayCard(c.rank, topRank, pileCount);
-        const cls = cardColor(c) +
-          (state.shSelectedCards.includes(c.id) ? ' selected' : '') +
-          (msg.isMyTurn ? (playable ? ' playable' : ' unplayable') : '');
-        return '<div class="playing-card ' + cls + '" ' +
-          (playable || !msg.isMyTurn ? 'onclick="shToggleCard(\'' + c.id + '\')"' : '') +
-          '>' + cardDisplay(c) + '</div>';
+        return renderCardImg(c, {
+          selected: state.shSelectedCards.includes(c.id),
+          playable: msg.isMyTurn ? playable : undefined,
+          onclick: (playable || !msg.isMyTurn) ? "shToggleCard('" + c.id + "')" : null,
+          id: 'shCard_' + c.id
+        });
       }).join('') : '<span style="color:var(--text-secondary);font-size:0.85rem;">Empty</span>';
 
       // Face up (sorted by rank)
@@ -1626,17 +1625,16 @@
         faceUpSection.style.display = 'block';
         faceUpDiv.innerHTML = faceUp.map(c => {
           const playable = msg.isMyTurn && canPlayCard(c.rank, topRank, pileCount);
-          const cls = cardColor(c) +
-            (state.shSelectedCards.includes(c.id) ? ' selected' : '') +
-            (msg.isMyTurn ? (playable ? ' playable' : ' unplayable') : '');
-          return '<div class="playing-card ' + cls + '" ' +
-            (playable || !msg.isMyTurn ? 'onclick="shToggleCard(\'' + c.id + '\')"' : '') +
-            '>' + cardDisplay(c) + '</div>';
+          return renderCardImg(c, {
+            selected: state.shSelectedCards.includes(c.id),
+            playable: msg.isMyTurn ? playable : undefined,
+            onclick: (playable || !msg.isMyTurn) ? "shToggleCard('" + c.id + "')" : null
+          });
         }).join('');
       } else {
         faceUpSection.style.display = faceUp.length > 0 ? 'block' : 'none';
         faceUpDiv.innerHTML = faceUp.map(c =>
-          '<div class="playing-card ' + cardColor(c) + '" style="opacity:0.5;">' + cardDisplay(c) + '</div>'
+          renderCardImg(c, {playable: false, style: 'opacity:0.5'})
         ).join('');
       }
 
@@ -1647,12 +1645,12 @@
       if (hand.length === 0 && faceUp.length === 0 && fdCount > 0) {
         faceDownSection.style.display = 'block';
         document.getElementById('shFaceDown').innerHTML = fdIds.map(id =>
-          '<div class="playing-card facedown" onclick="shPlayFaceDown(\'' + id + '\')">?</div>'
+          renderCardImg({rank:0, suit:'x'}, {facedown: true, onclick: "shPlayFaceDown('" + id + "')"})
         ).join('');
       } else {
         faceDownSection.style.display = fdCount > 0 ? 'block' : 'none';
         document.getElementById('shFaceDown').innerHTML = Array.from({length: fdCount}, () =>
-          '<div class="playing-card facedown" style="opacity:0.5;">?</div>'
+          renderCardImg({rank:0, suit:'x'}, {facedown: true, style: 'opacity:0.5'})
         ).join('');
       }
 
@@ -1711,21 +1709,6 @@
         }).join('');
     }
 
-    // Card display helpers
-    function cardDisplay(c) {
-      if (!c) return '?';
-      const ranks = {1:'A',2:'2',3:'3',4:'4',5:'5',6:'6',7:'7',8:'8',9:'9',10:'10',11:'J',12:'Q',13:'K',14:'A'};
-      const suits = {h:'\u2665',d:'\u2666',c:'\u2663',s:'\u2660'};
-      const r = ranks[c.rank] || c.rank;
-      const s = suits[c.suit] || c.suit;
-      return '<span class="card-rank">' + r + '</span><span class="card-suit">' + s + '</span>';
-    }
-
-    function cardColor(c) {
-      if (!c) return '';
-      return (c.suit === 'h' || c.suit === 'd') ? 'red' : 'black';
-    }
-
     // Check if a card rank can be played on the current pile
     function canPlayCard(rank, pileTopRank, pileCount) {
       // Coerce to numbers defensively — JSON may produce strings in edge cases
@@ -1774,7 +1757,7 @@
       document.getElementById('grStockCount').textContent = msg.stockCount || 0;
       document.getElementById('grOpponentCount').textContent = msg.opponentCardCount || 0;
       if (msg.discardTop) {
-        document.getElementById('grDiscardTop').innerHTML = '<div class="playing-card pile-card ' + cardColor(msg.discardTop) + '" style="margin:0 auto;font-size:0.9rem;">' + cardDisplay(msg.discardTop) + '</div>';
+        document.getElementById('grDiscardTop').innerHTML = renderCardImg(msg.discardTop, {width: 80, height: 112, pileCard: true, style: 'margin:0 auto'});
       } else {
         document.getElementById('grDiscardTop').innerHTML = '<span style="color:var(--text-secondary);">Empty</span>';
       }
@@ -1816,10 +1799,12 @@
       handSection.style.display = (msg.phase === 'scoring' || msg.phase === 'finished') ? 'none' : 'block';
       const hand = (msg.myHand || []).slice().sort((a, b) => a.rank - b.rank);
       const handDiv = document.getElementById('grHand');
-      handDiv.innerHTML = hand.map(c => {
-        const cls = cardColor(c) + (state.grSelectedCard === c.id ? ' selected' : '');
-        return '<div class="playing-card ' + cls + '" onclick="grSelectCard(\'' + c.id + '\')">' + cardDisplay(c) + '</div>';
-      }).join('');
+      handDiv.innerHTML = hand.map(c =>
+        renderCardImg(c, {
+          selected: state.grSelectedCard === c.id,
+          onclick: "grSelectCard('" + c.id + "')"
+        })
+      ).join('');
 
       // Actions
       actionsDiv.innerHTML = '';
@@ -1923,12 +1908,12 @@
         meldsHtml += '<div style="margin-bottom:8px;"><div style="font-size:0.8rem;color:var(--text-secondary);margin-bottom:4px;">' + escapeHtml(knockerName) + '\'s Melds</div>';
         meldsHtml += '<div class="card-row" style="flex-wrap:wrap;gap:4px;">' + (msg.knockerMelds || []).map(m =>
           '<div style="display:flex;gap:2px;margin-right:8px;padding:4px;border:1px solid var(--glass-border);border-radius:6px;">' +
-          m.cards.map(c => '<div class="playing-card ' + cardColor(c) + '" style="font-size:0.7rem;padding:4px 6px;">' + cardDisplay(c) + '</div>').join('') +
+          m.cards.map(c => renderCardImg(c, {width: 40, height: 56})).join('') +
           '</div>'
         ).join('') + '</div>';
         if (msg.knockerDeadwood && msg.knockerDeadwood.length > 0) {
           meldsHtml += '<div style="font-size:0.7rem;color:var(--text-secondary);margin-top:4px;">Deadwood: ' +
-            msg.knockerDeadwood.map(c => '<span class="playing-card ' + cardColor(c) + '" style="font-size:0.65rem;padding:2px 4px;display:inline-block;">' + cardDisplay(c) + '</span>').join(' ') + '</div>';
+            msg.knockerDeadwood.map(c => renderCardImg(c, {width: 36, height: 50, style: 'display:inline-block'})).join(' ') + '</div>';
         }
         meldsHtml += '</div>';
       }
@@ -1937,12 +1922,12 @@
         meldsHtml += '<div><div style="font-size:0.8rem;color:var(--text-secondary);margin-bottom:4px;">' + escapeHtml(opponentName) + '\'s Melds</div>';
         meldsHtml += '<div class="card-row" style="flex-wrap:wrap;gap:4px;">' + (msg.opponentMelds || []).map(m =>
           '<div style="display:flex;gap:2px;margin-right:8px;padding:4px;border:1px solid var(--glass-border);border-radius:6px;">' +
-          m.cards.map(c => '<div class="playing-card ' + cardColor(c) + '" style="font-size:0.7rem;padding:4px 6px;">' + cardDisplay(c) + '</div>').join('') +
+          m.cards.map(c => renderCardImg(c, {width: 40, height: 56})).join('') +
           '</div>'
         ).join('') + '</div>';
         if (msg.opponentDeadwood && msg.opponentDeadwood.length > 0) {
           meldsHtml += '<div style="font-size:0.7rem;color:var(--text-secondary);margin-top:4px;">Deadwood: ' +
-            msg.opponentDeadwood.map(c => '<span class="playing-card ' + cardColor(c) + '" style="font-size:0.65rem;padding:2px 4px;display:inline-block;">' + cardDisplay(c) + '</span>').join(' ') + '</div>';
+            msg.opponentDeadwood.map(c => renderCardImg(c, {width: 36, height: 50, style: 'display:inline-block'})).join(' ') + '</div>';
         }
         meldsHtml += '</div>';
       }
