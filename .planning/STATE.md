@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v2.1
 milestone_name: milestone
 status: Ready to execute
-stopped_at: Completed 05-01-PLAN.md
-last_updated: "2026-03-27T07:14:15.520Z"
+stopped_at: Completed 05-02-PLAN.md
+last_updated: "2026-03-27T07:21:47.970Z"
 last_activity: 2026-03-27
 progress:
   total_phases: 6
   completed_phases: 3
   total_plans: 9
-  completed_plans: 7
+  completed_plans: 8
 ---
 
 # State: Small Hours Game Engine
@@ -27,7 +27,7 @@ progress:
 ## Current Position
 
 Phase: 05 (card-game-gui) — EXECUTING
-Plan: 2 of 3
+Plan: 3 of 3
 
 ## Performance Metrics
 
@@ -85,6 +85,8 @@ Plan: 2 of 3
 - [Phase gin-rummy]: State injection for testing: inject specific hands directly into game.state to test knock/scoring deterministically without mocking shuffle
 - [Phase 05-card-game-gui]: cards.js as plain browser script globals (no module system) — avoids build step, loads via script tag, testable via inline re-declaration
 - [Phase 05-card-game-gui]: Rank 14 aliased to rank 1 SVG in cardSvgSrc() — Shithead uses rank 14 for Ace-high but JLogical SVGs only have SUIT-1.svg
+- [Phase 05-card-game-gui]: playable:undefined passed when not player's turn so renderCardImg omits playable/unplayable CSS class
+- [Phase 05-card-game-gui]: Sound state tracking (lastShState/lastGrState) prevents duplicate audio triggers on every host re-render
 
 ### Pending Todos
 
@@ -96,8 +98,8 @@ Plan: 2 of 3
 
 ### To Resume
 
-Last session: 2026-03-27T07:14:15.516Z
-Stopped at: Completed 05-01-PLAN.md
+Last session: 2026-03-27T07:21:47.965Z
+Stopped at: Completed 05-02-PLAN.md
 Resume file: None
 
 ### Files
@@ -121,3 +123,4 @@ Last activity: 2026-03-27
 | Phase gin-rummy P02 | 6 | 1 tasks | 4 files |
 | Phase gin-rummy P03 | 3 | 1 tasks | 1 files |
 | Phase 05-card-game-gui P01 | 3 | 2 tasks | 63 files |
+| Phase 05-card-game-gui P02 | 7 | 2 tasks | 63 files |
