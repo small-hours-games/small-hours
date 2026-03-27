@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v2.1
 milestone_name: milestone
 status: Milestone complete
-stopped_at: Phase 6 context gathered
-last_updated: "2026-03-27T08:39:52.307Z"
+stopped_at: Phase 6 UI-SPEC approved
+last_updated: "2026-03-27T09:01:59.832Z"
 last_activity: 2026-03-27
 progress:
   total_phases: 7
@@ -99,9 +99,9 @@ Plan: Not started
 
 ### To Resume
 
-Last session: 2026-03-27T08:39:52.299Z
-Stopped at: Phase 6 context gathered
-Resume file: .planning/phases/06-fanned-pile-display-for-card-games-show-stacked-pile-cards-as-a-fanned-spread-so-players-can-see-what-cards-are-in-the-pile-to-inform-gameplay-decisions/06-CONTEXT.md
+Last session: 2026-03-27T09:01:59.820Z
+Stopped at: Phase 6 UI-SPEC approved
+Resume file: .planning/phases/06-fanned-pile-display-for-card-games-show-stacked-pile-cards-as-a-fanned-spread-so-players-can-see-what-cards-are-in-the-pile-to-inform-gameplay-decisions/06-UI-SPEC.md
 
 ### Files
 
