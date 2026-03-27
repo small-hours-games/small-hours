@@ -579,6 +579,7 @@
   <!-- Toast container -->
   <div class="toast-container" id="toasts"></div>
 
+  <script src="/js/cards.js"></script>
   <script>
     // --- State ---
     const AVATARS = ['&#128056;', '&#128049;', '&#129412;', '&#128029;', '&#128025;', '&#129418;', '&#128039;', '&#129409;',
@@ -594,6 +595,14 @@
       maxReconnect: 10,
       reconnectTimer: null,
     };
+
+    // Sound state tracking — prevent duplicate triggers on re-renders
+    var lastShState = {};
+    var lastGrState = {};
+
+    // Init audio on first user interaction (required by browser autoplay policy)
+    document.addEventListener('click', function() { audio.init(); }, { once: true });
+    document.addEventListener('keydown', function() { audio.init(); }, { once: true });
 
     // --- Init ---
     (function init() {
@@ -1032,16 +1041,25 @@
       const boxes = msg.boxes || {};
       const pids = Object.keys(cum);
 
-      function hostCard(c) {
-        if (!c) return '';
-        const r = {1:'A',2:'2',3:'3',4:'4',5:'5',6:'6',7:'7',8:'8',9:'9',10:'10',11:'J',12:'Q',13:'K'}[c.rank] || c.rank;
-        const s = {h:'\u2665',d:'\u2666',c:'\u2663',s:'\u2660'}[c.suit] || c.suit;
-        const color = (c.suit === 'h' || c.suit === 'd') ? '#ff4757' : '#e0e0ff';
-        const bg = (c.suit === 'h' || c.suit === 'd') ? 'rgba(255,71,87,0.12)' : 'rgba(224,224,255,0.08)';
-        return '<div style="display:inline-flex;flex-direction:column;align-items:center;justify-content:center;width:48px;height:64px;border-radius:8px;border:1px solid ' + color + ';background:' + bg + ';margin:2px;">' +
-          '<span style="font-size:1rem;font-weight:700;color:' + color + ';">' + r + '</span>' +
-          '<span style="font-size:0.8rem;color:' + color + ';">' + s + '</span></div>';
+      // Sound transitions for Gin Rummy
+      if (lastGrState.round != null && msg.round > lastGrState.round) {
+        audio.play('deck_redraw');
       }
+      if (msg.phase === 'scoring' && lastGrState.phase !== 'scoring') {
+        audio.play('win');
+      }
+      if (msg.phase === 'finished' && lastGrState.phase !== 'finished') {
+        audio.play('win');
+      }
+      if (msg.phase === 'drawing' && lastGrState.phase === 'drawing') {
+        if (msg.stockCount != null && lastGrState.stockCount != null && msg.stockCount < lastGrState.stockCount) {
+          audio.play('draw');
+        }
+        if (msg.discardCount != null && lastGrState.discardCount != null && msg.discardCount > lastGrState.discardCount) {
+          audio.play('place');
+        }
+      }
+      lastGrState = { round: msg.round, phase: msg.phase, stockCount: msg.stockCount, discardCount: msg.discardCount };
 
       let html = '<div style="text-align:center;">';
 
@@ -1065,7 +1083,7 @@
       html += '<div style="display:flex;justify-content:center;gap:40px;margin:16px 0;align-items:center;">';
       html += '<div><div style="font-size:0.85rem;color:var(--text-secondary);">Stock</div><div style="font-size:1.8rem;font-weight:700;">' + (msg.stockCount || 0) + '</div></div>';
       if (msg.discardTop) {
-        html += '<div><div style="font-size:0.85rem;color:var(--text-secondary);">Discard</div>' + hostCard(msg.discardTop) + '</div>';
+        html += '<div><div style="font-size:0.85rem;color:var(--text-secondary);">Discard</div>' + renderCardImg(msg.discardTop, {width: 68, height: 96, pileCard: true}) + '</div>';
       } else {
         html += '<div><div style="font-size:0.85rem;color:var(--text-secondary);">Discard</div><div style="color:var(--text-secondary);">Empty</div></div>';
       }
@@ -1094,20 +1112,20 @@
           // Knocker melds
           html += '<div class="card" style="padding:12px;min-width:200px;"><div style="font-size:0.85rem;color:var(--text-secondary);margin-bottom:8px;">' + escapeHtml(knockerName) + '</div>';
           (msg.knockerMelds || []).forEach(m => {
-            html += '<div style="display:flex;gap:2px;margin-bottom:4px;">' + m.cards.map(c => hostCard(c)).join('') + '</div>';
+            html += '<div style="display:flex;gap:2px;margin-bottom:4px;">' + m.cards.map(c => renderCardImg(c, {width: 40, height: 56})).join('') + '</div>';
           });
           if (msg.knockerDeadwood && msg.knockerDeadwood.length > 0) {
-            html += '<div style="font-size:0.75rem;color:var(--text-secondary);margin-top:6px;">Deadwood: ' + msg.knockerDeadwood.map(c => hostCard(c)).join('') + '</div>';
+            html += '<div style="font-size:0.75rem;color:var(--text-secondary);margin-top:6px;">Deadwood: ' + msg.knockerDeadwood.map(c => renderCardImg(c, {width: 36, height: 50})).join('') + '</div>';
           }
           html += '</div>';
 
           // Opponent melds
           html += '<div class="card" style="padding:12px;min-width:200px;"><div style="font-size:0.85rem;color:var(--text-secondary);margin-bottom:8px;">' + escapeHtml(oppName) + '</div>';
           (msg.opponentMelds || []).forEach(m => {
-            html += '<div style="display:flex;gap:2px;margin-bottom:4px;">' + m.cards.map(c => hostCard(c)).join('') + '</div>';
+            html += '<div style="display:flex;gap:2px;margin-bottom:4px;">' + m.cards.map(c => renderCardImg(c, {width: 40, height: 56})).join('') + '</div>';
           });
           if (msg.opponentDeadwood && msg.opponentDeadwood.length > 0) {
-            html += '<div style="font-size:0.75rem;color:var(--text-secondary);margin-top:6px;">Deadwood: ' + msg.opponentDeadwood.map(c => hostCard(c)).join('') + '</div>';
+            html += '<div style="font-size:0.75rem;color:var(--text-secondary);margin-top:6px;">Deadwood: ' + msg.opponentDeadwood.map(c => renderCardImg(c, {width: 36, height: 50})).join('') + '</div>';
           }
           html += '</div>';
           html += '</div>';
@@ -1140,6 +1158,21 @@
       const content = document.getElementById('gameContent');
       const names = state.playerNames || msg.playerNames || {};
 
+      // Sound transitions for Shithead
+      if (msg.phase === 'play' || msg.phase === 'finished') {
+        if (lastShState.pileCount != null && msg.pileCount === 0 && lastShState.pileCount > 0) {
+          audio.play('deck_redraw');
+        } else if (lastShState.drawPileCount != null && msg.drawPileCount < lastShState.drawPileCount) {
+          audio.play('draw');
+        } else if (lastShState.pileCount != null && msg.pileCount > lastShState.pileCount) {
+          audio.play('place');
+        }
+        if (msg.phase === 'finished' && lastShState.phase !== 'finished') {
+          audio.play('win');
+        }
+      }
+      lastShState = { pileCount: msg.pileCount || 0, drawPileCount: msg.drawPileCount, phase: msg.phase };
+
       let html = '<div style="text-align:center;">';
 
       if (msg.phase === 'swap') {
@@ -1159,13 +1192,7 @@
         // --- Central pile ---
         html += '<div style="margin:16px 0;">';
         if (msg.pileTop) {
-          const r = {2:'2',3:'3',4:'4',5:'5',6:'6',7:'7',8:'8',9:'9',10:'10',11:'J',12:'Q',13:'K',14:'A'}[msg.pileTop.rank] || msg.pileTop.rank;
-          const s = {h:'♥',d:'♦',c:'♣',s:'♠'}[msg.pileTop.suit] || msg.pileTop.suit;
-          const color = (msg.pileTop.suit === 'h' || msg.pileTop.suit === 'd') ? '#ff4757' : '#e0e0ff';
-          const bg = (msg.pileTop.suit === 'h' || msg.pileTop.suit === 'd') ? 'rgba(255,71,87,0.15)' : 'rgba(224,224,255,0.1)';
-          html += '<div style="display:inline-block;width:100px;height:140px;border-radius:12px;border:3px solid ' + color + ';background:' + bg + ';display:inline-flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;">' +
-            '<span style="font-size:2.5rem;font-weight:900;color:' + color + ';">' + r + '</span>' +
-            '<span style="font-size:1.8rem;color:' + color + ';">' + s + '</span></div>';
+          html += renderCardImg(msg.pileTop, {width: 100, height: 140, pileCard: true});
           html += '<div style="color:var(--text-secondary);margin-top:8px;font-size:1rem;">Pile: ' + (msg.pileCount || 0) + ' cards</div>';
         } else {
           html += '<div style="display:inline-block;width:100px;height:140px;border-radius:12px;border:3px dashed rgba(255,255,255,0.15);display:inline-flex;align-items:center;justify-content:center;color:var(--text-secondary);font-size:1.2rem;">Empty</div>';
@@ -1220,15 +1247,8 @@
 
                 Object.values(groups).sort((a, b) => a.card.rank - b.card.rank).forEach(g => {
                   const c = g.card;
-                  const r = {2:'2',3:'3',4:'4',5:'5',6:'6',7:'7',8:'8',9:'9',10:'10',11:'J',12:'Q',13:'K',14:'A'}[c.rank] || c.rank;
-                  const s = {h:'♥',d:'♦',c:'♣',s:'♠'}[c.suit] || c.suit;
-                  const color = (c.suit === 'h' || c.suit === 'd') ? '#ff4757' : '#e0e0ff';
-                  const bg = (c.suit === 'h' || c.suit === 'd') ? 'rgba(255,71,87,0.12)' : 'rgba(224,224,255,0.08)';
-                  const prefix = g.count > 1 ? '<span style="font-size:0.65rem;position:absolute;top:-2px;right:-2px;background:var(--neon-purple);color:white;border-radius:50%;width:16px;height:16px;display:flex;align-items:center;justify-content:center;">' + g.count + '</span>' : '';
-                  html += '<div style="position:relative;width:40px;height:56px;border-radius:6px;border:1px solid ' + color + ';background:' + bg + ';display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;">' +
-                    prefix +
-                    '<span style="font-size:0.85rem;font-weight:700;color:' + color + ';">' + r + '</span>' +
-                    '<span style="font-size:0.7rem;color:' + color + ';">' + s + '</span></div>';
+                  const countBadge = g.count > 1 ? '<span style="font-size:0.65rem;position:absolute;top:-2px;right:-2px;background:var(--neon-purple);color:white;border-radius:50%;width:16px;height:16px;display:flex;align-items:center;justify-content:center;">' + g.count + '</span>' : '';
+                  html += '<div style="position:relative;display:inline-block;">' + countBadge + renderCardImg(c, {width: 40, height: 56}) + '</div>';
                 });
                 html += '</div>';
               }
