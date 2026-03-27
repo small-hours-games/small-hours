@@ -71,7 +71,9 @@ Card aspect ratio must always be 58:82 (≈ 2:3, matches SVG viewBox 261:355).
 | Body | 16px (1rem) | 400 | 1.5 |
 | Label / small | 14px (0.875rem) | 400 | 1.4 |
 | Heading | 20px (1.25rem) | 700 | 1.2 |
-| Display (score number) | 32px (2rem) | 900 | 1.0 |
+| Display (score number) | 32px (2rem) | 700 | 1.0 |
+
+Score numbers are large by size alone (32px at 2rem). No third weight is needed — `700` at `32px` is visually distinct from the `20px` heading. Maximum 2 declared weights: `400` and `700`.
 
 No new font sizes are introduced. These match existing values observed in `style.css` and the inline styles in `host.html`/`player.html`.
 
@@ -97,6 +99,14 @@ Card-specific states use the existing color vocabulary:
 - Facedown card back: gradient `var(--neon-purple)` → `var(--neon-blue)` (matches existing `.playing-card.facedown` CSS)
 - Win/score event: `var(--neon-blue)` (`#4dc9f6`) on scoreboard numbers
 - Unplayable: `opacity: 0.35` + `filter: grayscale(0.6)` — no new color, matches existing `.playing-card.unplayable`
+
+---
+
+## Focal Points
+
+**Host display (TV):** The primary visual anchor is the center pile — the face-up top card of the discard/play pile at 68x96px. Player hands are rendered smaller and arranged around it. The pile top draws the eye first; scoreboard is secondary.
+
+**Phone controller:** The primary visual anchor is the player's own hand row at the bottom of the screen. The selected card (lifted 12px with neon-green glow) is the active focal point within the hand. The pile top display above the hand is supporting context, not the primary anchor.
 
 ---
 
