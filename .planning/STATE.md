@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v2.1
 milestone_name: milestone
-status: Ready to plan
-stopped_at: Phase 5 UI-SPEC approved
-last_updated: "2026-03-27T06:49:25.398Z"
-last_activity: 2026-03-24
+status: Ready to execute
+stopped_at: Completed 05-01-PLAN.md
+last_updated: "2026-03-27T07:14:15.520Z"
+last_activity: 2026-03-27
 progress:
   total_phases: 6
   completed_phases: 3
-  total_plans: 6
-  completed_plans: 6
+  total_plans: 9
+  completed_plans: 7
 ---
 
 # State: Small Hours Game Engine
@@ -22,12 +22,12 @@ progress:
 
 **Core value:** Creating a new party game should be trivially simple — define state and rules, the engine handles everything else.
 
-**Current focus:** Phase gin-rummy — Gin Rummy
+**Current focus:** Phase 05 — card-game-gui
 
 ## Current Position
 
-Phase: 4
-Plan: Not started
+Phase: 05 (card-game-gui) — EXECUTING
+Plan: 2 of 3
 
 ## Performance Metrics
 
@@ -83,6 +83,8 @@ Plan: Not started
 - [Phase gin-rummy]: config stored in state (state.config) so actions can access targetScore/bigGinBonus without closures
 - [Phase gin-rummy]: Stock exhaustion checked in both draw and discard actions (both code paths)
 - [Phase gin-rummy]: State injection for testing: inject specific hands directly into game.state to test knock/scoring deterministically without mocking shuffle
+- [Phase 05-card-game-gui]: cards.js as plain browser script globals (no module system) — avoids build step, loads via script tag, testable via inline re-declaration
+- [Phase 05-card-game-gui]: Rank 14 aliased to rank 1 SVG in cardSvgSrc() — Shithead uses rank 14 for Ace-high but JLogical SVGs only have SUIT-1.svg
 
 ### Pending Todos
 
@@ -94,9 +96,9 @@ Plan: Not started
 
 ### To Resume
 
-Last session: 2026-03-27T06:49:25.387Z
-Stopped at: Phase 5 UI-SPEC approved
-Resume file: .planning/phases/05-card-game-gui-port-rendering-card-visuals-physics-and-sounds-from-jlogical-apps-cards-to-all-card-games/05-UI-SPEC.md
+Last session: 2026-03-27T07:14:15.516Z
+Stopped at: Completed 05-01-PLAN.md
+Resume file: None
 
 ### Files
 
@@ -112,9 +114,10 @@ Resume file: .planning/phases/05-card-game-gui-port-rendering-card-visuals-physi
 
 ---
 *State initialized: 2026-03-22*
-Last activity: 2026-03-24
+Last activity: 2026-03-27
 | Phase 02-question-cache P01 | 2 | 1 tasks | 2 files |
 | Phase 02-question-cache P02 | 10 | 2 tasks | 2 files |
 | Phase gin-rummy P01 | 15 | 1 tasks | 2 files |
 | Phase gin-rummy P02 | 6 | 1 tasks | 4 files |
 | Phase gin-rummy P03 | 3 | 1 tasks | 1 files |
+| Phase 05-card-game-gui P01 | 3 | 2 tasks | 63 files |
