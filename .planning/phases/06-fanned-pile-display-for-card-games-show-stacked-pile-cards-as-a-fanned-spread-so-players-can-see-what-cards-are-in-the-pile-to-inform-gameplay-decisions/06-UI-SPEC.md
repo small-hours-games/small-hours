@@ -43,7 +43,7 @@ Declared values (must be multiples of 4):
 | 3xl | 64px | Not used in this phase |
 
 Exceptions:
-- Fan card vertical cascade offset: 20px (TV), 14px (phone). These are non-standard but fixed values — not arbitrary; derived from card height ratio to show rank/suit on each visible card.
+- Fan card vertical cascade offset: 20px (TV), 12px (phone). These are non-standard but fixed values — not arbitrary; derived from card height ratio to show rank/suit on each visible card.
 - Card dimensions are fixed aspect-ratio values, not spacing tokens.
 
 ---
@@ -81,8 +81,8 @@ TV display:
 - `z-index`: `i + 1` (top card = 5, bottom card = 1)
 
 Phone display:
-- Container height: `(5 - 1) * 14px + 78px = 134px`
-- Card at index `i`: `top = (4 - i) * 14px`
+- Container height: `(5 - 1) * 12px + 78px = 126px`
+- Card at index `i`: `top = (4 - i) * 12px`
 - `z-index`: `i + 1`
 
 ### Fewer Than 5 Cards
@@ -120,10 +120,9 @@ All typography is inherited from the existing design system. No new type styles 
 |------|------|--------|-------------|
 | Body | 16px | 400 | 1.5 |
 | Label (pile count, section labels) | 14px | 400 | 1.4 |
-| Heading (game title area) | 20px | 600 | 1.2 |
 | Display (score, winner) | 28px+ | 700 | 1.1 |
 
-Source: `public/css/style.css` — font-size values at `.text-secondary` context (`0.85rem` = ~13.6px, rounded to 14px), body `1rem` = 16px, `.player-score` at `1.1rem`.
+Source: `public/css/style.css` — font-size values at `.text-secondary` context (`0.85rem` = ~13.6px, rounded to 14px), body `1rem` = 16px, `.player-score` at `1.1rem`. Phase introduces no heading-level type; weight 600 is not used in this phase's scope.
 
 ---
 
