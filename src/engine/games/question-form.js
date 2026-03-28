@@ -7,6 +7,21 @@
 // Questions are passed in via config.questions at game start.
 
 const questionForm = {
+  async prepare(config) {
+    // If questions are already provided (e.g. via WebSocket START_MINI_GAME), use them as-is
+    if (config.questions?.length) {
+      return { config };
+    }
+    // Otherwise load from file
+    const { loadQuestionFile } = await import('../../fetcher/question-file.js');
+    const file = config.file || 'todo-poll.json';
+    const loaded = await loadQuestionFile(file);
+    if (!loaded.ok) {
+      throw new Error(`Failed to load questions: ${loaded.error}`);
+    }
+    return { config: { ...config, questions: loaded.questions, _sourceFile: file } };
+  },
+
   setup({ players, config }) {
     const questions = config.questions || [];
 

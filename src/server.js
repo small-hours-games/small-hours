@@ -6,6 +6,7 @@ import http from 'http';
 import manager from './session/manager.js';
 import { setupRoutes } from './transport/http.js';
 import { setupWebSocket } from './transport/ws-adapter.js';
+import { prewarmCache } from './fetcher/cached-fetcher.js';
 
 const PORT = parseInt(process.env.PORT, 10) || 3001;
 
@@ -29,6 +30,8 @@ server.listen(PORT, () => {
   console.log(`  Local:   http://localhost:${PORT}`);
   console.log(`  Health:  http://localhost:${PORT}/health`);
 });
+
+prewarmCache().catch(err => console.warn('[prewarm] startup cache warm failed:', err.message));
 
 // Graceful shutdown
 function shutdown(signal) {

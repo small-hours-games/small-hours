@@ -132,6 +132,38 @@ export async function fetchCategories() {
 }
 
 /**
+ * Pre-warm the question cache at server startup.
+ * Fetches all categories, then questions for each category.
+ * Non-fatal: logs warnings on partial failures and continues.
+ * Already-cached categories/questions are skipped (disk hit = no API call).
+ */
+export async function prewarmCache() {
+  // 1. Fetch categories (hits disk if already cached)
+  const catResult = await fetchCategories();
+  if (!catResult.ok) {
+    console.warn('[prewarm] could not fetch categories:', catResult.error.message);
+    return;
+  }
+  console.log(`[prewarm] warming ${catResult.categories.length} categories...`);
+
+  // 2. For each category, fetch questions (hits disk if already cached)
+  let warmed = 0;
+  for (const cat of catResult.categories) {
+    const result = await fetchQuestions(cat.id, 50);
+    if (result.ok) {
+      warmed++;
+    } else {
+      console.warn(`[prewarm] failed category ${cat.id} (${cat.name}):`, result.error.message);
+    }
+  }
+  // Also warm the "any category" bucket
+  const anyResult = await fetchQuestions(null, 50);
+  if (anyResult.ok) warmed++;
+
+  console.log(`[prewarm] done — ${warmed}/${catResult.categories.length + 1} buckets ready`);
+}
+
+/**
  * Clear cached questions.
  *
  * @param {number|null} [categoryId] - If provided, removes only that category's file.
