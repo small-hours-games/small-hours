@@ -1,7 +1,13 @@
 {
   "permissions": {
     "allow": [
-      "Bash(node:*)"
+      "Bash(node:*)",
+      "Bash(git push:*)",
+      "Bash(sshpass:*)",
+      "Bash(git checkout:*)",
+      "Bash(git stash:*)"
     ]
-  }
+  },
+  "spinnerTipsEnabled": true,
+  "prefersReducedMotion": true
 }
