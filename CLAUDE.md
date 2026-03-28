@@ -40,6 +40,7 @@ src/
 │       ├── quiz.js
 │       ├── question-form.js
 │       ├── shithead.js
+│       ├── gin-rummy.js
 │       ├── spy.js
 │       └── template.js  #   Minimal reference game (use as starting point for new games)
 ├── fetcher/             # External data fetching with caching
@@ -144,6 +145,21 @@ The `question-form` game turns dev questions into an interactive polling experie
 - `finishReview` — end the game
 
 **Files:** `src/engine/games/question-form.js`, tests in `tests/engine/question-form.test.js`
+
+## Frontend Layer
+
+The client UI is **vanilla browser JavaScript** — no framework, no build step. Files live in `public/` and are served as static assets by Express.
+
+- `public/host.html` — display screen (TV/monitor); connects via `/ws/host/:code`
+- `public/player.html` — phone UI; connects via `/ws/player/:code`
+- `public/js/cards.js` — shared card rendering and audio module; loaded as a plain `<script>` tag, exposes browser globals (`renderCardImg`, `audio`, etc.)
+- `public/cards/faces/` — SVG card face images (`SUIT-RANK.svg`, e.g. `HEART-11-JACK.svg`)
+- `public/cards/backs/back.svg` — card back
+- `public/cards/sounds/` — WAV audio clips for card events (draw, place, win, deck_redraw)
+
+Card suit/rank encoding: engine uses lowercase single-char suits (`h`, `d`, `c`, `s`) and numeric ranks (1–14). `cards.js` maps these to SVG filenames. Rank 14 is Ace-high in Shithead and maps to the same SVG as rank 1.
+
+Frontend tests use `tests/frontend/card-renderer.test.js` (JSDOM environment via Vitest).
 
 ## WebSocket Protocol
 
