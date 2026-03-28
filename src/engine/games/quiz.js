@@ -1,4 +1,5 @@
 // Small Hours - Quiz / Trivia Game
+import { fetchQuestions } from '../../fetcher/cached-fetcher.js';
 
 function shuffleArray(arr) {
   const shuffled = [...arr];
@@ -17,6 +18,38 @@ const PHASE_DURATIONS = {
 };
 
 const quiz = {
+  async prepare(config, { usedQuestionIds }) {
+    const amount = config.questionCount || 10;
+    const result = await fetchQuestions(config.categoryId, amount);
+    if (!result.ok) {
+      throw new Error(`Failed to fetch questions: ${result.error.message}`);
+    }
+
+    // Filter out questions already used in this room session
+    let unused = result.questions.filter(q => !usedQuestionIds.has(q.id));
+
+    // Supplement with a fresh fetch if not enough unused questions
+    if (unused.length < amount) {
+      const supplement = await fetchQuestions(config.categoryId, amount);
+      if (supplement.ok) {
+        const existingIds = new Set(unused.map(q => q.id));
+        for (const q of supplement.questions) {
+          if (!usedQuestionIds.has(q.id) && !existingIds.has(q.id)) {
+            unused.push(q);
+            existingIds.add(q.id);
+          }
+          if (unused.length >= amount) break;
+        }
+      }
+    }
+
+    const selected = unused.slice(0, amount);
+    return {
+      config: { ...config, questions: selected },
+      trackIds: selected.map(q => q.id),
+    };
+  },
+
   setup({ players, config }) {
     const questions = config.questions || [];
     const questionCount = config.questionCount || questions.length;

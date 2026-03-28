@@ -8,8 +8,7 @@ import quiz from '../engine/games/quiz.js';
 import questionForm from '../engine/games/question-form.js';
 import template from '../engine/games/template.js';
 import ginRummy from '../engine/games/gin-rummy.js';
-import { fetchQuestions } from '../fetcher/cached-fetcher.js';
-import { loadQuestionFile, saveAnswers } from '../fetcher/question-file.js';
+import { saveAnswers } from '../fetcher/question-file.js';
 
 const AVATAR_POOL = [
   '\u{1F98A}', '\u{1F438}', '\u{1F43C}', '\u{1F981}', '\u{1F42F}',
@@ -257,50 +256,15 @@ export class Room {
       throw new Error('No connected players to start a game');
     }
 
-    // Quiz-specific: fetch questions from cached-fetcher, deduplicate used questions
     let gameConfig = { ...config };
-    if (gameType === 'quiz') {
-      const amount = config.questionCount || 10;
-      const result = await fetchQuestions(config.categoryId, amount);
-      if (!result.ok) {
-        throw new Error(`Failed to fetch questions: ${result.error.message}`);
-      }
 
-      // Filter out questions already used in this room (per D-09)
-      let unused = result.questions.filter(q => !this.usedQuestionIds.has(q.id));
-
-      // If not enough unused questions, fetch fresh from API to supplement (per D-11)
-      if (unused.length < amount) {
-        const supplement = await fetchQuestions(config.categoryId, amount);
-        if (supplement.ok) {
-          const existingIds = new Set(unused.map(q => q.id));
-          for (const q of supplement.questions) {
-            if (!this.usedQuestionIds.has(q.id) && !existingIds.has(q.id)) {
-              unused.push(q);
-              existingIds.add(q.id);
-            }
-            if (unused.length >= amount) break;
-          }
-        }
+    // Let the game definition prepare its own config (fetch questions, load files, etc.)
+    if (definition.prepare) {
+      const result = await definition.prepare(gameConfig, { usedQuestionIds: this.usedQuestionIds });
+      gameConfig = result.config;
+      for (const id of result.trackIds ?? []) {
+        this.usedQuestionIds.add(id);
       }
-
-      // Track the questions we are about to use
-      const selected = unused.slice(0, amount);
-      for (const q of selected) {
-        this.usedQuestionIds.add(q.id);
-      }
-      gameConfig.questions = selected;
-    }
-
-    // Question-form: load questions from file if none provided
-    if (gameType === 'question-form' && !gameConfig.questions?.length) {
-      const file = gameConfig.file || 'todo-poll.json';
-      const loaded = await loadQuestionFile(file);
-      if (!loaded.ok) {
-        throw new Error(`Failed to load questions: ${loaded.error}`);
-      }
-      gameConfig.questions = loaded.questions;
-      gameConfig._sourceFile = file;
     }
 
     this.lastActivity = Date.now();
