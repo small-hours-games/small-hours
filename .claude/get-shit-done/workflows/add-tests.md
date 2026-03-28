@@ -33,7 +33,7 @@ Exit.
 Load phase operation context:
 
 ```bash
-INIT=$(node "/home/skogix/dev/small-hours/.claude/get-shit-done/bin/gsd-tools.cjs" init phase-op "${PHASE_ARG}")
+INIT=$(node "/home/dellvall/small-hours/.claude/get-shit-done/bin/gsd-tools.cjs" init phase-op "${PHASE_ARG}")
 if [[ "$INIT" == @file:* ]]; then INIT=$(cat "${INIT#@file:}"); fi
 ```
 
@@ -146,7 +146,7 @@ find . -type d -name "*test*" -o -name "*spec*" -o -name "*__tests__*" 2>/dev/nu
 # Find existing test files for convention matching
 find . -type f \( -name "*.test.*" -o -name "*.spec.*" -o -name "*Tests.fs" -o -name "*Test.fs" \) 2>/dev/null | head -20
 # Check for test runners
-ls package.json *.sln 2>/dev/null
+ls package.json *.sln 2>/dev/null || true
 ```
 
 Identify:
@@ -243,7 +243,7 @@ For each approved E2E test:
 
 1. **Check for existing tests** covering the same scenario:
    ```bash
-   grep -r "{scenario keyword}" {e2e test directory} 2>/dev/null
+   grep -r "{scenario keyword}" {e2e test directory} 2>/dev/null || true
    ```
    If found, extend rather than duplicate.
 
@@ -297,7 +297,7 @@ Create a test coverage report and present to user:
 
 Record test generation in project state:
 ```bash
-node "/home/skogix/dev/small-hours/.claude/get-shit-done/bin/gsd-tools.cjs" state-snapshot
+node "/home/dellvall/small-hours/.claude/get-shit-done/bin/gsd-tools.cjs" state-snapshot
 ```
 
 If there are passing tests to commit:

@@ -24,7 +24,7 @@ Server runs on `http://localhost:3001`. Health check at `/health`.
 
 The engine is a pure function: `(state, action) => {newState, events}`. Everything else layers on top.
 
-```
+```txt
 src/
 ├── transport/           # Layer 1: Transport
 │   ├── http.js          #   Express routes: /health, /api/rooms, static files
@@ -53,6 +53,7 @@ src/
 ```
 
 **Key architecture decisions** (see `.planning/research/ARCHITECTURE.md` for rationale):
+
 - No 100ms tick loop — event-driven, broadcast on state change
 - No GameController base class — games are plain objects with `{setup, actions, view, endIf}`
 - No WebSocket-specific protocol — engine is transport-agnostic JSON in/out
@@ -97,7 +98,11 @@ Reference implementations: `src/engine/games/number-guess.js` (simplest game), `
 
 ## Test Harness
 
+> Note: `src/engine/games/shithead.test.js` is co-located with its source as an exception.
+> All other tests live in `tests/` under subdirs: `engine/`, `session/`, `integration/`, `fetcher/`, `frontend/`.
+
 `tests/engine/game-harness.js` provides helpers for testing game definitions:
+
 - `createTestGame(gameDef, players, config)` — set up a game via the engine
 - `act(game, type, playerId, payload)` — process a single action
 - `actChain(game, actions)` — process a sequence of `[type, playerId, payload]` tuples
@@ -112,12 +117,14 @@ The `question-form` game turns dev questions into an interactive polling experie
 **Game type:** `question-form`
 
 **Question types supported:**
+
 - `text` — free-form text input (max 500 chars)
 - `choice` — multiple choice from predefined options
 - `yesno` — yes/no toggle
 - `rating` — numeric scale (configurable `min`/`max`, default 1-5)
 
 **Starting the game via WebSocket:**
+
 ```js
 {
   type: 'START_MINI_GAME',
@@ -134,11 +141,13 @@ The `question-form` game turns dev questions into an interactive polling experie
 ```
 
 **Phases:** `answering` → `review` → `finished`
+
 - **answering:** Players swipe through questions on phones, answers auto-save, then submit all at once. Phase auto-advances to review when all players have submitted.
 - **review:** Host navigates between questions viewing aggregated results (tally bars for choice/yesno, average for rating, individual text responses). Any player can trigger `reviewQuestion` to navigate, `finishReview` to end.
 - **finished:** Game ends (no winner/scores — it's a form, not a competition).
 
 **Actions:**
+
 - `answer` — `{ questionIndex, value }` — save an answer (can overwrite before submit)
 - `submit` — lock in all answers
 - `reviewQuestion` — `{ questionIndex }` — navigate review to a specific question
@@ -168,6 +177,7 @@ Clients connect to `/ws/host/:code` (display) or `/ws/player/:code` (phone). Mes
 ## GSD Workflow
 
 This project uses the GSD (Get Shit Done) planning system via `/gsd:*` slash commands. Planning state lives in `.planning/`. Key files:
+
 - `.planning/PROJECT.md` — current milestone and requirements
 - `.planning/ROADMAP.md` — 12-phase roadmap with success criteria
 - `.planning/REQUIREMENTS.md` — 83 v1 requirements with traceability

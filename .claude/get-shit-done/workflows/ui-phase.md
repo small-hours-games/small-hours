@@ -5,16 +5,24 @@ UI-SPEC.md locks spacing, typography, color, copywriting, and design system deci
 </purpose>
 
 <required_reading>
-@/home/skogix/dev/small-hours/.claude/get-shit-done/references/ui-brand.md
+@/home/dellvall/small-hours/.claude/get-shit-done/references/ui-brand.md
 </required_reading>
+
+<available_agent_types>
+Valid GSD subagent types (use exact names — do not fall back to 'general-purpose'):
+- gsd-ui-researcher — Researches UI/UX approaches
+- gsd-ui-checker — Reviews UI implementation quality
+</available_agent_types>
 
 <process>
 
 ## 1. Initialize
 
 ```bash
-INIT=$(node "/home/skogix/dev/small-hours/.claude/get-shit-done/bin/gsd-tools.cjs" init plan-phase "$PHASE")
+INIT=$(node "/home/dellvall/small-hours/.claude/get-shit-done/bin/gsd-tools.cjs" init plan-phase "$PHASE")
 if [[ "$INIT" == @file:* ]]; then INIT=$(cat "${INIT#@file:}"); fi
+AGENT_SKILLS_UI=$(node "/home/dellvall/small-hours/.claude/get-shit-done/bin/gsd-tools.cjs" agent-skills gsd-ui-researcher 2>/dev/null)
+AGENT_SKILLS_UI_CHECKER=$(node "/home/dellvall/small-hours/.claude/get-shit-done/bin/gsd-tools.cjs" agent-skills gsd-ui-checker 2>/dev/null)
 ```
 
 Parse JSON for: `phase_dir`, `phase_number`, `phase_name`, `phase_slug`, `padded_phase`, `has_context`, `has_research`, `commit_docs`.
@@ -24,14 +32,14 @@ Parse JSON for: `phase_dir`, `phase_number`, `phase_name`, `phase_slug`, `padded
 Resolve UI agent models:
 
 ```bash
-UI_RESEARCHER_MODEL=$(node "/home/skogix/dev/small-hours/.claude/get-shit-done/bin/gsd-tools.cjs" resolve-model gsd-ui-researcher --raw)
-UI_CHECKER_MODEL=$(node "/home/skogix/dev/small-hours/.claude/get-shit-done/bin/gsd-tools.cjs" resolve-model gsd-ui-checker --raw)
+UI_RESEARCHER_MODEL=$(node "/home/dellvall/small-hours/.claude/get-shit-done/bin/gsd-tools.cjs" resolve-model gsd-ui-researcher --raw)
+UI_CHECKER_MODEL=$(node "/home/dellvall/small-hours/.claude/get-shit-done/bin/gsd-tools.cjs" resolve-model gsd-ui-checker --raw)
 ```
 
 Check config:
 
 ```bash
-UI_ENABLED=$(node "/home/skogix/dev/small-hours/.claude/get-shit-done/bin/gsd-tools.cjs" config-get workflow.ui_phase 2>/dev/null || echo "true")
+UI_ENABLED=$(node "/home/dellvall/small-hours/.claude/get-shit-done/bin/gsd-tools.cjs" config-get workflow.ui_phase 2>/dev/null || echo "true")
 ```
 
 **If `UI_ENABLED` is `false`:**
@@ -47,7 +55,7 @@ Exit workflow.
 Extract phase number from $ARGUMENTS. If not provided, detect next unplanned phase.
 
 ```bash
-PHASE_INFO=$(node "/home/skogix/dev/small-hours/.claude/get-shit-done/bin/gsd-tools.cjs" roadmap get-phase "${PHASE}")
+PHASE_INFO=$(node "/home/dellvall/small-hours/.claude/get-shit-done/bin/gsd-tools.cjs" roadmap get-phase "${PHASE}")
 ```
 
 **If `found` is false:** Error with available phases.
@@ -101,7 +109,7 @@ Display:
 Build prompt:
 
 ```markdown
-Read /home/skogix/dev/small-hours/.claude/agents/gsd-ui-researcher.md for instructions.
+Read /home/dellvall/small-hours/.claude/agents/gsd-ui-researcher.md for instructions.
 
 <objective>
 Create UI design contract for Phase {phase_number}: {phase_name}
@@ -116,9 +124,11 @@ Answer: "What visual and interaction contracts does this phase need?"
 - {research_path} (Technical Research — stack decisions)
 </files_to_read>
 
+${AGENT_SKILLS_UI}
+
 <output>
 Write to: {phase_dir}/{padded_phase}-UI-SPEC.md
-Template: /home/skogix/dev/small-hours/.claude/get-shit-done/templates/UI-SPEC.md
+Template: /home/dellvall/small-hours/.claude/get-shit-done/templates/UI-SPEC.md
 </output>
 
 <config>
@@ -161,7 +171,7 @@ Display:
 Build prompt:
 
 ```markdown
-Read /home/skogix/dev/small-hours/.claude/agents/gsd-ui-checker.md for instructions.
+Read /home/dellvall/small-hours/.claude/agents/gsd-ui-checker.md for instructions.
 
 <objective>
 Validate UI design contract for Phase {phase_number}: {phase_name}
@@ -173,6 +183,8 @@ Check all 6 dimensions. Return APPROVED or BLOCKED.
 - {context_path} (USER DECISIONS — check compliance)
 - {research_path} (Technical Research — check stack alignment)
 </files_to_read>
+
+${AGENT_SKILLS_UI_CHECKER}
 
 <config>
 ui_safety_gate: {ui_safety_gate config value}
@@ -261,13 +273,13 @@ Dimensions: 6/6 passed
 ## 11. Commit (if configured)
 
 ```bash
-node "/home/skogix/dev/small-hours/.claude/get-shit-done/bin/gsd-tools.cjs" commit "docs(${padded_phase}): UI design contract" --files "${PHASE_DIR}/${PADDED_PHASE}-UI-SPEC.md"
+node "/home/dellvall/small-hours/.claude/get-shit-done/bin/gsd-tools.cjs" commit "docs(${padded_phase}): UI design contract" --files "${PHASE_DIR}/${PADDED_PHASE}-UI-SPEC.md"
 ```
 
 ## 12. Update State
 
 ```bash
-node "/home/skogix/dev/small-hours/.claude/get-shit-done/bin/gsd-tools.cjs" state record-session \
+node "/home/dellvall/small-hours/.claude/get-shit-done/bin/gsd-tools.cjs" state record-session \
   --stopped-at "Phase ${PHASE} UI-SPEC approved" \
   --resume-file "${PHASE_DIR}/${PADDED_PHASE}-UI-SPEC.md"
 ```

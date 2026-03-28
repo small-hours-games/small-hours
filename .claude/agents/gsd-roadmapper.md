@@ -363,11 +363,11 @@ This annotation is consumed by downstream workflows (`new-project`, `progress`) 
 | 2. Name | 0/2 | Not started | - |
 ```
 
-Reference full template: `/home/skogix/dev/small-hours/.claude/get-shit-done/templates/roadmap.md`
+Reference full template: `/home/dellvall/small-hours/.claude/get-shit-done/templates/roadmap.md`
 
 ## STATE.md Structure
 
-Use template from `/home/skogix/dev/small-hours/.claude/get-shit-done/templates/state.md`.
+Use template from `/home/dellvall/small-hours/.claude/get-shit-done/templates/state.md`.
 
 Key sections:
 - Project Reference (core value, current focus)

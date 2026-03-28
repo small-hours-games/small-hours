@@ -19,7 +19,8 @@ Read all files referenced by the invoking prompt's execution_context before star
 Bootstrap via manager init:
 
 ```bash
-INIT=$(node "/home/skogix/dev/small-hours/.claude/get-shit-done/bin/gsd-tools.cjs" init manager)
+INIT=$(node "/home/dellvall/small-hours/.claude/get-shit-done/bin/gsd-tools.cjs" init manager)
+if [[ "$INIT" == @file:* ]]; then INIT=$(cat "${INIT#@file:}"); fi
 ```
 
 Parse JSON for: `milestone_version`, `milestone_name`, `phase_count`, `completed_count`, `in_progress_count`, `phases`, `recommended_actions`, `all_complete`, `waiting_signal`.
@@ -52,7 +53,8 @@ Proceed to dashboard step.
 **Every time this step is reached**, re-read state from disk to pick up changes from background agents:
 
 ```bash
-INIT=$(node "/home/skogix/dev/small-hours/.claude/get-shit-done/bin/gsd-tools.cjs" init manager)
+INIT=$(node "/home/dellvall/small-hours/.claude/get-shit-done/bin/gsd-tools.cjs" init manager)
+if [[ "$INIT" == @file:* ]]; then INIT=$(cat "${INIT#@file:}"); fi
 ```
 
 Parse the full JSON. Build the dashboard display.
@@ -221,8 +223,8 @@ Phase: {N} — {phase_name}
 Goal: {goal}
 
 Steps:
-1. Read the plan-phase workflow: cat /home/skogix/dev/small-hours/.claude/get-shit-done/workflows/plan-phase.md
-2. Run: node \"/home/skogix/dev/small-hours/.claude/get-shit-done/bin/gsd-tools.cjs\" init plan-phase {N}
+1. Read the plan-phase workflow: cat /home/dellvall/small-hours/.claude/get-shit-done/workflows/plan-phase.md
+2. Run: node \"/home/dellvall/small-hours/.claude/get-shit-done/bin/gsd-tools.cjs\" init plan-phase {N}
 3. Follow the workflow steps to produce PLAN.md files for this phase.
 4. If research is enabled in config, run the research step first.
 5. Spawn a gsd-planner subagent via Task() to create the plans.
@@ -256,8 +258,8 @@ Phase: {N} — {phase_name}
 Goal: {goal}
 
 Steps:
-1. Read the execute-phase workflow: cat /home/skogix/dev/small-hours/.claude/get-shit-done/workflows/execute-phase.md
-2. Run: node \"/home/skogix/dev/small-hours/.claude/get-shit-done/bin/gsd-tools.cjs\" init execute-phase {N}
+1. Read the execute-phase workflow: cat /home/dellvall/small-hours/.claude/get-shit-done/workflows/execute-phase.md
+2. Run: node \"/home/dellvall/small-hours/.claude/get-shit-done/bin/gsd-tools.cjs\" init execute-phase {N}
 3. Follow the workflow steps: discover plans, analyze dependencies, group into waves.
 4. For each wave, spawn gsd-executor subagents via Task() to execute plans in parallel.
 5. After all waves complete, spawn a gsd-verifier subagent if verifier is enabled.
