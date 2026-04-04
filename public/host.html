@@ -6,6 +6,7 @@
   <title>Small Hours - Host</title>
   <link rel="icon" type="image/png" href="/images/Shg-gemeni-trans.png">
   <link rel="stylesheet" href="/css/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
   <style>
     body {
       display: flex;
@@ -530,6 +531,7 @@
   <header class="host-header">
     <div class="host-logo"><img src="/images/Shg-gemeni-trans.png" alt="Small Hours Games"><span class="host-logo-text">Small Hours</span></div>
     <div id="headerInfo" style="color: var(--text-secondary); font-size: 0.9rem;"></div>
+    <button id="muteBtn" onclick="toggleMute()" style="background:rgba(255,255,255,0.05);border:1px solid var(--glass-border);border-radius:8px;padding:6px 12px;cursor:pointer;color:var(--text-secondary);font-size:0.85rem;">🔊 Sound</button>
   </header>
 
   <!-- Main content -->
@@ -540,7 +542,7 @@
         <div class="join-label">Join at</div>
         <div class="join-url" id="joinUrl"></div>
         <div class="room-code room-code-large neon" id="roomCode">----</div>
-        <img id="qrImage" alt="QR Code" style="border-radius:12px;margin-top:16px;width:180px;height:180px;">
+        <div id="qrContainer" style="border-radius:12px;margin-top:16px;background:white;padding:8px;width:180px;height:180px;display:flex;align-items:center;justify-content:center;"></div>
       </div>
       <div class="players-panel">
         <h2>Players <span class="player-count" id="playerCount">(0)</span></h2>
@@ -596,6 +598,19 @@
       reconnectTimer: null,
     };
 
+    // Mute toggle
+    let isMuted = false;
+    function toggleMute() {
+      isMuted = !isMuted;
+      document.getElementById('muteBtn').textContent = isMuted ? '\uD83D\uDD07 Muted' : '\uD83D\uDD0A Sound';
+      if (isMuted) {
+        audio._origPlay = audio._origPlay || audio.play;
+        audio.play = () => {};
+      } else if (audio._origPlay) {
+        audio.play = audio._origPlay;
+      }
+    }
+
     // Sound state tracking — prevent duplicate triggers on re-renders
     var lastShState = {};
     var lastGrState = {};
@@ -620,9 +635,11 @@
       const joinUrl = window.location.origin + '/player/' + state.code;
       document.getElementById('joinUrl').textContent = joinUrl;
 
-      // Generate QR code via API
-      const qrApiUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=' + encodeURIComponent(joinUrl);
-      document.getElementById('qrImage').src = qrApiUrl;
+      // Generate QR code locally
+      const qrContainer = document.getElementById('qrContainer');
+      if (typeof QRCode !== 'undefined') {
+        new QRCode(qrContainer, { text: joinUrl, width: 164, height: 164, colorDark: '#000000', colorLight: '#ffffff' });
+      }
 
       connect();
     })();
