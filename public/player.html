@@ -3,6 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#0a0a1a">
   <title>Small Hours - Player</title>
   <link rel="icon" type="image/png" href="/images/Shg-gemeni-trans.png">
   <link rel="stylesheet" href="/css/style.css">
@@ -627,6 +631,7 @@
       <div class="name" id="myName">Player</div>
     </div>
     <div class="room-badge" id="roomBadge">----</div>
+    <button id="shareBtn" onclick="shareRoom()" style="background:none;border:none;cursor:pointer;padding:4px 8px;color:var(--neon-blue);font-size:0.8rem;display:none;">🔗 Share</button>
   </header>
 
   <main class="player-main">
@@ -643,31 +648,34 @@
           <button class="suggest-btn" onclick="suggestGame('number-guess')" id="suggestNumberGuess">
             <span class="icon">&#127922;</span>
             Number Guess
+            <span class="vote-count" style="font-size:0.7rem;color:var(--neon-green);opacity:0.8;min-height:1em;"></span>
           </button>
           <button class="suggest-btn" onclick="suggestGame('quiz')" id="suggestQuiz">
             <span class="icon">&#10067;</span>
             Quiz
+            <span class="vote-count" style="font-size:0.7rem;color:var(--neon-green);opacity:0.8;min-height:1em;"></span>
           </button>
           <button class="suggest-btn" onclick="suggestGame('spy')" id="suggestSpy">
             <span class="icon">&#128373;</span>
             Spy
+            <span class="vote-count" style="font-size:0.7rem;color:var(--neon-green);opacity:0.8;min-height:1em;"></span>
           </button>
           <button class="suggest-btn" onclick="suggestGame('shithead')" id="suggestShithead">
             <span class="icon">&#127183;</span>
             Shithead
+            <span class="vote-count" style="font-size:0.7rem;color:var(--neon-green);opacity:0.8;min-height:1em;"></span>
           </button>
           <button class="suggest-btn" onclick="suggestGame('question-form')" id="suggestQuestionForm">
             <span class="icon">&#128203;</span>
             Questions
+            <span class="vote-count" style="font-size:0.7rem;color:var(--neon-green);opacity:0.8;min-height:1em;"></span>
           </button>
           <button class="suggest-btn" onclick="suggestGame('gin-rummy')" id="suggestGinRummy">
             <span class="icon">&#127183;</span>
             Gin Rummy
+            <span class="vote-count" style="font-size:0.7rem;color:var(--neon-green);opacity:0.8;min-height:1em;"></span>
           </button>
-          <button class="suggest-btn" onclick="suggestGame('template')" id="suggestTemplate">
-            <span class="icon">&#128200;</span>
-            Template
-          </button>
+
         </div>
       </div>
 
@@ -950,6 +958,7 @@
       }
 
       document.getElementById('roomBadge').textContent = state.code;
+      if (navigator.share || navigator.clipboard) document.getElementById('shareBtn').style.display = 'inline';
 
       if (!state.name) {
         // Show name entry form
@@ -1048,6 +1057,7 @@
           state.gameSuggestions = lobbyState.gameSuggestions || {};
           renderLobbyPlayers();
           renderAdminControls();
+          updateSuggestVotes();
           break;
         }
 
@@ -1133,7 +1143,12 @@
     function showSection(id) {
       document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
       const el = document.getElementById(id);
-      if (el) el.classList.add('active');
+      if (el) {
+        el.classList.add('active');
+        el.style.animation = 'none';
+        el.offsetHeight; // force reflow
+        el.style.animation = 'fadeIn 0.3s ease';
+      }
     }
 
     function getGameSectionId(game) {
@@ -1178,6 +1193,30 @@
         btn.textContent = 'Tap to Ready Up';
         btn.className = 'btn ready-btn btn-secondary';
       }
+    }
+
+    function updateSuggestVotes() {
+      const voteCounts = {};
+      Object.values(state.gameSuggestions || {}).forEach(game => {
+        voteCounts[game] = (voteCounts[game] || 0) + 1;
+      });
+      const map = {
+        'number-guess': 'suggestNumberGuess',
+        'quiz': 'suggestQuiz',
+        'spy': 'suggestSpy',
+        'shithead': 'suggestShithead',
+        'question-form': 'suggestQuestionForm',
+        'gin-rummy': 'suggestGinRummy'
+      };
+      Object.entries(map).forEach(([game, btnId]) => {
+        const btn = document.getElementById(btnId);
+        if (!btn) return;
+        const badge = btn.querySelector('.vote-count');
+        if (badge) {
+          const count = voteCounts[game] || 0;
+          badge.textContent = count > 0 ? count + ' vote' + (count > 1 ? 's' : '') : '';
+        }
+      });
     }
 
     function suggestGame(game) {
@@ -1231,6 +1270,15 @@
     }
 
     // --- Chat ---
+    function shareRoom() {
+      const url = window.location.origin + '/player/' + state.code;
+      if (navigator.share) {
+        navigator.share({ title: 'Join my Small Hours game!', text: 'Room code: ' + state.code, url });
+      } else if (navigator.clipboard) {
+        navigator.clipboard.writeText(url).then(() => showToast('Link copied!', 'success'));
+      }
+    }
+
     function sendChat() {
       const input = document.getElementById('chatInput');
       const text = input.value.trim();

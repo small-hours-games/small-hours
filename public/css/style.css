@@ -29,23 +29,17 @@ body {
   top: 0; left: 0; right: 0; bottom: 0;
   z-index: -1;
   background:
-    radial-gradient(ellipse at 20% 50%, rgba(179, 71, 217, 0.08) 0%, transparent 50%),
-    radial-gradient(ellipse at 80% 20%, rgba(77, 201, 246, 0.06) 0%, transparent 50%),
-    radial-gradient(ellipse at 50% 80%, rgba(57, 255, 20, 0.04) 0%, transparent 50%),
+    radial-gradient(ellipse 600px 600px at 20% 50%, rgba(179, 71, 217, 0.10) 0%, transparent 100%),
+    radial-gradient(ellipse 500px 500px at 80% 20%, rgba(77, 201, 246, 0.08) 0%, transparent 100%),
+    radial-gradient(ellipse 400px 400px at 50% 90%, rgba(255, 110, 199, 0.06) 0%, transparent 100%),
     var(--bg-primary);
-  animation: bgShift 20s ease-in-out infinite alternate;
+  animation: bgFloat 15s ease-in-out infinite alternate;
 }
 
-@keyframes bgShift {
-  0% {
-    background-position: 0% 0%, 100% 0%, 50% 100%;
-  }
-  50% {
-    background-position: 100% 50%, 0% 100%, 0% 0%;
-  }
-  100% {
-    background-position: 50% 100%, 50% 0%, 100% 50%;
-  }
+@keyframes bgFloat {
+  0%   { filter: hue-rotate(0deg); transform: scale(1); }
+  50%  { filter: hue-rotate(15deg); transform: scale(1.05); }
+  100% { filter: hue-rotate(-10deg); transform: scale(1); }
 }
 
 /* Glass card effect */
