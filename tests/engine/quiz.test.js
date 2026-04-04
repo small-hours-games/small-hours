@@ -370,7 +370,7 @@ describe('Quiz - view filtering', () => {
     const g1 = toQuestion(game);
     const view = getView(g1, 'p1');
     expect(view.question).toBeDefined();
-    expect(view.question.question).toBe(Q1.question);
+    expect(view.question.text).toBe(Q1.question);
     expect(view.question.answers).toHaveLength(4);
   });
 

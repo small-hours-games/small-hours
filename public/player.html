@@ -1375,6 +1375,11 @@
         const q = msg.question || {};
         document.getElementById('quizQuestion').textContent = q.text || '';
 
+        // Save question state for re-renders (e.g. after answer selection)
+        state._lastQuestion = q;
+        state._lastTimeLeft = msg.timeLeft;
+        state._lastTimeTotal = msg.timeTotal;
+
         // Timer
         if (msg.timeLeft != null && msg.timeTotal) {
           timerContainer.style.display = 'block';
@@ -1434,7 +1439,11 @@
     function selectAnswer(index) {
       if (state.selectedAnswer !== null) return;
       state.selectedAnswer = index;
-      send({ type: 'GAME_ACTION', action: { type: 'answer', answerId: index } });
+      // Send the answer text (not index) so the engine can compare against correct_answer string
+      const answerId = state._lastQuestion && state._lastQuestion.answers
+        ? state._lastQuestion.answers[index]
+        : index;
+      send({ type: 'GAME_ACTION', action: { type: 'answer', answerId } });
       // Re-render to show selected state
       renderQuizState({ phase: 'question', question: state._lastQuestion, timeLeft: state._lastTimeLeft, timeTotal: state._lastTimeTotal });
     }

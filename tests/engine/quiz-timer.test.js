@@ -134,7 +134,7 @@ describe('Quiz timerExpired phase transitions', () => {
     const view = getView(game, 'p1');
     expect(view.phase).toBe('question');
     expect(view.question).toBeDefined();
-    expect(view.question.question).toBe('What is 1+1?');
+    expect(view.question.text).toBe('What is 1+1?');
     expect(view.question.answers).toHaveLength(4);
   });
 });
