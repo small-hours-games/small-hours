@@ -8,6 +8,7 @@ allowed-tools:
   - Glob
   - Grep
   - AskUserQuestion
+  - Skill
   - Task
 ---
 <objective>
@@ -23,8 +24,8 @@ Designed for power users who want to parallelize work across phases from one ter
 </objective>
 
 <execution_context>
-@/home/dellvall/small-hours/.claude/get-shit-done/workflows/manager.md
-@/home/dellvall/small-hours/.claude/get-shit-done/references/ui-brand.md
+@/home/skogix/small-hours/.claude/get-shit-done/workflows/manager.md
+@/home/skogix/small-hours/.claude/get-shit-done/references/ui-brand.md
 </execution_context>
 
 <context>
@@ -34,6 +35,6 @@ Project context, phase list, dependencies, and recommendations are resolved insi
 </context>
 
 <process>
-Execute the manager workflow from @/home/dellvall/small-hours/.claude/get-shit-done/workflows/manager.md end-to-end.
+Execute the manager workflow from @/home/skogix/small-hours/.claude/get-shit-done/workflows/manager.md end-to-end.
 Maintain the dashboard refresh loop until the user exits or all phases complete.
 </process>
