@@ -1,109 +1,150 @@
 # Small Hours
 
-**Real-time multiplayer party games. One screen, many phones, zero hassle.**
+Real-time multiplayer party games for late nights with friends. One shared screen on the TV, everyone plays from their phone — no app to download, no account needed.
 
-A shared TV/monitor shows the game. Players join from their phones via room code — no app downloads, no accounts, no friction. Just open a browser and play.
+![Small Hours](public/images/Shg-gemeni-trans.png)
 
-## What's Included
+## How It Works
 
-**6 Party Games:**
-- **Number Guess** — Guess the number, closest wins
-- **Quiz** — Trivia with power-ups and scoring
-- **Spy** — Social deduction (find the spy among you)
-- **Shithead** — Classic card game
-- **Gin Rummy** — 2-player card classic
-- **Question Form** — Interactive polling (great for dev workflows)
+1. **Host** opens the game on a shared screen (laptop, TV, etc.) and creates a room
+2. **Players** join on their phones by visiting the URL and entering the 4-character room code
+3. **Play** — the host picks a game and everyone plays together in real time
+
+No app. No accounts. No installs. Just a browser.
+
+## Games
+
+| Game | Players | Description |
+|------|---------|-------------|
+| **Number Guess** | 2+ | Guess the secret number (1–100) with hot/cold feedback |
+| **Quiz** | 2+ | Trivia questions from OpenTrivia DB with categories and powerups |
+| **Spy** | 3+ | Social deduction — find the spy before they guess the secret word |
+| **Shithead** | 2–4 | Classic card-shedding game, last player holding cards loses |
+| **Gin Rummy** | 2 | Multi-hand card game with auto-computed melds and layoffs |
 
 ## Quick Start
 
+**Requirements:** Node.js ≥ 22
+
 ```bash
+# Install dependencies
 npm install
+
+# Start the server (port 3001)
 npm start
+
+# Or with auto-restart on file changes
+npm run dev
 ```
 
-Server runs on `http://localhost:3001`. Open it on your TV/computer, get a room code, share it with friends.
-
-### Requirements
-- Node.js 22+
-- Modern browser (mobile or desktop)
-
-## Architecture
-
-**3 layers, clean separation:**
-
-```
-Transport (Express + WebSocket)
-    ↓
-Session (RoomManager, Player lifecycle)
-    ↓
-Engine (Pure functions: state + action → new state)
-```
-
-The engine is a pure function: `(state, action) => {newState, events}`. Transport-agnostic, testable in isolation, no I/O in game logic.
-
-**Tech stack:**
-- Node.js 22 ESM
-- Express 5 + ws (WebSocket)
-- Vitest for testing
-- Vanilla JS frontend (no build step)
-
-## Project Structure
-
-```
-src/
-├── transport/       # HTTP routes, WebSocket handling
-├── session/        # Room management, player lifecycle
-├── engine/         # Pure game logic
-│   └── games/      # Game definitions (plain objects)
-├── fetcher/        # External APIs (OpenTrivia, TTS)
-└── server.js       # Entry point
-
-public/
-├── host.html       # TV/display screen
-├── player.html     # Phone controller
-└── js/cards.js     # Shared card rendering
-```
-
-## Adding a New Game
-
-Games are plain objects with four functions:
-
-```js
-export default {
-  setup(ctx) { /* return initial state */ },
-  actions: {
-    someAction(state, payload) { /* return { state, events } */ }
-  },
-  view(state, playerId) { /* return player-specific view */ },
-  endIf(state) { /* return null or { winner, scores } */ }
-}
-```
-
-See `src/engine/games/template.js` for a minimal starter, or `number-guess.js` for a complete simple game.
+Open [http://localhost:3001](http://localhost:3001) in your browser.
 
 ## Development
 
 ```bash
-npm run dev          # Start with auto-reload
-npm test             # Run all tests
-npm run test:watch   # Vitest watch mode
+npm test            # run all tests (Vitest)
+npm run test:watch  # watch mode
 ```
 
-Health check: `GET /health`
+Tests live in `tests/` under subdirectories: `engine/`, `session/`, `integration/`, `fetcher/`, `frontend/`. The Shithead game test (`src/engine/games/shithead.test.js`) is co-located with its source as an exception.
+
+## Architecture
+
+The engine is a pure function — no I/O, no side effects:
+
+```
+(state, action) => { newState, events }
+```
+
+Three layers build on top of it:
+
+```
+src/
+├── transport/       # Layer 1 — WebSocket server, HTTP routes, rate limiting
+├── session/         # Layer 2 — Room management, player lifecycle, game registry
+└── engine/          # Layer 3 — Pure game logic
+    └── games/       # Individual game definitions (plain objects, not classes)
+```
+
+**Key decisions:**
+- No 100ms tick loop — event-driven, broadcast on state change
+- Games are plain objects `{ setup, actions, view, endIf }`, not class instances
+- Transport-agnostic: the engine only speaks JSON in/out
+- Players are ephemeral — no auth, no persistence
+
+## Adding a New Game
+
+Copy `src/engine/games/template.js` as a starting point:
+
+```js
+export default {
+  setup({ players, config }) {
+    // return initial state
+  },
+  actions: {
+    myAction(state, { playerId, ...payload }) {
+      // return { state, events }
+    },
+  },
+  view(state, playerId) {
+    // return what this player can see
+  },
+  endIf(state) {
+    // return null if ongoing, { winner, scores } when done
+  },
+};
+```
+
+Then register it in two places:
+
+1. `src/session/room.js` — add to `GAME_REGISTRY`
+2. `src/engine/games/index.js` — add to re-exports
+
+## Configuration
+
+Copy `.env.example` to `.env` and set values as needed:
+
+```
+PORT=3001
+DOMAIN=your-domain.com
+GEMINI_API_KEY=your-key   # optional: enables TTS for quiz questions
+```
+
+Quiz questions are fetched from [OpenTrivia DB](https://opentdb.com/) and cached to disk under `data/questions/`. No API key needed for questions.
 
 ## Deployment
 
-Docker-ready with included `Dockerfile` and `docker-compose.yml`:
+Docker Compose is the recommended way to deploy:
 
 ```bash
-docker-compose up -d
+docker compose up -d
 ```
 
-## Documentation
+The `docker-compose.yml` uses `network_mode: host` with a health check on `/health`, resource limits (512 MB RAM, 1 CPU), and log rotation. Question cache and TTS audio are persisted via the `./data` volume mount.
 
-- `CLAUDE.md` — Full development guide for AI assistants
-- `.planning/` — GSD workflow, roadmap, requirements
+To deploy updates:
 
-## License
+```bash
+git pull
+docker compose up -d --build
+```
 
-MIT
+## WebSocket Protocol
+
+Clients connect to:
+- `/ws/host/:code` — shared display screen
+- `/ws/player/:code` — player phone controller
+
+All messages are JSON with aå `type` field. Game actions are sent as:
+
+```json
+{ "type": "GAME_ACTION", "action": { "type": "guess", "number": 42 } }
+```
+
+## Tech Stack
+
+- **Runtime:** Node.js 22, JavaScript ESM (no TypeScript, no build step)
+- **Server:** Express 5 + `ws` (WebSocket)
+- **Frontend:** Vanilla browser JS, no framework, no bundler
+- **Testing:** Vitest
+- **Deployment:** Docker
