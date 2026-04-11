@@ -30,10 +30,16 @@ const GAME_REGISTRY = {
 };
 
 let playerCounter = 0;
+let observerCounter = 0;
 
 function generatePlayerId() {
   playerCounter += 1;
   return `player_${Date.now()}_${playerCounter}`;
+}
+
+function generateObserverId() {
+  observerCounter += 1;
+  return `observer_${Date.now()}_${observerCounter}`;
 }
 
 /**
@@ -74,6 +80,7 @@ export class Room {
   constructor(code) {
     this.code = code;
     this.players = new Map();
+    this.observers = new Map();
     this.game = null;
     this.createdAt = Date.now();
     this.lastActivity = Date.now();
@@ -139,6 +146,30 @@ export class Room {
         if (firstPlayer) firstPlayer.isAdmin = true;
       }
     }
+  }
+
+  /**
+   * Add an observer to the room.
+   * Returns { observerId }.
+   */
+  addObserver(username) {
+    this.lastActivity = Date.now();
+    const clean = sanitizeUsername(username);
+    const observerId = generateObserverId();
+    this.observers.set(observerId, {
+      username: clean,
+      connected: true,
+      lastSeen: Date.now(),
+    });
+    return { observerId };
+  }
+
+  /**
+   * Remove an observer from the room.
+   */
+  removeObserver(observerId) {
+    this.lastActivity = Date.now();
+    this.observers.delete(observerId);
   }
 
   /**
@@ -222,6 +253,7 @@ export class Room {
       gameRunning: this.game !== null,
       gameSuggestions: suggestions,
       language: this.language,
+      observerCount: this.observers.size,
     };
 
     if (this.votingActive) {

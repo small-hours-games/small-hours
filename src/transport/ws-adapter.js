@@ -207,11 +207,11 @@ export function setupWebSocket(server, manager) {
       return;
     }
 
-    const role = pathParts[1];  // 'host' or 'player'
+    const role = pathParts[1];  // 'host', 'player', or 'observer'
     const code = pathParts[2].toUpperCase();
 
-    if (role !== 'host' && role !== 'player') {
-      send(ws, { type: 'ERROR', message: 'Invalid role. Use host or player.' });
+    if (role !== 'host' && role !== 'player' && role !== 'observer') {
+      send(ws, { type: 'ERROR', message: 'Invalid role. Use host, player, or observer.' });
       ws.close(4001, 'Invalid role');
       return;
     }
@@ -246,6 +246,8 @@ export function setupWebSocket(server, manager) {
       send(ws, { type: 'DISPLAY_OK', roomCode: code, state: room.getState() });
     }
     send(ws, { type: 'LOBBY_UPDATE', state: room.getState() });
+
+    // Observer: wait for JOIN_OBSERVER to register; handled in message dispatch
 
     ws.on('message', (data) => {
       meta.alive = true;
@@ -288,10 +290,29 @@ export function setupWebSocket(server, manager) {
 
   // --- Message dispatch ---
 
+  const OBSERVER_BLOCKED_TYPES = new Set([
+    'GAME_ACTION',
+    'SET_READY',
+    'START_MINI_GAME',
+    'SUGGEST_GAME',
+    'RETURN_TO_LOBBY',
+    'START_CATEGORY_VOTE',
+    'CATEGORY_VOTE',
+  ]);
+
   function handleMessage(ws, meta, room, msg) {
+    // Block observers from sending game-altering messages
+    if (meta.role === 'observer' && OBSERVER_BLOCKED_TYPES.has(msg.type)) {
+      send(ws, { type: 'ERROR', message: 'Observers cannot perform this action' });
+      return;
+    }
+
     switch (msg.type) {
       case 'JOIN_LOBBY':
         handleJoinLobby(ws, meta, room, msg);
+        break;
+      case 'JOIN_OBSERVER':
+        handleJoinObserver(ws, meta, room, msg);
         break;
       case 'SET_READY':
         handleSetReady(ws, meta, room, msg);
@@ -371,6 +392,30 @@ export function setupWebSocket(server, manager) {
       const view = getView(room.game, playerId);
       const playerNames = getPlayerNames(room);
       sendToPlayer(playerId, { type: 'GAME_STATE', ...view, playerNames });
+    }
+  }
+
+  function handleJoinObserver(ws, meta, room, msg) {
+    if (meta.role !== 'observer') {
+      send(ws, { type: 'ERROR', message: 'JOIN_OBSERVER is only valid for observer connections' });
+      return;
+    }
+
+    if (!msg.username) {
+      send(ws, { type: 'ERROR', message: 'Username required' });
+      return;
+    }
+
+    const { observerId } = room.addObserver(msg.username);
+    meta.observerId = observerId;
+
+    send(ws, { type: 'OBSERVER_OK', observerId });
+
+    // Send current game state if a game is running
+    if (room.game) {
+      const playerNames = getPlayerNames(room);
+      const hostView = getView(room.game, room.players.keys().next().value);
+      send(ws, { type: 'GAME_STATE', ...hostView, playerNames });
     }
   }
 
@@ -561,6 +606,14 @@ export function setupWebSocket(server, manager) {
   // --- Disconnect handling ---
 
   function handleDisconnect(ws, meta, room) {
+    // Observer disconnects: remove immediately, no grace timer
+    if (meta.role === 'observer') {
+      if (meta.observerId) {
+        room.removeObserver(meta.observerId);
+      }
+      return;
+    }
+
     const { playerId } = meta;
     if (!playerId) return;
 
