@@ -10,6 +10,21 @@ function shuffleArray(arr) {
   return shuffled;
 }
 
+/**
+ * Deterministic shuffle seeded by an integer.
+ * Ensures all viewers (host + players) see the same answer order for a given question.
+ */
+function seededShuffle(arr, seed) {
+  const shuffled = [...arr];
+  let s = seed | 0;
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    s = Math.imul(s, 1664525) + 1013904223 | 0;
+    const j = Math.abs(s) % (i + 1);
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  return shuffled;
+}
+
 const PHASE_DURATIONS = {
   countdown: 3000,
   question: 15000,
@@ -252,6 +267,7 @@ const quiz = {
       currentQuestion: state.currentQuestion,
       totalQuestions: state.questions.length,
       scores: { ...state.scores },
+      score: state.scores[playerId] || 0,
       myPowerups: state.powerups[playerId] ? { ...state.powerups[playerId] } : {},
       myStreak: state.streaks[playerId] || 0,
       round: state.round,
@@ -269,18 +285,19 @@ const quiz = {
           (playerAnswer && playerAnswer.powerupType === 'fifty') ||
           (state.powerups[playerId] && !state.powerups[playerId].fifty && state.phase === 'question');
 
+        // Use seeded shuffle so host and all players see the same answer order
         if (usedFifty && state.phase === 'question') {
           const incorrect = [...question.incorrect_answers];
           // Keep only 1 incorrect answer
           const kept = incorrect.slice(0, 1);
-          answers = shuffleArray([question.correct_answer, ...kept]);
+          answers = seededShuffle([question.correct_answer, ...kept], state.currentQuestion);
         } else {
-          answers = shuffleArray(allAnswers);
+          answers = seededShuffle(allAnswers, state.currentQuestion);
         }
 
         base.question = {
           id: question.id,
-          question: question.question,
+          text: question.question,
           answers,
           category: question.category,
           difficulty: question.difficulty,
@@ -293,6 +310,8 @@ const quiz = {
     if (state.phase === 'reveal') {
       const question = state.questions[state.currentQuestion];
       base.correctAnswer = question.correct_answer;
+      // correctIndex = position of the correct answer in the shuffled answers array
+      base.correctIndex = base.question ? base.question.answers.indexOf(question.correct_answer) : -1;
 
       const whoGotItRight = [];
       for (const [pid, answer] of Object.entries(state.answers)) {

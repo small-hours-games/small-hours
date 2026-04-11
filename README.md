@@ -135,7 +135,7 @@ Clients connect to:
 - `/ws/host/:code` — shared display screen
 - `/ws/player/:code` — player phone controller
 
-All messages are JSON with a `type` field. Game actions are sent as:
+All messages are JSON with aå `type` field. Game actions are sent as:
 
 ```json
 { "type": "GAME_ACTION", "action": { "type": "guess", "number": 42 } }

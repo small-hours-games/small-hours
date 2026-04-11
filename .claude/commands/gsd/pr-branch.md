@@ -17,9 +17,9 @@ changes that are irrelevant to code review.
 </objective>
 
 <execution_context>
-@/home/dellvall/small-hours/.claude/get-shit-done/workflows/pr-branch.md
+@/home/skogix/small-hours/.claude/get-shit-done/workflows/pr-branch.md
 </execution_context>
 
 <process>
-Execute the pr-branch workflow from @/home/dellvall/small-hours/.claude/get-shit-done/workflows/pr-branch.md end-to-end.
+Execute the pr-branch workflow from @/home/skogix/small-hours/.claude/get-shit-done/workflows/pr-branch.md end-to-end.
 </process>
