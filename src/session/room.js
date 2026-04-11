@@ -83,6 +83,7 @@ export class Room {
     this.categoryVotes = new Map();      // Map<playerId, categoryId>
     this.availableCategories = [];       // [{id, name}]
     this.votingActive = false;
+    this.stateVersion = 0;
   }
 
   /**
@@ -91,6 +92,7 @@ export class Room {
    * Returns { playerId, avatar }.
    */
   addPlayer(username) {
+    this.stateVersion += 1;
     this.lastActivity = Date.now();
     const clean = sanitizeUsername(username);
     const playerId = generatePlayerId();
@@ -115,6 +117,7 @@ export class Room {
    * If the removed player was admin, promote the next connected player.
    */
   removePlayer(playerId) {
+    this.stateVersion += 1;
     this.lastActivity = Date.now();
     const player = this.players.get(playerId);
     if (!player) return;
@@ -145,6 +148,7 @@ export class Room {
    * Set a player's ready status.
    */
   setReady(playerId, ready) {
+    this.stateVersion += 1;
     this.lastActivity = Date.now();
     const player = this.players.get(playerId);
     if (player) {
@@ -156,6 +160,7 @@ export class Room {
    * Record a game suggestion from a player.
    */
   suggestGame(playerId, gameType) {
+    this.stateVersion += 1;
     this.lastActivity = Date.now();
     if (this.players.has(playerId)) {
       this.gameSuggestions.set(playerId, gameType);
@@ -222,6 +227,7 @@ export class Room {
       gameRunning: this.game !== null,
       gameSuggestions: suggestions,
       language: this.language,
+      stateVersion: this.stateVersion,
     };
 
     if (this.votingActive) {
@@ -242,6 +248,7 @@ export class Room {
    * Creates a game instance via the engine.
    */
   async startGame(gameType, config = {}) {
+    this.stateVersion += 1;
     const definition = GAME_REGISTRY[gameType];
     if (!definition) {
       throw new Error(`Unknown game type: ${gameType}`);
@@ -280,6 +287,7 @@ export class Room {
    * End the current game and return to the lobby.
    */
   endGame() {
+    this.stateVersion += 1;
     this.lastActivity = Date.now();
     this.game = null;
     // Reset ready states
