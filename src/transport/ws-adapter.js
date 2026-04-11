@@ -79,6 +79,26 @@ export function setupWebSocket(server, manager) {
     return names;
   }
 
+  /**
+   * Award session scores based on a game's endResult.
+   * - If endResult.scores is a { [playerId]: number } map, pass it directly.
+   * - If only endResult.winner exists, award 3 points to the winner and 1 to all other connected players.
+   * - If neither exists, skip scoring.
+   */
+  function applyEndResultScores(room, endResult) {
+    if (endResult.scores && typeof endResult.scores === 'object') {
+      room.awardScores(endResult.scores);
+    } else if (typeof endResult.winner === 'string') {
+      const scoresMap = {};
+      for (const [id, p] of room.players) {
+        if (p.connected) {
+          scoresMap[id] = id === endResult.winner ? 3 : 1;
+        }
+      }
+      room.awardScores(scoresMap);
+    }
+  }
+
   // --- Phase timers ---
 
   function cancelPhaseTimer(roomCode) {
@@ -139,6 +159,7 @@ export function setupWebSocket(server, manager) {
           saveAnswers(gameState._sourceFile, gameState.responses, playerNames).catch(() => {});
         }
 
+        applyEndResultScores(room, endResult);
         room.endGame();
         cancelPhaseTimer(room.code);
         broadcastToRoom(room.code, { type: 'LOBBY_UPDATE', state: room.getState() });
@@ -527,6 +548,7 @@ export function setupWebSocket(server, manager) {
         saveAnswers(gameState._sourceFile, gameState.responses, playerNames).catch(() => {});
       }
 
+      applyEndResultScores(room, endResult);
       room.endGame();
       cancelPhaseTimer(room.code);
       roomGameTypes.delete(room.code);
