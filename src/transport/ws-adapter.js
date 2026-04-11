@@ -332,26 +332,35 @@ export function setupWebSocket(server, manager) {
       return;
     }
 
-    // Check if this username already exists (reconnection)
-    let existingId = null;
-    for (const [id, p] of room.players) {
-      if (p.username === msg.username) {
-        existingId = id;
-        break;
-      }
-    }
-
     let playerId, avatar;
-    if (existingId) {
-      // Reconnect existing player
-      playerId = existingId;
-      const player = room.players.get(existingId);
+    if (msg.playerId && room.players.has(msg.playerId)) {
+      // Primary reconnect path: token-based — restore slot by stable playerId
+      playerId = msg.playerId;
+      const player = room.players.get(playerId);
       avatar = player.avatar;
       player.connected = true;
       player.lastSeen = Date.now();
     } else {
-      // New player
-      ({ playerId, avatar } = room.addPlayer(msg.username));
+      // Fallback: check if this username already exists (reconnection by username)
+      let existingId = null;
+      for (const [id, p] of room.players) {
+        if (p.username === msg.username) {
+          existingId = id;
+          break;
+        }
+      }
+
+      if (existingId) {
+        // Reconnect existing player by username match
+        playerId = existingId;
+        const player = room.players.get(existingId);
+        avatar = player.avatar;
+        player.connected = true;
+        player.lastSeen = Date.now();
+      } else {
+        // New player
+        ({ playerId, avatar } = room.addPlayer(msg.username));
+      }
     }
 
     meta.playerId = playerId;
