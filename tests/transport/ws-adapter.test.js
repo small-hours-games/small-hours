@@ -491,6 +491,7 @@ describe('ws-adapter - GAME_ACTION', () => {
   it('processes a valid game action and sends GAME_STATE', async () => {
     env = makeEnv();
     const ws = connectPlayer(env, 'Alice');
+    connectPlayer(env, 'Bob');
 
     // Start number-guess directly on the room
     await env.room.startGame('number-guess', {});
@@ -534,6 +535,7 @@ describe('ws-adapter - RETURN_TO_LOBBY', () => {
   it('admin can return to lobby and triggers LOBBY_UPDATE', async () => {
     env = makeEnv();
     const ws = connectPlayer(env, 'Admin');
+    connectPlayer(env, 'Bob');
     await env.room.startGame('number-guess', {});
     expect(env.room.game).not.toBeNull();
 

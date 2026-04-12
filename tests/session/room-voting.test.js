@@ -117,6 +117,7 @@ describe('Room voting state', () => {
   it('Test 10: startGame() resets votingActive, categoryVotes, availableCategories', async () => {
     const room = new Room('TEST');
     const { playerId: p1 } = room.addPlayer('Alice');
+    room.addPlayer('Bob');
     room.votingActive = true;
     room.availableCategories = [{ id: 9, name: 'Gen' }];
     room.categoryVotes.set(p1, 9);

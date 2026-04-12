@@ -1,15 +1,6 @@
 // Small Hours - Quiz / Trivia Game
 import { fetchQuestions } from '../../fetcher/cached-fetcher.js';
 
-function shuffleArray(arr) {
-  const shuffled = [...arr];
-  for (let i = shuffled.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-  }
-  return shuffled;
-}
-
 /**
  * Deterministic shuffle seeded by an integer.
  * Ensures all viewers (host + players) see the same answer order for a given question.
@@ -87,6 +78,8 @@ const quiz = {
       scores,
       streaks,
       powerups,
+      // { [playerId]: questionIndex } — tracks which question fifty was activated on
+      fiftyActivatedOn: {},
       questionStartTime: null,
       round: 0,
     };
@@ -109,6 +102,7 @@ const quiz = {
       }
 
       let newPowerups = state.powerups;
+      let newFiftyActivatedOn = state.fiftyActivatedOn || {};
       if (powerupType) {
         const playerPowerups = state.powerups[playerId];
         if (!playerPowerups || !playerPowerups[powerupType]) {
@@ -124,6 +118,9 @@ const quiz = {
             [powerupType]: false,
           },
         };
+        if (powerupType === 'fifty') {
+          newFiftyActivatedOn = { ...newFiftyActivatedOn, [playerId]: state.currentQuestion };
+        }
       }
 
       const newAnswers = {
@@ -140,6 +137,7 @@ const quiz = {
           ...state,
           answers: newAnswers,
           powerups: newPowerups,
+          fiftyActivatedOn: newFiftyActivatedOn,
         },
         events: [
           {
@@ -148,6 +146,42 @@ const quiz = {
             usedPowerup: powerupType || null,
           },
         ],
+      };
+    },
+
+    useFifty(state, { playerId }) {
+      if (state.phase !== 'question') {
+        return {
+          state,
+          events: [{ type: 'error', playerId, message: 'Not in question phase' }],
+        };
+      }
+      if (state.answers[playerId]) {
+        return {
+          state,
+          events: [{ type: 'error', playerId, message: 'Already answered' }],
+        };
+      }
+      const playerPowerups = state.powerups[playerId];
+      if (!playerPowerups || !playerPowerups.fifty) {
+        return {
+          state,
+          events: [{ type: 'error', playerId, message: 'Powerup fifty not available' }],
+        };
+      }
+      return {
+        state: {
+          ...state,
+          powerups: {
+            ...state.powerups,
+            [playerId]: { ...playerPowerups, fifty: false },
+          },
+          fiftyActivatedOn: {
+            ...(state.fiftyActivatedOn || {}),
+            [playerId]: state.currentQuestion,
+          },
+        },
+        events: [{ type: 'powerup_activated', playerId, powerupType: 'fifty' }],
       };
     },
 
@@ -277,23 +311,8 @@ const quiz = {
       const question = state.questions[state.currentQuestion];
       if (question) {
         const allAnswers = [question.correct_answer, ...question.incorrect_answers];
-
-        let answers;
-        // Apply fifty-fifty: remove 2 incorrect answers
-        const playerAnswer = state.answers[playerId];
-        const usedFifty =
-          (playerAnswer && playerAnswer.powerupType === 'fifty') ||
-          (state.powerups[playerId] && !state.powerups[playerId].fifty && state.phase === 'question');
-
         // Use seeded shuffle so host and all players see the same answer order
-        if (usedFifty && state.phase === 'question') {
-          const incorrect = [...question.incorrect_answers];
-          // Keep only 1 incorrect answer
-          const kept = incorrect.slice(0, 1);
-          answers = seededShuffle([question.correct_answer, ...kept], state.currentQuestion);
-        } else {
-          answers = seededShuffle(allAnswers, state.currentQuestion);
-        }
+        const answers = seededShuffle(allAnswers, state.currentQuestion);
 
         base.question = {
           id: question.id,
@@ -302,6 +321,24 @@ const quiz = {
           category: question.category,
           difficulty: question.difficulty,
         };
+
+        // Compute eliminatedAnswers for this player (fifty-fifty powerup).
+        // Fifty is per-question: only eliminate if the player activated fifty
+        // on this specific question (tracked via fiftyActivatedOn).
+        const fiftyOn = state.fiftyActivatedOn && state.fiftyActivatedOn[playerId];
+        const usedFiftyHere = fiftyOn === state.currentQuestion;
+
+        if (usedFiftyHere) {
+          // Eliminate all incorrect answers except the first one.
+          // Use the same seeded shuffle so the kept incorrect answer is deterministic.
+          const shuffledIncorrect = seededShuffle(question.incorrect_answers, state.currentQuestion);
+          const keepIncorrect = shuffledIncorrect[0];
+          base.eliminatedAnswers = answers
+            .map((a, i) => (a === question.correct_answer || a === keepIncorrect ? -1 : i))
+            .filter(i => i !== -1);
+        } else {
+          base.eliminatedAnswers = [];
+        }
 
         base.hasAnswered = !!state.answers[playerId];
       }

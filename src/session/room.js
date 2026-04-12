@@ -21,12 +21,12 @@ const AVATAR_POOL = [
 const CODE_CHARS = 'ABCDEFGHJKLMNPQRTUVWXYZ0123456789';
 
 const GAME_REGISTRY = {
-  'number-guess': numberGuess,
-  'shithead': shithead,
-  'quiz': quiz,
-  'question-form': questionForm,
-  'template': template,
-  'gin-rummy': ginRummy,
+  'number-guess': { definition: numberGuess, label: 'Number Guess', minPlayers: 2, maxPlayers: 10, complexity: 1 },
+  'shithead':     { definition: shithead,     label: 'Shithead',     minPlayers: 2, maxPlayers: 6,  complexity: 3 },
+  'quiz':         { definition: quiz,         label: 'Quiz',         minPlayers: 1, maxPlayers: 20, complexity: 1 },
+  'question-form':{ definition: questionForm, label: 'Question Form',minPlayers: 2, maxPlayers: 20, complexity: 1 },
+  'template':     { definition: template,     label: 'Template',     minPlayers: 1, maxPlayers: 20, complexity: 1 },
+  'gin-rummy':    { definition: ginRummy,     label: 'Gin Rummy',    minPlayers: 2, maxPlayers: 4,  complexity: 4 },
 };
 
 let playerCounter = 0;
@@ -90,6 +90,7 @@ export class Room {
     this.categoryVotes = new Map();      // Map<playerId, categoryId>
     this.availableCategories = [];       // [{id, name}]
     this.votingActive = false;
+    this.stateVersion = 0;
   }
 
   /**
@@ -98,6 +99,7 @@ export class Room {
    * Returns { playerId, avatar }.
    */
   addPlayer(username) {
+    this.stateVersion += 1;
     this.lastActivity = Date.now();
     const clean = sanitizeUsername(username);
     const playerId = generatePlayerId();
@@ -112,6 +114,7 @@ export class Room {
       isBot: false,
       connected: true,
       lastSeen: Date.now(),
+      sessionScore: 0,
     });
 
     return { playerId, avatar };
@@ -120,8 +123,10 @@ export class Room {
   /**
    * Remove a player from the room.
    * If the removed player was admin, promote the next connected player.
+   * NOTE: When a player is removed their sessionScore is lost along with their record.
    */
   removePlayer(playerId) {
+    this.stateVersion += 1;
     this.lastActivity = Date.now();
     const player = this.players.get(playerId);
     if (!player) return;
@@ -176,6 +181,7 @@ export class Room {
    * Set a player's ready status.
    */
   setReady(playerId, ready) {
+    this.stateVersion += 1;
     this.lastActivity = Date.now();
     const player = this.players.get(playerId);
     if (player) {
@@ -187,6 +193,7 @@ export class Room {
    * Record a game suggestion from a player.
    */
   suggestGame(playerId, gameType) {
+    this.stateVersion += 1;
     this.lastActivity = Date.now();
     if (this.players.has(playerId)) {
       this.gameSuggestions.set(playerId, gameType);
@@ -226,6 +233,16 @@ export class Room {
   }
 
   /**
+   * Return the list of games compatible with the current connected player count.
+   */
+  availableGames() {
+    const count = [...this.players.values()].filter(p => p.connected).length;
+    return Object.entries(GAME_REGISTRY)
+      .filter(([, m]) => count >= m.minPlayers && count <= m.maxPlayers)
+      .map(([type, m]) => ({ type, label: m.label, minPlayers: m.minPlayers, maxPlayers: m.maxPlayers, complexity: m.complexity }));
+  }
+
+  /**
    * Get the current lobby state suitable for broadcast.
    */
   getState() {
@@ -239,6 +256,7 @@ export class Room {
         isAdmin: p.isAdmin,
         isBot: p.isBot,
         connected: p.connected,
+        sessionScore: p.sessionScore,
       });
     }
 
@@ -274,18 +292,17 @@ export class Room {
    * Creates a game instance via the engine.
    */
   async startGame(gameType, config = {}) {
-    const definition = GAME_REGISTRY[gameType];
-    if (!definition) {
-      throw new Error(`Unknown game type: ${gameType}`);
-    }
+    const entry = GAME_REGISTRY[gameType];
+    if (!entry) throw new Error(`Unknown game type: ${gameType}`);
+    const connectedCount = [...this.players.values()].filter(p => p.connected).length;
+    if (connectedCount < entry.minPlayers) throw new Error(`${entry.label} requires at least ${entry.minPlayers} players`);
+    if (connectedCount > entry.maxPlayers) throw new Error(`${entry.label} supports at most ${entry.maxPlayers} players`);
+
+    const { definition } = entry;
 
     const playerIds = [];
     for (const [id, p] of this.players) {
       if (p.connected) playerIds.push(id);
-    }
-
-    if (playerIds.length === 0) {
-      throw new Error('No connected players to start a game');
     }
 
     let gameConfig = { ...config };
@@ -312,6 +329,7 @@ export class Room {
    * End the current game and return to the lobby.
    */
   endGame() {
+    this.stateVersion += 1;
     this.lastActivity = Date.now();
     this.game = null;
     // Reset ready states

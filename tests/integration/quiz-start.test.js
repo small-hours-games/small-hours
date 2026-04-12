@@ -15,8 +15,9 @@ describe('Quiz start flow', () => {
 
   beforeEach(() => {
     room = new Room('TEST');
-    // Add a connected player so startGame doesn't reject for "no players"
+    // Add connected players so startGame meets minPlayers for both quiz and number-guess
     room.addPlayer('Alice');
+    room.addPlayer('Bob');
   });
 
   afterEach(() => {
