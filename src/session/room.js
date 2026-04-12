@@ -22,6 +22,7 @@ const CODE_CHARS = 'ABCDEFGHJKLMNPQRTUVWXYZ0123456789';
 
 const GAME_REGISTRY = {
   'number-guess': { definition: numberGuess, label: 'Number Guess', minPlayers: 2, maxPlayers: 10, complexity: 1 },
+  'skogai': { definition: skogai, label: 'SkogAI', minPlayers: 1, maxPlayers: 10, complexity: 1 },
   'shithead':     { definition: shithead,     label: 'Shithead',     minPlayers: 2, maxPlayers: 6,  complexity: 3 },
   'quiz':         { definition: quiz,         label: 'Quiz',         minPlayers: 1, maxPlayers: 20, complexity: 1 },
   'question-form':{ definition: questionForm, label: 'Question Form',minPlayers: 2, maxPlayers: 20, complexity: 1 },
