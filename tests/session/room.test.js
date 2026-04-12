@@ -350,13 +350,15 @@ describe('Room - startGame (registry)', () => {
   it('throws when no connected players', async () => {
     const room = new Room('TEST');
     const { playerId } = room.addPlayer('Alice');
+    room.addPlayer('Bob');
     room.players.get(playerId).connected = false;
-    await expect(room.startGame('number-guess', {})).rejects.toThrow(/No connected players/);
+    await expect(room.startGame('number-guess', {})).rejects.toThrow(/requires at least 2 players/);
   });
 
   it('can start number-guess (sync setup, no prepare)', async () => {
     const room = new Room('TEST');
     room.addPlayer('Alice');
+    room.addPlayer('Bob');
     const game = await room.startGame('number-guess', {});
     expect(game).toBeDefined();
     expect(room.game).toBe(game);
@@ -365,6 +367,7 @@ describe('Room - startGame (registry)', () => {
   it('clears gameSuggestions after starting a game', async () => {
     const room = new Room('TEST');
     const { playerId } = room.addPlayer('Alice');
+    room.addPlayer('Bob');
     room.suggestGame(playerId, 'quiz');
     await room.startGame('number-guess', {});
     expect(room.gameSuggestions.size).toBe(0);
@@ -378,6 +381,7 @@ describe('Room - endGame', () => {
   it('clears the game reference', async () => {
     const room = new Room('TEST');
     room.addPlayer('Alice');
+    room.addPlayer('Bob');
     await room.startGame('number-guess', {});
     room.endGame();
     expect(room.game).toBeNull();
@@ -386,6 +390,7 @@ describe('Room - endGame', () => {
   it('resets all ready states', async () => {
     const room = new Room('TEST');
     const { playerId } = room.addPlayer('Alice');
+    room.addPlayer('Bob');
     room.setReady(playerId, true);
     await room.startGame('number-guess', {});
     room.endGame();
@@ -428,6 +433,7 @@ describe('Room - toJSON', () => {
   it('game contains id when a game is running', async () => {
     const room = new Room('JSON');
     room.addPlayer('Alice');
+    room.addPlayer('Bob');
     const game = await room.startGame('number-guess', {});
     const json = room.toJSON();
     expect(json.game.id).toBe(game.id);
