@@ -870,6 +870,32 @@
       const content = document.getElementById('gameContent');
       const timerContainer = document.getElementById('timerContainer');
       const timerBar = document.getElementById('timerBar');
+      const roundInfo = document.getElementById('roundInfo');
+
+      // Progress indicator ("Question 3 of 10")
+      if (msg.currentQuestion != null && msg.totalQuestions) {
+        roundInfo.textContent = 'Question ' + (msg.currentQuestion + 1) + ' of ' + msg.totalQuestions;
+      }
+
+      if (msg.phase === 'countdown') {
+        timerContainer.style.display = 'none';
+        content.innerHTML = '<div class="quiz-display">' +
+          '<div class="quiz-question-text">Get ready!</div>' +
+          '<div class="quiz-timer-large">&#9201;</div>' +
+          '<div style="color:var(--text-secondary);">First question coming up...</div>' +
+          '</div>';
+        return;
+      }
+
+      if (msg.phase === 'between') {
+        timerContainer.style.display = 'none';
+        const nextQ = (msg.currentQuestion != null ? msg.currentQuestion + 1 : '?');
+        content.innerHTML = '<div class="quiz-display">' +
+          '<div class="quiz-question-text">Next up: Question ' + nextQ + '</div>' +
+          '<div style="color:var(--text-secondary);margin-top:16px;">Get ready for the next round...</div>' +
+          '</div>';
+        return;
+      }
 
       if (msg.phase === 'question') {
         const q = msg.question || {};
@@ -880,8 +906,7 @@
         const labels = ['A', 'B', 'C', 'D'];
         const classes = ['a', 'b', 'c', 'd'];
         (q.answers || []).forEach((a, i) => {
-          const eliminated = (msg.eliminated || []).includes(i) ? ' eliminated' : '';
-          html += '<div class="quiz-answer-box ' + classes[i] + eliminated + '">' +
+          html += '<div class="quiz-answer-box ' + classes[i] + '">' +
             '<strong>' + labels[i] + '.</strong> ' + escapeHtml(a) + '</div>';
         });
 

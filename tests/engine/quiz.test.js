@@ -389,7 +389,7 @@ describe('Quiz - view filtering', () => {
     expect(view.hasAnswered).toBe(false);
   });
 
-  it('fifty-fifty reduces answers to 2 during question phase', () => {
+  it('fifty-fifty leaves 4 answers but marks 2 as eliminated during question phase', () => {
     const game = makeGame(['p1']);
     const g1 = toQuestion(game);
     const { game: g2 } = processAction(g1, {
@@ -399,9 +399,88 @@ describe('Quiz - view filtering', () => {
       powerupType: 'fifty',
     });
     const view = getView(g2, 'p1');
-    // After fifty-fifty: correct + 1 incorrect = 2 answers
-    expect(view.question.answers).toHaveLength(2);
+    // Answer list is always 4 — eliminated indices point to 2 of them.
+    expect(view.question.answers).toHaveLength(4);
     expect(view.question.answers).toContain(Q1.correct_answer);
+    expect(view.eliminatedAnswers).toHaveLength(2);
+    // The correct answer must not be eliminated
+    const correctIdx = view.question.answers.indexOf(Q1.correct_answer);
+    expect(view.eliminatedAnswers).not.toContain(correctIdx);
+  });
+
+  it('view returns empty eliminatedAnswers when fifty not used', () => {
+    const game = makeGame(['p1']);
+    const g1 = toQuestion(game);
+    const view = getView(g1, 'p1');
+    expect(view.eliminatedAnswers).toEqual([]);
+  });
+
+  it('useFifty action activates fifty without recording an answer', () => {
+    const game = makeGame(['p1']);
+    const g1 = toQuestion(game);
+    const { game: g2, events } = processAction(g1, {
+      type: 'useFifty',
+      playerId: 'p1',
+    });
+    // Powerup is consumed
+    expect(g2.state.powerups.p1.fifty).toBe(false);
+    // No answer was recorded — player can still answer
+    expect(g2.state.answers.p1).toBeUndefined();
+    expect(events[0].type).toBe('powerup_activated');
+    expect(events[0].powerupType).toBe('fifty');
+    // View now shows eliminated indices
+    const view = getView(g2, 'p1');
+    expect(view.question.answers).toHaveLength(4);
+    expect(view.eliminatedAnswers).toHaveLength(2);
+  });
+
+  it('useFifty rejects if player already answered', () => {
+    const game = makeGame(['p1']);
+    const g1 = toQuestion(game);
+    const { game: g2 } = processAction(g1, {
+      type: 'answer',
+      playerId: 'p1',
+      answerId: Q1.correct_answer,
+    });
+    const { events } = processAction(g2, { type: 'useFifty', playerId: 'p1' });
+    expect(events[0].type).toBe('error');
+    expect(events[0].message).toMatch(/already answered/i);
+  });
+
+  it('useFifty rejects if fifty not available', () => {
+    const game = makeGame(['p1']);
+    const g1 = toQuestion(game);
+    const { game: g2 } = processAction(g1, { type: 'useFifty', playerId: 'p1' });
+    const { events } = processAction(g2, { type: 'useFifty', playerId: 'p1' });
+    expect(events[0].type).toBe('error');
+    expect(events[0].message).toMatch(/not available/i);
+  });
+
+  it('useFifty rejects outside question phase', () => {
+    const game = makeGame(['p1']);
+    // Still in countdown
+    const { events } = processAction(game, { type: 'useFifty', playerId: 'p1' });
+    expect(events[0].type).toBe('error');
+    expect(events[0].message).toMatch(/not in question/i);
+  });
+
+  it('answer after useFifty still works (player can answer post-fifty)', () => {
+    const game = makeGame(['p1']);
+    const g1 = toQuestion(game);
+    const g2 = processAction(g1, { type: 'useFifty', playerId: 'p1' }).game;
+    // Get the view to find the available (non-eliminated) answer set
+    const view = getView(g2, 'p1');
+    // Player picks the correct answer
+    const { game: g3, events } = processAction(g2, {
+      type: 'answer',
+      playerId: 'p1',
+      answerId: Q1.correct_answer,
+    });
+    expect(g3.state.answers.p1).toBeDefined();
+    expect(g3.state.answers.p1.answerId).toBe(Q1.correct_answer);
+    expect(events[0].type).toBe('answer_submitted');
+    // eliminatedAnswers still respected post-answer
+    expect(view.eliminatedAnswers).toHaveLength(2);
   });
 
   it('reveals correctAnswer during reveal phase', () => {

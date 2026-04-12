@@ -4,9 +4,12 @@
 import { WebSocketServer } from 'ws';
 import { processAction, getView, checkEnd } from '../engine/engine.js';
 import { saveAnswers } from '../fetcher/question-file.js';
-import { fetchCategories } from '../fetcher/cached-fetcher.js';
 import { PHASE_DURATIONS as QUIZ_DURATIONS } from '../engine/games/quiz.js';
 import { PHASE_DURATIONS as SPY_DURATIONS } from '../engine/games/spy.js';
+import * as lobbyHandlers from './handlers/lobby.js';
+import * as gameHandlers from './handlers/game.js';
+import * as chatHandlers from './handlers/chat.js';
+import * as voteHandlers from './handlers/vote.js';
 
 const GAME_PHASE_DURATIONS = {
   quiz: QUIZ_DURATIONS,
@@ -68,8 +71,6 @@ export function setupWebSocket(server, manager) {
     }
   }
 
-  // --- Helpers ---
-
   /** Build a playerId → username map from room players */
   function getPlayerNames(room) {
     const names = {};
@@ -77,6 +78,26 @@ export function setupWebSocket(server, manager) {
       names[id] = p.username;
     }
     return names;
+  }
+
+  /**
+   * Award session scores based on a game's endResult.
+   * - If endResult.scores is a { [playerId]: number } map, pass it directly.
+   * - If only endResult.winner exists, award 3 points to the winner and 1 to all other connected players.
+   * - If neither exists, skip scoring.
+   */
+  function applyEndResultScores(room, endResult) {
+    if (endResult.scores && typeof endResult.scores === 'object') {
+      room.awardScores(endResult.scores);
+    } else if (typeof endResult.winner === 'string') {
+      const scoresMap = {};
+      for (const [id, p] of room.players) {
+        if (p.connected) {
+          scoresMap[id] = id === endResult.winner ? 3 : 1;
+        }
+      }
+      room.awardScores(scoresMap);
+    }
   }
 
   // --- Phase timers ---
@@ -139,6 +160,7 @@ export function setupWebSocket(server, manager) {
           saveAnswers(gameState._sourceFile, gameState.responses, playerNames).catch(() => {});
         }
 
+        applyEndResultScores(room, endResult);
         room.endGame();
         cancelPhaseTimer(room.code);
         broadcastToRoom(room.code, { type: 'LOBBY_UPDATE', state: room.getState() });
@@ -286,276 +308,63 @@ export function setupWebSocket(server, manager) {
     });
   });
 
+  // --- Context object passed to all handlers ---
+
+  function makeCtx() {
+    return {
+      send,
+      broadcastToRoom,
+      sendToPlayer,
+      playerSockets,
+      graceTimers,
+      phaseTimers,
+      roomGameTypes,
+      schedulePhaseTimer,
+      cancelPhaseTimer,
+      getPlayerNames,
+      checkChatRateLimit,
+    };
+  }
+
   // --- Message dispatch ---
 
   function handleMessage(ws, meta, room, msg) {
+    const ctx = makeCtx();
     switch (msg.type) {
       case 'JOIN_LOBBY':
-        handleJoinLobby(ws, meta, room, msg);
+        lobbyHandlers.handleJoinLobby(ws, meta, room, msg, ctx);
         break;
       case 'SET_READY':
-        handleSetReady(ws, meta, room, msg);
+        lobbyHandlers.handleSetReady(ws, meta, room, msg, ctx);
         break;
       case 'SUGGEST_GAME':
-        handleSuggestGame(ws, meta, room, msg);
+        lobbyHandlers.handleSuggestGame(ws, meta, room, msg, ctx);
         break;
       case 'START_MINI_GAME':
-        handleStartMiniGame(ws, meta, room, msg).catch(err => {
+        gameHandlers.handleStartMiniGame(ws, meta, room, msg, ctx).catch(err => {
           send(ws, { type: 'ERROR', message: err.message });
         });
         break;
       case 'RETURN_TO_LOBBY':
-        handleReturnToLobby(ws, meta, room, msg);
+        lobbyHandlers.handleReturnToLobby(ws, meta, room, msg, ctx);
         break;
       case 'GAME_ACTION':
-        handleGameAction(ws, meta, room, msg);
+        gameHandlers.handleGameAction(ws, meta, room, msg, ctx);
         break;
       case 'CHAT_MESSAGE':
-        handleChatMessage(ws, meta, room, msg);
+        chatHandlers.handleChatMessage(ws, meta, room, msg, ctx);
         break;
       case 'START_CATEGORY_VOTE':
-        handleStartCategoryVote(ws, meta, room, msg).catch(err => {
+        voteHandlers.handleStartCategoryVote(ws, meta, room, msg, ctx).catch(err => {
           send(ws, { type: 'ERROR', message: err.message });
         });
         break;
       case 'CATEGORY_VOTE':
-        handleCategoryVote(ws, meta, room, msg);
+        voteHandlers.handleCategoryVote(ws, meta, room, msg, ctx);
         break;
       default:
         send(ws, { type: 'ERROR', message: `Unknown message type: ${msg.type}` });
     }
-  }
-
-  function handleJoinLobby(ws, meta, room, msg) {
-    if (!msg.username) {
-      send(ws, { type: 'ERROR', message: 'Username required' });
-      return;
-    }
-
-    // Check if this username already exists (reconnection)
-    let existingId = null;
-    for (const [id, p] of room.players) {
-      if (p.username === msg.username) {
-        existingId = id;
-        break;
-      }
-    }
-
-    let playerId, avatar;
-    if (existingId) {
-      // Reconnect existing player
-      playerId = existingId;
-      const player = room.players.get(existingId);
-      avatar = player.avatar;
-      player.connected = true;
-      player.lastSeen = Date.now();
-    } else {
-      // New player
-      ({ playerId, avatar } = room.addPlayer(msg.username));
-    }
-
-    meta.playerId = playerId;
-    playerSockets.set(playerId, ws);
-
-    // Cancel any pending grace timer
-    if (graceTimers.has(playerId)) {
-      clearTimeout(graceTimers.get(playerId));
-      graceTimers.delete(playerId);
-    }
-
-    send(ws, { type: 'JOIN_OK', playerId, avatar });
-    broadcastToRoom(room.code, { type: 'LOBBY_UPDATE', state: room.getState() });
-
-    // If a game is running, send current game state to the reconnecting player
-    if (room.game) {
-      const view = getView(room.game, playerId);
-      const playerNames = getPlayerNames(room);
-      sendToPlayer(playerId, { type: 'GAME_STATE', ...view, playerNames });
-    }
-  }
-
-  function handleSetReady(ws, meta, room, msg) {
-    if (!meta.playerId) {
-      send(ws, { type: 'ERROR', message: 'Not joined yet' });
-      return;
-    }
-    room.setReady(meta.playerId, msg.ready);
-    broadcastToRoom(room.code, { type: 'LOBBY_UPDATE', state: room.getState() });
-  }
-
-  function handleSuggestGame(ws, meta, room, msg) {
-    if (!meta.playerId) {
-      send(ws, { type: 'ERROR', message: 'Not joined yet' });
-      return;
-    }
-    if (!msg.gameType) {
-      send(ws, { type: 'ERROR', message: 'gameType required' });
-      return;
-    }
-    room.suggestGame(meta.playerId, msg.gameType);
-    broadcastToRoom(room.code, { type: 'LOBBY_UPDATE', state: room.getState() });
-  }
-
-  async function handleStartMiniGame(ws, meta, room, msg) {
-    if (!meta.playerId) {
-      send(ws, { type: 'ERROR', message: 'Not joined yet' });
-      return;
-    }
-
-    const player = room.players.get(meta.playerId);
-    if (!player || !player.isAdmin) {
-      send(ws, { type: 'ERROR', message: 'Only admin can start a game' });
-      return;
-    }
-
-    if (!msg.gameType) {
-      send(ws, { type: 'ERROR', message: 'gameType required' });
-      return;
-    }
-
-    let config = msg.config || {};
-
-    // Quiz: resolve winning category from votes if no explicit override (per D-12, D-16)
-    if (msg.gameType === 'quiz' && room.votingActive && !config.categoryId) {
-      config = { ...config, categoryId: room.resolveWinningCategory() };
-    }
-
-    try {
-      const game = await room.startGame(msg.gameType, config);
-      broadcastToRoom(room.code, {
-        type: 'MINI_GAME_STARTING',
-        gameType: msg.gameType,
-        gameId: game.id,
-      });
-
-      // Send initial game state to each player
-      const pNames = getPlayerNames(room);
-      for (const [id] of room.players) {
-        const view = getView(room.game, id);
-        sendToPlayer(id, { type: 'GAME_STATE', ...view, gameType: msg.gameType, playerNames: pNames });
-      }
-      // Also broadcast to host displays
-      broadcastToRoom(room.code, { type: 'GAME_STATE', gameType: msg.gameType, phase: room.game.state.phase, playerNames: pNames }, { hostsOnly: true });
-
-      // Schedule phase timer for timer-driven games
-      roomGameTypes.set(room.code, msg.gameType);
-      schedulePhaseTimer(room, msg.gameType);
-    } catch (err) {
-      send(ws, { type: 'ERROR', message: err.message });
-    }
-  }
-
-  function handleReturnToLobby(ws, meta, room) {
-    if (!meta.playerId) {
-      send(ws, { type: 'ERROR', message: 'Not joined yet' });
-      return;
-    }
-
-    const player = room.players.get(meta.playerId);
-    if (!player || !player.isAdmin) {
-      send(ws, { type: 'ERROR', message: 'Only admin can return to lobby' });
-      return;
-    }
-
-    cancelPhaseTimer(room.code);
-    roomGameTypes.delete(room.code);
-    room.endGame();
-    broadcastToRoom(room.code, { type: 'LOBBY_UPDATE', state: room.getState() });
-  }
-
-  function handleGameAction(ws, meta, room, msg) {
-    if (!meta.playerId) {
-      send(ws, { type: 'ERROR', message: 'Not joined yet' });
-      return;
-    }
-
-    if (!room.game) {
-      send(ws, { type: 'ERROR', message: 'No game running' });
-      return;
-    }
-
-    if (!msg.action || !msg.action.type) {
-      send(ws, { type: 'ERROR', message: 'action with type required' });
-      return;
-    }
-
-    const action = { ...msg.action, playerId: meta.playerId };
-    const { game: updatedGame, events } = processAction(room.game, action);
-    room.game = updatedGame;
-    room.lastActivity = Date.now();
-
-    const playerNames = getPlayerNames(room);
-
-    // Send per-player views (flattened into GAME_STATE)
-    for (const [id] of room.players) {
-      const view = getView(room.game, id);
-      sendToPlayer(id, { type: 'GAME_STATE', ...view, playerNames });
-    }
-
-    // Broadcast shared state to host displays only (not players — they got personal views above)
-    const hostView = getView(room.game, room.players.keys().next().value);
-    const sharedState = { type: 'GAME_STATE', ...hostView, playerNames };
-    delete sharedState.myHand;
-    delete sharedState.myFaceUp;
-    delete sharedState.myFaceDownCount;
-    delete sharedState.myFaceDownIds;
-    delete sharedState.myGuesses;
-    delete sharedState.isMyTurn;
-    delete sharedState.swapConfirmed;
-    if (events.length > 0) sharedState.events = events;
-    broadcastToRoom(room.code, sharedState, { hostsOnly: true });
-
-    // Reschedule phase timer if phase changed due to player action
-    const activeGameType = roomGameTypes.get(room.code);
-    if (activeGameType) {
-      schedulePhaseTimer(room, activeGameType);
-    }
-
-    // Check for game end
-    const endResult = checkEnd(room.game);
-    if (endResult) {
-      // Send final views with end result
-      for (const [id] of room.players) {
-        const view = getView(room.game, id);
-        sendToPlayer(id, { type: 'GAME_STATE', ...view, ...endResult });
-      }
-      broadcastToRoom(room.code, { type: 'GAME_STATE', phase: 'finished', ...endResult, playerNames }, { hostsOnly: true });
-
-      // Save question-form answers to file
-      const gameState = room.game?.state;
-      if (gameState?.questions && gameState?.responses && gameState?._sourceFile) {
-        saveAnswers(gameState._sourceFile, gameState.responses, playerNames).catch(() => {});
-      }
-
-      room.endGame();
-      cancelPhaseTimer(room.code);
-      roomGameTypes.delete(room.code);
-      broadcastToRoom(room.code, { type: 'LOBBY_UPDATE', state: room.getState() });
-    }
-  }
-
-  function handleChatMessage(ws, meta, room, msg) {
-    if (!meta.playerId) {
-      send(ws, { type: 'ERROR', message: 'Not joined yet' });
-      return;
-    }
-
-    if (!checkChatRateLimit(meta)) {
-      send(ws, { type: 'ERROR', message: 'Chat rate limit exceeded' });
-      return;
-    }
-
-    const text = String(msg.text || '').replace(/<[^>]*>/g, '').trim().slice(0, 200);
-    if (!text) return;
-
-    const player = room.players.get(meta.playerId);
-    broadcastToRoom(room.code, {
-      type: 'CHAT_MESSAGE',
-      playerId: meta.playerId,
-      username: player ? player.username : 'Unknown',
-      text,
-      timestamp: Date.now(),
-    });
   }
 
   // --- Disconnect handling ---
@@ -591,51 +400,6 @@ export function setupWebSocket(server, manager) {
   function hasActiveSockets(code) {
     const sockets = roomSockets.get(code);
     return sockets ? sockets.size > 0 : false;
-  }
-
-  async function handleStartCategoryVote(ws, meta, room) {
-    if (!meta.playerId) {
-      send(ws, { type: 'ERROR', message: 'Not joined yet' });
-      return;
-    }
-    const player = room.players.get(meta.playerId);
-    if (!player || !player.isAdmin) {
-      send(ws, { type: 'ERROR', message: 'Only admin can start voting' });
-      return;
-    }
-    const result = await fetchCategories();
-    if (!result.ok) {
-      send(ws, { type: 'ERROR', message: result.error.message });
-      return;
-    }
-    room.availableCategories = result.categories;
-    room.votingActive = true;
-    room.categoryVotes.clear();
-    broadcastToRoom(room.code, { type: 'LOBBY_UPDATE', state: room.getState() });
-  }
-
-  function handleCategoryVote(ws, meta, room, msg) {
-    if (!meta.playerId) {
-      send(ws, { type: 'ERROR', message: 'Not joined yet' });
-      return;
-    }
-    if (!room.votingActive) {
-      send(ws, { type: 'ERROR', message: 'Voting not active' });
-      return;
-    }
-    const categoryId = Number(msg.categoryId);
-    if (!Number.isFinite(categoryId)) {
-      send(ws, { type: 'ERROR', message: 'Invalid categoryId' });
-      return;
-    }
-    const valid = room.availableCategories.some(c => c.id === categoryId);
-    if (!valid) {
-      send(ws, { type: 'ERROR', message: 'Invalid categoryId' });
-      return;
-    }
-    room.categoryVotes.set(meta.playerId, categoryId);
-    room.lastActivity = Date.now();
-    broadcastToRoom(room.code, { type: 'LOBBY_UPDATE', state: room.getState() });
   }
 
   return { wss, broadcastToRoom, sendToPlayer, hasActiveSockets };

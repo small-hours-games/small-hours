@@ -83,6 +83,7 @@ export class Room {
     this.categoryVotes = new Map();      // Map<playerId, categoryId>
     this.availableCategories = [];       // [{id, name}]
     this.votingActive = false;
+    this.stateVersion = 0;
   }
 
   /**
@@ -91,6 +92,7 @@ export class Room {
    * Returns { playerId, avatar }.
    */
   addPlayer(username) {
+    this.stateVersion += 1;
     this.lastActivity = Date.now();
     const clean = sanitizeUsername(username);
     const playerId = generatePlayerId();
@@ -105,6 +107,7 @@ export class Room {
       isBot: false,
       connected: true,
       lastSeen: Date.now(),
+      sessionScore: 0,
     });
 
     return { playerId, avatar };
@@ -113,8 +116,10 @@ export class Room {
   /**
    * Remove a player from the room.
    * If the removed player was admin, promote the next connected player.
+   * NOTE: When a player is removed their sessionScore is lost along with their record.
    */
   removePlayer(playerId) {
+    this.stateVersion += 1;
     this.lastActivity = Date.now();
     const player = this.players.get(playerId);
     if (!player) return;
@@ -142,9 +147,23 @@ export class Room {
   }
 
   /**
+   * Award session score points to players after a mini-game ends.
+   * @param {{ [playerId: string]: number }} scoresMap - points to add per player
+   */
+  awardScores(scoresMap) {
+    for (const [playerId, points] of Object.entries(scoresMap)) {
+      const player = this.players.get(playerId);
+      if (player) {
+        player.sessionScore += points;
+      }
+    }
+  }
+
+  /**
    * Set a player's ready status.
    */
   setReady(playerId, ready) {
+    this.stateVersion += 1;
     this.lastActivity = Date.now();
     const player = this.players.get(playerId);
     if (player) {
@@ -156,6 +175,7 @@ export class Room {
    * Record a game suggestion from a player.
    */
   suggestGame(playerId, gameType) {
+    this.stateVersion += 1;
     this.lastActivity = Date.now();
     if (this.players.has(playerId)) {
       this.gameSuggestions.set(playerId, gameType);
@@ -218,6 +238,7 @@ export class Room {
         isAdmin: p.isAdmin,
         isBot: p.isBot,
         connected: p.connected,
+        sessionScore: p.sessionScore,
       });
     }
 
@@ -290,6 +311,7 @@ export class Room {
    * End the current game and return to the lobby.
    */
   endGame() {
+    this.stateVersion += 1;
     this.lastActivity = Date.now();
     this.game = null;
     // Reset ready states
