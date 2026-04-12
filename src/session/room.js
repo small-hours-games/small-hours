@@ -253,7 +253,6 @@ export class Room {
       gameRunning: this.game !== null,
       gameSuggestions: suggestions,
       language: this.language,
-      stateVersion: this.stateVersion,
       availableGames: this.availableGames(),
     };
 
@@ -275,7 +274,6 @@ export class Room {
    * Creates a game instance via the engine.
    */
   async startGame(gameType, config = {}) {
-    this.stateVersion += 1;
     const entry = GAME_REGISTRY[gameType];
     if (!entry) throw new Error(`Unknown game type: ${gameType}`);
     const connectedCount = [...this.players.values()].filter(p => p.connected).length;
