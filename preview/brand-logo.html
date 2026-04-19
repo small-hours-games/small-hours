@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;900&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #0a0a1a; font-family: 'Outfit', sans-serif; padding: 24px; display: flex; flex-direction: column; gap: 16px; align-items: center; }
+  img.logo { width: 200px; height: auto; animation: glow 3s ease-in-out infinite; }
+  @keyframes glow {
+    0%,100% { filter: drop-shadow(0 0 10px rgba(179,71,217,0.4)); transform: scale(1); }
+    50%      { filter: drop-shadow(0 0 24px rgba(179,71,217,0.7)); transform: scale(1.04); }
+  }
+  .title {
+    font-size: 2.2rem; font-weight: 900; letter-spacing: -0.02em;
+    background: linear-gradient(135deg, #b347d9, #4dc9f6, #ff6ec7);
+    background-size: 200% 200%; -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent; background-clip: text;
+    animation: grad 5s ease-in-out infinite;
+  }
+  @keyframes grad { 0%,100%{background-position:0% 50%} 50%{background-position:100% 50%} }
+  .sub { color: #8888aa; font-size: 0.9rem; }
+  .row { display: flex; align-items: center; gap: 8px; }
+  .logo-sm { width: 32px; height: auto; }
+  .logo-text-sm { font-size: 1.2rem; font-weight: 900; background: linear-gradient(135deg, #b347d9, #4dc9f6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+</style>
+</head>
+<body>
+  <img class="logo" src="../assets/logo.png" alt="Small Hours Games" style="width:200px">
+  <div class="sub">Late-night party games with friends</div>
+  <div class="row" style="margin-top:8px">
+    <img class="logo-sm" src="../assets/logo.png" alt="">
+    <span style="font-size:0.75rem; color:#8888aa; font-family:monospace">compact lockup</span>
+  </div>
+</body>
+</html>

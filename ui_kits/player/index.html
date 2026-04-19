@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Small Hours — Player Controller (Phone)</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;900&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0a0a1a;
+  --card: rgba(20,20,40,0.85);
+  --purple: #b347d9;
+  --blue: #4dc9f6;
+  --green: #39ff14;
+  --pink: #ff6ec7;
+  --orange: #ff9f43;
+  --red: #ff4757;
+  --text: #e0e0ff;
+  --muted: #8888aa;
+  --border: rgba(179,71,217,0.3);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+/* Phone frame simulation */
+body {
+  background: #060610;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  font-family: 'Outfit', sans-serif;
+  padding: 24px 12px;
+  gap: 32px;
+  flex-wrap: wrap;
+}
+
+.phone-frame {
+  width: 375px;
+  background: var(--bg);
+  border-radius: 40px;
+  border: 2px solid rgba(255,255,255,0.08);
+  overflow: hidden;
+  box-shadow: 0 0 60px rgba(179,71,217,0.15), 0 30px 60px rgba(0,0,0,0.6);
+  position: relative;
+  flex-shrink: 0;
+}
+
+.screen {
+  width: 100%;
+  overflow: hidden;
+  position: relative;
+}
+
+/* Animated background */
+.bg-anim {
+  position: absolute; inset: 0; z-index: 0; pointer-events: none;
+  background:
+    radial-gradient(ellipse 300px 300px at 20% 50%, rgba(179,71,217,0.1) 0%, transparent 100%),
+    radial-gradient(ellipse 250px 250px at 80% 20%, rgba(77,201,246,0.08) 0%, transparent 100%);
+  animation: bgFloat 15s ease-in-out infinite alternate;
+}
+@keyframes bgFloat {
+  0%   { filter: hue-rotate(0deg); }
+  100% { filter: hue-rotate(-10deg); }
+}
+
+/* Status bar */
+.status-bar {
+  position: relative; z-index: 10;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 20px 8px;
+  font-size: 0.75rem; font-weight: 600; color: var(--text);
+}
+
+/* Screen content */
+.screen-content { position: relative; z-index: 5; padding: 0 20px 28px; }
+
+/* Cards */
+.card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 20px; backdrop-filter: blur(12px); }
+.card-sm { padding: 14px 16px; }
+.card-title { font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); margin-bottom: 12px; }
+
+/* Buttons */
+.btn { padding: 14px 20px; border: none; border-radius: 12px; font-size: 1rem; font-weight: 600; cursor: pointer; width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 52px; font-family: 'Outfit', sans-serif; transition: all 0.2s; -webkit-tap-highlight-color: transparent; }
+.btn:active { transform: scale(0.97); }
+.btn-primary { background: linear-gradient(135deg, var(--purple), var(--blue)); color: white; }
+.btn-secondary { background: var(--card); color: var(--text); border: 1px solid var(--border); }
+.btn-success { background: linear-gradient(135deg, var(--green), #00cc88); color: #0a0a1a; }
+.btn-danger  { background: linear-gradient(135deg, var(--red), var(--pink)); color: white; }
+.btn-sm { min-height: 44px; font-size: 0.9rem; padding: 10px 16px; }
+
+/* Inputs */
+input {
+  background: rgba(10,10,26,0.8); border: 1px solid var(--border); border-radius: 8px;
+  padding: 14px 16px; color: var(--text); font-size: 1rem; width: 100%;
+  font-family: 'Outfit', sans-serif; outline: none; transition: all 0.2s;
+}
+input:focus { border-color: var(--purple); box-shadow: 0 0 10px rgba(179,71,217,0.3); }
+
+/* Logo section */
+.logo-section { text-align: center; padding: 24px 0 20px; }
+.logo-section img { width: 80px; height: auto; }
+.title {
+  font-size: 2rem; font-weight: 900; letter-spacing: -0.02em;
+  background: linear-gradient(135deg, var(--purple), var(--blue), var(--pink));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+}
+.subtitle { color: var(--muted); font-size: 0.85rem; margin-top: 4px; }
+
+/* Divider */
+.divider { display: flex; align-items: center; gap: 14px; margin: 18px 0; color: var(--muted); font-size: 0.82rem; }
+.divider::before, .divider::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+/* Ready toggle */
+.ready-toggle { display: flex; align-items: center; justify-content: space-between; padding: 14px; border-radius: 12px; background: rgba(57,255,20,0.06); border: 1px solid rgba(57,255,20,0.25); }
+
+/* Answer buttons */
+.answer-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 4px; }
+.ans-btn {
+  padding: 18px 12px; border-radius: 12px; font-size: 0.95rem; font-weight: 600;
+  border: 2px solid transparent; min-height: 62px; display: flex; align-items: center;
+  justify-content: center; text-align: center; cursor: pointer; color: white;
+  transition: all 0.15s; -webkit-tap-highlight-color: transparent;
+}
+.ans-btn:active { transform: scale(0.95); }
+.ans-btn.selected { border-color: white; box-shadow: 0 0 20px rgba(255,255,255,0.25); }
+
+/* Powerups */
+.powerup-row { display: flex; gap: 8px; flex-wrap: wrap; }
+.pu-btn {
+  padding: 8px 14px; border-radius: 20px; font-size: 0.8rem; font-weight: 600;
+  cursor: pointer; border: 1px solid var(--border); background: var(--card);
+  color: var(--text); transition: all 0.2s; font-family: 'Outfit', sans-serif;
+}
+.pu-btn:hover { border-color: var(--purple); background: rgba(179,71,217,0.15); }
+
+/* Connection status */
+.conn-bar { display: flex; align-items: center; justify-content: flex-end; gap: 7px; padding: 4px 20px 0; font-size: 0.72rem; font-weight: 600; color: var(--green); }
+.conn-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+
+/* Section label */
+.screen-label { font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); background: rgba(10,10,26,0.9); padding: 4px 10px; border-radius: 20px; text-align: center; margin-bottom: 10px; display: inline-block; }
+
+/* Waiting state */
+.waiting { text-align: center; padding: 32px 16px; }
+.waiting-emoji { font-size: 3rem; margin-bottom: 12px; }
+.waiting-title { font-size: 1.2rem; font-weight: 700; margin-bottom: 6px; }
+.waiting-sub { font-size: 0.85rem; color: var(--muted); }
+.pulse { animation: pulse 2s ease-in-out infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
+
+/* Screen switcher (prototype nav) */
+.prototype-nav {
+  display: flex; gap: 0; background: rgba(10,10,26,0.95);
+  border-top: 1px solid var(--border); padding: 10px 16px;
+}
+.pnav-btn {
+  flex: 1; padding: 8px 4px; border: none; background: transparent;
+  color: var(--muted); font-size: 0.68rem; font-family: 'Outfit', sans-serif;
+  font-weight: 600; cursor: pointer; border-radius: 8px; transition: all 0.15s;
+  text-align: center;
+}
+.pnav-btn.active { color: var(--purple); background: rgba(179,71,217,0.1); }
+.pnav-icon { font-size: 1.1rem; display: block; margin-bottom: 2px; }
+
+/* Info line */
+.info-line { font-size: 0.82rem; color: var(--muted); text-align: center; margin-top: 4px; }
+.info-line strong { color: var(--text); }
+
+/* Card game hand */
+.card-hand { display: flex; justify-content: center; gap: -8px; padding: 8px 0; flex-wrap: nowrap; overflow-x: auto; }
+.play-card {
+  width: 52px; height: 74px; border-radius: 6px; background: white;
+  margin-left: -10px; border: 1px solid rgba(0,0,0,0.1);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.8rem; font-weight: 700; cursor: pointer;
+  transition: transform 0.15s; user-select: none; flex-shrink: 0;
+}
+.play-card:first-child { margin-left: 0; }
+.play-card.selected { transform: translateY(-14px); outline: 2px solid var(--green); }
+.play-card.red { color: #d40000; }
+.play-card.black { color: #111; }
+</style>
+</head>
+<body>
+
+<!-- Screen 1: Join -->
+<div class="phone-frame">
+  <div class="screen" style="min-height:680px">
+    <div class="bg-anim"></div>
+    <div class="status-bar">
+      <span>9:41</span>
+      <span>● ● ●</span>
+    </div>
+    <div class="screen-content">
+      <div class="logo-section">
+        <img src="../../assets/logo.png" alt="Small Hours" style="width:180px">
+        <div class="subtitle" style="margin-top:8px">Late-night party games with friends</div>
+      </div>
+
+      <div class="card" style="margin-bottom:14px">
+        <div class="card-title">Start a Game</div>
+        <button class="btn btn-primary">Create Room</button>
+      </div>
+
+      <div class="divider">or join an existing room</div>
+
+      <div class="card">
+        <div class="card-title">Join a Room</div>
+        <div style="display:flex; flex-direction:column; gap:10px">
+          <input placeholder="ABCD" style="text-align:center; font-size:1.5rem; font-weight:700; letter-spacing:0.3em; font-family:'Courier New',monospace; color:var(--purple)" value="XKQZ" maxlength="4">
+          <input placeholder="Your name" value="Alex">
+          <button class="btn btn-secondary">Join Room</button>
+        </div>
+      </div>
+
+      <div class="info-line" style="margin-top:16px">Party games best played in the small hours</div>
+    </div>
+    <div class="prototype-nav">
+      <button class="pnav-btn active" onclick="switchScreen(0, this)"><span class="pnav-icon">🏠</span>Join</button>
+      <button class="pnav-btn" onclick="switchScreen(1, this)"><span class="pnav-icon">⏳</span>Lobby</button>
+      <button class="pnav-btn" onclick="switchScreen(2, this)"><span class="pnav-icon">🧠</span>Quiz</button>
+      <button class="pnav-btn" onclick="switchScreen(3, this)"><span class="pnav-icon">🃏</span>Cards</button>
+    </div>
+  </div>
+</div>
+
+<!-- Screen 2: Lobby (waiting) -->
+<div class="phone-frame" id="screen-lobby" style="display:none">
+  <div class="screen" style="min-height:680px">
+    <div class="bg-anim"></div>
+    <div class="status-bar">
+      <span>9:43</span>
+      <span>● ● ●</span>
+    </div>
+    <div class="conn-bar"><div class="conn-dot"></div>Connected</div>
+    <div class="screen-content">
+      <div style="text-align:center; padding: 16px 0 20px">
+        <div style="font-size:0.72rem; text-transform:uppercase; letter-spacing:0.1em; color:var(--muted); margin-bottom:8px">You've joined</div>
+        <div style="font-family:'Courier New',monospace; font-size:2.8rem; font-weight:900; letter-spacing:0.25em; color:var(--purple); text-shadow:0 0 10px rgba(179,71,217,0.4)">XKQZ</div>
+        <div style="font-size:0.9rem; color:var(--muted); margin-top:6px">Playing as <strong style="color:var(--text)">Alex</strong></div>
+      </div>
+
+      <div class="ready-toggle" style="margin-bottom:14px">
+        <div>
+          <div style="font-weight:700; font-size:1rem; color:var(--green)">Ready!</div>
+          <div style="font-size:0.78rem; color:var(--muted)">Waiting for host to start</div>
+        </div>
+        <div style="width:44px; height:26px; border-radius:13px; background:var(--green); position:relative; cursor:pointer">
+          <div style="position:absolute; right:3px; top:3px; width:20px; height:20px; border-radius:50%; background:#0a0a1a"></div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-bottom:12px">
+        <div class="card-title">Players (4 / 8)</div>
+        <div style="display:flex; flex-direction:column; gap:6px">
+          <div style="display:flex; align-items:center; gap:10px; padding:8px; border-radius:8px; background:rgba(57,255,20,0.05)">
+            <span style="font-size:1.2rem">🐸</span>
+            <span style="flex:1; font-weight:600; font-size:0.9rem">Alex (you)</span>
+            <span style="color:var(--green); font-size:0.78rem; font-weight:600">Ready</span>
+          </div>
+          <div style="display:flex; align-items:center; gap:10px; padding:8px; border-radius:8px; background:rgba(255,255,255,0.02)">
+            <span style="font-size:1.2rem">🐱</span>
+            <span style="flex:1; font-weight:600; font-size:0.9rem">Jordan <span style="font-size:0.65rem; background:rgba(179,71,217,0.2); color:var(--purple); padding:1px 6px; border-radius:8px; font-weight:700">ADMIN</span></span>
+            <span style="color:var(--green); font-size:0.78rem; font-weight:600">Ready</span>
+          </div>
+          <div style="display:flex; align-items:center; gap:10px; padding:8px; border-radius:8px; background:rgba(255,255,255,0.02)">
+            <span style="font-size:1.2rem">🦄</span>
+            <span style="flex:1; font-weight:600; font-size:0.9rem">Sam</span>
+            <span style="color:var(--muted); font-size:0.78rem">Waiting...</span>
+          </div>
+          <div style="display:flex; align-items:center; gap:10px; padding:8px; border-radius:8px; background:rgba(255,255,255,0.02)">
+            <span style="font-size:1.2rem">🐝</span>
+            <span style="flex:1; font-weight:600; font-size:0.9rem">Chris</span>
+            <span style="color:var(--muted); font-size:0.78rem">Waiting...</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="waiting">
+        <div class="waiting-sub pulse">Waiting for host to start the game...</div>
+      </div>
+    </div>
+    <div class="prototype-nav">
+      <button class="pnav-btn" onclick="switchScreen(0, this)"><span class="pnav-icon">🏠</span>Join</button>
+      <button class="pnav-btn active" onclick="switchScreen(1, this)"><span class="pnav-icon">⏳</span>Lobby</button>
+      <button class="pnav-btn" onclick="switchScreen(2, this)"><span class="pnav-icon">🧠</span>Quiz</button>
+      <button class="pnav-btn" onclick="switchScreen(3, this)"><span class="pnav-icon">🃏</span>Cards</button>
+    </div>
+  </div>
+</div>
+
+<!-- Screen 3: Quiz active -->
+<div class="phone-frame" id="screen-quiz" style="display:none">
+  <div class="screen" style="min-height:680px">
+    <div class="bg-anim"></div>
+    <div class="status-bar">
+      <span>9:48</span>
+      <span>● ● ●</span>
+    </div>
+    <div class="screen-content">
+      <div style="text-align:center; padding: 12px 0 16px">
+        <div style="font-size:0.72rem; text-transform:uppercase; letter-spacing:0.1em; color:var(--muted)">Question 3 of 10</div>
+        <div style="margin-top:10px; width:100%; height:5px; background:rgba(255,255,255,0.1); border-radius:3px; overflow:hidden">
+          <div style="width:60%; height:100%; background:linear-gradient(90deg,var(--green),var(--blue)); border-radius:3px"></div>
+        </div>
+        <div style="font-size:2.5rem; font-weight:900; color:var(--blue); margin-top:6px" id="quizTimer">18</div>
+      </div>
+
+      <div style="text-align:center; font-size:0.95rem; font-weight:600; color:var(--muted); margin-bottom:14px; padding:0 8px">
+        Select your answer on the TV screen topic
+      </div>
+
+      <div class="answer-grid" style="margin-bottom:14px">
+        <div class="ans-btn" style="background:#c850f0" onclick="selectAns(this)">A. Sydney</div>
+        <div class="ans-btn" style="background:rgba(77,201,246,0.7)" onclick="selectAns(this)">B. Melbourne</div>
+        <div class="ans-btn selected" style="background:rgba(57,255,20,0.5); color:#0a0a1a" onclick="selectAns(this)">C. Canberra</div>
+        <div class="ans-btn" style="background:rgba(255,159,67,0.7)" onclick="selectAns(this)">D. Brisbane</div>
+      </div>
+
+      <div class="card card-sm" style="margin-bottom:12px">
+        <div class="card-title">Powerups</div>
+        <div class="powerup-row">
+          <button class="pu-btn">⚡ 50/50</button>
+          <button class="pu-btn">🔁 Skip</button>
+          <button class="pu-btn" style="opacity:0.3; text-decoration:line-through">📢 Reveal</button>
+        </div>
+      </div>
+
+      <div style="display:flex; gap:8px">
+        <div style="flex:1; text-align:center; padding:10px; border-radius:10px; background:rgba(255,255,255,0.03)">
+          <div style="font-size:0.7rem; color:var(--muted)">Score</div>
+          <div style="font-size:1.3rem; font-weight:900; color:var(--blue)">87</div>
+        </div>
+        <div style="flex:1; text-align:center; padding:10px; border-radius:10px; background:rgba(255,255,255,0.03)">
+          <div style="font-size:0.7rem; color:var(--muted)">Rank</div>
+          <div style="font-size:1.3rem; font-weight:900; color:var(--purple)">#2</div>
+        </div>
+        <div style="flex:1; text-align:center; padding:10px; border-radius:10px; background:rgba(255,255,255,0.03)">
+          <div style="font-size:0.7rem; color:var(--muted)">Streak</div>
+          <div style="font-size:1.3rem; font-weight:900; color:var(--orange)">🔥3</div>
+        </div>
+      </div>
+    </div>
+    <div class="prototype-nav">
+      <button class="pnav-btn" onclick="switchScreen(0, this)"><span class="pnav-icon">🏠</span>Join</button>
+      <button class="pnav-btn" onclick="switchScreen(1, this)"><span class="pnav-icon">⏳</span>Lobby</button>
+      <button class="pnav-btn active" onclick="switchScreen(2, this)"><span class="pnav-icon">🧠</span>Quiz</button>
+      <button class="pnav-btn" onclick="switchScreen(3, this)"><span class="pnav-icon">🃏</span>Cards</button>
+    </div>
+  </div>
+</div>
+
+<!-- Screen 4: Card game (Shithead) -->
+<div class="phone-frame" id="screen-cards" style="display:none">
+  <div class="screen" style="min-height:680px">
+    <div class="bg-anim"></div>
+    <div class="status-bar">
+      <span>10:12</span>
+      <span>● ● ●</span>
+    </div>
+    <div class="screen-content">
+      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; padding-top:8px">
+        <div style="font-size:1.1rem; font-weight:700">Shithead</div>
+        <div style="font-size:0.78rem; color:var(--green); font-weight:600">Your turn ◀</div>
+      </div>
+
+      <!-- Pile -->
+      <div style="text-align:center; margin-bottom:16px">
+        <div style="font-size:0.72rem; text-transform:uppercase; letter-spacing:0.1em; color:var(--muted); margin-bottom:8px">Pile (7 cards)</div>
+        <div style="display:inline-flex; flex-direction:column; align-items:center">
+          <div style="width:72px; height:100px; border-radius:8px; background:white; border:1px solid rgba(0,0,0,0.1); box-shadow:0 0 12px rgba(57,255,20,0.3), 0 4px 12px rgba(0,0,0,0.4); display:flex; align-items:center; justify-content:center; font-size:1.5rem; font-weight:900; color:#d40000">
+            7♥
+          </div>
+        </div>
+      </div>
+
+      <!-- Other players -->
+      <div class="card card-sm" style="margin-bottom:12px">
+        <div class="card-title">Other Players</div>
+        <div style="display:flex; flex-direction:column; gap:6px">
+          <div style="display:flex; align-items:center; gap:8px; font-size:0.85rem">
+            <span>🐱</span><span style="flex:1;font-weight:600">Jordan</span>
+            <span style="color:var(--muted)">5 cards</span>
+          </div>
+          <div style="display:flex; align-items:center; gap:8px; font-size:0.85rem">
+            <span>🦄</span><span style="flex:1;font-weight:600">Sam</span>
+            <span style="color:var(--muted)">3 cards</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Your hand -->
+      <div>
+        <div style="font-size:0.72rem; text-transform:uppercase; letter-spacing:0.1em; color:var(--muted); margin-bottom:10px">Your Hand</div>
+        <div class="card-hand">
+          <div class="play-card red selected">Q♥</div>
+          <div class="play-card red">9♦</div>
+          <div class="play-card black">J♠</div>
+          <div class="play-card red">2♥</div>
+          <div class="play-card black">6♣</div>
+          <div class="play-card red">K♦</div>
+        </div>
+        <div style="margin-top:12px; display:flex; gap:8px">
+          <button class="btn btn-success btn-sm" style="flex:1">Play Q♥</button>
+          <button class="btn btn-secondary btn-sm" style="flex:1">Pass</button>
+        </div>
+      </div>
+    </div>
+    <div class="prototype-nav">
+      <button class="pnav-btn" onclick="switchScreen(0, this)"><span class="pnav-icon">🏠</span>Join</button>
+      <button class="pnav-btn" onclick="switchScreen(1, this)"><span class="pnav-icon">⏳</span>Lobby</button>
+      <button class="pnav-btn" onclick="switchScreen(2, this)"><span class="pnav-icon">🧠</span>Quiz</button>
+      <button class="pnav-btn active" onclick="switchScreen(3, this)"><span class="pnav-icon">🃏</span>Cards</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const screens = ['screen-join', 'screen-lobby', 'screen-quiz', 'screen-cards'];
+const frames = document.querySelectorAll('.phone-frame');
+
+function switchScreen(idx, btn) {
+  // Show/hide frames
+  frames.forEach((f, i) => f.style.display = i === idx ? 'block' : 'none');
+  // Update nav in all frames — we only show one at a time anyway
+}
+
+// Quiz timer countdown
+let qt = 18;
+setInterval(() => {
+  qt = qt <= 0 ? 30 : qt - 0.1;
+  const el = document.getElementById('quizTimer');
+  if (el) el.textContent = Math.ceil(qt);
+}, 100);
+
+// Answer selection
+function selectAns(el) {
+  el.closest('.answer-grid').querySelectorAll('.ans-btn').forEach(b => b.classList.remove('selected'));
+  el.classList.add('selected');
+}
+</script>
+</body>
+</html>

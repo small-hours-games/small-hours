@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;900&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #0a0a1a; font-family: 'Outfit', sans-serif; padding: 20px; }
+  .grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 10px; }
+  .swatch { border-radius: 10px; overflow: hidden; }
+  .color-block { height: 72px; }
+  .label { padding: 6px 8px; background: rgba(20,20,40,0.9); }
+  .name { font-size: 11px; font-weight: 600; color: #e0e0ff; }
+  .hex  { font-size: 10px; color: #8888aa; font-family: monospace; }
+</style>
+</head>
+<body>
+<div class="grid">
+  <div class="swatch">
+    <div class="color-block" style="background:#b347d9; box-shadow: inset 0 0 20px rgba(179,71,217,0.4)"></div>
+    <div class="label"><div class="name">Purple</div><div class="hex">#b347d9</div></div>
+  </div>
+  <div class="swatch">
+    <div class="color-block" style="background:#4dc9f6; box-shadow: inset 0 0 20px rgba(77,201,246,0.4)"></div>
+    <div class="label"><div class="name">Blue</div><div class="hex">#4dc9f6</div></div>
+  </div>
+  <div class="swatch">
+    <div class="color-block" style="background:#39ff14; box-shadow: inset 0 0 20px rgba(57,255,20,0.4)"></div>
+    <div class="label"><div class="name">Green</div><div class="hex">#39ff14</div></div>
+  </div>
+  <div class="swatch">
+    <div class="color-block" style="background:#ff6ec7; box-shadow: inset 0 0 20px rgba(255,110,199,0.4)"></div>
+    <div class="label"><div class="name">Pink</div><div class="hex">#ff6ec7</div></div>
+  </div>
+  <div class="swatch">
+    <div class="color-block" style="background:#ff9f43; box-shadow: inset 0 0 20px rgba(255,159,67,0.4)"></div>
+    <div class="label"><div class="name">Orange</div><div class="hex">#ff9f43</div></div>
+  </div>
+  <div class="swatch">
+    <div class="color-block" style="background:#ff4757; box-shadow: inset 0 0 20px rgba(255,71,87,0.4)"></div>
+    <div class="label"><div class="name">Red</div><div class="hex">#ff4757</div></div>
+  </div>
+  <div class="swatch">
+    <div class="color-block" style="background: linear-gradient(135deg,#b347d9,#4dc9f6,#ff6ec7)"></div>
+    <div class="label"><div class="name">Gradient</div><div class="hex">primary</div></div>
+  </div>
+</div>
+</body>
+</html>

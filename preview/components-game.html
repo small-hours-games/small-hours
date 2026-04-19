@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;900&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #0a0a1a; font-family: 'Outfit', sans-serif; color: #e0e0ff; padding: 20px; display: flex; gap: 24px; flex-wrap: wrap; }
+
+  /* Leaderboard */
+  .leaderboard { display: flex; flex-direction: column; gap: 6px; min-width: 200px; }
+  .lb-entry { display: flex; align-items: center; gap: 12px; padding: 10px 14px; border-radius: 8px; background: rgba(255,255,255,0.03); }
+  .lb-entry:first-child { background: rgba(179,71,217,0.15); border: 1px solid rgba(179,71,217,0.3); }
+  .lb-rank { font-weight: 900; font-size: 1.1rem; min-width: 24px; color: #8888aa; }
+  .lb-entry:first-child .lb-rank { color: #b347d9; }
+  .lb-name { flex: 1; font-weight: 500; }
+  .lb-score { font-weight: 700; color: #4dc9f6; }
+
+  /* Answer grid */
+  .answer-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; width: 260px; }
+  .ans-btn { padding: 18px 14px; border-radius: 12px; font-size: 0.95rem; font-weight: 600; border: 2px solid transparent; min-height: 56px; display: flex; align-items: center; justify-content: center; color: white; cursor: pointer; }
+  .ans-btn.selected { border-color: white; box-shadow: 0 0 20px rgba(255,255,255,0.3); }
+  .ans-btn.correct { background: #39ff14 !important; color: #0a0a1a !important; }
+</style>
+</head>
+<body>
+  <div>
+    <div style="font-size:0.7rem;text-transform:uppercase;letter-spacing:0.1em;color:#8888aa;margin-bottom:10px">Leaderboard</div>
+    <div class="leaderboard">
+      <div class="lb-entry"><span class="lb-rank">1</span><span class="lb-name">Alex</span><span class="lb-score">142</span></div>
+      <div class="lb-entry"><span class="lb-rank">2</span><span class="lb-name">Jordan</span><span class="lb-score">87</span></div>
+      <div class="lb-entry"><span class="lb-rank">3</span><span class="lb-name">Sam</span><span class="lb-score">64</span></div>
+      <div class="lb-entry"><span class="lb-rank">4</span><span class="lb-name">Chris</span><span class="lb-score">55</span></div>
+    </div>
+  </div>
+  <div>
+    <div style="font-size:0.7rem;text-transform:uppercase;letter-spacing:0.1em;color:#8888aa;margin-bottom:10px">Quiz Answers</div>
+    <div class="answer-grid">
+      <div class="ans-btn" style="background:#c850f0">A. Paris</div>
+      <div class="ans-btn selected" style="background:#4dc9f6">B. London</div>
+      <div class="ans-btn correct" style="background:#39c060; color:#0a0a1a">C. Berlin</div>
+      <div class="ans-btn" style="background:#ff9f43">D. Rome</div>
+    </div>
+  </div>
+</body>
+</html>

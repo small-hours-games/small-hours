@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #0a0a1a; font-family: 'Outfit', sans-serif; padding: 20px; display: flex; flex-direction: column; gap: 12px; }
+  .field { display: flex; flex-direction: column; gap: 6px; max-width: 360px; }
+  label { font-size: 0.85rem; color: #8888aa; font-weight: 500; }
+  input {
+    background: rgba(10,10,26,0.8); border: 1px solid rgba(179,71,217,0.3);
+    border-radius: 8px; padding: 12px 16px; color: #e0e0ff;
+    font-size: 1rem; font-family: 'Outfit', sans-serif; outline: none;
+  }
+  .focused { border-color: #b347d9; box-shadow: 0 0 10px rgba(179,71,217,0.3); }
+  .room-code-input {
+    text-align: center; font-size: 1.5rem; font-weight: 700;
+    letter-spacing: 0.3em; text-transform: uppercase;
+    font-family: 'Courier New', monospace; color: #b347d9;
+  }
+  .error { border-color: #ff4757; }
+  .error-msg { font-size: 0.85rem; color: #ff4757; }
+</style>
+</head>
+<body>
+  <div class="field">
+    <label>Your Name</label>
+    <input value="Alex" placeholder="Enter your name">
+  </div>
+  <div class="field">
+    <label>Room Code</label>
+    <input class="room-code-input" value="ABCD" placeholder="ABCD">
+  </div>
+  <div class="field">
+    <label>Focused state</label>
+    <input class="focused" value="Typing…" placeholder="">
+  </div>
+  <div class="field">
+    <label>Error state</label>
+    <input class="error" value="too long name that exceeds limit">
+    <span class="error-msg">Name must be 20 characters or less</span>
+  </div>
+</body>
+</html>

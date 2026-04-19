@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;900&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #0a0a1a; font-family: 'Outfit', sans-serif; padding: 20px; }
+  .row { display: flex; gap: 8px; }
+  .chip { flex: 1; border-radius: 8px; padding: 12px; display: flex; flex-direction: column; gap: 4px; }
+  .dot { width: 28px; height: 28px; border-radius: 50%; margin-bottom: 4px; }
+  .name { font-size: 11px; font-weight: 700; }
+  .desc { font-size: 10px; }
+  .answer-row { display: flex; gap: 8px; margin-top: 10px; }
+  .ans { flex: 1; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; color: white; }
+</style>
+</head>
+<body>
+<div class="row">
+  <div class="chip" style="background:rgba(57,255,20,0.1); border:1px solid rgba(57,255,20,0.3)">
+    <div class="dot" style="background:#39ff14"></div>
+    <div class="name" style="color:#39ff14">Connected / Success</div>
+    <div class="desc" style="color:#8888aa">Ready, correct, online</div>
+  </div>
+  <div class="chip" style="background:rgba(255,71,87,0.1); border:1px solid rgba(255,71,87,0.3)">
+    <div class="dot" style="background:#ff4757"></div>
+    <div class="name" style="color:#ff4757">Error / Disconnected</div>
+    <div class="desc" style="color:#8888aa">Wrong, offline, danger</div>
+  </div>
+  <div class="chip" style="background:rgba(255,159,67,0.1); border:1px solid rgba(255,159,67,0.3)">
+    <div class="dot" style="background:#ff9f43"></div>
+    <div class="name" style="color:#ff9f43">Warning / Reconnecting</div>
+    <div class="desc" style="color:#8888aa">Timer warning, unstable</div>
+  </div>
+  <div class="chip" style="background:rgba(77,201,246,0.1); border:1px solid rgba(77,201,246,0.3)">
+    <div class="dot" style="background:#4dc9f6"></div>
+    <div class="name" style="color:#4dc9f6">Info / Scores</div>
+    <div class="desc" style="color:#8888aa">Points, neutral data</div>
+  </div>
+  <div class="chip" style="background:rgba(179,71,217,0.1); border:1px solid rgba(179,71,217,0.3)">
+    <div class="dot" style="background:#b347d9"></div>
+    <div class="name" style="color:#b347d9">Leader / Admin</div>
+    <div class="desc" style="color:#8888aa">First place, host role</div>
+  </div>
+</div>
+<div style="margin-top:12px; border-top:1px solid rgba(179,71,217,0.15); padding-top:10px">
+  <div style="font-size:9px; text-transform:uppercase; letter-spacing:0.1em; color:#8888aa; margin-bottom:8px; font-family:monospace">Quiz Answer Colors — positional only, not semantic</div>
+  <div class="answer-row">
+    <div class="ans" style="background:#c850f0">A <span style="font-size:8px; opacity:0.8">violet</span></div>
+    <div class="ans" style="background:#4dc9f6">B <span style="font-size:8px; opacity:0.8">blue</span></div>
+    <div class="ans" style="background:#39c060; color:#0a0a1a">C <span style="font-size:8px; opacity:0.8">green</span></div>
+    <div class="ans" style="background:#ff9f43">D <span style="font-size:8px; opacity:0.8">orange</span></div>
+  </div>
+  <div style="font-size:9px; color:#8888aa; font-family:monospace; margin-top:6px">💡 Suggestion: replace A's red with violet to avoid confusion with the Error state</div>
+</div>
+</body>
+</html>

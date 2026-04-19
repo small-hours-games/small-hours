@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;900&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #0a0a1a; font-family: 'Outfit', sans-serif; padding: 20px; display: flex; gap: 16px; flex-wrap: wrap; }
+  .card {
+    background: rgba(20,20,40,0.8); border: 1px solid rgba(179,71,217,0.3);
+    border-radius: 16px; padding: 20px; backdrop-filter: blur(12px);
+    min-width: 200px;
+  }
+  .card-title { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: #8888aa; margin-bottom: 12px; }
+  .card-ready { border-color: rgba(57,255,20,0.3); background: rgba(57,255,20,0.05); }
+  .card-leader { background: rgba(179,71,217,0.1); border-color: rgba(179,71,217,0.3); }
+  .body { color: #e0e0ff; font-size: 0.95rem; line-height: 1.5; }
+</style>
+</head>
+<body>
+  <div class="card" style="width:200px">
+    <div class="card-title">Default Card</div>
+    <div class="body">Glass surface<br>16px radius<br>Purple glass border</div>
+  </div>
+  <div class="card card-ready" style="width:200px">
+    <div class="card-title">Ready State</div>
+    <div class="body" style="color:#39ff14">Player is ready<br>Green border + tint</div>
+  </div>
+  <div class="card card-leader" style="width:200px">
+    <div class="card-title">Leader / #1</div>
+    <div class="body" style="color:#b347d9">First place<br>Purple background</div>
+  </div>
+  <div class="card" style="width:200px; border:1px solid rgba(77,201,246,0.3)">
+    <div class="card-title">Info Variant</div>
+    <div class="body" style="color:#4dc9f6">Blue border<br>for info panels</div>
+  </div>
+</body>
+</html>

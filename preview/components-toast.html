@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #0a0a1a; font-family: 'Outfit', sans-serif; padding: 20px; display: flex; flex-direction: column; gap: 8px; max-width: 320px; }
+  .toast {
+    padding: 12px 20px; border-radius: 8px; background: rgba(20,20,40,0.9);
+    border: 1px solid rgba(179,71,217,0.3); backdrop-filter: blur(12px);
+    font-size: 0.9rem; color: #e0e0ff; animation: slideIn 0.3s ease;
+  }
+  .toast-success { border-color: rgba(57,255,20,0.4); }
+  .toast-error   { border-color: rgba(255,71,87,0.4); }
+  @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+</style>
+</head>
+<body>
+  <div class="toast">Alex joined!</div>
+  <div class="toast toast-success">Connected as host</div>
+  <div class="toast toast-error">Connection lost. Please refresh.</div>
+  <div class="toast">Jordan left</div>
+</body>
+</html>

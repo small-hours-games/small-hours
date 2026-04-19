@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Small Hours — Host Display (TV)</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;900&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0a0a1a;
+  --card: rgba(20,20,40,0.85);
+  --purple: #b347d9;
+  --blue: #4dc9f6;
+  --green: #39ff14;
+  --pink: #ff6ec7;
+  --orange: #ff9f43;
+  --red: #ff4757;
+  --text: #e0e0ff;
+  --muted: #8888aa;
+  --border: rgba(179,71,217,0.3);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'Outfit', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* Animated background */
+.bg-anim {
+  position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  background:
+    radial-gradient(ellipse 700px 600px at 15% 50%, rgba(179,71,217,0.1) 0%, transparent 100%),
+    radial-gradient(ellipse 600px 500px at 85% 20%, rgba(77,201,246,0.08) 0%, transparent 100%),
+    radial-gradient(ellipse 500px 400px at 50% 95%, rgba(255,110,199,0.06) 0%, transparent 100%);
+  animation: bgFloat 15s ease-in-out infinite alternate;
+}
+@keyframes bgFloat {
+  0%   { filter: hue-rotate(0deg); transform: scale(1); }
+  50%  { filter: hue-rotate(15deg); transform: scale(1.05); }
+  100% { filter: hue-rotate(-10deg); transform: scale(1); }
+}
+
+/* Header */
+header {
+  position: relative; z-index: 10;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 32px;
+  border-bottom: 1px solid var(--border);
+  background: rgba(10,10,26,0.6);
+  backdrop-filter: blur(12px);
+}
+.logo { display: flex; align-items: center; gap: 10px; }
+.logo img { height: 34px; }
+.logo-text {
+  font-size: 1.3rem; font-weight: 900;
+  background: linear-gradient(135deg, var(--purple), var(--blue));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+}
+.header-right { display: flex; align-items: center; gap: 16px; color: var(--muted); font-size: 0.9rem; }
+
+/* Connection status */
+.conn { display: flex; align-items: center; gap: 7px; padding: 5px 13px; border-radius: 20px; font-size: 0.78rem; font-weight: 600; }
+.conn-dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+.connected { background: rgba(57,255,20,0.15); color: var(--green); border: 1px solid rgba(57,255,20,0.3); }
+
+/* Tab nav */
+.tab-nav { display: flex; gap: 0; border-bottom: 1px solid var(--border); position: relative; z-index: 10; background: rgba(10,10,26,0.5); }
+.tab { padding: 10px 24px; font-size: 0.85rem; font-weight: 600; color: var(--muted); cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.2s; user-select: none; }
+.tab:hover { color: var(--text); }
+.tab.active { color: var(--purple); border-bottom-color: var(--purple); }
+
+/* Main */
+main { flex: 1; position: relative; z-index: 5; overflow: hidden; }
+
+/* ── VIEW: Lobby ── */
+.view { display: none; padding: 32px; height: 100%; }
+.view.active { display: flex; }
+
+.lobby-layout { display: grid; grid-template-columns: 280px 1fr; gap: 40px; width: 100%; max-width: 1100px; margin: 0 auto; align-items: start; }
+
+.join-panel { text-align: center; }
+.join-label { font-size: 0.85rem; color: var(--muted); margin-bottom: 6px; }
+.join-url { font-size: 0.85rem; color: var(--blue); word-break: break-all; margin-bottom: 16px; }
+.room-code-lg {
+  font-family: 'Courier New', monospace; font-size: 4.5rem; font-weight: 900;
+  letter-spacing: 0.3em; color: var(--purple);
+  text-shadow: 0 0 10px rgba(179,71,217,0.5), 0 0 40px rgba(179,71,217,0.25);
+  display: block; margin-bottom: 16px;
+}
+.qr-placeholder {
+  width: 160px; height: 160px; background: white; border-radius: 12px;
+  margin: 0 auto; display: flex; align-items: center; justify-content: center;
+  color: #444; font-size: 0.75rem; font-family: monospace;
+}
+
+/* Card */
+.card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 24px; backdrop-filter: blur(12px); }
+.card-title { font-size: 0.78rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); margin-bottom: 14px; }
+
+/* Player grid */
+.players-panel h2 { font-size: 1.4rem; font-weight: 700; margin-bottom: 16px; display: flex; align-items: center; gap: 10px; }
+.player-count { font-size: 0.85rem; color: var(--muted); font-weight: 400; }
+.player-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 12px; }
+.player-card {
+  display: flex; align-items: center; gap: 12px; padding: 14px;
+  border-radius: 12px; background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.05); transition: all 0.3s;
+}
+.player-card.ready { border-color: rgba(57,255,20,0.3); background: rgba(57,255,20,0.05); }
+.avatar { font-size: 1.8rem; width: 44px; height: 44px; border-radius: 50%; background: rgba(179,71,217,0.1); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.p-name { font-weight: 600; font-size: 1rem; }
+.p-status { font-size: 0.78rem; margin-top: 2px; }
+.p-ready { color: var(--green); }
+.p-wait  { color: var(--muted); }
+.badge { font-size: 0.65rem; background: rgba(179,71,217,0.2); color: var(--purple); padding: 2px 7px; border-radius: 10px; font-weight: 700; }
+
+/* ── VIEW: Quiz ── */
+.quiz-view { flex-direction: column; align-items: center; justify-content: center; gap: 20px; }
+.quiz-header { text-align: center; }
+.round-label { font-size: 0.85rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; }
+.quiz-question { font-size: 2rem; font-weight: 700; line-height: 1.3; text-align: center; max-width: 800px; }
+.quiz-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; width: 100%; max-width: 700px; }
+.quiz-opt { padding: 22px 18px; border-radius: 12px; font-size: 1.1rem; font-weight: 600; text-align: center; color: white; }
+.quiz-opt.a { background: rgba(200, 80, 240, 0.75); }
+.quiz-opt.b { background: rgba(77,201,246,0.65); }
+.quiz-opt.c { background: rgba(57,255,20,0.45); color: #0a0a1a; }
+.quiz-opt.d { background: rgba(255,159,67,0.65); }
+.quiz-opt.correct { outline: 3px solid var(--green); box-shadow: 0 0 20px rgba(57,255,20,0.3); }
+.quiz-timer { font-size: 4rem; font-weight: 900; color: var(--blue); }
+.timer-bar-wrap { width: 100%; max-width: 700px; height: 6px; background: rgba(255,255,255,0.1); border-radius: 3px; overflow: hidden; }
+.timer-bar { height: 100%; border-radius: 3px; background: linear-gradient(90deg, var(--green), var(--blue)); transition: width 0.1s linear; }
+
+/* ── Scoreboard sidebar ── */
+.sidebar {
+  position: fixed; right: 0; top: 68px; bottom: 0; width: 240px;
+  background: rgba(20,20,40,0.95); border-left: 1px solid var(--border);
+  padding: 20px; backdrop-filter: blur(12px); z-index: 20; overflow-y: auto;
+}
+.sidebar h3 { font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); margin-bottom: 14px; }
+.score-row { display: flex; align-items: center; gap: 10px; padding: 8px; border-radius: 8px; margin-bottom: 4px; }
+.score-row:first-child { background: rgba(179,71,217,0.1); }
+.s-rank { font-weight: 900; min-width: 22px; color: var(--muted); font-size: 0.9rem; }
+.score-row:first-child .s-rank { color: var(--purple); }
+.s-name { flex: 1; font-weight: 500; font-size: 0.9rem; }
+.s-score { font-weight: 700; color: var(--blue); font-size: 0.95rem; }
+
+/* ── Chat ── */
+.chat-panel {
+  position: fixed; left: 0; bottom: 0; width: 270px;
+  background: rgba(20,20,40,0.95); border-top: 1px solid var(--border); border-right: 1px solid var(--border);
+  border-radius: 0 12px 0 0; padding: 12px; backdrop-filter: blur(12px); z-index: 20;
+}
+.chat-msg { font-size: 0.82rem; padding: 3px 0; }
+.chat-author { font-weight: 700; color: var(--blue); }
+
+/* Btn */
+.btn { padding: 12px 24px; border: none; border-radius: 12px; font-size: 0.95rem; font-weight: 600; cursor: pointer; font-family: 'Outfit', sans-serif; transition: all 0.2s; }
+.btn-primary { background: linear-gradient(135deg, var(--purple), var(--blue)); color: white; }
+.btn-primary:hover { transform: translateY(-2px); box-shadow: 0 4px 20px rgba(179,71,217,0.4); }
+.btn-secondary { background: var(--card); color: var(--text); border: 1px solid var(--border); }
+.btn-success { background: linear-gradient(135deg, var(--green), #00cc88); color: #0a0a1a; }
+
+/* Game menu */
+.game-menu { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; max-width: 700px; margin: 0 auto; }
+.game-card {
+  background: var(--card); border: 1px solid var(--border); border-radius: 14px;
+  padding: 20px 16px; text-align: center; cursor: pointer; transition: all 0.2s;
+}
+.game-card:hover { border-color: var(--purple); box-shadow: 0 0 20px rgba(179,71,217,0.2); transform: translateY(-2px); }
+.game-icon { font-size: 2rem; margin-bottom: 8px; }
+.game-name { font-weight: 700; font-size: 1rem; margin-bottom: 4px; }
+.game-desc { font-size: 0.78rem; color: var(--muted); }
+.game-players { font-size: 0.7rem; color: var(--muted); margin-top: 6px; }
+
+.section-heading { font-size: 1.5rem; font-weight: 700; margin-bottom: 20px; }
+</style>
+</head>
+<body>
+<div class="bg-anim"></div>
+
+<header>
+  <div class="logo">
+    <img src="../../assets/logo.png" alt="Small Hours Games">
+    <span class="logo-text">Small Hours</span>
+  </div>
+  <div class="header-right">
+    <span>Room: <strong style="color:var(--purple); font-family:'Courier New',monospace; letter-spacing:0.1em">XKQZ</strong></span>
+    <div class="conn connected"><div class="conn-dot"></div>Connected</div>
+  </div>
+</header>
+
+<div class="tab-nav">
+  <div class="tab active" onclick="showTab('lobby')">Lobby</div>
+  <div class="tab" onclick="showTab('games')">Choose Game</div>
+  <div class="tab" onclick="showTab('quiz')">Quiz (Live)</div>
+</div>
+
+<main>
+
+  <!-- LOBBY VIEW -->
+  <div id="view-lobby" class="view active">
+    <div class="lobby-layout">
+      <div>
+        <div class="card" style="text-align:center">
+          <div class="join-label">Join at</div>
+          <div class="join-url">smallhours.games/player/XKQZ</div>
+          <div class="room-code-lg">XKQZ</div>
+          <div class="qr-placeholder">[ QR code ]</div>
+        </div>
+      </div>
+      <div>
+        <h2 class="players-panel" style="font-size:1.4rem;font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:10px">
+          Players <span style="font-size:0.85rem;color:var(--muted);font-weight:400">(4)</span>
+        </h2>
+        <div class="player-grid">
+          <div class="player-card ready">
+            <div class="avatar">🐸</div>
+            <div><div class="p-name">Alex <span class="badge">ADMIN</span></div><div class="p-status p-ready">Ready</div></div>
+          </div>
+          <div class="player-card ready">
+            <div class="avatar">🐱</div>
+            <div><div class="p-name">Jordan</div><div class="p-status p-ready">Ready</div></div>
+          </div>
+          <div class="player-card">
+            <div class="avatar">🦄</div>
+            <div><div class="p-name">Sam</div><div class="p-status p-wait">Not ready</div></div>
+          </div>
+          <div class="player-card">
+            <div class="avatar">🐝</div>
+            <div><div class="p-name">Chris</div><div class="p-status p-wait">Not ready</div></div>
+          </div>
+        </div>
+        <div style="margin-top:24px; display:flex; gap:12px">
+          <button class="btn btn-primary" onclick="showTab('games')">Choose a Game →</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- GAMES VIEW -->
+  <div id="view-games" class="view" style="flex-direction:column; align-items:center; padding-top:32px">
+    <div class="section-heading" style="text-align:center">Choose a Game</div>
+    <div class="game-menu">
+      <div class="game-card" onclick="showTab('quiz')">
+        <div class="game-icon">🧠</div>
+        <div class="game-name">Quiz</div>
+        <div class="game-desc">Trivia with powerups</div>
+        <div class="game-players">2+ players</div>
+      </div>
+      <div class="game-card">
+        <div class="game-icon">🔢</div>
+        <div class="game-name">Number Guess</div>
+        <div class="game-desc">Hot &amp; cold guessing</div>
+        <div class="game-players">2+ players</div>
+      </div>
+      <div class="game-card">
+        <div class="game-icon">🕵️</div>
+        <div class="game-name">Spy</div>
+        <div class="game-desc">Social deduction</div>
+        <div class="game-players">3+ players</div>
+      </div>
+      <div class="game-card">
+        <div class="game-icon">🃏</div>
+        <div class="game-name">Shithead</div>
+        <div class="game-desc">Card-shedding game</div>
+        <div class="game-players">2–4 players</div>
+      </div>
+      <div class="game-card">
+        <div class="game-icon">🂡</div>
+        <div class="game-name">Gin Rummy</div>
+        <div class="game-desc">Multi-hand card game</div>
+        <div class="game-players">2 players</div>
+      </div>
+      <div class="game-card" style="border-style:dashed; opacity:0.5; cursor:default">
+        <div class="game-icon">＋</div>
+        <div class="game-name">More coming</div>
+        <div class="game-desc">Stay tuned</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- QUIZ LIVE VIEW -->
+  <div id="view-quiz" class="view quiz-view" style="padding-right:260px">
+    <div class="quiz-header">
+      <div class="round-label">Question 3 of 10</div>
+    </div>
+    <div class="quiz-question">What is the capital of Australia?</div>
+    <div class="timer-bar-wrap">
+      <div class="timer-bar" id="timerBar" style="width:60%"></div>
+    </div>
+    <div class="quiz-timer" id="timerNum">18</div>
+    <div class="quiz-grid">
+      <div class="quiz-opt a">A. Sydney</div>
+      <div class="quiz-opt b">B. Melbourne</div>
+      <div class="quiz-opt c correct">C. Canberra</div>
+      <div class="quiz-opt d">D. Brisbane</div>
+    </div>
+  </div>
+
+</main>
+
+<!-- Scoreboard (shown during game) -->
+<div class="sidebar" id="sidebar" style="display:none">
+  <h3>Scoreboard</h3>
+  <div class="score-row"><span class="s-rank">1</span><span class="s-name">Alex</span><span class="s-score">142</span></div>
+  <div class="score-row"><span class="s-rank">2</span><span class="s-name">Jordan</span><span class="s-score">87</span></div>
+  <div class="score-row"><span class="s-rank">3</span><span class="s-name">Sam</span><span class="s-score">64</span></div>
+  <div class="score-row"><span class="s-rank">4</span><span class="s-name">Chris</span><span class="s-score">55</span></div>
+</div>
+
+<!-- Chat panel (shown during game) -->
+<div class="chat-panel" id="chatPanel" style="display:none">
+  <div><div class="chat-msg"><span class="chat-author">Jordan:</span> let's go!</div></div>
+  <div><div class="chat-msg"><span class="chat-author">Sam:</span> C for sure</div></div>
+  <div><div class="chat-msg"><span class="chat-author">Chris:</span> no way its D</div></div>
+</div>
+
+<script>
+function showTab(name) {
+  document.querySelectorAll('.tab').forEach((t,i) => {
+    const tabs = ['lobby','games','quiz'];
+    t.classList.toggle('active', tabs[i] === name);
+  });
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.getElementById('view-' + name).classList.add('active');
+
+  const inGame = name === 'quiz';
+  document.getElementById('sidebar').style.display = inGame ? 'block' : 'none';
+  document.getElementById('chatPanel').style.display = inGame ? 'block' : 'none';
+
+  if (inGame) {
+    startTimer();
+  }
+}
+
+let timerInt;
+function startTimer() {
+  clearInterval(timerInt);
+  let t = 18, total = 30;
+  timerInt = setInterval(() => {
+    t = Math.max(0, t - 0.1);
+    const pct = (t / total) * 100;
+    const bar = document.getElementById('timerBar');
+    bar.style.width = pct + '%';
+    bar.style.background = pct < 20 ? '#ff4757' : pct < 40 ? 'linear-gradient(90deg,#ff9f43,#ff4757)' : 'linear-gradient(90deg,#39ff14,#4dc9f6)';
+    document.getElementById('timerNum').textContent = Math.ceil(t);
+    if (t <= 0) clearInterval(timerInt);
+  }, 100);
+}
+</script>
+</body>
+</html>

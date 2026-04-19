@@ -1,0 +1,203 @@
+/**
+ * Small Hours Games — Design Tokens
+ * CSS custom properties for the full visual system.
+ * Import this file + the Google Font link before use.
+ *
+ * Font note: The production app uses system-ui / Segoe UI.
+ * This design system substitutes **Outfit** (Google Fonts) as a
+ * closer-match gaming-friendly sans-serif. Flag to client and
+ * replace with a licensed custom font if desired.
+ *
+ * Google Font import (add to <head>):
+ * <link rel="preconnect" href="https://fonts.googleapis.com">
+ * <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;900&display=swap" rel="stylesheet">
+ */
+
+:root {
+
+  /* ─── BACKGROUNDS ─── */
+  --color-bg-base:        #0a0a1a;   /* deep space black */
+  --color-bg-card:        rgba(20, 20, 40, 0.8); /* glass card surface */
+  --color-bg-card-solid:  #141428;   /* non-transparent fallback */
+  --color-bg-hover:       rgba(255, 255, 255, 0.06);
+  --color-bg-subtle:      rgba(255, 255, 255, 0.03);
+
+  /* ─── NEON ACCENT PALETTE ─── */
+  --color-purple:         #b347d9;
+  --color-purple-dim:     rgba(179, 71, 217, 0.15);
+  --color-purple-glow:    rgba(179, 71, 217, 0.3);
+  --color-purple-glow-strong: rgba(179, 71, 217, 0.5);
+
+  --color-blue:           #4dc9f6;
+  --color-blue-dim:       rgba(77, 201, 246, 0.15);
+  --color-blue-glow:      rgba(77, 201, 246, 0.3);
+
+  --color-green:          #39ff14;   /* neon chartreuse */
+  --color-green-dim:      rgba(57, 255, 20, 0.15);
+  --color-green-glow:     rgba(57, 255, 20, 0.3);
+
+  --color-pink:           #ff6ec7;
+  --color-pink-dim:       rgba(255, 110, 199, 0.15);
+
+  --color-orange:         #ff9f43;
+  --color-orange-dim:     rgba(255, 159, 67, 0.15);
+
+  --color-red:            #ff4757;
+  --color-red-dim:        rgba(255, 71, 87, 0.15);
+  --color-red-glow:       rgba(255, 71, 87, 0.3);
+
+  /* ─── TEXT ─── */
+  --color-text-primary:   #e0e0ff;   /* slightly lavender white */
+  --color-text-secondary: #8888aa;   /* muted slate */
+  --color-text-disabled:  rgba(224, 224, 255, 0.3);
+  --color-text-on-green:  #0a0a1a;   /* dark text on neon-green bg */
+
+  /* ─── BORDERS ─── */
+  --color-border:         rgba(179, 71, 217, 0.3);  /* glass purple rim */
+  --color-border-hover:   rgba(179, 71, 217, 0.6);
+  --color-border-green:   rgba(57, 255, 20, 0.3);
+  --color-border-subtle:  rgba(255, 255, 255, 0.05);
+
+  /* ─── SEMANTIC / STATE ─── */
+  --color-success:        var(--color-green);
+  --color-success-bg:     var(--color-green-dim);
+  --color-success-border: var(--color-green-glow);
+
+  --color-error:          var(--color-red);
+  --color-error-bg:       var(--color-red-dim);
+  --color-error-border:   var(--color-red-glow);
+
+  --color-warning:        var(--color-orange);
+  --color-warning-bg:     var(--color-orange-dim);
+
+  --color-info:           var(--color-blue);
+  --color-info-bg:        var(--color-blue-dim);
+  --color-info-border:    var(--color-blue-glow);
+
+  --color-connected:      var(--color-green);
+  --color-disconnected:   var(--color-red);
+  --color-reconnecting:   var(--color-orange);
+
+  /* ─── QUIZ ANSWER COLORS ─── */
+  --color-answer-a:       rgba(255, 71, 87, 0.7);   /* red */
+  --color-answer-b:       rgba(77, 201, 246, 0.7);  /* blue */
+  --color-answer-c:       rgba(57, 255, 20, 0.5);   /* green */
+  --color-answer-d:       rgba(255, 159, 67, 0.7);  /* orange */
+
+  /* ─── TYPOGRAPHY ─── */
+  --font-sans:            'Outfit', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  --font-mono:            'Courier New', 'Consolas', monospace;
+
+  /* Scale */
+  --text-xs:              0.75rem;   /* 12px — fine print */
+  --text-sm:              0.85rem;   /* ~14px — labels, caps */
+  --text-base:            1rem;      /* 16px — body */
+  --text-lg:              1.1rem;    /* ~18px — player names */
+  --text-xl:              1.2rem;    /* ~19px */
+  --text-2xl:             1.5rem;    /* 24px — section headers */
+  --text-3xl:             2rem;      /* 32px — big feedback */
+  --text-4xl:             3rem;      /* 48px — landing title */
+  --text-5xl:             4rem;      /* 64px — quiz timer */
+  --text-6xl:             5rem;      /* 80px — room code large */
+
+  /* Weights */
+  --weight-regular:       400;
+  --weight-medium:        500;
+  --weight-semibold:      600;
+  --weight-bold:          700;
+  --weight-black:         900;
+
+  /* Leading */
+  --leading-tight:        1.2;
+  --leading-normal:       1.5;
+  --leading-relaxed:      1.7;
+
+  /* Letter spacing */
+  --tracking-tight:       -0.02em;   /* display titles */
+  --tracking-normal:      0em;
+  --tracking-wide:        0.1em;     /* caps labels */
+  --tracking-wider:       0.3em;     /* room codes */
+
+  /* ─── SEMANTIC TYPE ROLES ─── */
+  /* Usage: apply font-size + font-weight + line-height together */
+  --type-display:         var(--weight-black) var(--text-4xl) / var(--leading-tight) var(--font-sans);
+  --type-h1:              var(--weight-black) var(--text-3xl) / var(--leading-tight) var(--font-sans);
+  --type-h2:              var(--weight-bold) var(--text-2xl) / var(--leading-tight) var(--font-sans);
+  --type-h3:              var(--weight-bold) var(--text-xl) / var(--leading-tight) var(--font-sans);
+  --type-label-caps:      var(--weight-semibold) var(--text-sm) / 1 var(--font-sans);
+  --type-body:            var(--weight-regular) var(--text-base) / var(--leading-normal) var(--font-sans);
+  --type-body-strong:     var(--weight-semibold) var(--text-base) / var(--leading-normal) var(--font-sans);
+  --type-small:           var(--weight-regular) var(--text-sm) / var(--leading-normal) var(--font-sans);
+  --type-room-code:       var(--weight-black) var(--text-6xl) / 1 var(--font-mono);
+  --type-room-code-sm:    var(--weight-black) var(--text-4xl) / 1 var(--font-mono);
+  --type-score-big:       var(--weight-black) var(--text-5xl) / 1 var(--font-sans);
+
+  /* ─── SPACING ─── */
+  --space-1:   4px;
+  --space-2:   8px;
+  --space-3:   12px;
+  --space-4:   16px;
+  --space-5:   20px;
+  --space-6:   24px;
+  --space-8:   32px;
+  --space-10:  40px;
+  --space-12:  48px;
+  --space-16:  64px;
+
+  /* ─── BORDER RADIUS ─── */
+  --radius-sm:   8px;    /* inputs */
+  --radius-md:   12px;   /* buttons */
+  --radius-lg:   16px;   /* cards */
+  --radius-xl:   20px;   /* pills / tags */
+  --radius-full: 50%;    /* avatars, dots */
+
+  /* ─── GLASS / BLUR ─── */
+  --blur-card:    blur(12px);
+  --blur-overlay: blur(20px);
+
+  /* ─── NEON GLOW — TEXT SHADOWS ─── */
+  --glow-purple:
+    0 0 10px var(--color-purple),
+    0 0 40px var(--color-purple),
+    0 0 80px rgba(179, 71, 217, 0.3);
+
+  --glow-blue:
+    0 0 10px var(--color-blue),
+    0 0 40px var(--color-blue),
+    0 0 80px rgba(77, 201, 246, 0.3);
+
+  --glow-green:
+    0 0 10px var(--color-green),
+    0 0 40px var(--color-green);
+
+  /* ─── NEON GLOW — BOX SHADOWS ─── */
+  --shadow-purple:  0 4px 20px rgba(179, 71, 217, 0.4);
+  --shadow-blue:    0 4px 20px rgba(77, 201, 246, 0.4);
+  --shadow-green:   0 4px 20px rgba(57, 255, 20, 0.3);
+  --shadow-red:     0 4px 20px rgba(255, 71, 87, 0.4);
+  --shadow-focus:   0 0 10px rgba(179, 71, 217, 0.3);
+
+  /* ─── GRADIENTS ─── */
+  --gradient-primary:  linear-gradient(135deg, var(--color-purple), var(--color-blue));
+  --gradient-success:  linear-gradient(135deg, var(--color-green), #00cc88);
+  --gradient-danger:   linear-gradient(135deg, var(--color-red), var(--color-pink));
+  --gradient-title:    linear-gradient(135deg, var(--color-purple), var(--color-blue), var(--color-pink));
+  --gradient-timer:    linear-gradient(90deg, var(--color-green), var(--color-blue));
+  --gradient-timer-warn: linear-gradient(90deg, var(--color-orange), var(--color-red));
+
+  /* ─── ANIMATION ─── */
+  --duration-micro:   0.15s;
+  --duration-fast:    0.2s;
+  --duration-base:    0.3s;
+  --duration-slow:    0.4s;
+  --ease-default:     ease;
+  --ease-in-out:      ease-in-out;
+
+  /* ─── Z-INDEX ─── */
+  --z-bg:        -1;
+  --z-base:       0;
+  --z-overlay:  100;
+  --z-sidebar:  200;
+  --z-toast:    1000;
+  --z-status:   999;
+}

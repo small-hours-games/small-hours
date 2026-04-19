@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #0a0a1a; font-family: 'Outfit', sans-serif; padding: 20px; display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-start; }
+  .btn {
+    padding: 14px 28px; border: none; border-radius: 12px;
+    font-size: 1rem; font-weight: 600; cursor: pointer;
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    min-height: 48px; font-family: 'Outfit', sans-serif;
+  }
+  .primary { background: linear-gradient(135deg, #b347d9, #4dc9f6); color: white; }
+  .secondary { background: rgba(20,20,40,0.8); color: #e0e0ff; border: 1px solid rgba(179,71,217,0.3); }
+  .success { background: linear-gradient(135deg, #39ff14, #00cc88); color: #0a0a1a; }
+  .danger  { background: linear-gradient(135deg, #ff4757, #ff6ec7); color: white; }
+  .disabled { background: linear-gradient(135deg, #b347d9, #4dc9f6); color: white; opacity: 0.4; cursor: not-allowed; }
+</style>
+</head>
+<body>
+  <button class="btn primary">Create Room</button>
+  <button class="btn secondary">Join Room</button>
+  <button class="btn success">Ready ✓</button>
+  <button class="btn danger">Leave Game</button>
+  <button class="btn disabled" disabled>Disabled</button>
+</body>
+</html>
