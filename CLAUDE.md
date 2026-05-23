@@ -174,6 +174,13 @@ Frontend tests use `tests/frontend/card-renderer.test.js` (JSDOM environment via
 
 Clients connect to `/ws/host/:code` (display) or `/ws/player/:code` (phone). Messages are JSON with a `type` field. Game actions are wrapped as `{ type: 'GAME_ACTION', action: { type: '<action-name>', ...payload } }`.
 
+## Notifications
+
+Discord webhook fires on every `POST /api/rooms` (new room created). Source: `src/notifications/discord.js`.
+Requires `DISCORD_WEBHOOK_URL` in `.env`. No-ops silently if unset.
+Always include both `content` (plain text) and `embeds` in webhook payloads — `content` is what
+appears in push notifications; embed-only messages show blank in Discord previews.
+
 ## GSD Workflow
 
 This project uses the GSD (Get Shit Done) planning system via `/gsd:*` slash commands. Planning state lives in `.planning/`. Key files:
@@ -181,3 +188,14 @@ This project uses the GSD (Get Shit Done) planning system via `/gsd:*` slash com
 - `.planning/PROJECT.md` — current milestone and requirements
 - `.planning/ROADMAP.md` — 12-phase roadmap with success criteria
 - `.planning/REQUIREMENTS.md` — 83 v1 requirements with traceability
+
+# Local Context
+
+## Production Server
+
+- Host: `10.10.0.21`, user `root`
+- Project path: `/opt/small-hours`
+- Docker Compose — source baked into image; code changes require `docker compose build && docker compose up -d`
+- Env changes only (`.env`) take effect with `docker compose up -d` — no rebuild needed
+- `GEMINI_API_KEY` is still placeholder — TTS features non-functional until set
+- SSH via skog-ssh MCP: host registered as `adhoc:small-hours-host`
