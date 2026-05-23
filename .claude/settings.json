@@ -16,13 +16,14 @@
       "Bash(skogcli *)",
       "Skill(gsd:*)",
       "Skill(skogai-routing:*)",
+      "mcp__skog-ssh__get_command_status",
+      "mcp__skog-ssh__perform_command",
+      "mcp__composio__COMPOSIO_SEARCH_TOOLS",
       "Skill(skogai-bats-testing:*)",
       "Bash(wt *)"
     ],
     "defaultMode": "default",
-    "additionalDirectories": [
-      "/home/dellvall/claude"
-    ]
+    "additionalDirectories": ["/home/dellvall/claude"]
   },
   "enableAllProjectMcpServers": false,
   "hooks": {
