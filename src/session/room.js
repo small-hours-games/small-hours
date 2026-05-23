@@ -8,6 +8,7 @@ import quiz from '../engine/games/quiz.js';
 import questionForm from '../engine/games/question-form.js';
 import template from '../engine/games/template.js';
 import ginRummy from '../engine/games/gin-rummy.js';
+import skogai from '../engine/games/skogai.js';
 import { saveAnswers } from '../fetcher/question-file.js';
 
 const AVATAR_POOL = [
@@ -21,8 +22,8 @@ const AVATAR_POOL = [
 const CODE_CHARS = 'ABCDEFGHJKLMNPQRTUVWXYZ0123456789';
 
 const GAME_REGISTRY = {
-  'number-guess': { definition: numberGuess, label: 'Number Guess', minPlayers: 2, maxPlayers: 10, complexity: 1 },
-  'skogai': { definition: skogai, label: 'SkogAI', minPlayers: 1, maxPlayers: 10, complexity: 1 },
+  'number-guess': { definition: numberGuess,  label: 'Number Guess', minPlayers: 2, maxPlayers: 10, complexity: 1 },
+  'skogai': 	  { definition: skogai,       label: 'SkogAI',       minPlayers: 1, maxPlayers: 10, complexity: 1 },
   'shithead':     { definition: shithead,     label: 'Shithead',     minPlayers: 2, maxPlayers: 6,  complexity: 3 },
   'quiz':         { definition: quiz,         label: 'Quiz',         minPlayers: 1, maxPlayers: 20, complexity: 1 },
   'question-form':{ definition: questionForm, label: 'Question Form',minPlayers: 2, maxPlayers: 20, complexity: 1 },

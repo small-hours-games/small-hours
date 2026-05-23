@@ -327,6 +327,7 @@ export function setupWebSocket(server, manager) {
       checkChatRateLimit,
     };
   }
+  const ctx = makeCtx();
 
   // --- Message dispatch ---
 

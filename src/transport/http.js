@@ -4,6 +4,7 @@
 import { fileURLToPath } from 'url';
 import path from 'path';
 import express from 'express';
+import { notifyRoomCreated } from '../notifications/discord.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -46,6 +47,7 @@ export function setupRoutes(app, manager) {
     try {
       const room = manager.createRoom();
       res.status(201).json({ code: room.code });
+      notifyRoomCreated(room.code).catch(() => {});
     } catch (err) {
       res.status(500).json({ error: err.message });
     }

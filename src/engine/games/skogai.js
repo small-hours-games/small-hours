@@ -5,7 +5,7 @@
 // Use this as a starting point for new games.
 // Game definition interface: { setup, actions, view, endIf }
 
-const template = {
+const skogai = {
   setup({ players, config }) {
     const target = (config && config.target) || 3;
     const scores = {};
@@ -69,4 +69,4 @@ const template = {
   },
 };
 
-export default template;
+export default skogai;
