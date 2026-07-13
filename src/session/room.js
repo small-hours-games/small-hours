@@ -345,6 +345,7 @@ export class Room {
 
     this.lastActivity = Date.now();
     this.game = createGame(definition, { players: playerIds, config: gameConfig });
+    this.gameType = gameType;
     this.gameSuggestions.clear();
     this.categoryVotes.clear();
     this.availableCategories = [];

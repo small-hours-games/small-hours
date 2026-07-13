@@ -2,6 +2,7 @@
 
 import { processAction, getView, checkEnd } from '../../engine/engine.js';
 import { saveAnswers } from '../../fetcher/question-file.js';
+import { createGift, gameLabel } from '../../session/gifts.js';
 
 /**
  * Handle START_MINI_GAME message — admin starts a mini-game (async: may fetch questions).
@@ -133,12 +134,36 @@ export function handleGameAction(ws, meta, room, msg, ctx) {
   // Check for game end
   const endResult = checkEnd(room.game);
   if (endResult) {
+    // Generate a shareable gift link for the winner (best-effort; never block end).
+    let giftUrl = null, giftToken = null;
+    try {
+      const winnerName = (room.players.get(endResult.winner) && room.players.get(endResult.winner).name) || null;
+      const created = createGift({
+        roomCode: room.code,
+        winnerId: endResult.winner,
+        gameType: room.gameType || 'unknown',
+        winnerName,
+      });
+      giftUrl = created.url;
+      giftToken = created.token;
+    } catch (e) {
+      console.warn('[gift] failed to create gift:', e.message);
+    }
+
     // Send final views with end result
     for (const [id] of room.players) {
       const view = getView(room.game, id);
       sendToPlayer(id, { type: 'GAME_STATE', ...view, ...endResult });
     }
-    broadcastToRoom(room.code, { type: 'GAME_STATE', phase: 'finished', ...endResult, playerNames }, { hostsOnly: true });
+    broadcastToRoom(room.code, {
+      type: 'GAME_STATE',
+      phase: 'finished',
+      ...endResult,
+      playerNames,
+      giftUrl,
+      giftToken,
+      gameLabel: gameLabel(room.gameType || 'unknown'),
+    }, { hostsOnly: true });
 
     // Award session scores (mirrors the timer-driven end path). endResult
     // carries either a per-player scores map or a single winner.

@@ -157,56 +157,7 @@ export function setupWebSocket(server, manager) {
       const sharedState = { type: 'GAME_STATE', ...hostView, playerNames };
       if (events.length > 0) sharedState.events = events;
       broadcastToRoom(room.code, sharedState, { hostsOnly: true });
-
-      // Check for game end
-      const endResult = checkEnd(room.game);
-      if (endResult) {
-        // Generate a shareable gift link for the winner (best-effort; never block game end).
-        let giftUrl = null;
-        let giftToken = null;
-        try {
-          const winnerName = (room.players.get(endResult.winner) && room.players.get(endResult.winner).name) || null;
-          const created = createGift({
-            roomCode: room.code,
-            winnerId: endResult.winner,
-            gameType: room.gameType || 'unknown',
-            winnerName,
-          });
-          giftUrl = created.url;
-          giftToken = created.token;
-        } catch (e) {
-          console.warn('[gift] failed to create gift:', e.message);
-        }
-
-        for (const [id] of room.players) {
-          const view = getView(room.game, id);
-          sendToPlayer(id, { type: 'GAME_STATE', ...view, ...endResult });
-        }
-        broadcastToRoom(room.code, {
-          type: 'GAME_STATE',
-          phase: 'finished',
-          ...endResult,
-          playerNames,
-          giftUrl,
-          giftToken,
-          gameLabel: gameLabel(room.gameType || 'unknown'),
-        }, { hostsOnly: true });
-
-        const gameState = room.game?.state;
-        if (gameState?.questions && gameState?.responses && gameState?._sourceFile) {
-          saveAnswers(gameState._sourceFile, gameState.responses, playerNames).catch(() => {});
-        }
-
-        applyEndResultScores(room, endResult);
-        room.endGame();
-        cancelPhaseTimer(room.code);
-        broadcastToRoom(room.code, { type: 'LOBBY_UPDATE', state: room.getState() });
-        return;
-      }
-
-      // Schedule next phase timer (force: phase changed)
-      schedulePhaseTimer(room, gameType, { force: true });
-    }, duration);
+    });
 
     timer.phase = phase;
     if (timer.unref) timer.unref();
