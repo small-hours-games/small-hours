@@ -3,10 +3,17 @@
 
 import express from 'express';
 import http from 'http';
+import fs from 'fs';
 import manager from './session/manager.js';
 import { setupRoutes } from './transport/http.js';
 import { setupWebSocket } from './transport/ws-adapter.js';
 import { prewarmCache } from './fetcher/cached-fetcher.js';
+
+// Load .env if present (Node >=20.6 built-in; no dependency needed).
+// Populates process.env with keys like GEMINI_API_KEY, DOMAIN, DISCORD_WEBHOOK_URL.
+if (fs.existsSync('.env') && typeof process.loadEnvFile === 'function') {
+  try { process.loadEnvFile('.env'); } catch { /* ignore malformed .env */ }
+}
 
 const PORT = parseInt(process.env.PORT, 10) || 3001;
 
