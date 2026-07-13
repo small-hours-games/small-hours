@@ -82,8 +82,14 @@ const numberGuess = {
       }
     }
 
+    const scores = {};
+    for (const [id, guesses] of Object.entries(state.guesses)) {
+      scores[id] = state.maxRounds - guesses.length;
+    }
+
     const view = {
       phase: state.phase,
+      scores,
       round: state.round,
       maxRounds: state.maxRounds,
       myGuesses: ownGuesses,

@@ -710,6 +710,7 @@ function view(state, playerId) {
     isMyTurn,
     handNumber: state.handNumber,
     cumulative: state.cumulative,
+    scores: { ...(state.finalScores || state.cumulative) },
     boxes: state.boxes,
     stockCount: state.stock.length,
     discardTop,

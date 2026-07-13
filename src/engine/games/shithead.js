@@ -396,8 +396,17 @@ function pickUpPile(state, { playerId }) {
 function view(state, playerId) {
   const pileTop = state.pile.length > 0 ? state.pile[state.pile.length - 1] : null;
 
+  // Live standing derived from finishOrder (mirrors endIf scoring):
+  // players who have gone out rank above those still in.
+  const scores = {};
+  for (const id of state.players) {
+    const pos = state.finishOrder.indexOf(id);
+    scores[id] = pos === -1 ? 0 : state.players.length - pos;
+  }
+
   return {
     phase: state.phase,
+    scores,
     currentPlayer: state.players[state.currentPlayerIndex],
     myHand: state.hands[playerId] || [],
     myFaceUp: state.faceUp[playerId] || [],

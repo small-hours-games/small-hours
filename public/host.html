@@ -819,7 +819,7 @@
         case 'template': renderTemplate(msg); break;
       }
 
-      if (msg.scores) renderScoreboard(msg.scores);
+      if (msg.scores) renderScoreboard(msg.scores, msg.playerNames);
       if (msg.phase === 'lobby' || msg.phase === 'finished') returnToLobby(msg);
     }
 
@@ -1305,11 +1305,13 @@
       content.innerHTML = html;
     }
 
-    function renderScoreboard(scores) {
+    function renderScoreboard(scores, playerNames) {
       const list = document.getElementById('scoreList');
+      const names = playerNames || {};
       const sorted = Object.entries(scores).sort((a, b) => b[1] - a[1]);
 
-      list.innerHTML = sorted.map(([name, score], i) => {
+      list.innerHTML = sorted.map(([id, score], i) => {
+        const name = names[id] || id;
         return '<div class="score-entry">' +
           '<span class="score-rank">' + (i + 1) + '</span>' +
           '<span class="score-name">' + escapeHtml(name) + '</span>' +
