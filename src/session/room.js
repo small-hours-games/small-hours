@@ -11,6 +11,10 @@ import template from '../engine/games/template.js';
 import ginRummy from '../engine/games/gin-rummy.js';
 import hilow from '../engine/games/hilow.js';
 import skogai from '../engine/games/skogai.js';
+import sjuan from '../engine/games/sjuan.js';
+import uno from '../engine/games/uno.js';
+import yatzy from '../engine/games/yatzy.js';
+import labyrint from '../engine/games/labyrint.js';
 import { saveAnswers } from '../fetcher/question-file.js';
 import { randomBytes } from 'node:crypto';
 
@@ -34,6 +38,10 @@ const GAME_REGISTRY = {
   'template':     { definition: template,     label: 'Template',     minPlayers: 1, maxPlayers: 20, complexity: 1 },
   'gin-rummy':    { definition: ginRummy,     label: 'Gin Rummy',    minPlayers: 2, maxPlayers: 4,  complexity: 4 },
   'hilow':        { definition: hilow,        label: 'Högt/Lågt',    minPlayers: 2, maxPlayers: 8,  complexity: 1 },
+  'sjuan':       { definition: sjuan,       label: 'Sjuan',        minPlayers: 2, maxPlayers: 8,  complexity: 2 },
+  'uno':         { definition: uno,         label: 'Uno',          minPlayers: 2, maxPlayers: 8,  complexity: 2 },
+  'yatzy':       { definition: yatzy,       label: 'Yatzy',        minPlayers: 1, maxPlayers: 8,  complexity: 2 },
+  'labyrint':    { definition: labyrint,    label: 'Labyrint',     minPlayers: 2, maxPlayers: 8,  complexity: 2 },
 };
 
 let playerCounter = 0;
