@@ -819,7 +819,9 @@
         case 'template': renderTemplate(msg); break;
       }
 
-      if (msg.scores) renderScoreboard(msg.scores, msg.playerNames);
+      if (msg.scores || state.gameType === 'number-guess' || state.gameType === 'shithead') {
+        renderScoreboard(msg, state.gameType);
+      }
       if (msg.phase === 'lobby' || msg.phase === 'finished') returnToLobby(msg);
     }
 
@@ -856,10 +858,6 @@
         html += '</div>';
       } else {
         html += '<div style="color:var(--text-secondary);margin-top:24px;">Waiting for guesses...</div>';
-      }
-
-      if (msg.scores) {
-        renderScoreboard(msg.scores);
       }
 
       html += '</div>';
@@ -1004,23 +1002,6 @@
         html += '<div style="font-size:2rem;color:var(--neon-green);font-weight:700;margin-bottom:16px;">Game Over!</div>';
       }
       html += '<div style="font-size:1.2rem;margin-bottom:16px;">Target: ' + (msg.target || 3) + '</div>';
-      if (msg.scores) {
-        const entries = Object.entries(msg.scores).sort((a, b) => b[1] - a[1]);
-        html += '<div style="display:flex;flex-direction:column;gap:8px;max-width:300px;margin:0 auto;">';
-        for (const [id, score] of entries) {
-          const name = (msg.playerNames && msg.playerNames[id]) || id;
-          const pct = Math.round((score / (msg.target || 3)) * 100);
-          const isWinner = msg.winner === id;
-          html += '<div style="display:flex;align-items:center;gap:12px;">' +
-            '<span style="min-width:80px;text-align:right;' + (isWinner ? 'color:var(--neon-green);font-weight:700;' : '') + '">' + escapeHtml(name) + '</span>' +
-            '<div style="flex:1;background:rgba(255,255,255,0.1);border-radius:4px;height:24px;">' +
-            '<div style="width:' + pct + '%;height:100%;background:var(--neon-blue);border-radius:4px;transition:width 0.3s;"></div>' +
-            '</div>' +
-            '<span style="min-width:30px;">' + score + '</span>' +
-            '</div>';
-        }
-        html += '</div>';
-      }
       html += '</div>';
       content.innerHTML = html;
     }
@@ -1338,20 +1319,94 @@
       content.innerHTML = html;
     }
 
-    function renderScoreboard(scores, playerNames) {
-      const list = document.getElementById('scoreList');
-      const names = playerNames || {};
-      const sorted = Object.entries(scores).sort((a, b) => b[1] - a[1]);
+    // Normalize each game's score shape into one unified scoreboard model.
+    // Returns { roundLabel, status, entries:[{id,name,valueText,rank,isOut}] }.
+    // `entries` is already sorted best-first; rank is 1-based.
+    function getScoreboardData(msg, gameType) {
+      const names = msg.playerNames || {};
+      const scores = msg.scores || {};
+      const ids = Object.keys(scores);
 
-      list.innerHTML = sorted.map(([id, score], i) => {
-        const name = names[id] || id;
-        const rank = i + 1;
-        const rankClass = rank === 1 ? 'rank-gold' : rank === 2 ? 'rank-silver' : rank === 3 ? 'rank-bronze' : '';
-        return '<div class="score-entry card" data-player-id="' + escapeHtml(id) + '">' +
-          '<span class="score-rank ' + rankClass + '">' + rank + '</span>' +
-          '<span class="score-name">' + escapeHtml(name) + '</span>' +
-          '<span class="score-value">' + score + '</span></div>';
+      let entries;
+      let roundLabel = null;
+      let status = (msg.phase === 'finished') ? 'Klart' : 'Spelar';
+
+      if (gameType === 'shithead') {
+        // `scores` here is players.length - placement; derive true placement from finishOrder.
+        const finishOrder = msg.finishOrder || [];
+        // Best-first: those who went out first rank above those still in.
+        const rankedIds = [
+          ...finishOrder,
+          ...ids.filter(id => !finishOrder.includes(id)),
+        ];
+        entries = rankedIds.map((id, i) => ({
+          id,
+          name: names[id] || id,
+          valueText: finishOrder.includes(id) ? 'Plats ' + (i + 1) : 'Spelar',
+          rank: i + 1,
+          isOut: finishOrder.includes(id),
+        }));
+      } else if (gameType === 'number-guess') {
+        // `scores` = maxRounds - guesses (guesses remaining). Higher = better.
+        const maxRounds = msg.maxRounds || 0;
+        const sorted = ids.slice().sort((a, b) => scores[b] - scores[a]);
+        entries = sorted.map((id, i) => {
+          const guessesLeft = scores[id];
+          return {
+            id,
+            name: names[id] || id,
+            valueText: guessesLeft + ' gissningar kvar',
+            rank: i + 1,
+            isOut: false,
+          };
+        });
+        if (msg.round != null && maxRounds) {
+          roundLabel = 'Round ' + (msg.round + 1) + ' / ' + maxRounds;
+        }
+      } else {
+        // quiz / spy / gin-rummy / template: scores are accumulated points, higher = better.
+        const sorted = ids.slice().sort((a, b) => scores[b] - scores[a]);
+        entries = sorted.map((id, i) => ({
+          id,
+          name: names[id] || id,
+          valueText: scores[id] + ' p',
+          rank: i + 1,
+          isOut: false,
+        }));
+        if (gameType === 'quiz' && msg.totalQuestions) {
+          roundLabel = 'Fråga ' + ((msg.currentQuestion || 0) + 1) + ' / ' + msg.totalQuestions;
+        } else if (gameType === 'spy' && msg.totalRounds) {
+          roundLabel = 'Round ' + (msg.round || 0) + ' / ' + msg.totalRounds;
+        } else if (gameType === 'gin-rummy' && msg.handNumber != null) {
+          roundLabel = 'Hand ' + msg.handNumber;
+        }
+      }
+
+      return { roundLabel, status, entries };
+    }
+
+    function renderScoreboard(msg, gameType) {
+      const list = document.getElementById('scoreList');
+      const { roundLabel, status, entries } = getScoreboardData(msg, gameType);
+
+      let header = '<h3 class="score-panel-title neon">Live Scores</h3>';
+      const meta = [];
+      if (roundLabel) meta.push(roundLabel);
+      if (status) meta.push(status);
+      if (meta.length) {
+        header += '<div class="score-panel-meta">' + escapeHtml(meta.join(' · ')) + '</div>';
+      }
+
+      const rows = entries.map(e => {
+        const rankClass = e.rank === 1 ? 'rank-gold' : e.rank === 2 ? 'rank-silver' : e.rank === 3 ? 'rank-bronze' : '';
+        const outBadge = e.isOut ? ' <span class="score-out-badge">UTE</span>' : '';
+        return '<div class="score-entry card' + (e.isOut ? ' is-out' : '') + '" data-player-id="' + escapeHtml(e.id) + '">' +
+          '<span class="score-rank ' + rankClass + '">' + e.rank + '</span>' +
+          '<span class="score-name">' + escapeHtml(e.name) + outBadge + '</span>' +
+          '<span class="score-value">' + escapeHtml(e.valueText) + '</span></div>';
       }).join('');
+
+      list.innerHTML = header + rows;
     }
 
     function returnToLobby(msg) {

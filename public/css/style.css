@@ -1302,3 +1302,63 @@ input::placeholder {
 .card-deal-in {
   animation: cardDeal 0.2s ease forwards;
 }
+
+/* Unified Host Scoreboard (rendered by renderScoreboard) */
+.score-panel-meta {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  font-weight: 600;
+  margin: 4px 0 10px;
+  letter-spacing: 0.04em;
+}
+
+.score-entry {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  margin-bottom: 8px;
+  transition: opacity 0.2s, filter 0.2s;
+}
+
+.score-entry.is-out {
+  opacity: 0.55;
+  filter: grayscale(0.5);
+}
+
+.score-rank {
+  min-width: 28px;
+  text-align: center;
+  font-weight: 800;
+  font-size: 1.1rem;
+}
+
+.score-rank.rank-gold { color: #ffd700; text-shadow: 0 0 10px rgba(255, 215, 0, 0.6); }
+.score-rank.rank-silver { color: #c0c0c0; text-shadow: 0 0 8px rgba(192, 192, 192, 0.5); }
+.score-rank.rank-bronze { color: #cd7f32; text-shadow: 0 0 8px rgba(205, 127, 50, 0.5); }
+
+.score-name {
+  flex: 1;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.score-value {
+  font-weight: 700;
+  color: var(--neon-blue);
+  min-width: 56px;
+  text-align: right;
+}
+
+.score-out-badge {
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  color: #0a0a1a;
+  background: var(--neon-red);
+  padding: 2px 6px;
+  border-radius: 4px;
+  margin-left: 6px;
+}
