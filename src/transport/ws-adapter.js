@@ -31,7 +31,8 @@ const DISCONNECT_GRACE_MS = 30_000;
  * @returns {{ wss: WebSocketServer, broadcastToRoom: Function, sendToPlayer: Function }}
  */
 export function setupWebSocket(server, manager) {
-  const wss = new WebSocketServer({ server });
+  // Limit frame size to 1MB to prevent message-size DoS (ws default ~100MB).
+  const wss = new WebSocketServer({ server, maxPayload: 1_048_576 });
 
   // socket -> metadata mapping
   const socketMeta = new Map();
@@ -110,7 +111,17 @@ export function setupWebSocket(server, manager) {
     }
   }
 
-  function schedulePhaseTimer(room, gameType) {
+  function schedulePhaseTimer(room, gameType, { force = false } = {}) {
+    if (!force) {
+      // Don't reset an already-running timer for the same phase. A GAME_ACTION
+      // re-enters here on every player move; rescheduling would restart the
+      // countdown to full each time, stalling timed phases (quiz/spy) forever
+      // while players keep acting. Only reschedule when the phase changed.
+      const current = phaseTimers.get(room.code);
+      if (current && current.phase === room.game?.state.phase) {
+        return;
+      }
+    }
     cancelPhaseTimer(room.code);
 
     if (!room.game) return;
@@ -167,10 +178,11 @@ export function setupWebSocket(server, manager) {
         return;
       }
 
-      // Schedule next phase timer
-      schedulePhaseTimer(room, gameType);
+      // Schedule next phase timer (force: phase changed)
+      schedulePhaseTimer(room, gameType, { force: true });
     }, duration);
 
+    timer.phase = phase;
     if (timer.unref) timer.unref();
     phaseTimers.set(room.code, timer);
   }
@@ -386,262 +398,6 @@ export function setupWebSocket(server, manager) {
       default:
         send(ws, { type: 'ERROR', message: `Unknown message type: ${msg.type}` });
     }
-  }
-
-  function handleJoinLobby(ws, meta, room, msg) {
-    if (!msg.username) {
-      send(ws, { type: 'ERROR', message: 'Username required' });
-      return;
-    }
-
-    // Check if this username already exists (reconnection)
-    let existingId = null;
-    for (const [id, p] of room.players) {
-      if (p.username === msg.username) {
-        existingId = id;
-        break;
-      }
-    }
-
-    let playerId, avatar;
-    if (existingId) {
-      // Reconnect existing player
-      playerId = existingId;
-      const player = room.players.get(existingId);
-      avatar = player.avatar;
-      player.connected = true;
-      player.lastSeen = Date.now();
-    } else {
-      // New player
-      ({ playerId, avatar } = room.addPlayer(msg.username));
-    }
-
-    meta.playerId = playerId;
-    playerSockets.set(playerId, ws);
-
-    // Cancel any pending grace timer
-    if (graceTimers.has(playerId)) {
-      clearTimeout(graceTimers.get(playerId));
-      graceTimers.delete(playerId);
-    }
-
-    send(ws, { type: 'JOIN_OK', playerId, avatar });
-    broadcastToRoom(room.code, { type: 'LOBBY_UPDATE', state: room.getState() });
-
-    // If a game is running, send current game state to the reconnecting player
-    if (room.game) {
-      const view = getView(room.game, playerId);
-      const playerNames = getPlayerNames(room);
-      sendToPlayer(playerId, { type: 'GAME_STATE', ...view, playerNames });
-    }
-  }
-
-  function handleJoinObserver(ws, meta, room, msg) {
-    if (meta.role !== 'observer') {
-      send(ws, { type: 'ERROR', message: 'JOIN_OBSERVER is only valid for observer connections' });
-      return;
-    }
-
-    if (!msg.username) {
-      send(ws, { type: 'ERROR', message: 'Username required' });
-      return;
-    }
-
-    const { observerId } = room.addObserver(msg.username);
-    meta.observerId = observerId;
-
-    send(ws, { type: 'OBSERVER_OK', observerId });
-
-    // Send current game state if a game is running
-    if (room.game) {
-      const playerNames = getPlayerNames(room);
-      const hostView = getView(room.game, room.players.keys().next().value);
-      send(ws, { type: 'GAME_STATE', ...hostView, playerNames });
-    }
-  }
-
-  function handleSetReady(ws, meta, room, msg) {
-    if (!meta.playerId) {
-      send(ws, { type: 'ERROR', message: 'Not joined yet' });
-      return;
-    }
-    room.setReady(meta.playerId, msg.ready);
-    broadcastToRoom(room.code, { type: 'LOBBY_UPDATE', state: room.getState() });
-  }
-
-  function handleSuggestGame(ws, meta, room, msg) {
-    if (!meta.playerId) {
-      send(ws, { type: 'ERROR', message: 'Not joined yet' });
-      return;
-    }
-    if (!msg.gameType) {
-      send(ws, { type: 'ERROR', message: 'gameType required' });
-      return;
-    }
-    room.suggestGame(meta.playerId, msg.gameType);
-    broadcastToRoom(room.code, { type: 'LOBBY_UPDATE', state: room.getState() });
-  }
-
-  async function handleStartMiniGame(ws, meta, room, msg) {
-    if (!meta.playerId) {
-      send(ws, { type: 'ERROR', message: 'Not joined yet' });
-      return;
-    }
-
-    const player = room.players.get(meta.playerId);
-    if (!player || !player.isAdmin) {
-      send(ws, { type: 'ERROR', message: 'Only admin can start a game' });
-      return;
-    }
-
-    if (!msg.gameType) {
-      send(ws, { type: 'ERROR', message: 'gameType required' });
-      return;
-    }
-
-    let config = msg.config || {};
-
-    // Quiz: resolve winning category from votes if no explicit override (per D-12, D-16)
-    if (msg.gameType === 'quiz' && room.votingActive && !config.categoryId) {
-      config = { ...config, categoryId: room.resolveWinningCategory() };
-    }
-
-    try {
-      const game = await room.startGame(msg.gameType, config);
-      broadcastToRoom(room.code, {
-        type: 'MINI_GAME_STARTING',
-        gameType: msg.gameType,
-        gameId: game.id,
-      });
-
-      // Send initial game state to each player
-      const pNames = getPlayerNames(room);
-      for (const [id] of room.players) {
-        const view = getView(room.game, id);
-        sendToPlayer(id, { type: 'GAME_STATE', ...view, gameType: msg.gameType, playerNames: pNames });
-      }
-      // Also broadcast to host displays
-      broadcastToRoom(room.code, { type: 'GAME_STATE', gameType: msg.gameType, phase: room.game.state.phase, playerNames: pNames }, { hostsOnly: true });
-
-      // Schedule phase timer for timer-driven games
-      roomGameTypes.set(room.code, msg.gameType);
-      schedulePhaseTimer(room, msg.gameType);
-    } catch (err) {
-      send(ws, { type: 'ERROR', message: err.message });
-    }
-  }
-
-  function handleReturnToLobby(ws, meta, room) {
-    if (!meta.playerId) {
-      send(ws, { type: 'ERROR', message: 'Not joined yet' });
-      return;
-    }
-
-    const player = room.players.get(meta.playerId);
-    if (!player || !player.isAdmin) {
-      send(ws, { type: 'ERROR', message: 'Only admin can return to lobby' });
-      return;
-    }
-
-    cancelPhaseTimer(room.code);
-    roomGameTypes.delete(room.code);
-    room.endGame();
-    broadcastToRoom(room.code, { type: 'LOBBY_UPDATE', state: room.getState() });
-  }
-
-  function handleGameAction(ws, meta, room, msg) {
-    if (!meta.playerId) {
-      send(ws, { type: 'ERROR', message: 'Not joined yet' });
-      return;
-    }
-
-    if (!room.game) {
-      send(ws, { type: 'ERROR', message: 'No game running' });
-      return;
-    }
-
-    if (!msg.action || !msg.action.type) {
-      send(ws, { type: 'ERROR', message: 'action with type required' });
-      return;
-    }
-
-    const action = { ...msg.action, playerId: meta.playerId };
-    const { game: updatedGame, events } = processAction(room.game, action);
-    room.game = updatedGame;
-    room.lastActivity = Date.now();
-
-    const playerNames = getPlayerNames(room);
-
-    // Send per-player views (flattened into GAME_STATE)
-    for (const [id] of room.players) {
-      const view = getView(room.game, id);
-      sendToPlayer(id, { type: 'GAME_STATE', ...view, playerNames });
-    }
-
-    // Broadcast shared state to host displays only (not players — they got personal views above)
-    const hostView = getView(room.game, room.players.keys().next().value);
-    const sharedState = { type: 'GAME_STATE', ...hostView, playerNames };
-    delete sharedState.myHand;
-    delete sharedState.myFaceUp;
-    delete sharedState.myFaceDownCount;
-    delete sharedState.myFaceDownIds;
-    delete sharedState.myGuesses;
-    delete sharedState.isMyTurn;
-    delete sharedState.swapConfirmed;
-    if (events.length > 0) sharedState.events = events;
-    broadcastToRoom(room.code, sharedState, { hostsOnly: true });
-
-    // Reschedule phase timer if phase changed due to player action
-    const activeGameType = roomGameTypes.get(room.code);
-    if (activeGameType) {
-      schedulePhaseTimer(room, activeGameType);
-    }
-
-    // Check for game end
-    const endResult = checkEnd(room.game);
-    if (endResult) {
-      // Send final views with end result
-      for (const [id] of room.players) {
-        const view = getView(room.game, id);
-        sendToPlayer(id, { type: 'GAME_STATE', ...view, ...endResult });
-      }
-      broadcastToRoom(room.code, { type: 'GAME_STATE', phase: 'finished', ...endResult, playerNames }, { hostsOnly: true });
-
-      // Save question-form answers to file
-      const gameState = room.game?.state;
-      if (gameState?.questions && gameState?.responses && gameState?._sourceFile) {
-        saveAnswers(gameState._sourceFile, gameState.responses, playerNames).catch(() => {});
-      }
-
-      room.endGame();
-      cancelPhaseTimer(room.code);
-      roomGameTypes.delete(room.code);
-      broadcastToRoom(room.code, { type: 'LOBBY_UPDATE', state: room.getState() });
-    }
-  }
-
-  function handleChatMessage(ws, meta, room, msg) {
-    if (!meta.playerId) {
-      send(ws, { type: 'ERROR', message: 'Not joined yet' });
-      return;
-    }
-
-    if (!checkChatRateLimit(meta)) {
-      send(ws, { type: 'ERROR', message: 'Chat rate limit exceeded' });
-      return;
-    }
-
-    const text = String(msg.text || '').replace(/<[^>]*>/g, '').trim().slice(0, 200);
-    if (!text) return;
-
-    const player = room.players.get(meta.playerId);
-    broadcastToRoom(room.code, {
-      type: 'CHAT_MESSAGE',
-      playerId: meta.playerId,
-      username: player ? player.username : 'Unknown',
-      text,
-      timestamp: Date.now(),
-    });
   }
 
   // --- Disconnect handling ---

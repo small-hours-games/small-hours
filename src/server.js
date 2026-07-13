@@ -63,3 +63,13 @@ function shutdown(signal) {
 
 process.on('SIGTERM', () => shutdown('SIGTERM'));
 process.on('SIGINT', () => shutdown('SIGINT'));
+
+// Crash resilience: a throw inside an async timer/WebSocket callback (e.g. the
+// phase-timer game-end path) must not terminate the whole server and drop all
+// rooms. Log and keep the process alive.
+process.on('uncaughtException', (err) => {
+  console.error('[fatal] uncaughtException:', err);
+});
+process.on('unhandledRejection', (reason) => {
+  console.error('[fatal] unhandledRejection:', reason);
+});

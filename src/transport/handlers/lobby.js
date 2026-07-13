@@ -19,26 +19,31 @@ export function handleJoinLobby(ws, meta, room, msg, ctx) {
     return;
   }
 
-  // Check if this username already exists (reconnection)
+  // Check for an existing player to reconnect. Reconnection requires the
+  // unguessable reconnectToken, NOT the username — prevents admin/identity
+  // hijack via username collision.
   let existingId = null;
-  for (const [id, p] of room.players) {
-    if (p.username === msg.username) {
-      existingId = id;
-      break;
+  if (msg.reconnectToken) {
+    for (const [id, p] of room.players) {
+      if (p.reconnectToken === msg.reconnectToken) {
+        existingId = id;
+        break;
+      }
     }
   }
 
-  let playerId, avatar;
+  let playerId, avatar, reconnectToken;
   if (existingId) {
     // Reconnect existing player
     playerId = existingId;
     const player = room.players.get(existingId);
     avatar = player.avatar;
+    reconnectToken = player.reconnectToken;
     player.connected = true;
     player.lastSeen = Date.now();
   } else {
     // New player
-    ({ playerId, avatar } = room.addPlayer(msg.username));
+    ({ playerId, avatar, reconnectToken } = room.addPlayer(msg.username));
   }
 
   meta.playerId = playerId;
@@ -50,7 +55,7 @@ export function handleJoinLobby(ws, meta, room, msg, ctx) {
     graceTimers.delete(playerId);
   }
 
-  send(ws, { type: 'JOIN_OK', playerId, avatar });
+  send(ws, { type: 'JOIN_OK', playerId, avatar, reconnectToken });
   broadcastToRoom(room.code, { type: 'LOBBY_UPDATE', state: room.getState() });
 
   // If a game is running, send current game state to the reconnecting player

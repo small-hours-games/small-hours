@@ -11,6 +11,11 @@ const __dirname = path.dirname(__filename);
 const PUBLIC_DIR = path.resolve(__dirname, '../../public');
 const AUDIO_DIR = path.resolve(__dirname, '../../data/audio');
 
+// Room-flood protection
+const MAX_ROOMS = 200;
+const ROOM_CREATE_MIN_INTERVAL_MS = 200;
+let lastRoomCreateAt = 0;
+
 /**
  * Set up HTTP routes on the Express app.
  *
@@ -29,21 +34,28 @@ export function setupRoutes(app, manager) {
     });
   });
 
-  // List rooms
+  // List rooms — expose counts only, never room codes, to avoid room-code
+  // enumeration of live rooms.
   app.get('/api/rooms', (_req, res) => {
-    const rooms = [];
-    for (const [code, room] of manager.rooms) {
-      rooms.push({
-        code,
-        playerCount: room.players.size,
-        gameRunning: room.game !== null,
-      });
-    }
-    res.json(rooms);
+    res.json({
+      count: manager.rooms.size,
+      players: manager.stats().playerCount,
+    });
   });
 
   // Create room
-  app.post('/api/rooms', (_req, res) => {
+  app.post('/api/rooms', (req, res) => {
+    // Basic flood protection: cap total rooms and rate-limit creation.
+    if (manager.rooms.size >= MAX_ROOMS) {
+      res.status(503).json({ error: 'Server at room capacity' });
+      return;
+    }
+    const now = Date.now();
+    if (now - lastRoomCreateAt < ROOM_CREATE_MIN_INTERVAL_MS) {
+      res.status(429).json({ error: 'Too many rooms created, slow down' });
+      return;
+    }
+    lastRoomCreateAt = now;
     try {
       const room = manager.createRoom();
       res.status(201).json({ code: room.code });
@@ -58,6 +70,11 @@ export function setupRoutes(app, manager) {
     const { questionId, type } = req.params;
     if (type !== 'q' && type !== 'a') {
       res.status(400).json({ error: 'Type must be "q" or "a"' });
+      return;
+    }
+    // Prevent path traversal: questionId must be a plain slug, no separators or ".."
+    if (!/^[a-zA-Z0-9_-]+$/.test(questionId)) {
+      res.status(400).json({ error: 'Invalid question id' });
       return;
     }
     const basePath = path.join(AUDIO_DIR, `${questionId}_${type}`);

@@ -10,6 +10,7 @@ import template from '../engine/games/template.js';
 import ginRummy from '../engine/games/gin-rummy.js';
 import skogai from '../engine/games/skogai.js';
 import { saveAnswers } from '../fetcher/question-file.js';
+import { randomBytes } from 'node:crypto';
 
 const AVATAR_POOL = [
   '\u{1F98A}', '\u{1F438}', '\u{1F43C}', '\u{1F981}', '\u{1F42F}',
@@ -37,6 +38,14 @@ let observerCounter = 0;
 function generatePlayerId() {
   playerCounter += 1;
   return `player_${Date.now()}_${playerCounter}`;
+}
+
+// Cryptographically unguessable token used to authenticate reconnection /
+// admin reclaim, so identity cannot be hijacked by guessing a username.
+// Uses crypto.randomBytes (not Math.random) since this token is the
+// admin-identity secret.
+function generateReconnectToken() {
+  return `rt_${randomBytes(18).toString('base64url')}`;
 }
 
 function generateObserverId() {
@@ -76,6 +85,10 @@ function sanitizeUsername(raw) {
   return stripped.slice(0, 20) || 'Player';
 }
 
+// Capacity limits to bound per-room state (DoS protection).
+const MAX_PLAYERS = 30;
+const MAX_OBSERVERS = 30;
+
 export { AVATAR_POOL };
 
 export class Room {
@@ -101,12 +114,16 @@ export class Room {
    * Returns { playerId, avatar }.
    */
   addPlayer(username) {
+    if (this.players.size >= MAX_PLAYERS) {
+      throw new Error('Room is full');
+    }
     this.stateVersion += 1;
     this.lastActivity = Date.now();
     const clean = sanitizeUsername(username);
     const playerId = generatePlayerId();
     const avatar = avatarFromUsername(clean);
     const isAdmin = this.players.size === 0;
+    const reconnectToken = generateReconnectToken();
 
     this.players.set(playerId, {
       username: clean,
@@ -117,9 +134,10 @@ export class Room {
       connected: true,
       lastSeen: Date.now(),
       sessionScore: 0,
+      reconnectToken,
     });
 
-    return { playerId, avatar };
+    return { playerId, avatar, reconnectToken };
   }
 
   /**
@@ -160,6 +178,9 @@ export class Room {
    * Returns { observerId }.
    */
   addObserver(username) {
+    if (this.observers.size >= MAX_OBSERVERS) {
+      throw new Error('Too many observers');
+    }
     this.lastActivity = Date.now();
     const clean = sanitizeUsername(username);
     const observerId = generateObserverId();
@@ -330,6 +351,22 @@ export class Room {
   /**
    * End the current game and return to the lobby.
    */
+  /**
+   * Award session scores to players. Scores is { [playerId]: number }.
+   * Adds to each player's sessionScore (the persistent lobby leaderboard).
+   */
+  awardScores(scores) {
+    if (!scores || typeof scores !== 'object') return;
+    for (const [id, delta] of Object.entries(scores)) {
+      const player = this.players.get(id);
+      if (player) {
+        player.sessionScore = (player.sessionScore || 0) + Number(delta || 0);
+      }
+    }
+    this.stateVersion += 1;
+    this.lastActivity = Date.now();
+  }
+
   endGame() {
     this.stateVersion += 1;
     this.lastActivity = Date.now();

@@ -115,6 +115,22 @@ function getPlayerId(ws) {
   return joinOk ? joinOk.playerId : null;
 }
 
+/** Grab the reconnectToken from the JOIN_OK response. */
+function getReconnectToken(ws) {
+  const joinOk = ws._sent.find(m => m.type === 'JOIN_OK');
+  return joinOk ? joinOk.reconnectToken : null;
+}
+
+/** Reconnect an existing player by passing its reconnectToken. */
+function reconnectPlayer(env, reconnectToken, roomCode) {
+  const code = roomCode || env.room.code;
+  const ws = makeFakeWs(code, 'player');
+  const req = makeFakeReq(`/ws/player/${code}`, 'localhost');
+  fakeWss.emit('connection', ws, req);
+  ws.emit('message', JSON.stringify({ type: 'JOIN_LOBBY', username: 'Alice', reconnectToken }));
+  return ws;
+}
+
 // -----------------------------------------------------------------------
 // Connection handling
 // -----------------------------------------------------------------------
@@ -195,20 +211,35 @@ describe('ws-adapter - JOIN_LOBBY', () => {
     expect(err.message).toMatch(/username required/i);
   });
 
-  it('reconnects existing player by username', () => {
+  it('reconnects existing player by reconnectToken (not username)', () => {
     env = makeEnv();
     const ws1 = connectPlayer(env, 'Alice');
     const playerId1 = getPlayerId(ws1);
+    const token = getReconnectToken(ws1);
 
     // Simulate disconnect
     ws1.emit('close');
 
-    // Reconnect with same username on new socket
-    const ws2 = connectPlayer(env, 'Alice');
+    // Reconnect with the unguessable token on a new socket
+    const ws2 = reconnectPlayer(env, token);
     const playerId2 = getPlayerId(ws2);
 
     expect(playerId2).toBe(playerId1);
     expect(env.room.players.size).toBe(1);
+  });
+
+  it('does NOT hijack another player via matching username', () => {
+    env = makeEnv();
+    const ws1 = connectPlayer(env, 'Alice');
+    const playerId1 = getPlayerId(ws1);
+    ws1.emit('close');
+
+    // A different socket claiming the same username but no token = new player
+    const ws2 = connectPlayer(env, 'Alice');
+    const playerId2 = getPlayerId(ws2);
+
+    expect(playerId2).not.toBe(playerId1);
+    expect(env.room.players.size).toBe(2);
   });
 
   it('broadcasts LOBBY_UPDATE to room after join', () => {
@@ -418,11 +449,12 @@ describe('ws-adapter - reconnection grace period', () => {
     env = makeEnv();
     const ws1 = connectPlayer(env, 'Alice');
     const playerId = getPlayerId(ws1);
+    const token = getReconnectToken(ws1);
     ws1.emit('close');
 
-    // Reconnect within the 30-second window
+    // Reconnect within the 30-second window using the reconnect token
     vi.advanceTimersByTime(15_000);
-    connectPlayer(env, 'Alice'); // same username → reconnection
+    reconnectPlayer(env, token);
 
     // Advance past the original grace period deadline
     vi.advanceTimersByTime(20_000);

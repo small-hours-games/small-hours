@@ -14,7 +14,26 @@ const QUESTIONS_DIR = join(__dirname, '..', '..', 'questions');
  * @param {string} filename - e.g. 'todo-poll.json'
  * @returns {{ ok: true, questions: Array, name: string } | { ok: false, error: string }}
  */
+/**
+ * Validate that a question filename stays inside QUESTIONS_DIR.
+ * Rejects anything containing a path separator or ".." to prevent traversal.
+ * @param {string} filename
+ * @returns {boolean}
+ */
+function isSafeFilename(filename) {
+  return typeof filename === 'string'
+    && filename.length > 0
+    && filename.length <= 128
+    && !filename.includes('/')
+    && !filename.includes('\\')
+    && !filename.includes('..')
+    && /^[a-zA-Z0-9._-]+$/.test(filename);
+}
+
 export async function loadQuestionFile(filename) {
+  if (!isSafeFilename(filename)) {
+    return { ok: false, error: 'Invalid filename' };
+  }
   try {
     const filepath = join(QUESTIONS_DIR, filename);
     const raw = await readFile(filepath, 'utf-8');
@@ -39,6 +58,9 @@ export async function loadQuestionFile(filename) {
  * @param {Object} playerNames - { playerId: username }
  */
 export async function saveAnswers(filename, responses, playerNames) {
+  if (!isSafeFilename(filename)) {
+    return { ok: false, error: 'Invalid filename' };
+  }
   try {
     const filepath = join(QUESTIONS_DIR, filename);
     const raw = await readFile(filepath, 'utf-8');

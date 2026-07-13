@@ -40,6 +40,14 @@ export async function handleStartMiniGame(ws, meta, room, msg, ctx) {
 
   try {
     const game = await room.startGame(msg.gameType, config);
+
+    // A concurrent RETURN_TO_LOBBY or second start may have cleared the game
+    // while we awaited. Guard before touching room.game to avoid a crash.
+    if (!room.game) {
+      send(ws, { type: 'ERROR', message: 'Game was cancelled before it started' });
+      return;
+    }
+
     broadcastToRoom(room.code, {
       type: 'MINI_GAME_STARTING',
       gameType: msg.gameType,
@@ -57,7 +65,7 @@ export async function handleStartMiniGame(ws, meta, room, msg, ctx) {
 
     // Schedule phase timer for timer-driven games
     roomGameTypes.set(room.code, msg.gameType);
-    schedulePhaseTimer(room, msg.gameType);
+    schedulePhaseTimer(room, msg.gameType, { force: true });
   } catch (err) {
     send(ws, { type: 'ERROR', message: err.message });
   }
@@ -131,6 +139,22 @@ export function handleGameAction(ws, meta, room, msg, ctx) {
       sendToPlayer(id, { type: 'GAME_STATE', ...view, ...endResult });
     }
     broadcastToRoom(room.code, { type: 'GAME_STATE', phase: 'finished', ...endResult, playerNames }, { hostsOnly: true });
+
+    // Award session scores (mirrors the timer-driven end path). endResult
+    // carries either a per-player scores map or a single winner.
+    try {
+      if (endResult.scores && typeof endResult.scores === 'object') {
+        room.awardScores(endResult.scores);
+      } else if (typeof endResult.winner === 'string') {
+        const scoresMap = {};
+        for (const [id, p] of room.players) {
+          if (p.connected) scoresMap[id] = id === endResult.winner ? 3 : 1;
+        }
+        room.awardScores(scoresMap);
+      }
+    } catch (err) {
+      console.error('[score] failed to award session scores:', err.message);
+    }
 
     // Save question-form answers to file
     const gameState = room.game?.state;
