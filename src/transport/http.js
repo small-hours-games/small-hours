@@ -142,7 +142,24 @@ export function setupRoutes(app, manager) {
     const id = randomBytes(12).toString('base64url');
     const filePath = path.join(AUDIO_DIR, `tts_${id}.wav`);
     fs.writeFileSync(filePath, result.audioData);
-    res.json({ url: `/api/audio/tts_${id}/wav`, cached: true });
+    res.json({ url: `/api/audio/tts/${id}`, cached: true });
+  });
+
+  // Serve generated TTS audio (saved as tts_<id>.wav)
+  app.get('/api/audio/tts/:id', (req, res) => {
+    const { id } = req.params;
+    // Guard against path traversal: id must be a plain base64url slug.
+    if (!/^[a-zA-Z0-9_-]+$/.test(id)) {
+      res.status(400).json({ error: 'Invalid id' });
+      return;
+    }
+    const filePath = path.join(AUDIO_DIR, `tts_${id}.wav`);
+    if (!fs.existsSync(filePath)) {
+      res.status(404).json({ error: 'Audio not found' });
+      return;
+    }
+    res.setHeader('Content-Type', 'audio/wav');
+    res.sendFile(filePath);
   });
 
   // Serve cached TTS audio files
