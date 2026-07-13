@@ -594,6 +594,16 @@
     </div>
   </div>
 
+  <!-- Game story / narration overlay -->
+  <div id="storyOverlay" class="story-overlay" style="display:none;">
+    <div class="story-inner">
+      <div class="story-badge" id="storyBadge">⚔️</div>
+      <h1 class="story-title neon" id="storyTitle">Spelet börjar</h1>
+      <p class="story-text" id="storyText"></p>
+      <button class="btn btn-primary" id="storySkipBtn" style="max-width:240px;margin:18px auto 0;">Fortsätt</button>
+    </div>
+  </div>
+
   <!-- Toast container -->
   <div class="toast-container" id="toasts"></div>
 
@@ -639,6 +649,12 @@
     (function init() {
       const pathParts = window.location.pathname.split('/');
       state.code = pathParts[2]?.toUpperCase();
+
+      // Load game narratives for the story overlay (best-effort).
+      fetch('/api/stories').then(r => r.json()).then(d => {
+        if (d && d.stories) window.SMALL_HOURS_STORIES = d.stories;
+      }).catch(() => {});
+
       if (!state.code || state.code.length !== 4) {
         document.querySelector('.host-main').innerHTML =
           '<div class="card text-center" style="max-width:400px;"><h2>Invalid Room</h2><p class="mt-2 text-secondary">No valid room code in URL.</p><a href="/" class="btn btn-primary mt-2">Go Home</a></div>';
@@ -816,10 +832,59 @@
         'shithead': 'Shithead',
         'question-form': 'Question Form',
         'gin-rummy': 'Gin Rummy',
+        'hilow': 'Högt/Lågt',
         'template': 'Template'
       };
       document.getElementById('gameTitle').textContent = titles[msg.gameType] || msg.gameType;
       document.getElementById('roundInfo').textContent = '';
+
+      // Narrate the game's story (intro + TTS voice).
+      playStory(msg.gameType);
+    }
+
+    // --- Game story / narration ---
+    let storyAudio = null;
+    async function speakText(text) {
+      try {
+        const res = await fetch('/api/tts', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text, voice: 'Enceladus' }),
+        });
+        if (!res.ok) return; // TTS optional; fail silently
+        const data = await res.json();
+        if (data.url) {
+          if (storyAudio) storyAudio.pause();
+          storyAudio = new Audio(data.url);
+          storyAudio.play().catch(() => {});
+        }
+      } catch (e) { /* TTS optional */ }
+    }
+
+    function playStory(gameType) {
+      const story = (window.SMALL_HOURS_STORIES && window.SMALL_HOURS_STORIES[gameType]) || null;
+      if (!story) return;
+      const overlay = document.getElementById('storyOverlay');
+      const badge = document.getElementById('storyBadge');
+      const title = document.getElementById('storyTitle');
+      const text = document.getElementById('storyText');
+      const skip = document.getElementById('storySkipBtn');
+
+      badge.textContent = story.badge || '⚔️';
+      title.textContent = story.title;
+      text.textContent = story.intro;
+      overlay.className = 'story-overlay theme-' + (story.theme || 'purple');
+      overlay.style.display = 'flex';
+
+      const close = () => {
+        overlay.style.display = 'none';
+        if (storyAudio) storyAudio.pause();
+      };
+      skip.onclick = close;
+      // Auto-dismiss after the narration window (skip if no TTS).
+      setTimeout(close, 7000);
+      // Speak the intro aloud (best-effort).
+      speakText(story.intro);
     }
 
     function renderGameState(msg) {

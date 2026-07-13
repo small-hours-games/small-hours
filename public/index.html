@@ -607,30 +607,43 @@
       <span class="tagline" aria-label="Live multiplayer">Real-time multiplayer</span>
     </header>
 
+    <!-- Quick Play (no codes) -->
+    <section class="card" aria-labelledby="quick-title">
+      <h2 id="quick-title" class="card-title">Spela nu</h2>
+      <button class="btn btn-primary" id="quickPlayBtn" onclick="quickPlay()" aria-label="Start playing instantly">
+        <span class="spinner" aria-hidden="true"></span>
+        <span class="btn-text">⚡ Snabbspela</span>
+      </button>
+      <p class="text-secondary" style="font-size:0.82rem;margin-top:10px;">Ett rum skapas direkt. Dela länken med kompisar — ingen kod behövs.</p>
+      <div class="error-msg" id="quickError" role="alert" aria-live="polite"></div>
+    </section>
+
+    <div class="divider" role="separator">eller skapa ett rum manuellt</div>
+
     <!-- Create Room Card -->
     <section class="card" aria-labelledby="create-title">
       <h2 id="create-title" class="card-title">Start a Game</h2>
-      <button class="btn btn-primary" id="createBtn" onclick="createRoom()" aria-label="Create a new game room">
+      <button class="btn btn-secondary" id="createBtn" onclick="createRoom()" aria-label="Create a new game room">
         <span class="spinner" aria-hidden="true"></span>
         <span class="btn-text">Create Room</span>
       </button>
       <div class="error-msg" id="createError" role="alert" aria-live="polite"></div>
     </section>
 
-    <div class="divider" role="separator">or join an existing room</div>
+    <div class="divider" role="separator">eller join an existing room</div>
 
     <!-- Join Room Card -->
     <section class="card" aria-labelledby="join-title">
       <h2 id="join-title" class="card-title">Join a Room</h2>
       <form id="joinForm" onsubmit="joinRoom(event)" novalidate>
         <div class="input-group">
-          <label class="input-label" for="roomCode">Room Code</label>
+          <label class="input-label" for="roomCode">Room Link or Code</label>
           <input
             type="text"
             id="roomCode"
             class="room-code-input"
-            placeholder="ABCD"
-            maxlength="4"
+            placeholder="ABCD eller /player/ABCD"
+            maxlength="40"
             autocomplete="off"
             autocapitalize="characters"
             spellcheck="false"
@@ -731,7 +744,13 @@
     // ============================================
     const roomCodeInput = document.getElementById('roomCode');
     roomCodeInput.addEventListener('input', (e) => {
-      e.target.value = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+      // Allow raw paste of a full join link; only normalize when it looks like a code.
+      const v = e.target.value.trim();
+      if (/^[a-z0-9/:.?=&_-]+$/i.test(v)) {
+        e.target.value = v;
+      } else {
+        e.target.value = v.toUpperCase().replace(/[^A-Z0-9]/g, '');
+      }
     });
 
     // Auto-focus room code on load
@@ -752,6 +771,32 @@
         toast.style.animation = 'slideIn 0.3s ease reverse forwards';
         setTimeout(() => toast.remove(), 300);
       }, 3500);
+    }
+
+    // ============================================
+    // Quick Play (no codes)
+    // ============================================
+    async function quickPlay() {
+      const btn = document.getElementById('quickPlayBtn');
+      const errEl = document.getElementById('quickError');
+      errEl.classList.remove('visible');
+      btn.classList.add('loading');
+      btn.disabled = true;
+      try {
+        const res = await fetch('/api/rooms', { method: 'POST' });
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          throw new Error(data.error || 'Could not start a game');
+        }
+        const data = await res.json();
+        showToast('Spelet startar!', 'success');
+        window.location.href = '/host/' + data.code;
+      } catch (err) {
+        errEl.textContent = err.message;
+        errEl.classList.add('visible');
+        btn.classList.remove('loading');
+        btn.disabled = false;
+      }
     }
 
     // ============================================
@@ -786,23 +831,27 @@
     // ============================================
     function joinRoom(e) {
       e.preventDefault();
-      const code = document.getElementById('roomCode').value.trim().toUpperCase();
+      let raw = document.getElementById('roomCode').value.trim();
       const name = document.getElementById('username').value.trim();
       const errEl = document.getElementById('joinError');
       errEl.classList.remove('visible');
 
-      if (code.length !== 4) {
-        errEl.textContent = 'Room code must be 4 characters';
+      // Accept a full join link: extract the code after /player/
+      const linkMatch = raw.match(/\/player\/([A-Z0-9]{4})/i);
+      const code = (linkMatch ? linkMatch[1] : raw).toUpperCase();
+
+      if (!/^[A-Z0-9]{4}$/.test(code)) {
+        errEl.textContent = 'Ange en giltig 4-teckens kod eller en /player/-länk';
         errEl.classList.add('visible');
         return;
       }
-      if (!name || name.length < 1) {
-        errEl.textContent = 'Please enter your name';
+      if (!name) {
+        errEl.textContent = 'Ange ditt namn';
         errEl.classList.add('visible');
         return;
       }
       if (name.length > 20) {
-        errEl.textContent = 'Name must be 20 characters or less';
+        errEl.textContent = 'Namnet får vara max 20 tecken';
         errEl.classList.add('visible');
         return;
       }

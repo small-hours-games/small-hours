@@ -3,9 +3,12 @@
 
 import { fileURLToPath } from 'url';
 import path from 'path';
+import fs from 'fs';
 import express from 'express';
+import { randomBytes } from 'node:crypto';
 import { notifyRoomCreated } from '../notifications/discord.js';
 import { getGift, createGift, gameLabel } from '../session/gifts.js';
+import { STORIES } from '../session/stories.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -113,6 +116,33 @@ export function setupRoutes(app, manager) {
       winnerName,
     });
     res.status(201).json({ token, url, winnerId, winnerName });
+  });
+
+  // Game narration stories (for host story overlay + TTS)
+  app.get('/api/stories', (_req, res) => {
+    res.json({ stories: STORIES });
+  });
+
+  // Generic TTS endpoint: text -> audio URL (uses Gemini if GEMINI_API_KEY set)
+  app.post('/api/tts', express.json(), async (req, res) => {
+    const text = (req.body && req.body.text || '').toString().slice(0, 500);
+    if (!text) {
+      res.status(400).json({ error: 'text required' });
+      return;
+    }
+    // Lazy import to avoid crashing if module has issues.
+    const { synthesizeSpeech } = await import('../fetcher/gemini-tts.js');
+    const result = await synthesizeSpeech(text, { voice: req.body.voice || 'Enceladus' });
+    if (!result.ok) {
+      res.status(502).json({ error: result.error.message });
+      return;
+    }
+    // Persist to data/audio so it can be cached + served.
+    if (!fs.existsSync(AUDIO_DIR)) fs.mkdirSync(AUDIO_DIR, { recursive: true });
+    const id = randomBytes(12).toString('base64url');
+    const filePath = path.join(AUDIO_DIR, `tts_${id}.wav`);
+    fs.writeFileSync(filePath, result.audioData);
+    res.json({ url: `/api/audio/tts_${id}/wav`, cached: true });
   });
 
   // Serve cached TTS audio files
