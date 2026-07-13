@@ -573,8 +573,8 @@
   </div>
 
   <!-- Scoreboard sidebar -->
-  <div class="scoreboard-panel" id="scorePanel" style="display:none;">
-    <h3>Scoreboard</h3>
+  <div class="scoreboard-panel card" id="scorePanel" style="display:none;" role="region" aria-label="Live Scoreboard">
+    <h3 class="score-panel-title neon">Live Scores</h3>
     <div id="scoreList"></div>
   </div>
 
@@ -879,10 +879,10 @@
 
       if (msg.phase === 'countdown') {
         timerContainer.style.display = 'none';
-        content.innerHTML = '<div class="quiz-display">' +
+        content.innerHTML = '<div class="quiz-display countdown-phase">' +
           '<div class="quiz-question-text">Get ready!</div>' +
-          '<div class="quiz-timer-large">&#9201;</div>' +
-          '<div style="color:var(--text-secondary);">First question coming up...</div>' +
+          '<div class="quiz-timer-large" aria-label="Countdown timer">&#9201;</div>' +
+          '<div class="quiz-countdown-text">First question coming up...</div>' +
           '</div>';
         return;
       }
@@ -890,24 +890,30 @@
       if (msg.phase === 'between') {
         timerContainer.style.display = 'none';
         const nextQ = (msg.currentQuestion != null ? msg.currentQuestion + 1 : '?');
-        content.innerHTML = '<div class="quiz-display">' +
+        content.innerHTML = '<div class="quiz-display between-phase">' +
           '<div class="quiz-question-text">Next up: Question ' + nextQ + '</div>' +
-          '<div style="color:var(--text-secondary);margin-top:16px;">Get ready for the next round...</div>' +
+          '<div class="quiz-between-text">Get ready for the next round...</div>' +
           '</div>';
         return;
       }
 
       if (msg.phase === 'question') {
         const q = msg.question || {};
-        let html = '<div class="quiz-display">' +
+        let html = '<div class="quiz-display question-phase">' +
+          '<div class="quiz-progress">' +
+            '<span class="quiz-progress-label">Question ' + (msg.currentQuestion + 1) + ' of ' + msg.totalQuestions + '</span>' +
+            '<div class="timer-bar-container"><div class="timer-bar" id="inlineTimerBar" style="width: 100%"></div></div>' +
+          '</div>' +
           '<div class="quiz-question-text">' + escapeHtml(q.text || '') + '</div>' +
           '<div class="quiz-answers-display">';
 
         const labels = ['A', 'B', 'C', 'D'];
-        const classes = ['a', 'b', 'c', 'd'];
+        const neonColors = ['var(--neon-red)', 'var(--neon-blue)', 'var(--neon-green)', 'var(--neon-orange)'];
         (q.answers || []).forEach((a, i) => {
-          html += '<div class="quiz-answer-box ' + classes[i] + '">' +
-            '<strong>' + labels[i] + '.</strong> ' + escapeHtml(a) + '</div>';
+          html += '<button class="answer-btn answer-' + labels[i].toLowerCase() + '" style="background:' + neonColors[i] + '" data-index="' + i + '" aria-label="Answer ' + labels[i] + ': ' + escapeHtml(a) + '">' +
+            '<span class="answer-label">' + labels[i] + '.</span>' +
+            '<span class="answer-text">' + escapeHtml(a) + '</span>' +
+          '</button>';
         });
 
         html += '</div>';
@@ -917,8 +923,15 @@
           const pct = (msg.timeLeft / msg.timeTotal) * 100;
           timerBar.style.width = pct + '%';
           timerBar.className = 'timer-bar' + (pct < 20 ? ' critical' : pct < 40 ? ' warning' : '');
+          
+          // Also update inline timer bar
+          const inlineBar = document.getElementById('inlineTimerBar');
+          if (inlineBar) {
+            inlineBar.style.width = pct + '%';
+            inlineBar.className = 'timer-bar' + (pct < 20 ? ' critical' : pct < 40 ? ' warning' : '');
+          }
 
-          html += '<div class="quiz-timer-large">' + Math.ceil(msg.timeLeft) + '</div>';
+          html += '<div class="quiz-timer-large" aria-live="polite" aria-label="' + Math.ceil(msg.timeLeft) + ' seconds remaining">' + Math.ceil(msg.timeLeft) + '</div>';
         } else {
           timerContainer.style.display = 'none';
         }
@@ -928,16 +941,21 @@
       } else if (msg.phase === 'reveal') {
         timerContainer.style.display = 'none';
         const q = msg.question || {};
-        let html = '<div class="quiz-display">' +
+        let html = '<div class="quiz-display reveal-phase">' +
           '<div class="quiz-question-text">' + escapeHtml(q.text || '') + '</div>' +
           '<div class="quiz-answers-display">';
 
         const labels = ['A', 'B', 'C', 'D'];
-        const classes = ['a', 'b', 'c', 'd'];
+        const neonColors = ['var(--neon-red)', 'var(--neon-blue)', 'var(--neon-green)', 'var(--neon-orange)'];
         (q.answers || []).forEach((a, i) => {
-          const isCorrect = i === msg.correctIndex ? ' correct' : '';
-          html += '<div class="quiz-answer-box ' + classes[i] + isCorrect + '">' +
-            '<strong>' + labels[i] + '.</strong> ' + escapeHtml(a) + '</div>';
+          const isCorrect = i === msg.correctIndex;
+          const mark = isCorrect ? '<span class="answer-mark correct" aria-label="Correct answer">&#9989;</span>' : '<span class="answer-mark incorrect" aria-label="Incorrect">&#10060;</span>';
+          const correctClass = isCorrect ? ' correct' : ' incorrect';
+          html += '<button class="answer-btn answer-' + labels[i].toLowerCase() + correctClass + '" style="background:' + (isCorrect ? 'var(--neon-green)' : neonColors[i]) + '" disabled aria-disabled="true" aria-label="' + (isCorrect ? 'Correct answer: ' : 'Incorrect: ') + escapeHtml(a) + '">' +
+            '<span class="answer-label">' + labels[i] + '.</span>' +
+            '<span class="answer-text">' + escapeHtml(a) + '</span>' +
+            mark +
+          '</button>';
         });
 
         html += '</div></div>';
@@ -1215,86 +1233,101 @@
       }
       lastShState = { pileCount: msg.pileCount || 0, drawPileCount: msg.drawPileCount, phase: msg.phase };
 
-      let html = '<div style="text-align:center;">';
+      let html = '<div class="shithead-display ' + msg.phase + '-phase">';
 
       if (msg.phase === 'swap') {
-        html += '<div style="font-size:2rem;margin:20px 0;color:var(--neon-purple);">Swap Phase</div>' +
-          '<p style="color:var(--text-secondary);font-size:1.2rem;margin-bottom:24px;">Players are arranging their cards...</p>';
+        html += '<div class="phase-title swap-title">Swap Phase</div>' +
+          '<p class="phase-subtitle">Players are arranging their cards...</p>';
         // Show swap confirmation status
         if (msg.swapConfirmed) {
-          html += '<div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">';
+          html += '<div class="swap-status-grid">';
           for (const [id, confirmed] of Object.entries(msg.swapConfirmed)) {
             const name = names[id] || id;
-            const icon = confirmed ? '<span style="color:var(--neon-green);">✓</span>' : '<span style="color:var(--text-secondary);">...</span>';
-            html += '<div class="card" style="padding:12px 20px;min-width:120px;">' + icon + ' ' + escapeHtml(name) + '</div>';
+            const iconClass = confirmed ? 'confirmed' : 'pending';
+            const icon = confirmed ? '✓' : '⏳';
+            html += '<div class="swap-status-card card">' +
+              '<span class="status-icon ' + iconClass + '">' + icon + '</span>' +
+              '<span class="status-name">' + escapeHtml(name) + '</span>' +
+            '</div>';
           }
           html += '</div>';
         }
       } else if (msg.phase === 'play' || msg.phase === 'finished') {
         // --- Central pile ---
-        html += '<div style="margin:16px 0;">';
+        html += '<div class="central-pile" aria-label="Central play pile">';
         if (msg.pileTop) {
-          html += renderCardImg(msg.pileTop, {width: 100, height: 140, pileCard: true});
-          html += '<div style="color:var(--text-secondary);margin-top:8px;font-size:1rem;">Pile: ' + (msg.pileCount || 0) + ' cards</div>';
+          html += '<div class="pile-top-card">' + renderCardImg(msg.pileTop, {width: 120, height: 168, pileCard: true}) + '</div>';
+          html += '<div class="pile-info">Pile: ' + (msg.pileCount || 0) + ' cards</div>';
         } else {
-          html += '<div style="display:inline-block;width:100px;height:140px;border-radius:12px;border:3px dashed rgba(255,255,255,0.15);display:inline-flex;align-items:center;justify-content:center;color:var(--text-secondary);font-size:1.2rem;">Empty</div>';
+          html += '<div class="pile-empty" aria-label="Empty pile">Empty</div>';
+          html += '<div class="pile-info">Pile: 0 cards</div>';
         }
         html += '</div>';
 
         // --- Info bar ---
-        html += '<div style="display:flex;gap:16px;justify-content:center;margin:12px 0;font-size:0.9rem;color:var(--text-secondary);">';
-        if (msg.drawPileCount != null) html += '<span>Draw: ' + msg.drawPileCount + '</span>';
+        html += '<div class="shithead-info-bar">';
+        if (msg.drawPileCount != null) html += '<span class="info-item">Draw: ' + msg.drawPileCount + '</span>';
         html += '</div>';
 
         if (msg.phase === 'finished') {
-          html += '<div style="font-size:2rem;color:var(--neon-green);margin:16px 0;">Game Over!</div>';
+          html += '<div class="game-finished">';
+          html += '<div class="game-over-title">Game Over!</div>';
           if (msg.loser) {
             const loserName = names[msg.loser] || 'Someone';
-            html += '<div style="font-size:1.5rem;color:var(--neon-pink);margin-bottom:16px;">' + escapeHtml(loserName) + ' is the Shithead! 💩</div>';
+            html += '<div class="loser-announce">' + escapeHtml(loserName) + ' is the Shithead! 💩</div>';
           }
+          html += '</div>';
         }
 
         // --- Player cards ---
-        html += '<div style="display:flex;gap:20px;justify-content:center;flex-wrap:wrap;margin-top:20px;">';
+        html += '<div class="shithead-players">';
         if (msg.players) {
           msg.players.forEach(p => {
             const name = names[p.playerId] || p.playerId;
             const isCurrent = p.playerId === msg.currentPlayer;
-            const borderStyle = isCurrent ? 'border:2px solid var(--neon-green);box-shadow:0 0 20px rgba(57,255,20,0.3);' : 'border:1px solid var(--glass-border);';
-            const total = (p.handCount || 0) + (p.faceUp ? p.faceUp.length : 0) + (p.faceDownCount || 0);
+            const isOut = p.isOut === true;
+            const currentTurnClass = isCurrent ? ' current-turn' : '';
+            const outClass = isOut ? ' player-out' : '';
+            const ariaCurrent = isCurrent ? ' aria-current="true"' : '';
 
-            html += '<div class="card" style="padding:16px;min-width:160px;max-width:220px;' + borderStyle + '">';
-            // Name header
-            html += '<div style="font-weight:700;font-size:1.1rem;margin-bottom:8px;' + (isCurrent ? 'color:var(--neon-green);' : '') + '">' +
-              escapeHtml(name) + (isCurrent ? ' ◀' : '') + '</div>';
-
-            if (p.isOut) {
-              html += '<div style="color:var(--neon-green);font-size:1rem;">✓ Out!</div>';
-            } else {
-              // Hand count
-              html += '<div style="font-size:0.8rem;color:var(--text-secondary);margin-bottom:4px;">Hand: ' + (p.handCount || 0) + ' | Down: ' + (p.faceDownCount || 0) + '</div>';
-
-              // Face-up cards (visible to all) — group by rank
-              if (p.faceUp && p.faceUp.length > 0) {
-                html += '<div style="font-size:0.75rem;color:var(--text-secondary);margin:6px 0 4px;">Face up:</div>';
-                html += '<div style="display:flex;gap:4px;flex-wrap:wrap;justify-content:center;">';
-
-                // Group cards by rank+suit
-                const groups = {};
-                p.faceUp.forEach(c => {
-                  const key = c.rank + c.suit;
-                  if (!groups[key]) groups[key] = { card: c, count: 0 };
-                  groups[key].count++;
-                });
-
-                Object.values(groups).sort((a, b) => a.card.rank - b.card.rank).forEach(g => {
-                  const c = g.card;
-                  const countBadge = g.count > 1 ? '<span style="font-size:0.65rem;position:absolute;top:-2px;right:-2px;background:var(--neon-purple);color:white;border-radius:50%;width:16px;height:16px;display:flex;align-items:center;justify-content:center;">' + g.count + '</span>' : '';
-                  html += '<div style="position:relative;display:inline-block;">' + countBadge + renderCardImg(c, {width: 40, height: 56}) + '</div>';
-                });
-                html += '</div>';
-              }
+            html += '<div class="player-panel card' + currentTurnClass + outClass + '" data-player-id="' + escapeHtml(p.playerId) + '"' + ariaCurrent + '>';
+            // Name header with turn indicator
+            html += '<div class="player-header">';
+            html += '<span class="player-name">' + escapeHtml(name) + '</span>';
+            if (isCurrent) {
+              html += '<span class="turn-indicator neon-green" aria-label="Current turn">▶</span>';
             }
+            if (isOut) {
+              html += '<span class="out-badge" aria-label="Player is out">✓ Out</span>';
+            }
+            html += '</div>';
+
+            // Card counts
+            html += '<div class="player-card-counts">';
+            html += '<span class="count-item"><span class="count-label">Hand:</span> <span class="count-value">' + (p.handCount || 0) + '</span></span>';
+            html += '<span class="count-item"><span class="count-label">Down:</span> <span class="count-value">' + (p.faceDownCount || 0) + '</span></span>';
+            html += '</div>';
+
+            // Face-up cards (visible to all) — fanned layout
+            if (p.faceUp && p.faceUp.length > 0) {
+              html += '<div class="face-up-fan" aria-label="Face up cards">';
+              
+              // Group cards by rank+suit
+              const groups = {};
+              p.faceUp.forEach(c => {
+                const key = c.rank + c.suit;
+                if (!groups[key]) groups[key] = { card: c, count: 0 };
+                groups[key].count++;
+              });
+
+              Object.values(groups).sort((a, b) => a.card.rank - b.card.rank).forEach((g, idx) => {
+                const c = g.card;
+                const countBadge = g.count > 1 ? '<span class="count-badge">' + g.count + '</span>' : '';
+                html += '<div class="fan-card" style="--card-index: ' + idx + ';">' + countBadge + renderCardImg(c, {width: 50, height: 70}) + '</div>';
+              });
+              html += '</div>';
+            }
+
             html += '</div>';
           });
         }
@@ -1312,8 +1345,10 @@
 
       list.innerHTML = sorted.map(([id, score], i) => {
         const name = names[id] || id;
-        return '<div class="score-entry">' +
-          '<span class="score-rank">' + (i + 1) + '</span>' +
+        const rank = i + 1;
+        const rankClass = rank === 1 ? 'rank-gold' : rank === 2 ? 'rank-silver' : rank === 3 ? 'rank-bronze' : '';
+        return '<div class="score-entry card" data-player-id="' + escapeHtml(id) + '">' +
+          '<span class="score-rank ' + rankClass + '">' + rank + '</span>' +
           '<span class="score-name">' + escapeHtml(name) + '</span>' +
           '<span class="score-value">' + score + '</span></div>';
       }).join('');
