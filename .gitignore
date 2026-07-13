@@ -6,3 +6,6 @@ node_modules/
 /tmp
 /package-lock.json
 /tests/latest-test-results.txt
+
+# Runtime data (gifts store, generated)
+data/

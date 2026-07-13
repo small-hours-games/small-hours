@@ -5,9 +5,11 @@ import { createGame, processAction, getView, checkEnd } from '../engine/engine.j
 import numberGuess from '../engine/games/number-guess.js';
 import shithead from '../engine/games/shithead.js';
 import quiz from '../engine/games/quiz.js';
+import spy from '../engine/games/spy.js';
 import questionForm from '../engine/games/question-form.js';
 import template from '../engine/games/template.js';
 import ginRummy from '../engine/games/gin-rummy.js';
+import hilow from '../engine/games/hilow.js';
 import skogai from '../engine/games/skogai.js';
 import { saveAnswers } from '../fetcher/question-file.js';
 import { randomBytes } from 'node:crypto';
@@ -27,9 +29,11 @@ const GAME_REGISTRY = {
   'skogai': 	  { definition: skogai,       label: 'SkogAI',       minPlayers: 1, maxPlayers: 10, complexity: 1 },
   'shithead':     { definition: shithead,     label: 'Shithead',     minPlayers: 2, maxPlayers: 6,  complexity: 3 },
   'quiz':         { definition: quiz,         label: 'Quiz',         minPlayers: 1, maxPlayers: 20, complexity: 1 },
+  'spy':          { definition: spy,          label: 'Spy',          minPlayers: 3, maxPlayers: 10, complexity: 2 },
   'question-form':{ definition: questionForm, label: 'Question Form',minPlayers: 2, maxPlayers: 20, complexity: 1 },
   'template':     { definition: template,     label: 'Template',     minPlayers: 1, maxPlayers: 20, complexity: 1 },
   'gin-rummy':    { definition: ginRummy,     label: 'Gin Rummy',    minPlayers: 2, maxPlayers: 4,  complexity: 4 },
+  'hilow':        { definition: hilow,        label: 'Högt/Lågt',    minPlayers: 2, maxPlayers: 8,  complexity: 1 },
 };
 
 let playerCounter = 0;

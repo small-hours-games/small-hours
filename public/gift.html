@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Grattis! · Small Hours</title>
+<link rel="stylesheet" href="/css/style.css" />
+<style>
+  body { min-height: 100vh; display: flex; align-items: center; justify-content: center;
+         background: var(--bg-primary); color: var(--text-primary); font-family: inherit; }
+  .gift-card { max-width: 480px; width: 92%; text-align: center; padding: 36px 28px; }
+  .gift-emoji { font-size: 4rem; margin-bottom: 8px; }
+  .gift-title { font-size: 1.8rem; font-weight: 800; color: var(--neon-green); text-shadow: 0 0 20px rgba(57,255,20,0.4); }
+  .gift-sub { color: var(--text-secondary); margin: 10px 0 20px; font-size: 1.05rem; }
+  .gift-code { font-family: 'Courier New', monospace; font-size: 1.4rem; font-weight: 800;
+               letter-spacing: 0.18em; color: var(--neon-blue); background: rgba(255,255,255,0.05);
+               padding: 14px; border-radius: 12px; border: 1px solid var(--glass-border); margin: 16px 0; }
+  .qr-box { display: flex; justify-content: center; margin: 18px 0; }
+  .qr-box svg { background: white; padding: 12px; border-radius: 12px; }
+  .btn-row { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-top: 12px; }
+  .confetti-note { color: var(--text-secondary); font-size: 0.85rem; margin-top: 18px; }
+  .err { color: var(--neon-red); }
+</style>
+</head>
+<body>
+  <div class="card gift-card" id="app">
+    <div class="gift-emoji">🎁</div>
+    <div class="gift-title" id="title">Laddar present…</div>
+    <div class="gift-sub" id="sub"></div>
+    <div class="gift-code" id="code" style="display:none;"></div>
+    <div class="qr-box" id="qr"></div>
+    <div class="btn-row">
+      <button class="btn btn-primary" id="copyBtn" style="display:none;">Kopiera kod</button>
+      <button class="btn btn-secondary" id="roomBtn" style="display:none;">Skapa eget rum</button>
+    </div>
+    <div class="confetti-note">Du fick den här av en kompis som vann ett spel. Använd koden för att starta din egen match med en vinnar-aura! 🏆</div>
+  </div>
+
+<script>
+(function () {
+  const token = location.pathname.split('/').filter(Boolean).pop();
+  const api = (p) => fetch(p).then(r => r.json()).catch(() => ({ error: 'nätverksfel' }));
+
+  async function init() {
+    const data = await api('/api/gift/' + encodeURIComponent(token));
+    const title = document.getElementById('title');
+    const sub = document.getElementById('sub');
+    const codeEl = document.getElementById('code');
+    const qr = document.getElementById('qr');
+    const copyBtn = document.getElementById('copyBtn');
+    const roomBtn = document.getElementById('roomBtn');
+
+    if (data.error || !data.gift) {
+      title.textContent = 'Presenten hittades inte';
+      title.className = 'gift-title err';
+      sub.textContent = 'Koden kan vara fel eller utgången.';
+      return;
+    }
+
+    const g = data.gift;
+    title.textContent = '🎉 ' + (g.winnerName || 'Din kompis') + ' vann ' + (g.gameLabel || g.gameType) + '!';
+    sub.textContent = 'Här är din present: en vinnar-kod att starta eget spel med.';
+
+    const qr = document.getElementById('qr');
+    qr.innerHTML = '';
+    try {
+      new QRCode(qr, { text: window.location.origin + '/host/' + g.roomCode + '?gift=' + encodeURIComponent(code), width: 200, height: 200, colorDark: '#0a0a1a', colorLight: '#ffffff', correctLevel: QRCode.CorrectLevel.M });
+    } catch (e) {
+      qr.textContent = 'QR kunde inte ritas';
+    }
+    roomBtn.style.display = 'inline-block';
+    roomBtn.onclick = () => { window.location.href = '/host/' + g.roomCode + '?gift=' + encodeURIComponent(code); };
+    copyBtn.onclick = async () => {
+      try { await navigator.clipboard.writeText(code); copyBtn.textContent = 'Kopierad!'; }
+      catch { copyBtn.textContent = code; }
+    };
+  }
+
+  // Render a scannable QR code using qrcodejs (loaded via CDN below).
+  function renderQr(text) {
+    const box = document.getElementById('qr');
+    box.innerHTML = '';
+    new QRCode(box, { text, width: 200, height: 200, colorDark: '#0a0a1a', colorLight: '#ffffff', correctLevel: QRCode.CorrectLevel.M });
+  }
+
+  init();
+})();
+</script>
+<script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+</body>
+</html>

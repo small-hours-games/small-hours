@@ -578,6 +578,22 @@
     <div id="scoreList"></div>
   </div>
 
+  <!-- Gift / winner share modal -->
+  <div id="giftModal" class="gift-modal" style="display:none;">
+    <div class="gift-modal-inner card">
+      <div class="gift-emoji">🎁</div>
+      <h2 class="neon" id="giftTitle">Vinnare!</h2>
+      <p class="gift-sub" id="giftSub"></p>
+      <div class="qr-box" id="giftQr"></div>
+      <div class="gift-code" id="giftCodeBox"></div>
+      <div class="btn-row">
+        <button class="btn btn-primary" id="giftCopyBtn">Kopiera länk</button>
+        <button class="btn btn-secondary" id="giftCloseBtn">Stäng</button>
+      </div>
+      <p class="gift-note">Ge presenten till en kompis — de scannar QR:en eller öppnar länken för att starta eget spel med vinnar-aura! 🏆</p>
+    </div>
+  </div>
+
   <!-- Toast container -->
   <div class="toast-container" id="toasts"></div>
 
@@ -1409,12 +1425,50 @@
       list.innerHTML = header + rows;
     }
 
+    // --- Gift share modal ---
+    function renderGiftQr(text) {
+      const box = document.getElementById('giftQr');
+      box.innerHTML = '';
+      try {
+        new QRCode(box, { text, width: 180, height: 180, colorDark: '#0a0a1a', colorLight: '#ffffff', correctLevel: QRCode.CorrectLevel.M });
+      } catch (e) {
+        box.textContent = text;
+      }
+      return box;
+    }
+    function showGift(msg) {
+      const modal = document.getElementById('giftModal');
+      const title = document.getElementById('giftTitle');
+      const sub = document.getElementById('giftSub');
+      const qr = document.getElementById('giftQr');
+      const codeBox = document.getElementById('giftCodeBox');
+      const copyBtn = document.getElementById('giftCopyBtn');
+      const closeBtn = document.getElementById('giftCloseBtn');
+
+      const winnerName = (state.playerNames || {})[msg.winner] || 'Vinnaren';
+      const label = msg.gameLabel || 'spelet';
+      title.textContent = '🎉 ' + winnerName + ' vann ' + label + '!';
+      sub.textContent = 'Dela en present till en kompis:';
+      qr.innerHTML = '';
+      renderGiftQr(msg.giftUrl);
+      codeBox.textContent = msg.giftUrl;
+      copyBtn.onclick = async () => {
+        try { await navigator.clipboard.writeText(msg.giftUrl); copyBtn.textContent = 'Kopierad!'; }
+        catch { copyBtn.textContent = msg.giftUrl; }
+      };
+      closeBtn.onclick = () => { modal.style.display = 'none'; };
+      modal.style.display = 'flex';
+    }
+
     function returnToLobby(msg) {
       if (msg.phase === 'finished') {
         if (msg.winner) {
           const name = (state.playerNames || {})[msg.winner] || 'Someone';
           showToast(name + ' wins!', 'success');
           spawnConfetti();
+          if (msg.giftUrl) {
+            showGift(msg);
+          }
         }
         // Show final state for a few seconds then return to lobby
         setTimeout(() => {

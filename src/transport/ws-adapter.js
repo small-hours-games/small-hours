@@ -10,6 +10,7 @@ import * as lobbyHandlers from './handlers/lobby.js';
 import * as gameHandlers from './handlers/game.js';
 import * as chatHandlers from './handlers/chat.js';
 import * as voteHandlers from './handlers/vote.js';
+import { createGift, gameLabel } from '../session/gifts.js';
 
 const GAME_PHASE_DURATIONS = {
   quiz: QUIZ_DURATIONS,
@@ -160,11 +161,36 @@ export function setupWebSocket(server, manager) {
       // Check for game end
       const endResult = checkEnd(room.game);
       if (endResult) {
+        // Generate a shareable gift link for the winner (best-effort; never block game end).
+        let giftUrl = null;
+        let giftToken = null;
+        try {
+          const winnerName = (room.players.get(endResult.winner) && room.players.get(endResult.winner).name) || null;
+          const created = createGift({
+            roomCode: room.code,
+            winnerId: endResult.winner,
+            gameType: room.gameType || 'unknown',
+            winnerName,
+          });
+          giftUrl = created.url;
+          giftToken = created.token;
+        } catch (e) {
+          console.warn('[gift] failed to create gift:', e.message);
+        }
+
         for (const [id] of room.players) {
           const view = getView(room.game, id);
           sendToPlayer(id, { type: 'GAME_STATE', ...view, ...endResult });
         }
-        broadcastToRoom(room.code, { type: 'GAME_STATE', phase: 'finished', ...endResult, playerNames }, { hostsOnly: true });
+        broadcastToRoom(room.code, {
+          type: 'GAME_STATE',
+          phase: 'finished',
+          ...endResult,
+          playerNames,
+          giftUrl,
+          giftToken,
+          gameLabel: gameLabel(room.gameType || 'unknown'),
+        }, { hostsOnly: true });
 
         const gameState = room.game?.state;
         if (gameState?.questions && gameState?.responses && gameState?._sourceFile) {

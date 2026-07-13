@@ -5,6 +5,7 @@ import { fileURLToPath } from 'url';
 import path from 'path';
 import express from 'express';
 import { notifyRoomCreated } from '../notifications/discord.js';
+import { getGift, createGift, gameLabel } from '../session/gifts.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -65,6 +66,55 @@ export function setupRoutes(app, manager) {
     }
   });
 
+  // Get gift data (for the gift page to render)
+  app.get('/api/gift/:token', (req, res) => {
+    const gift = getGift(req.params.token);
+    if (!gift) {
+      res.status(404).json({ error: 'Gift not found' });
+      return;
+    }
+    res.json({
+      gift: {
+        token: gift.token,
+        roomCode: gift.roomCode,
+        winnerId: gift.winnerId,
+        winnerName: gift.winnerName,
+        gameType: gift.gameType,
+        gameLabel: gameLabel(gift.gameType),
+        awardedAt: gift.awardedAt,
+      },
+    });
+  });
+
+  // Create a gift for the current winner of a room (called by host/ws on game over)
+  app.post('/api/rooms/:code/gift', (req, res) => {
+    const room = manager.getRoom(req.params.code);
+    if (!room) {
+      res.status(404).json({ error: 'Room not found' });
+      return;
+    }
+    const game = room.game;
+    if (!game) {
+      res.status(409).json({ error: 'No game running' });
+      return;
+    }
+    // Determine winner from the game's endIf, if finished.
+    const result = game.definition.endIf(game.state);
+    if (!result || !result.winner) {
+      res.status(409).json({ error: 'Game not finished / no winner yet' });
+      return;
+    }
+    const winnerId = result.winner;
+    const winnerName = (room.players.get(winnerId) && room.players.get(winnerId).name) || null;
+    const { token, url } = createGift({
+      roomCode: req.params.code,
+      winnerId,
+      gameType: room.gameType || 'unknown',
+      winnerName,
+    });
+    res.status(201).json({ token, url, winnerId, winnerName });
+  });
+
   // Serve cached TTS audio files
   app.get('/api/audio/:questionId/:type', (req, res) => {
     const { questionId, type } = req.params;
@@ -106,6 +156,7 @@ export function setupRoutes(app, manager) {
     let file = 'index.html';
     if (req.path.startsWith('/host/')) file = 'host.html';
     else if (req.path.startsWith('/player/')) file = 'player.html';
+    else if (req.path.startsWith('/gift/')) file = 'gift.html';
 
     res.sendFile(path.join(PUBLIC_DIR, file), (err) => {
       if (err) {

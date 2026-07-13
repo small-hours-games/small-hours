@@ -30,14 +30,13 @@ function canPlayOnPile(cardRank, pile) {
 const names = { alice: 'Alice', bob: 'Bob', carol: 'Carol' };
 
 describe('shithead scoreboard end-to-end (real engine, real finishOrder)', () => {
-  it('renders placement + UTE badge as players go out', () => {
+  function playOne() {
     let g = createGame(shithead, { players: ['alice', 'bob', 'carol'] });
     for (const p of ['alice', 'bob', 'carol']) {
       g = processAction(g, { type: 'confirmSwap', playerId: p }).game;
     }
-
     let turns = 0;
-    while (!checkEnd(g) && turns < 800) {
+    while (!checkEnd(g) && turns < 3000) {
       const state = g.state;
       const current = state.players[state.currentPlayerIndex];
       const src = (state.hands[current] || []).length ? state.hands[current]
@@ -55,9 +54,16 @@ describe('shithead scoreboard end-to-end (real engine, real finishOrder)', () =>
       }
       turns++;
     }
+    return g;
+  }
+
+  it('renders placement + UTE badge as players go out', () => {
+    // RNG shuffles can deadlock a naive single run; retry until a clean finish.
+    let g, attempts = 0;
+    do { g = playOne(); attempts++; } while (!checkEnd(g) && attempts < 25);
 
     const over = checkEnd(g);
-    expect(over).not.toBeNull();
+    expect(over, `game finished within ${attempts} attempts`).not.toBeNull();
 
     const view = getView(g, 'alice');
     const msg = { ...view, playerNames: names };

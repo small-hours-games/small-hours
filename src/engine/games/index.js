@@ -6,3 +6,4 @@ export { default as skogai } from './skogai.js';
 export { default as questionForm } from './question-form.js';
 export { default as template } from './template.js';
 export { default as ginRummy } from './gin-rummy.js';
+export { default as hilow } from './hilow.js';
