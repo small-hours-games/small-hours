@@ -959,13 +959,14 @@
       const pathParts = window.location.pathname.split('/');
       state.code = pathParts[2]?.toUpperCase();
       const params = new URLSearchParams(window.location.search);
-      state.name = params.get('name')?.trim();
+      const urlName = params.get('name')?.trim();
+      const savedName = (() => { try { return localStorage.getItem('sh_player_name'); } catch { return null; } })();
+      state.name = urlName || (savedName || '').trim() || null;
 
       if (!state.code || state.code.length !== 4) {
         document.querySelector('.player-main').innerHTML =
           '<div class="error-screen"><div class="card"><h2 style="margin-bottom:12px;">Invalid Room</h2>' +
-          '<p class="text-secondary">No valid room code in URL.</p>' +
-          '<a href="/" class="btn btn-primary mt-2" style="display:inline-flex;">Go Home</a></div></div>';
+          '<p class="text-secondary">No valid room code in URL.</p><a href="/" class="btn btn-primary mt-2">Go Home</a></div></div>';
         return;
       }
 
@@ -986,11 +987,16 @@
           e.preventDefault();
           const name = document.getElementById('nameInput').value.trim();
           if (!name) return;
+          // Remember the name so the player never has to type it again.
+          try { localStorage.setItem('sh_player_name', name); } catch { /* ignore */ }
           // Reload with name param
           window.location.href = '/player/' + state.code + '?name=' + encodeURIComponent(name);
         });
         return;
       }
+
+      // Name known (from URL or remembered) — remember it and join directly.
+      try { localStorage.setItem('sh_player_name', state.name); } catch { /* ignore */ }
 
       document.getElementById('myName').textContent = state.name;
 
