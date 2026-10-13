@@ -169,7 +169,7 @@ describe('getScoreboardData — status on finished', () => {
 });
 
 describe('getScoreboardData — unified scoreboard CSS contract', () => {
-  const css = fs.readFileSync('/opt/data/small-hours/public/css/style.css', 'utf-8');
+  const css = fs.readFileSync(new URL('../../public/css/style.css', import.meta.url), 'utf-8');
 
   it('has styles for the meta/round line', () => {
     expect(css).toContain('.score-panel-meta');

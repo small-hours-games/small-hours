@@ -86,7 +86,7 @@ describe('Host Scoreboard Panel - Visual & Accessibility Contract', () => {
 // CSS contract tests - verify the style.css has the required classes
 describe('Host Scoreboard Panel - CSS Contract', () => {
   const fs = require('fs');
-  const css = fs.readFileSync('/opt/data/small-hours/public/css/style.css', 'utf-8');
+  const css = fs.readFileSync(new URL('../../public/css/style.css', import.meta.url), 'utf-8');
 
   it('has .card class with glassmorphism (used by score entries)', () => {
     expect(css).toContain('.card');
