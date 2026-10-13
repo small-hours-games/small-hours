@@ -32,6 +32,8 @@ export function setupRoutes(app, manager) {
     const { roomCount, playerCount } = manager.stats();
     res.json({
       status: 'ok',
+      version: process.env.APP_VERSION || 'dev',
+      commit: process.env.GIT_SHA || null,
       uptime: process.uptime(),
       rooms: roomCount,
       players: playerCount,

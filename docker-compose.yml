@@ -3,7 +3,7 @@ name: small-hours
 services:
   game:
     container_name: small-hours
-    build: .
+    image: ghcr.io/small-hours-games/small-hours:${IMAGE_TAG:-latest}
     restart: unless-stopped
     network_mode: host
     env_file:

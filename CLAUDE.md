@@ -195,7 +195,7 @@ This project uses the GSD (Get Shit Done) planning system via `/gsd:*` slash com
 
 - Host: `10.10.0.21`, user `root`
 - Project path: `/opt/small-hours`
-- Docker Compose — source baked into image; code changes require `docker compose build && docker compose up -d`
+- Docker Compose pulls `ghcr.io/small-hours-games/small-hours:${IMAGE_TAG}` (built by `.github/workflows/docker.yml` on push to main and `v*` tags). Deploy: `./update.sh`; pin/rollback: `./update.sh v2.1.0`. Running version: `curl localhost:3001/health`
 - Env changes only (`.env`) take effect with `docker compose up -d` — no rebuild needed
 - `GEMINI_API_KEY` is still placeholder — TTS features non-functional until set
 - SSH via skog-ssh MCP: host registered as `adhoc:small-hours-host`
