@@ -65,7 +65,7 @@ src/
 1. **WebSocket message arrives** in `ws-adapter.js` → parsed, rate-limited, dispatched by `msg.type`
 2. **Session layer** (`room.js`) manages player join/leave, lobby state, and calls `room.startGame(gameType)`
 3. **Game actions** flow through: `ws-adapter.handleGameAction` → `engine.processAction(game, action)` → per-player views via `engine.getView` → broadcast back via WebSocket
-4. **Game registry** lives in `room.js` as `GAME_REGISTRY` object mapping type strings to game definitions. New games must be imported and added there **and** re-exported from `src/engine/games/index.js`.
+4. **Game registry** lives in `room.js` as `GAME_REGISTRY` object mapping type strings to game definitions. New games must be imported and added there **and** re-exported from `src/engine/games/index.js`. Entries with `enabled: false` (engine exists but UI is missing/broken) are hidden from the lobby and refused by `startGame`.
 
 ## Tech Stack
 

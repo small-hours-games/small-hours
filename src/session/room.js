@@ -28,20 +28,21 @@ const AVATAR_POOL = [
 // Characters that can appear in room codes (excludes I, O, S)
 const CODE_CHARS = 'ABCDEFGHJKLMNPQRTUVWXYZ0123456789';
 
+// enabled: false = engine exists but the host/player UI is missing or broken; hidden from the lobby and not startable.
 const GAME_REGISTRY = {
   'number-guess': { definition: numberGuess,  label: 'Number Guess', minPlayers: 2, maxPlayers: 10, complexity: 1 },
-  'skogai': 	  { definition: skogai,       label: 'SkogAI',       minPlayers: 1, maxPlayers: 10, complexity: 1 },
+  'skogai': 	  { definition: skogai,       label: 'SkogAI',       minPlayers: 1, maxPlayers: 10, complexity: 1, enabled: false },
   'shithead':     { definition: shithead,     label: 'Shithead',     minPlayers: 2, maxPlayers: 6,  complexity: 3 },
   'quiz':         { definition: quiz,         label: 'Quiz',         minPlayers: 1, maxPlayers: 20, complexity: 1 },
-  'spy':          { definition: spy,          label: 'Spy',          minPlayers: 3, maxPlayers: 10, complexity: 2 },
+  'spy':          { definition: spy,          label: 'Spy',          minPlayers: 3, maxPlayers: 10, complexity: 2, enabled: false },
   'question-form':{ definition: questionForm, label: 'Question Form',minPlayers: 2, maxPlayers: 20, complexity: 1 },
   'template':     { definition: template,     label: 'Template',     minPlayers: 1, maxPlayers: 20, complexity: 1 },
   'gin-rummy':    { definition: ginRummy,     label: 'Gin Rummy',    minPlayers: 2, maxPlayers: 4,  complexity: 4 },
-  'hilow':        { definition: hilow,        label: 'Högt/Lågt',    minPlayers: 2, maxPlayers: 8,  complexity: 1 },
-  'sjuan':       { definition: sjuan,       label: 'Sjuan',        minPlayers: 2, maxPlayers: 8,  complexity: 2 },
-  'uno':         { definition: uno,         label: 'Uno',          minPlayers: 2, maxPlayers: 8,  complexity: 2 },
-  'yatzy':       { definition: yatzy,       label: 'Yatzy',        minPlayers: 1, maxPlayers: 8,  complexity: 2 },
-  'labyrint':    { definition: labyrint,    label: 'Labyrint',     minPlayers: 2, maxPlayers: 8,  complexity: 2 },
+  'hilow':        { definition: hilow,        label: 'Högt/Lågt',    minPlayers: 2, maxPlayers: 8,  complexity: 1, enabled: false },
+  'sjuan':       { definition: sjuan,       label: 'Sjuan',        minPlayers: 2, maxPlayers: 8,  complexity: 2, enabled: false },
+  'uno':         { definition: uno,         label: 'Uno',          minPlayers: 2, maxPlayers: 8,  complexity: 2, enabled: false },
+  'yatzy':       { definition: yatzy,       label: 'Yatzy',        minPlayers: 1, maxPlayers: 8,  complexity: 2, enabled: false },
+  'labyrint':    { definition: labyrint,    label: 'Labyrint',     minPlayers: 2, maxPlayers: 8,  complexity: 2, enabled: false },
 };
 
 let playerCounter = 0;
@@ -273,7 +274,7 @@ export class Room {
   availableGames() {
     const count = [...this.players.values()].filter(p => p.connected).length;
     return Object.entries(GAME_REGISTRY)
-      .filter(([, m]) => count >= m.minPlayers && count <= m.maxPlayers)
+      .filter(([, m]) => m.enabled !== false && count >= m.minPlayers && count <= m.maxPlayers)
       .map(([type, m]) => ({ type, label: m.label, minPlayers: m.minPlayers, maxPlayers: m.maxPlayers, complexity: m.complexity }));
   }
 
@@ -329,6 +330,7 @@ export class Room {
   async startGame(gameType, config = {}) {
     const entry = GAME_REGISTRY[gameType];
     if (!entry) throw new Error(`Unknown game type: ${gameType}`);
+    if (entry.enabled === false) throw new Error(`${entry.label} is not available yet`);
     const connectedCount = [...this.players.values()].filter(p => p.connected).length;
     if (connectedCount < entry.minPlayers) throw new Error(`${entry.label} requires at least ${entry.minPlayers} players`);
     if (connectedCount > entry.maxPlayers) throw new Error(`${entry.label} supports at most ${entry.maxPlayers} players`);

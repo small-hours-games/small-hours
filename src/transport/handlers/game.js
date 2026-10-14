@@ -131,65 +131,71 @@ export function handleGameAction(ws, meta, room, msg, ctx) {
     schedulePhaseTimer(room, activeGameType);
   }
 
-  // Check for game end
-  const endResult = checkEnd(room.game);
-  if (endResult) {
-    // Generate a shareable gift link for the winner (best-effort; never block end).
-    let giftUrl = null, giftToken = null;
-    try {
-      const winnerName = (room.players.get(endResult.winner) && room.players.get(endResult.winner).name) || null;
-      const created = createGift({
-        roomCode: room.code,
-        winnerId: endResult.winner,
-        gameType: room.gameType || 'unknown',
-        winnerName,
-      });
-      giftUrl = created.url;
-      giftToken = created.token;
-    } catch (e) {
-      console.warn('[gift] failed to create gift:', e.message);
-    }
+  finishIfEnded(room, ctx);
+}
 
-    // Send final views with end result
-    for (const [id] of room.players) {
-      const view = getView(room.game, id);
-      sendToPlayer(id, { type: 'GAME_STATE', ...view, ...endResult });
-    }
-    broadcastToRoom(room.code, {
-      type: 'GAME_STATE',
-      phase: 'finished',
-      ...endResult,
-      playerNames,
-      giftUrl,
-      giftToken,
-      gameLabel: gameLabel(room.gameType || 'unknown'),
-    }, { hostsOnly: true });
-
-    // Award session scores (mirrors the timer-driven end path). endResult
-    // carries either a per-player scores map or a single winner.
-    try {
-      if (endResult.scores && typeof endResult.scores === 'object') {
-        room.awardScores(endResult.scores);
-      } else if (typeof endResult.winner === 'string') {
-        const scoresMap = {};
-        for (const [id, p] of room.players) {
-          if (p.connected) scoresMap[id] = id === endResult.winner ? 3 : 1;
-        }
-        room.awardScores(scoresMap);
-      }
-    } catch (err) {
-      console.error('[score] failed to award session scores:', err.message);
-    }
-
-    // Save question-form answers to file
-    const gameState = room.game?.state;
-    if (gameState?.questions && gameState?.responses && gameState?._sourceFile) {
-      saveAnswers(gameState._sourceFile, gameState.responses, playerNames).catch(() => {});
-    }
-
-    room.endGame();
-    cancelPhaseTimer(room.code);
-    roomGameTypes.delete(room.code);
-    broadcastToRoom(room.code, { type: 'LOBBY_UPDATE', state: room.getState() });
+// Shared by player actions and timer-driven phase changes (e.g. quiz's last reveal).
+export function finishIfEnded(room, ctx) {
+  const { sendToPlayer, broadcastToRoom, roomGameTypes, cancelPhaseTimer, getPlayerNames } = ctx;
+  const endResult = room.game && checkEnd(room.game);
+  if (!endResult) return false;
+  const playerNames = getPlayerNames(room);
+  // Generate a shareable gift link for the winner (best-effort; never block end).
+  let giftUrl = null, giftToken = null;
+  try {
+    const winnerName = (room.players.get(endResult.winner) && room.players.get(endResult.winner).name) || null;
+    const created = createGift({
+      roomCode: room.code,
+      winnerId: endResult.winner,
+      gameType: room.gameType || 'unknown',
+      winnerName,
+    });
+    giftUrl = created.url;
+    giftToken = created.token;
+  } catch (e) {
+    console.warn('[gift] failed to create gift:', e.message);
   }
+
+  // Send final views with end result
+  for (const [id] of room.players) {
+    const view = getView(room.game, id);
+    sendToPlayer(id, { type: 'GAME_STATE', ...view, ...endResult });
+  }
+  broadcastToRoom(room.code, {
+    type: 'GAME_STATE',
+    phase: 'finished',
+    ...endResult,
+    playerNames,
+    giftUrl,
+    giftToken,
+    gameLabel: gameLabel(room.gameType || 'unknown'),
+  }, { hostsOnly: true });
+
+  // Award session scores. endResult
+  // carries either a per-player scores map or a single winner.
+  try {
+    if (endResult.scores && typeof endResult.scores === 'object') {
+      room.awardScores(endResult.scores);
+    } else if (typeof endResult.winner === 'string') {
+      const scoresMap = {};
+      for (const [id, p] of room.players) {
+        if (p.connected) scoresMap[id] = id === endResult.winner ? 3 : 1;
+      }
+      room.awardScores(scoresMap);
+    }
+  } catch (err) {
+    console.error('[score] failed to award session scores:', err.message);
+  }
+
+  // Save question-form answers to file
+  const gameState = room.game?.state;
+  if (gameState?.questions && gameState?.responses && gameState?._sourceFile) {
+    saveAnswers(gameState._sourceFile, gameState.responses, playerNames).catch(() => {});
+  }
+
+  room.endGame();
+  cancelPhaseTimer(room.code);
+  roomGameTypes.delete(room.code);
+  broadcastToRoom(room.code, { type: 'LOBBY_UPDATE', state: room.getState() });
+  return true;
 }

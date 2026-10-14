@@ -82,26 +82,6 @@ export function setupWebSocket(server, manager) {
     return names;
   }
 
-  /**
-   * Award session scores based on a game's endResult.
-   * - If endResult.scores is a { [playerId]: number } map, pass it directly.
-   * - If only endResult.winner exists, award 3 points to the winner and 1 to all other connected players.
-   * - If neither exists, skip scoring.
-   */
-  function applyEndResultScores(room, endResult) {
-    if (endResult.scores && typeof endResult.scores === 'object') {
-      room.awardScores(endResult.scores);
-    } else if (typeof endResult.winner === 'string') {
-      const scoresMap = {};
-      for (const [id, p] of room.players) {
-        if (p.connected) {
-          scoresMap[id] = id === endResult.winner ? 3 : 1;
-        }
-      }
-      room.awardScores(scoresMap);
-    }
-  }
-
   // --- Phase timers ---
 
   function cancelPhaseTimer(roomCode) {
@@ -157,7 +137,11 @@ export function setupWebSocket(server, manager) {
       const sharedState = { type: 'GAME_STATE', ...hostView, playerNames };
       if (events.length > 0) sharedState.events = events;
       broadcastToRoom(room.code, sharedState, { hostsOnly: true });
-    });
+
+      if (!gameHandlers.finishIfEnded(room, ctx)) {
+        schedulePhaseTimer(room, gameType, { force: true });
+      }
+    }, duration);
 
     timer.phase = phase;
     if (timer.unref) timer.unref();

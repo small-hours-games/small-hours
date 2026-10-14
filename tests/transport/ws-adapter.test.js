@@ -78,6 +78,7 @@ vi.mock('../../src/fetcher/question-file.js', () => ({
 // Now import the module under test
 // -----------------------------------------------------------------------
 import { setupWebSocket } from '../../src/transport/ws-adapter.js';
+import { fetchQuestions } from '../../src/fetcher/cached-fetcher.js';
 import { RoomManager } from '../../src/session/manager.js';
 
 // -----------------------------------------------------------------------
@@ -576,5 +577,39 @@ describe('ws-adapter - RETURN_TO_LOBBY', () => {
 
     const update = ws._sent.find(m => m.type === 'LOBBY_UPDATE');
     expect(update).toBeDefined();
+  });
+});
+
+// -----------------------------------------------------------------------
+// Phase timers (timed games advance on their own)
+// -----------------------------------------------------------------------
+describe('ws-adapter - phase timers', () => {
+  let env;
+  beforeEach(() => { vi.useFakeTimers(); env = makeEnv(); });
+  afterEach(() => { env.manager.destroy(); vi.useRealTimers(); });
+
+  it('waits each phase duration, advances, and ends the game when the timer finishes it', async () => {
+    const q = id => ({ id, question: id + '?', correct_answer: 'a', incorrect_answers: ['b', 'c', 'd'], category: 'x', difficulty: 'easy' });
+    fetchQuestions.mockResolvedValue({ ok: true, questions: [q('q1'), q('q2')] });
+    const admin = connectPlayer(env, 'A');
+    connectPlayer(env, 'B');
+    admin.emit('message', JSON.stringify({ type: 'START_MINI_GAME', gameType: 'quiz', config: { questionCount: 2 } }));
+    await vi.advanceTimersByTimeAsync(0);
+    expect(env.room.game.state.phase).toBe('countdown');
+
+    await vi.advanceTimersByTimeAsync(2999);
+    expect(env.room.game.state.phase).toBe('countdown');
+    await vi.advanceTimersByTimeAsync(1);
+    expect(env.room.game.state.phase).toBe('question');
+
+    await vi.advanceTimersByTimeAsync(15000);
+    expect(env.room.game.state.phase).toBe('reveal');
+    await vi.advanceTimersByTimeAsync(4000 + 5000);
+    expect(env.room.game.state.phase).toBe('question');
+    expect(env.room.game.state.currentQuestion).toBe(1);
+
+    await vi.advanceTimersByTimeAsync(15000 + 4000);
+    expect(env.room.game).toBeNull();
+    expect(admin._sent.at(-1).type).toBe('LOBBY_UPDATE');
   });
 });
