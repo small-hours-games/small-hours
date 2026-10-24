@@ -62,7 +62,8 @@ export function handleJoinLobby(ws, meta, room, msg, ctx) {
   if (room.game) {
     const view = getView(room.game, playerId);
     const playerNames = getPlayerNames(room);
-    sendToPlayer(playerId, { type: 'GAME_STATE', ...view, playerNames });
+    const clock = ctx.timing ? ctx.timing(room) : {};
+    sendToPlayer(playerId, { type: 'GAME_STATE', ...view, ...clock, gameType: room.gameType, playerNames });
   }
 }
 

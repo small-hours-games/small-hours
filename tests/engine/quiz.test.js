@@ -562,3 +562,40 @@ describe('Quiz - endIf', () => {
     expect(result.scores.p1).toBeGreaterThan(result.scores.p2);
   });
 });
+
+describe('Quiz - question duration', () => {
+  // Answer `elapsedMs` after the question started (questionStartTime is rewound instead of waiting)
+  function scoreAfter(config, elapsedMs) {
+    let game = createGame(quiz, { players: ['p1'], config: { questions: [Q1], ...config } });
+    game = toQuestion(game);
+    game = { ...game, state: { ...game.state, questionStartTime: Date.now() - elapsedMs } };
+    game = processAction(game, { type: 'answer', playerId: 'p1', answerId: Q1.correct_answer }).game;
+    return processAction(game, { type: 'timerExpired', phase: 'question' }).game.state.scores.p1;
+  }
+
+  it('defaults to the 15 s question phase', () => {
+    const game = createGame(quiz, { players: ['p1'], config: { questions: [Q1] } });
+    expect(game.state.questionDuration).toBe(PHASE_DURATIONS.question);
+    expect(scoreAfter({}, 16000)).toBe(500); // past 15 s: minimum points
+  });
+
+  it('scales the speed bonus to a longer question (Music Quiz: 20 s)', () => {
+    expect(scoreAfter({ questionDuration: 20000 }, 16000)).toBeGreaterThan(500);
+    expect(scoreAfter({ questionDuration: 20000 }, 10000)).toBe(750); // halfway
+  });
+});
+
+
+describe('Quiz answer visibility', () => {
+  it('restores only the player selection during voting and reveals all guesses afterward', () => {
+    let game = toQuestion(makeGame(['p1', 'p2']));
+    game = processAction(game, { type: 'answer', playerId: 'p1', answerId: '2' }).game;
+    game = processAction(game, { type: 'answer', playerId: 'p2', answerId: '3' }).game;
+    expect(getView(game, 'p1').selectedAnswer).toBe('2');
+    expect(getView(game, 'p2').selectedAnswer).toBe('3');
+    expect(getView(game, 'host').playerAnswers).toBeUndefined();
+    game = processAction(game, { type: 'timerExpired', phase: 'question' }).game;
+    expect(getView(game, 'host').playerAnswers).toEqual({ p1: '2', p2: '3' });
+    expect(getView(game, 'p1').selectedAnswer).toBe('2');
+  });
+});

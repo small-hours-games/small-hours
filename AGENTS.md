@@ -1,12 +1,10 @@
 # AGENTS.md
 
-This file provides guidance to Codex (Codex.ai/code) when working with code in this repository.
+This file provides project guidance for coding agents working in this repository.
 
 ## Project Overview
 
 **Small Hours Games** — a real-time multiplayer party game engine. One shared screen (TV/monitor) as the display, players join from phones via room code. This repo is a ground-up rewrite focused on building the engine first, not infrastructure.
-
-Planning state is in `.planning/`.
 
 ## Development
 
@@ -52,7 +50,7 @@ src/
 └── server.js            # Entry point: wires Express + WebSocket + RoomManager
 ```
 
-**Key architecture decisions** (see `.planning/research/ARCHITECTURE.md` for rationale):
+**Key architecture decisions:**
 
 - No 100ms tick loop — event-driven, broadcast on state change
 - No GameController base class — games are plain objects with `{setup, actions, view, endIf}`
@@ -72,7 +70,7 @@ src/
 - **Runtime:** Node.js 22 LTS, JavaScript ESM (no TypeScript, no build step)
 - **Server:** Express 5 + ws (WebSocket)
 - **Testing:** Vitest (globals: false — must import `describe`, `it`, `expect` explicitly)
-- **Dependencies philosophy:** Earn dependencies when needed (see `.planning/research/STACK.md`)
+- **Dependencies philosophy:** Earn dependencies when needed
 
 ## Design Principles
 
@@ -181,14 +179,6 @@ Requires `DISCORD_WEBHOOK_URL` in `.env`. No-ops silently if unset.
 Always include both `content` (plain text) and `embeds` in webhook payloads — `content` is what
 appears in push notifications; embed-only messages show blank in Discord previews.
 
-## GSD Workflow
-
-This project uses the GSD (Get Shit Done) planning system via `/gsd:*` slash commands. Planning state lives in `.planning/`. Key files:
-
-- `.planning/PROJECT.md` — current milestone and requirements
-- `.planning/ROADMAP.md` — 12-phase roadmap with success criteria
-- `.planning/REQUIREMENTS.md` — 83 v1 requirements with traceability
-
 # Local Context
 
 ## Production Server
@@ -199,3 +189,7 @@ This project uses the GSD (Get Shit Done) planning system via `/gsd:*` slash com
 - Env changes only (`.env`) take effect with `docker compose up -d` — no rebuild needed
 - `GEMINI_API_KEY` is still placeholder — TTS features non-functional until set
 - SSH via skog-ssh MCP: host registered as `adhoc:small-hours-host`
+
+## Deployment Preference
+
+After completing and verifying application changes, always rebuild and restart the server with `docker compose build && docker compose up -d`, then verify `/health`. The user has authorized this as the default workflow; do not leave completed changes awaiting a separate deployment request.

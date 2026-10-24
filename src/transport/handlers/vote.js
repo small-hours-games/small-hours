@@ -1,6 +1,6 @@
 // Small Hours - Category vote message handlers
 
-import { fetchCategories } from '../../fetcher/cached-fetcher.js';
+import { fetchCategories, MAIN_CATEGORY_IDS } from '../../fetcher/cached-fetcher.js';
 
 /**
  * Handle START_CATEGORY_VOTE message — admin kicks off a category vote by fetching categories.
@@ -28,7 +28,10 @@ export async function handleStartCategoryVote(ws, meta, room, msg, ctx) {
     send(ws, { type: 'ERROR', message: result.error.message });
     return;
   }
-  room.availableCategories = result.categories;
+  // Only the main categories, in display order (music has its own Music Quiz game)
+  room.availableCategories = MAIN_CATEGORY_IDS
+    .map(id => result.categories.find(c => c.id === id))
+    .filter(Boolean);
   room.votingActive = true;
   room.categoryVotes.clear();
   broadcastToRoom(room.code, { type: 'LOBBY_UPDATE', state: room.getState() });

@@ -2,10 +2,22 @@ node_modules/
 .env
 *.log
 .DS_Store
-/.claude/worktrees
 /tmp
 /package-lock.json
 /tests/latest-test-results.txt
 
 # Runtime data (gifts store, generated)
 data/
+
+# Android TV app build output, signing key (keep a backup!) and the served APK copy
+/android-tv/build/
+/android-tv/dist/
+/android-tv/keystore/
+/public/download/
+
+# Local AI tooling and generated planning state
+/.claude/
+/.codex/
+/.agents/
+/.hermes/
+/.planning/

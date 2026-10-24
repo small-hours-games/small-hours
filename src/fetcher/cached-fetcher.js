@@ -15,6 +15,13 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const CACHE_DIR = resolve(__dirname, '../../data/questions');
 const CATEGORY_CACHE_PATH = resolve(__dirname, '../../data/categories.json');
 
+// Categories offered in the quiz category vote, in display order: General Knowledge,
+// Geography, History, Science & Nature, Sports, Film.
+export const MAIN_CATEGORY_IDS = [9, 22, 23, 17, 21, 11];
+
+// OpenTrivia allows about one request per 5 seconds per IP
+const API_SPACING_MS = 5500;
+
 /**
  * Compute a stable, content-based question ID.
  * Uses sha1 of (question text + null byte + correct_answer).
@@ -131,36 +138,52 @@ export async function fetchCategories() {
   return result;
 }
 
+async function isCached(categoryId) {
+  try {
+    await readFile(join(CACHE_DIR, `${categoryId ?? 'any'}.json`), 'utf8');
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 /**
- * Pre-warm the question cache at server startup.
- * Fetches all categories, then questions for each category.
+ * Pre-warm the question cache at server startup for the categories the quiz offers
+ * (MAIN_CATEGORY_IDS) plus the "any category" bucket.
  * Non-fatal: logs warnings on partial failures and continues.
- * Already-cached categories/questions are skipped (disk hit = no API call).
+ * Already-cached buckets are skipped; live API calls are spaced out to stay under
+ * OpenTrivia's rate limit (back-to-back calls used to fail with "Too many requests").
+ *
+ * @param {{spacingMs?: number}} [opts]
  */
-export async function prewarmCache() {
-  // 1. Fetch categories (hits disk if already cached)
+export async function prewarmCache({ spacingMs = API_SPACING_MS } = {}) {
   const catResult = await fetchCategories();
   if (!catResult.ok) {
     console.warn('[prewarm] could not fetch categories:', catResult.error.message);
     return;
   }
-  console.log(`[prewarm] warming ${catResult.categories.length} categories...`);
+  const names = new Map(catResult.categories.map(c => [c.id, c.name]));
+  const buckets = [...MAIN_CATEGORY_IDS, null];
+  console.log(`[prewarm] warming ${buckets.length} buckets...`);
 
-  // 2. For each category, fetch questions (hits disk if already cached)
   let warmed = 0;
-  for (const cat of catResult.categories) {
-    const result = await fetchQuestions(cat.id, 50);
+  let calledApi = true; // fetchCategories may just have hit the API
+  for (const id of buckets) {
+    if (await isCached(id)) {
+      warmed++;
+      continue;
+    }
+    if (calledApi) await new Promise(r => setTimeout(r, spacingMs));
+    calledApi = true;
+    const result = await fetchQuestions(id, 50);
     if (result.ok) {
       warmed++;
     } else {
-      console.warn(`[prewarm] failed category ${cat.id} (${cat.name}):`, result.error.message);
+      console.warn(`[prewarm] failed category ${id ?? 'any'} (${names.get(id) || 'any'}):`, result.error.message);
     }
   }
-  // Also warm the "any category" bucket
-  const anyResult = await fetchQuestions(null, 50);
-  if (anyResult.ok) warmed++;
 
-  console.log(`[prewarm] done — ${warmed}/${catResult.categories.length + 1} buckets ready`);
+  console.log(`[prewarm] done — ${warmed}/${buckets.length} buckets ready`);
 }
 
 /**

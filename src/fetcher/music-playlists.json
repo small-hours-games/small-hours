@@ -1,0 +1,10 @@
+[
+  { "id": 867825522,   "name": "80s Hits",           "icon": "📼" },
+  { "id": 878989033,   "name": "90s Hits",           "icon": "💿" },
+  { "id": 248297032,   "name": "00s Hits",           "icon": "📀" },
+  { "id": 3155776842,  "name": "Today's Top Hits",   "icon": "🔥" },
+  { "id": 1579490515,  "name": "Swedish Hits",       "icon": "🇸🇪" },
+  { "id": 9037748342,  "name": "Eurovision Winners", "icon": "🎤" },
+  { "id": 1306931615,  "name": "Rock Essentials",    "icon": "🎸" },
+  { "id": 12566903723, "name": "Disco Super Hits",   "icon": "🪩" }
+]

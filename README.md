@@ -161,7 +161,6 @@ Player avatars use HTML entity emoji (`&#128056;` frog, `&#128049;` cat, etc.) �
 
 ```
 README.md                    ← This file
-SKILL.md                     ← Claude Code skill definition
 colors_and_type.css          ← All CSS custom properties (colors, type, spacing, semantic)
 assets/
   logo.png                   ← Primary brand logo (transparent PNG)

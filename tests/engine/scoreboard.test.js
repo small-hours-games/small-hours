@@ -8,7 +8,7 @@ import numberGuess from '../../src/engine/games/number-guess.js';
 
 // Guards against regressions in the host scoreboard contract: every game's
 // view() must emit a `scores` object keyed by all player IDs, so the host
-// scoreboard renders consistently (see .hermes/plans/2026-07-13_fix-scoreboard-all-games.md).
+// scoreboard renders consistently.
 const games = { quiz, spy, shithead, ginRummy, numberGuess };
 
 describe('scoreboard consistency across games', () => {

@@ -6,14 +6,15 @@ import { processAction, getView, checkEnd } from '../engine/engine.js';
 import { saveAnswers } from '../fetcher/question-file.js';
 import { PHASE_DURATIONS as QUIZ_DURATIONS } from '../engine/games/quiz.js';
 import { PHASE_DURATIONS as SPY_DURATIONS } from '../engine/games/spy.js';
+import { PHASE_DURATIONS as MUSIC_QUIZ_DURATIONS } from '../engine/games/music-quiz.js';
 import * as lobbyHandlers from './handlers/lobby.js';
 import * as gameHandlers from './handlers/game.js';
 import * as chatHandlers from './handlers/chat.js';
 import * as voteHandlers from './handlers/vote.js';
-import { createGift, gameLabel } from '../session/gifts.js';
 
 const GAME_PHASE_DURATIONS = {
   quiz: QUIZ_DURATIONS,
+  'music-quiz': MUSIC_QUIZ_DURATIONS,
   spy: SPY_DURATIONS,
 };
 
@@ -137,31 +138,66 @@ export function setupWebSocket(server, manager) {
     const timer = setTimeout(() => {
       phaseTimers.delete(room.code);
       if (!room.game) return;
-
-      // Dispatch the synthetic timerExpired action
-      const action = { type: 'timerExpired', phase };
-      const { game: updatedGame, events } = processAction(room.game, action);
-      room.game = updatedGame;
-      room.lastActivity = Date.now();
-
-      const playerNames = getPlayerNames(room);
-
-      // Broadcast updated views to players
-      for (const [id] of room.players) {
-        const view = getView(room.game, id);
-        sendToPlayer(id, { type: 'GAME_STATE', ...view, playerNames });
+      try {
+        advancePhase(room, gameType, phase);
+      } catch (err) {
+        // A throwing timer used to leave the game frozen forever. End it instead.
+        console.error(`[timer] ${gameType} ${phase} failed in room ${room.code}:`, err);
+        cancelPhaseTimer(room.code);
+        roomGameTypes.delete(room.code);
+        room.endGame();
+        broadcastToRoom(room.code, { type: 'ERROR', message: 'The game hit a problem and was stopped' });
+        broadcastToRoom(room.code, { type: 'LOBBY_UPDATE', state: room.getState() });
       }
-
-      // Broadcast to host displays
-      const hostView = getView(room.game, room.players.keys().next().value);
-      const sharedState = { type: 'GAME_STATE', ...hostView, playerNames };
-      if (events.length > 0) sharedState.events = events;
-      broadcastToRoom(room.code, sharedState, { hostsOnly: true });
-    });
+    }, duration);
 
     timer.phase = phase;
+    timer.endsAt = Date.now() + duration;
+    timer.total = duration;
     if (timer.unref) timer.unref();
     phaseTimers.set(room.code, timer);
+  }
+
+  /**
+   * Time left in the current timed phase, for clients' countdowns. Relative seconds
+   * (not a deadline) so phone/TV clock differences don't matter. Empty when untimed.
+   */
+  function timing(room) {
+    const timer = phaseTimers.get(room.code);
+    if (!timer || !room.game || timer.phase !== room.game.state.phase) return {};
+    const left = Math.max(0, timer.endsAt - Date.now());
+    return { timeLeft: Math.round(left / 100) / 10, timeTotal: timer.total / 1000 };
+  }
+
+  // One timer step: dispatch timerExpired, schedule the next phase, broadcast, or end
+  function advancePhase(room, gameType, phase) {
+    // Dispatch the synthetic timerExpired action
+    const action = { type: 'timerExpired', phase };
+    const { game: updatedGame, events } = processAction(room.game, action);
+    room.game = updatedGame;
+    room.lastActivity = Date.now();
+
+    // Timer-driven games (quiz/spy) end on their last timer, not on a player action
+    const endResult = checkEnd(room.game);
+    // Schedule first so the broadcast carries the new phase's time left
+    if (!endResult) schedulePhaseTimer(room, gameType, { force: true });
+
+    const playerNames = getPlayerNames(room);
+    const clock = timing(room);
+
+    // Broadcast updated views to players
+    for (const [id] of room.players) {
+      const view = getView(room.game, id);
+      sendToPlayer(id, { type: 'GAME_STATE', ...view, ...clock, playerNames });
+    }
+
+    // Broadcast to host displays
+    const hostView = getView(room.game, room.players.keys().next().value);
+    const sharedState = { type: 'GAME_STATE', ...hostView, ...clock, playerNames };
+    if (events.length > 0) sharedState.events = events;
+    broadcastToRoom(room.code, sharedState, { hostsOnly: true });
+
+    if (endResult) gameHandlers.finishGame(room, endResult, ctx);
   }
 
   // --- Rate limiting ---
@@ -258,6 +294,19 @@ export function setupWebSocket(server, manager) {
     }
     send(ws, { type: 'LOBBY_UPDATE', state: room.getState() });
 
+    // A TV (re)connecting mid-game gets the running game straight away, not the lobby
+    if (role === 'host' && room.game && room.gameType) {
+      const firstPlayer = room.players.keys().next().value;
+      send(ws, { type: 'MINI_GAME_STARTING', gameType: room.gameType, resume: true });
+      send(ws, {
+        type: 'GAME_STATE',
+        ...(firstPlayer ? getView(room.game, firstPlayer) : { phase: room.game.state.phase }),
+        ...timing(room),
+        gameType: room.gameType,
+        playerNames: getPlayerNames(room),
+      });
+    }
+
     // Observer: wait for JOIN_OBSERVER to register; handled in message dispatch
 
     ws.on('message', (data) => {
@@ -312,6 +361,7 @@ export function setupWebSocket(server, manager) {
       roomGameTypes,
       schedulePhaseTimer,
       cancelPhaseTimer,
+      timing,
       getPlayerNames,
       checkChatRateLimit,
     };
@@ -324,6 +374,7 @@ export function setupWebSocket(server, manager) {
     'GAME_ACTION',
     'SET_READY',
     'START_MINI_GAME',
+    'START_VOTED_GAME',
     'SUGGEST_GAME',
     'RETURN_TO_LOBBY',
     'START_CATEGORY_VOTE',
@@ -352,6 +403,11 @@ export function setupWebSocket(server, manager) {
         break;
       case 'START_MINI_GAME':
         gameHandlers.handleStartMiniGame(ws, meta, room, msg, ctx).catch(err => {
+          send(ws, { type: 'ERROR', message: err.message });
+        });
+        break;
+      case 'START_VOTED_GAME':
+        gameHandlers.handleStartVotedGame(ws, meta, room, msg, ctx).catch(err => {
           send(ws, { type: 'ERROR', message: err.message });
         });
         break;
@@ -390,6 +446,8 @@ export function setupWebSocket(server, manager) {
 
     const { playerId } = meta;
     if (!playerId) return;
+    // A refreshed page may reconnect before its old socket closes.
+    if (playerSockets.get(playerId) !== ws) return;
 
     playerSockets.delete(playerId);
 

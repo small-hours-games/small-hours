@@ -15,6 +15,7 @@ import sjuan from '../engine/games/sjuan.js';
 import uno from '../engine/games/uno.js';
 import yatzy from '../engine/games/yatzy.js';
 import labyrint from '../engine/games/labyrint.js';
+import musicQuiz from '../engine/games/music-quiz.js';
 import { saveAnswers } from '../fetcher/question-file.js';
 import { randomBytes } from 'node:crypto';
 
@@ -33,6 +34,7 @@ const GAME_REGISTRY = {
   'skogai': 	  { definition: skogai,       label: 'SkogAI',       minPlayers: 1, maxPlayers: 10, complexity: 1 },
   'shithead':     { definition: shithead,     label: 'Shithead',     minPlayers: 2, maxPlayers: 6,  complexity: 3 },
   'quiz':         { definition: quiz,         label: 'Quiz',         minPlayers: 1, maxPlayers: 20, complexity: 1 },
+  'music-quiz':   { definition: musicQuiz,    label: 'Music Quiz',   minPlayers: 1, maxPlayers: 20, complexity: 1 },
   'spy':          { definition: spy,          label: 'Spy',          minPlayers: 3, maxPlayers: 10, complexity: 2 },
   'question-form':{ definition: questionForm, label: 'Question Form',minPlayers: 2, maxPlayers: 20, complexity: 1 },
   'template':     { definition: template,     label: 'Template',     minPlayers: 1, maxPlayers: 20, complexity: 1 },
@@ -236,6 +238,36 @@ export class Room {
   }
 
   /**
+   * Resolve the most-suggested game among those compatible with the connected player count.
+   * Tie-break 1: admin's suggestion wins if admin voted for a tied game.
+   * Tie-break 2: alphabetically first game type wins.
+   * Returns null if no compatible game has been suggested.
+   */
+  resolveWinningGame() {
+    const compatible = new Set(this.availableGames().map(g => g.type));
+    const tallies = new Map();
+    for (const gameType of this.gameSuggestions.values()) {
+      if (!compatible.has(gameType)) continue;
+      tallies.set(gameType, (tallies.get(gameType) || 0) + 1);
+    }
+    if (tallies.size === 0) return null;
+    const maxCount = Math.max(...tallies.values());
+    const tied = [...tallies.entries()]
+      .filter(([, count]) => count === maxCount)
+      .map(([gameType]) => gameType);
+    if (tied.length === 1) return tied[0];
+    let adminId = null;
+    for (const [id, p] of this.players) {
+      if (p.isAdmin) { adminId = id; break; }
+    }
+    if (adminId && this.gameSuggestions.has(adminId)) {
+      const adminVote = this.gameSuggestions.get(adminId);
+      if (tied.includes(adminVote)) return adminVote;
+    }
+    return tied.sort()[0];
+  }
+
+  /**
    * Resolve the winning category from player votes using plurality with tie-breaking.
    * Tie-break 1: admin's vote wins if admin voted for a tied category.
    * Tie-break 2: lowest category ID wins.
@@ -305,6 +337,7 @@ export class Room {
       players,
       gameRunning: this.game !== null,
       gameSuggestions: suggestions,
+      leadingGame: this.resolveWinningGame(),
       language: this.language,
       observerCount: this.observers.size,
     };
@@ -347,6 +380,7 @@ export class Room {
       const result = await definition.prepare(gameConfig, { usedQuestionIds: this.usedQuestionIds });
       gameConfig = result.config;
       for (const id of result.trackIds ?? []) {
+        this.usedQuestionIds.delete(id);
         this.usedQuestionIds.add(id);
       }
     }

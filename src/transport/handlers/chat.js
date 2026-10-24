@@ -30,6 +30,7 @@ export function handleChatMessage(ws, meta, room, msg, ctx) {
     type: 'CHAT_MESSAGE',
     playerId: meta.playerId,
     username: player ? player.username : 'Unknown',
+    avatar: player?.avatar || '💬',
     text,
     timestamp: Date.now(),
   });

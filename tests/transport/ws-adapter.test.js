@@ -70,6 +70,17 @@ vi.mock('../../src/fetcher/cached-fetcher.js', () => ({
   }),
 }));
 
+vi.mock('../../src/fetcher/deezer.js', async (importOriginal) => ({
+  ...(await importOriginal()),
+  fetchPlaylistTracks: vi.fn(async (id) => ({
+    ok: true, title: 'Playlist ' + id,
+    tracks: Array.from({ length: 12 }, (_, i) => ({
+      id: id * 100 + i, title: 'Song ' + id + '-' + i, artist: 'Artist ' + id + '-' + i,
+      album: '', cover: 'c.jpg', preview: 'https://cdnt-preview.dzcdn.net/' + i + '.mp3', rank: 100 - i,
+    })),
+  })),
+}));
+
 vi.mock('../../src/fetcher/question-file.js', () => ({
   saveAnswers: vi.fn().mockResolvedValue(undefined),
 }));
@@ -79,6 +90,7 @@ vi.mock('../../src/fetcher/question-file.js', () => ({
 // -----------------------------------------------------------------------
 import { setupWebSocket } from '../../src/transport/ws-adapter.js';
 import { RoomManager } from '../../src/session/manager.js';
+import { fetchQuestions } from '../../src/fetcher/cached-fetcher.js';
 
 // -----------------------------------------------------------------------
 // Test helpers
@@ -226,6 +238,18 @@ describe('ws-adapter - JOIN_LOBBY', () => {
 
     expect(playerId2).toBe(playerId1);
     expect(env.room.players.size).toBe(1);
+  });
+
+  it('keeps the refreshed connection when the previous socket closes late', () => {
+    env = makeEnv();
+    const ws1 = connectPlayer(env, 'Alice');
+    const playerId = getPlayerId(ws1);
+    const ws2 = reconnectPlayer(env, getReconnectToken(ws1));
+    ws1.emit('close');
+    expect(getPlayerId(ws2)).toBe(playerId);
+    expect(env.room.players.size).toBe(1);
+    expect(env.room.players.get(playerId).connected).toBe(true);
+    expect(env.room.players.has(playerId)).toBe(true);
   });
 
   it('does NOT hijack another player via matching username', () => {
@@ -576,5 +600,125 @@ describe('ws-adapter - RETURN_TO_LOBBY', () => {
 
     const update = ws._sent.find(m => m.type === 'LOBBY_UPDATE');
     expect(update).toBeDefined();
+  });
+});
+
+// -----------------------------------------------------------------------
+// Phase timers (quiz): each phase lasts its full duration, the next phase is
+// scheduled automatically, and the game ends on its last timer.
+// -----------------------------------------------------------------------
+describe('ws-adapter - quiz phase timers', () => {
+  let env;
+  beforeEach(() => vi.useFakeTimers());
+  afterEach(() => {
+    env.manager.destroy();
+    vi.useRealTimers();
+  });
+
+  const Q = (id) => ({ id, question: id + '?', correct_answer: 'A', incorrect_answers: ['B', 'C', 'D'], category: 'Test', difficulty: 'easy' });
+  const phaseOf = (ws) => ws._sent.filter(m => m.type === 'GAME_STATE').at(-1)?.phase;
+
+  it('runs a quiz to the end on timers alone', async () => {
+    fetchQuestions.mockResolvedValue({ ok: true, questions: [Q('q1'), Q('q2')] });
+    env = makeEnv();
+    const ws = connectPlayer(env, 'Alice');
+    ws.emit('message', JSON.stringify({ type: 'START_MINI_GAME', gameType: 'quiz', config: { categoryId: 9, questionCount: 2 } }));
+    await vi.advanceTimersByTimeAsync(0);
+    expect(phaseOf(ws)).toBe('countdown');
+
+    // Countdown must last its full 3 s (regression: timers once fired after 0 ms)
+    await vi.advanceTimersByTimeAsync(4999);
+    expect(phaseOf(ws)).toBe('countdown');
+    await vi.advanceTimersByTimeAsync(1);
+    expect(phaseOf(ws)).toBe('question');
+    ws.emit('message', JSON.stringify({ type: 'GAME_ACTION', action: { type: 'answer', answerId: 'A' } }));
+
+    // Answering must not cut the question short; the next phases follow on timers
+    await vi.advanceTimersByTimeAsync(14000);
+    expect(phaseOf(ws)).toBe('question');
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(phaseOf(ws)).toBe('reveal');
+    await vi.advanceTimersByTimeAsync(4000);
+    expect(phaseOf(ws)).toBe('between');
+    await vi.advanceTimersByTimeAsync(5000);
+    expect(phaseOf(ws)).toBe('question');
+    expect(ws._sent.filter(m => m.type === 'GAME_STATE').at(-1).currentQuestion).toBe(1);
+
+    // Last reveal ends the game and returns the room to the lobby
+    await vi.advanceTimersByTimeAsync(15000 + 4000);
+    expect(phaseOf(ws)).toBe('finished');
+    expect(env.room.game).toBeNull();
+    const lobby = ws._sent.filter(m => m.type === 'LOBBY_UPDATE').at(-1);
+    expect(lobby.state.gameRunning).toBe(false);
+    expect(lobby.state.players[0].sessionScore).toBeGreaterThan(0);
+  });
+});
+
+describe('ws-adapter - broken timer step', () => {
+  let env;
+  beforeEach(() => vi.useFakeTimers());
+  afterEach(() => {
+    env.manager.destroy();
+    vi.useRealTimers();
+  });
+
+  it('stops the game and returns to the lobby instead of freezing', async () => {
+    fetchQuestions.mockResolvedValue({ ok: true, questions: [{ id: 'q1', question: '?', correct_answer: 'A', incorrect_answers: ['B', 'C', 'D'], category: 'T', difficulty: 'easy' }] });
+    env = makeEnv();
+    const ws = connectPlayer(env, 'Alice');
+    ws.emit('message', JSON.stringify({ type: 'START_MINI_GAME', gameType: 'quiz', config: { categoryId: 9, questionCount: 1 } }));
+    await vi.advanceTimersByTimeAsync(5000); // -> question
+    // Corrupt the state so the question timer throws (as an empty quiz used to)
+    env.room.game = { ...env.room.game, state: { ...env.room.game.state, questions: [] } };
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    await vi.advanceTimersByTimeAsync(15000);
+
+    expect(env.room.game).toBeNull();
+    expect(ws._sent.some(m => m.type === 'ERROR' && /stopped/.test(m.message))).toBe(true);
+    expect(ws._sent.filter(m => m.type === 'LOBBY_UPDATE').at(-1).state.gameRunning).toBe(false);
+    errorSpy.mockRestore();
+  });
+});
+
+describe('ws-adapter - countdown timing', () => {
+  let env;
+  beforeEach(() => vi.useFakeTimers());
+  afterEach(() => {
+    env.manager.destroy();
+    vi.useRealTimers();
+  });
+
+  const lastState = (ws) => ws._sent.filter(m => m.type === 'GAME_STATE').at(-1);
+
+  it('Music Quiz questions last 20 s and every state carries the time left', async () => {
+    env = makeEnv();
+    const ws = connectPlayer(env, 'Alice');
+    ws.emit('message', JSON.stringify({ type: 'START_MINI_GAME', gameType: 'music-quiz', config: { questionCount: 2 } }));
+    await vi.advanceTimersByTimeAsync(0);
+    expect(lastState(ws)).toMatchObject({ phase: 'countdown', timeLeft: 5, timeTotal: 5 });
+
+    await vi.advanceTimersByTimeAsync(5000);
+    expect(lastState(ws)).toMatchObject({ phase: 'question', timeLeft: 20, timeTotal: 20 });
+
+    // Answering after 10 s: the update carries ~10 s left (the timer is not restarted)
+    await vi.advanceTimersByTimeAsync(10000);
+    const q = lastState(ws).question;
+    ws.emit('message', JSON.stringify({ type: 'GAME_ACTION', action: { type: 'answer', answerId: q.answers[0] } }));
+    expect(lastState(ws)).toMatchObject({ phase: 'question', timeLeft: 10, timeTotal: 20 });
+
+    await vi.advanceTimersByTimeAsync(9900);
+    expect(lastState(ws).phase).toBe('question');
+    await vi.advanceTimersByTimeAsync(100);
+    expect(lastState(ws)).toMatchObject({ phase: 'reveal', timeLeft: 4, timeTotal: 4 });
+  });
+
+  it('trivia questions keep 15 s', async () => {
+    fetchQuestions.mockResolvedValue({ ok: true, questions: [{ id: 'q1', question: '?', correct_answer: 'A', incorrect_answers: ['B', 'C', 'D'], category: 'T', difficulty: 'easy' }] });
+    env = makeEnv();
+    const ws = connectPlayer(env, 'Alice');
+    ws.emit('message', JSON.stringify({ type: 'START_MINI_GAME', gameType: 'quiz', config: { categoryId: 9, questionCount: 1 } }));
+    await vi.advanceTimersByTimeAsync(5000);
+    expect(lastState(ws)).toMatchObject({ phase: 'question', timeLeft: 15, timeTotal: 15 });
   });
 });

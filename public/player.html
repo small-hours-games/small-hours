@@ -2,732 +2,154 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1">
-  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="theme-color" content="#0a0a1a">
-  <title>Small Hours - Player</title>
-  <link rel="icon" type="image/png" href="/images/Shg-gemeni-trans.png">
-  <link rel="stylesheet" href="/css/style.css">
-  <style>
-    body {
-      display: flex;
-      flex-direction: column;
-      min-height: 100vh;
-      padding-bottom: env(safe-area-inset-bottom, 0);
-    }
-
-    .player-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 12px 16px;
-      border-bottom: 1px solid var(--glass-border);
-      position: sticky;
-      top: 0;
-      background: rgba(10, 10, 26, 0.95);
-      backdrop-filter: blur(12px);
-      z-index: 10;
-    }
-
-    .player-identity {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-
-    .player-identity .avatar {
-      font-size: 1.5rem;
-      width: 36px;
-      height: 36px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: rgba(179, 71, 217, 0.15);
-      border-radius: 50%;
-    }
-
-    .player-identity .name {
-      font-weight: 700;
-      font-size: 1rem;
-    }
-
-    .room-badge {
-      font-family: 'Courier New', monospace;
-      font-weight: 700;
-      font-size: 0.85rem;
-      color: var(--neon-purple);
-      background: rgba(179, 71, 217, 0.1);
-      padding: 4px 10px;
-      border-radius: 8px;
-      letter-spacing: 0.15em;
-    }
-
-    .player-main {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      padding: 16px;
-      gap: 16px;
-      max-width: 500px;
-      width: 100%;
-      margin: 0 auto;
-    }
-
-    /* Sections (lobby, games) are toggled via display */
-    .section { display: none; }
-    .section.active { display: flex; flex-direction: column; gap: 16px; }
-
-    /* Lobby */
-    .ready-btn {
-      padding: 20px;
-      font-size: 1.2rem;
-      border-radius: 16px;
-      font-weight: 700;
-    }
-
-    .ready-btn.is-ready {
-      background: rgba(57, 255, 20, 0.15);
-      border: 2px solid var(--neon-green);
-      color: var(--neon-green);
-    }
-
-    .game-suggest-title {
-      font-size: 0.85rem;
-      text-transform: uppercase;
-      letter-spacing: 0.1em;
-      color: var(--text-secondary);
-    }
-
-    .game-suggest-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr 1fr;
-      gap: 10px;
-    }
-
-    .suggest-btn {
-      padding: 16px 8px;
-      border-radius: 12px;
-      border: 1px solid var(--glass-border);
-      background: var(--bg-card);
-      color: var(--text-primary);
-      font-size: 0.85rem;
-      font-weight: 600;
-      cursor: pointer;
-      text-align: center;
-      transition: all 0.2s;
-      min-height: 48px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 4px;
-      -webkit-tap-highlight-color: transparent;
-    }
-
-    .suggest-btn:active { transform: scale(0.95); }
-
-    .suggest-btn:hover {
-      border-color: var(--neon-purple);
-      background: rgba(179, 71, 217, 0.1);
-    }
-
-    .suggest-btn .icon { font-size: 1.4rem; }
-
-    .suggest-btn.voted {
-      border-color: var(--neon-purple);
-      background: rgba(179, 71, 217, 0.15);
-      box-shadow: 0 0 10px rgba(179, 71, 217, 0.2);
-    }
-
-    /* Number Guess */
-    .guess-section .feedback-display {
-      text-align: center;
-      font-size: 1.2rem;
-      min-height: 2em;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: var(--text-secondary);
-    }
-
-    .guess-input-row {
-      display: flex;
-      gap: 10px;
-    }
-
-    .guess-input-row input {
-      flex: 1;
-      font-size: 1.5rem;
-      text-align: center;
-      font-weight: 700;
-      padding: 16px;
-    }
-
-    .guess-input-row .btn {
-      width: auto;
-      min-width: 80px;
-      font-size: 1.1rem;
-    }
-
-    .guess-history {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      justify-content: center;
-    }
-
-    .guess-chip {
-      padding: 6px 14px;
-      border-radius: 20px;
-      font-size: 0.85rem;
-      font-weight: 600;
-      background: var(--bg-card);
-      border: 1px solid var(--glass-border);
-    }
-
-    .guess-chip.higher { color: var(--neon-blue); border-color: rgba(77, 201, 246, 0.3); }
-    .guess-chip.lower { color: var(--neon-pink); border-color: rgba(255, 110, 199, 0.3); }
-    .guess-chip.correct { color: var(--neon-green); border-color: rgba(57, 255, 20, 0.3); background: rgba(57, 255, 20, 0.1); }
-
-    /* Quiz */
-    .quiz-section .question-text {
-      font-size: 1.1rem;
-      font-weight: 600;
-      text-align: center;
-      line-height: 1.4;
-    }
-
-    .quiz-timer-display {
-      text-align: center;
-      font-size: 2rem;
-      font-weight: 900;
-      margin: 8px 0;
-    }
-
-    .answer-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 10px;
-    }
-
-    .answer-btn {
-      padding: 18px 12px;
-      border-radius: 12px;
-      font-size: 1rem;
-      font-weight: 600;
-      cursor: pointer;
-      border: 2px solid transparent;
-      transition: all 0.15s;
-      min-height: 60px;
-      text-align: center;
-      color: white;
-      -webkit-tap-highlight-color: transparent;
-    }
-
-    .answer-btn:active:not(:disabled) { transform: scale(0.95); }
-    .answer-btn.answer-a { background: rgba(255, 71, 87, 0.7); }
-    .answer-btn.answer-b { background: rgba(77, 201, 246, 0.7); }
-    .answer-btn.answer-c { background: rgba(57, 255, 20, 0.5); color: #0a0a1a; }
-    .answer-btn.answer-d { background: rgba(255, 159, 67, 0.7); }
-
-    .answer-btn.selected { border-color: white; box-shadow: 0 0 20px rgba(255, 255, 255, 0.3); }
-    .answer-btn.correct { background: var(--neon-green) !important; color: #0a0a1a !important; }
-    .answer-btn.incorrect { background: var(--neon-red) !important; opacity: 0.6; }
-    .answer-btn:disabled { cursor: not-allowed; }
-    .answer-btn.eliminated { opacity: 0.15; pointer-events: none; }
-
-    .powerup-row {
-      display: flex;
-      gap: 8px;
-      justify-content: center;
-      flex-wrap: wrap;
-    }
-
-    .powerup-btn {
-      padding: 10px 18px;
-      border-radius: 24px;
-      font-size: 0.85rem;
-      font-weight: 600;
-      cursor: pointer;
-      border: 1px solid var(--glass-border);
-      background: var(--bg-card);
-      color: var(--text-primary);
-      transition: all 0.2s;
-      min-height: 44px;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      -webkit-tap-highlight-color: transparent;
-    }
-
-    .powerup-btn:active:not(:disabled) { transform: scale(0.95); }
-    .powerup-btn:disabled, .powerup-btn.used { opacity: 0.3; cursor: not-allowed; }
-
-    /* Spy */
-    .spy-section .word-display {
-      text-align: center;
-      padding: 20px;
-      border-radius: 12px;
-      background: rgba(57, 255, 20, 0.08);
-      border: 1px solid rgba(57, 255, 20, 0.2);
-    }
-
-    .spy-section .word-label {
-      font-size: 0.85rem;
-      color: var(--text-secondary);
-      text-transform: uppercase;
-      letter-spacing: 0.1em;
-    }
-
-    .spy-section .word-value {
-      font-size: 2rem;
-      font-weight: 900;
-      color: var(--neon-green);
-      margin-top: 4px;
-    }
-
-    .spy-section .spy-alert {
-      text-align: center;
-      padding: 20px;
-      border-radius: 12px;
-      background: rgba(255, 71, 87, 0.1);
-      border: 1px solid rgba(255, 71, 87, 0.3);
-    }
-
-    .spy-section .spy-alert-title {
-      font-size: 1.5rem;
-      font-weight: 900;
-      color: var(--neon-red);
-    }
-
-    .spy-section .spy-alert-sub {
-      color: var(--text-secondary);
-      margin-top: 4px;
-    }
-
-    .clue-input-row {
-      display: flex;
-      gap: 10px;
-    }
-
-    .clue-input-row input { flex: 1; }
-    .clue-input-row .btn { width: auto; min-width: 80px; }
-
-    /* Chat (lobby) */
-    .lobby-chat {
-      margin-top: 8px;
-    }
-
-    .lobby-chat .chat-messages {
-      max-height: 150px;
-      overflow-y: auto;
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-      padding: 8px;
-      background: rgba(10, 10, 26, 0.5);
-      border-radius: 8px;
-      min-height: 60px;
-      margin-bottom: 8px;
-    }
-
-    .chat-msg {
-      font-size: 0.85rem;
-      animation: fadeIn 0.2s ease;
-    }
-
-    .chat-msg .author {
-      font-weight: 600;
-      color: var(--neon-blue);
-    }
-
-    .chat-input-row {
-      display: flex;
-      gap: 8px;
-    }
-
-    .chat-input-row input { flex: 1; }
-    .chat-input-row .btn { width: auto; min-width: 60px; }
-
-    /* Error screen */
-    .error-screen {
-      flex: 1;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 24px;
-    }
-
-    .error-screen .card {
-      text-align: center;
-      max-width: 350px;
-      width: 100%;
-    }
-
-    /* Score display */
-    .my-score {
-      text-align: center;
-      font-size: 0.9rem;
-      color: var(--text-secondary);
-    }
-
-    .my-score .score-val {
-      font-size: 1.5rem;
-      font-weight: 900;
-      color: var(--neon-blue);
-    }
-
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(8px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-
-    /* Shithead card game */
-    .card-row {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 6px;
-      min-height: 50px;
-    }
-
-    .playing-card {
-      width: 58px;
-      height: 82px;
-      border-radius: 8px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: 700;
-      cursor: pointer;
-      border: 2px solid rgba(255,255,255,0.15);
-      transition: all 0.15s;
-      user-select: none;
-      -webkit-tap-highlight-color: transparent;
-      background: rgba(255,255,255,0.12);
-      flex-direction: column;
-      line-height: 1;
-      gap: 2px;
-    }
-
-    .playing-card.red { color: #ff4757; background: rgba(255, 71, 87, 0.1); border-color: rgba(255, 71, 87, 0.25); }
-    .playing-card.black { color: #e0e0ff; background: rgba(224, 224, 255, 0.08); border-color: rgba(224, 224, 255, 0.2); }
-
-    .playing-card.selected {
-      border-color: var(--neon-green);
-      box-shadow: 0 0 12px rgba(57, 255, 20, 0.4);
-      transform: translateY(-6px);
-    }
-
-    .playing-card.facedown {
-      background: linear-gradient(135deg, var(--neon-purple), var(--neon-blue));
-      color: white;
-      font-size: 1.4rem;
-      border-color: rgba(179, 71, 217, 0.4);
-    }
-
-    .playing-card .card-rank { font-size: 1.3rem; }
-    .playing-card .card-suit { font-size: 1rem; opacity: 0.9; }
-
-    .playing-card.pile-card {
-      width: 80px;
-      height: 112px;
-      font-size: 1.5rem;
-      border-width: 3px;
-    }
-    .playing-card.pile-card .card-rank { font-size: 1.8rem; }
-    .playing-card.pile-card .card-suit { font-size: 1.3rem; }
-
-    .playing-card.playable {
-      border-color: rgba(57, 255, 20, 0.4);
-      box-shadow: 0 0 8px rgba(57, 255, 20, 0.15);
-    }
-    .playing-card.playable.red { border-color: rgba(255, 71, 87, 0.5); box-shadow: 0 0 8px rgba(255, 71, 87, 0.2); }
-    .playing-card.playable.black { border-color: rgba(77, 201, 246, 0.5); box-shadow: 0 0 8px rgba(77, 201, 246, 0.2); }
-
-    .playing-card.unplayable {
-      opacity: 0.35;
-      filter: grayscale(0.6);
-      cursor: not-allowed;
-      transform: none !important;
-    }
-
-    @keyframes turnGlow {
-      0%, 100% { box-shadow: inset 0 0 20px rgba(57, 255, 20, 0.15), 0 0 30px rgba(57, 255, 20, 0.1); }
-      50% { box-shadow: inset 0 0 40px rgba(57, 255, 20, 0.25), 0 0 60px rgba(57, 255, 20, 0.2); }
-    }
-
-    .my-turn-glow {
-      animation: turnGlow 1.5s ease-in-out infinite;
-      border: 2px solid rgba(57, 255, 20, 0.4) !important;
-    }
-
-    /* Question Form */
-    .qf-progress {
-      font-size: 0.85rem;
-      color: var(--text-secondary);
-      text-align: center;
-    }
-
-    .qf-question-card {
-      padding: 16px;
-      border-left: 3px solid var(--neon-purple);
-    }
-
-    .qf-question-card .qf-label {
-      font-size: 0.75rem;
-      color: var(--text-secondary);
-      text-transform: uppercase;
-      letter-spacing: 0.1em;
-      margin-bottom: 6px;
-    }
-
-    .qf-question-card .qf-text {
-      font-size: 1.05rem;
-      font-weight: 600;
-      margin-bottom: 12px;
-    }
-
-    .qf-input-text {
-      width: 100%;
-      background: rgba(255,255,255,0.06);
-      border: 1px solid var(--glass-border);
-      border-radius: 10px;
-      color: var(--text-primary);
-      padding: 12px;
-      font-size: 0.95rem;
-      resize: vertical;
-      min-height: 60px;
-    }
-
-    .qf-choices {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-    }
-
-    .qf-choice-btn {
-      padding: 12px 16px;
-      border-radius: 10px;
-      background: rgba(255,255,255,0.06);
-      border: 1px solid var(--glass-border);
-      color: var(--text-primary);
-      font-size: 0.95rem;
-      cursor: pointer;
-      text-align: left;
-      transition: all 0.15s;
-    }
-
-    .qf-choice-btn:hover { background: rgba(255,255,255,0.1); }
-    .qf-choice-btn.selected {
-      border-color: var(--neon-purple);
-      background: rgba(179, 71, 217, 0.15);
-      color: var(--neon-purple);
-      font-weight: 600;
-    }
-
-    .qf-yesno-row {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 10px;
-    }
-
-    .qf-yesno-btn {
-      padding: 16px;
-      border-radius: 12px;
-      font-size: 1.1rem;
-      font-weight: 700;
-      cursor: pointer;
-      border: 2px solid var(--glass-border);
-      transition: all 0.15s;
-    }
-
-    .qf-yesno-btn.yes { background: rgba(57, 255, 20, 0.08); color: var(--neon-green); }
-    .qf-yesno-btn.no { background: rgba(255, 71, 87, 0.08); color: var(--neon-pink); }
-    .qf-yesno-btn.selected { border-width: 3px; }
-    .qf-yesno-btn.yes.selected { border-color: var(--neon-green); background: rgba(57, 255, 20, 0.2); }
-    .qf-yesno-btn.no.selected { border-color: var(--neon-pink); background: rgba(255, 71, 87, 0.2); }
-
-    .qf-rating-row {
-      display: flex;
-      gap: 6px;
-      justify-content: center;
-    }
-
-    .qf-rating-btn {
-      width: 48px;
-      height: 48px;
-      border-radius: 12px;
-      font-size: 1.1rem;
-      font-weight: 700;
-      cursor: pointer;
-      border: 2px solid var(--glass-border);
-      background: rgba(255,255,255,0.06);
-      color: var(--text-primary);
-      transition: all 0.15s;
-    }
-
-    .qf-rating-btn.selected {
-      border-color: var(--neon-blue);
-      background: rgba(77, 201, 246, 0.2);
-      color: var(--neon-blue);
-    }
-
-    .qf-nav {
-      display: flex;
-      gap: 10px;
-      justify-content: space-between;
-    }
-
-    .qf-submitted-banner {
-      text-align: center;
-      padding: 20px;
-      color: var(--neon-green);
-      font-weight: 700;
-      font-size: 1.1rem;
-    }
-
-    .qf-review-answer {
-      padding: 10px 14px;
-      border-radius: 8px;
-      background: rgba(255,255,255,0.04);
-      margin-bottom: 6px;
-      font-size: 0.9rem;
-    }
-
-    .qf-tally-bar {
-      height: 28px;
-      border-radius: 6px;
-      background: rgba(179, 71, 217, 0.3);
-      display: flex;
-      align-items: center;
-      padding: 0 10px;
-      margin-bottom: 4px;
-      font-size: 0.85rem;
-      font-weight: 600;
-      transition: width 0.3s;
-    }
-
-    @media (max-width: 400px) {
-      .answer-grid { grid-template-columns: 1fr; }
-      .game-suggest-grid { grid-template-columns: 1fr 1fr; }
-    }
-  </style>
+  <meta name="theme-color" content="#e0f2fe">
+  <title>Smallhours - Player</title>
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <script src="/js/tailwind-config.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Fredoka:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/smallhours.css">
+  <link rel="stylesheet" href="/css/player.css">
 </head>
-<body>
-  <div class="bg-animated"></div>
+<body class="text-slate-800 font-sans">
 
-  <!-- Connection status -->
-  <div class="connection-status disconnected" id="connStatus">
-    <span class="status-dot"></span>
-    <span id="connText">Connecting...</span>
-  </div>
-
-  <!-- Header -->
-  <header class="player-header">
-    <div class="player-identity">
-      <div class="avatar" id="myAvatar">&#128056;</div>
-      <div class="name" id="myName">Player</div>
+  <!-- Top bar -->
+  <header class="bg-white/90 backdrop-blur-md border-b border-sky-100 sticky top-0 z-50">
+    <div class="max-w-md mx-auto px-4 h-14 flex items-center justify-between gap-2">
+      <a href="/" class="flex items-center gap-2.5 min-w-0">
+        <div class="w-9 h-9 shrink-0 rounded-2xl bg-gradient-to-tr from-sky-500 to-blue-600 flex items-center justify-center text-white shadow-md shadow-sky-500/20">
+          <i class="fa-solid fa-gamepad"></i>
+        </div>
+        <span class="font-display text-xl font-bold tracking-tight text-slate-900">Smallhours</span>
+      </a>
+      <div class="flex items-center gap-2 min-w-0">
+        <button id="shareBtn" onclick="shareRoom()" aria-label="Share room" class="hidden w-8 h-8 rounded-full bg-sky-50 hover:bg-sky-100 text-sky-700 items-center justify-center">
+          <i class="fa-solid fa-share-nodes text-sm"></i>
+        </button>
+        <span class="font-mono font-bold text-sky-900 tracking-widest text-xs bg-sky-100 border border-sky-200 px-2 py-0.5 rounded-md" id="roomBadge">----</span>
+        <div class="flex items-center gap-1.5 bg-white border border-sky-200 rounded-full pl-1 pr-2.5 py-0.5 min-w-0">
+          <span class="text-lg leading-none" id="myAvatar">&#128056;</span>
+          <span class="text-xs font-bold text-slate-700 truncate max-w-[6rem]" id="myName">Player</span>
+        </div>
+      </div>
     </div>
-    <div class="room-badge" id="roomBadge">----</div>
-    <button id="shareBtn" onclick="shareRoom()" style="background:none;border:none;cursor:pointer;padding:4px 8px;color:var(--neon-blue);font-size:0.8rem;display:none;">🔗 Share</button>
+    <div class="player-connection-row">
+      <div class="connection-status disconnected" id="connStatus" role="status" aria-live="polite">
+        <span class="status-dot"></span>
+        <span id="connText">Connecting...</span>
+      </div>
+    </div>
   </header>
 
   <main class="player-main">
 
-    <!-- LOBBY SECTION -->
-    <div class="section active" id="lobbySection">
-      <button class="btn ready-btn btn-secondary" id="readyBtn" onclick="toggleReady()">
-        Tap to Ready Up
-      </button>
-
-      <div>
-        <div class="game-suggest-title">Vote for a game</div>
-        <div class="game-suggest-grid mt-1">
-          <button class="suggest-btn" onclick="suggestGame('number-guess')" id="suggestNumberGuess">
-            <span class="icon">&#127922;</span>
-            Number Guess
-            <span class="vote-count" style="font-size:0.7rem;color:var(--neon-green);opacity:0.8;min-height:1em;"></span>
-          </button>
-          <button class="suggest-btn" onclick="suggestGame('quiz')" id="suggestQuiz">
-            <span class="icon">&#10067;</span>
-            Quiz
-            <span class="vote-count" style="font-size:0.7rem;color:var(--neon-green);opacity:0.8;min-height:1em;"></span>
-          </button>
-          <button class="suggest-btn" onclick="suggestGame('spy')" id="suggestSpy">
-            <span class="icon">&#128373;</span>
-            Spy
-            <span class="vote-count" style="font-size:0.7rem;color:var(--neon-green);opacity:0.8;min-height:1em;"></span>
-          </button>
-          <button class="suggest-btn" onclick="suggestGame('shithead')" id="suggestShithead">
-            <span class="icon">&#127183;</span>
-            Shithead
-            <span class="vote-count" style="font-size:0.7rem;color:var(--neon-green);opacity:0.8;min-height:1em;"></span>
-          </button>
-          <button class="suggest-btn" onclick="suggestGame('question-form')" id="suggestQuestionForm">
-            <span class="icon">&#128203;</span>
-            Questions
-            <span class="vote-count" style="font-size:0.7rem;color:var(--neon-green);opacity:0.8;min-height:1em;"></span>
-          </button>
-          <button class="suggest-btn" onclick="suggestGame('gin-rummy')" id="suggestGinRummy">
-            <span class="icon">&#127183;</span>
-            Gin Rummy
-            <span class="vote-count" style="font-size:0.7rem;color:var(--neon-green);opacity:0.8;min-height:1em;"></span>
-          </button>
-          <button class="suggest-btn" onclick="suggestGame('hilow')" id="suggestHilow">
-            <span class="icon">&#127922;</span>
-            Högt/Lågt
-            <span class="vote-count" style="font-size:0.7rem;color:var(--neon-green);opacity:0.8;min-height:1em;"></span>
-          </button>
-          <button class="suggest-btn" onclick="suggestGame('skogai')" id="suggestSkogai">
-            <span class="icon">&#127794;</span>
-            SkogAI
-            <span class="vote-count" style="font-size:0.7rem;color:var(--neon-green);opacity:0.8;min-height:1em;"></span>
-          </button>
-          <button class="suggest-btn" onclick="suggestGame('sjuan')" id="suggestSjuan">
-            <span class="icon">&#127183;</span>
-            Sjuan
-            <span class="vote-count" style="font-size:0.7rem;color:var(--neon-green);opacity:0.8;min-height:1em;"></span>
-          </button>
-          <button class="suggest-btn" onclick="suggestGame('uno')" id="suggestUno">
-            <span class="icon">&#127183;</span>
-            Uno
-            <span class="vote-count" style="font-size:0.7rem;color:var(--neon-green);opacity:0.8;min-height:1em;"></span>
-          </button>
-          <button class="suggest-btn" onclick="suggestGame('yatzy')" id="suggestYatzy">
-            <span class="icon">&#127922;</span>
-            Yatzy
-            <span class="vote-count" style="font-size:0.7rem;color:var(--neon-green);opacity:0.8;min-height:1em;"></span>
-          </button>
-          <button class="suggest-btn" onclick="suggestGame('labyrint')" id="suggestLabyrint">
-            <span class="icon">&#128373;</span>
-            Labyrint
-            <span class="vote-count" style="font-size:0.7rem;color:var(--neon-green);opacity:0.8;min-height:1em;"></span>
-          </button>
-
+    <!-- NICKNAME (shown when no name is known yet) -->
+    <div class="section" id="nameSection">
+      <div class="device-screen bg-sky-100 border-4 border-white rounded-[2.5rem] p-6 flex flex-col min-h-[520px] justify-between">
+        <div class="text-center pt-2">
+          <span class="text-[11px] font-bold text-slate-500 block uppercase">Joining Room</span>
         </div>
+        <div class="my-auto space-y-6">
+          <div class="text-center">
+            <div class="w-20 h-20 mx-auto rounded-3xl bg-amber-100 border-2 border-amber-300 flex items-center justify-center text-amber-600 mb-3 shadow-inner">
+              <i class="fa-solid fa-dice text-3xl"></i>
+            </div>
+            <h2 class="text-2xl font-bold font-display text-slate-800">Enter Player Name</h2>
+            <p class="text-xs text-slate-500 mt-1">Choose a nickname to join the party</p>
+          </div>
+          <form id="nameForm" class="bg-white/85 p-5 rounded-2xl border border-sky-200 shadow-sm space-y-4">
+            <div>
+              <label for="nameInput" class="block text-xs font-bold text-slate-700 mb-1.5 uppercase">Nickname:</label>
+              <div class="relative">
+                <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                  <i class="fa-regular fa-face-smile"></i>
+                </span>
+                <input id="nameInput" type="text" maxlength="20" autocomplete="off" spellcheck="false" class="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500 font-semibold text-slate-800" placeholder="Username" />
+              </div>
+            </div>
+            <div class="grid grid-cols-2 gap-3 pt-2">
+              <a href="/" class="w-full py-3 px-4 bg-white hover:bg-slate-100 text-slate-700 font-bold rounded-xl border border-slate-300 transition text-sm text-center">Back</a>
+              <button type="submit" class="w-full py-3 px-4 bg-sky-600 hover:bg-sky-700 text-white font-bold rounded-xl shadow-md shadow-sky-600/30 transition text-sm">Join</button>
+            </div>
+          </form>
+        </div>
+        <div></div>
       </div>
+    </div>
 
-      <!-- Admin: Start Game button -->
-      <div id="adminControls" style="display:none;">
-        <button class="btn btn-primary" id="startGameBtn" onclick="startGame()" style="font-size:1.1rem;padding:16px;">
-          Start Game
-        </button>
+    <!-- GAMES DASHBOARD -->
+    <div class="section" id="lobbySection">
+      <div class="device-screen bg-sky-100 border-4 border-white rounded-[2.5rem] p-5 flex flex-col gap-4">
+        <div class="pt-1">
+          <div class="flex items-center justify-between pb-3 border-b border-sky-200">
+            <span class="font-display font-bold text-xl text-slate-800">Games Dashboard</span>
+          </div>
+          <div class="mt-3 p-2.5 rounded-xl bg-amber-50 border border-amber-200 text-[11px] leading-tight text-amber-900">
+            <span class="font-bold block text-amber-700 mb-0.5"><i class="fa-solid fa-lightbulb"></i> How it works</span>
+            Everyone wishes for a game. The most picked game is chosen and the next phase begins.
+          </div>
+          <button id="categoryReturn" onclick="showSection('categorySection')" class="hidden mt-3 w-full p-2.5 rounded-xl bg-white border border-sky-300 text-sky-800 text-xs font-bold items-center justify-between">
+            <span><i class="fa-solid fa-list-check"></i> Quiz category vote is open</span>
+            <i class="fa-solid fa-chevron-right text-[10px]"></i>
+          </button>
+        </div>
+
+        <div class="space-y-2.5">
+          <p class="text-xs font-bold text-slate-600 uppercase tracking-wide">Vote for next activity:</p>
+          <div id="voteList" class="space-y-2.5"></div>
+        </div>
+
+        <div id="adminControls" class="space-y-2"></div>
+
+        <!-- Players & current score -->
+        <div class="bg-white/90 rounded-2xl p-3 border border-sky-200 shadow-sm" id="lobbyPlayers">
+          <div class="text-xs text-slate-500">Waiting for players...</div>
+        </div>
+
+        <!-- Chat -->
+        <details class="bg-white/90 rounded-2xl border border-sky-200 shadow-sm lobby-chat group">
+          <summary class="cursor-pointer select-none px-3 py-2.5 text-xs font-bold text-slate-700 uppercase flex items-center justify-between">
+            <span><i class="fa-regular fa-comments text-sky-600"></i> Chat</span>
+            <i class="fa-solid fa-chevron-down text-[10px] text-slate-400 group-open:rotate-180 transition"></i>
+          </summary>
+          <div class="px-3 pb-3">
+            <div class="chat-messages text-sm" id="lobbyChatMessages" role="log" aria-label="Party chat messages" aria-live="polite"></div>
+            <div class="flex gap-2 mt-2">
+              <input type="text" id="chatInput" placeholder="Say something..." maxlength="200"
+                class="flex-1 px-3 py-2 rounded-xl border border-slate-300 text-sm"
+                onkeydown="if(event.key==='Enter')sendChat()">
+              <button onclick="sendChat()" class="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl text-sm">Send</button>
+            </div>
+          </div>
+        </details>
       </div>
+    </div>
 
-      <!-- Player list -->
-      <div class="card" id="lobbyPlayers">
-        <div style="color: var(--text-secondary); font-size: 0.9rem;">Waiting for players...</div>
-      </div>
+    <!-- QUIZ CATEGORY VOTE -->
+    <div class="section" id="categorySection">
+      <div class="device-screen bg-sky-100 border-4 border-white rounded-[2.5rem] p-5 flex flex-col gap-3">
+        <div class="pt-1">
+          <div class="flex items-center justify-between pb-3 border-b border-sky-200">
+            <button onclick="showSection('lobbySection')" class="text-xs font-semibold text-sky-700 hover:underline flex items-center gap-1">
+              <i class="fa-solid fa-chevron-left text-[10px]"></i> Games
+            </button>
+            <h2 class="font-display font-bold text-lg text-slate-800">Quiz Category</h2>
+            <span class="w-12"></span>
+          </div>
+          <p class="text-[11px] text-slate-600 text-center mt-2 font-medium">Vote for a topic &mdash; the most picked category is played</p>
+        </div>
 
-      <!-- Chat -->
-      <div class="card lobby-chat">
-        <div class="chat-messages" id="lobbyChatMessages"></div>
-        <div class="chat-input-row">
-          <input type="text" id="chatInput" placeholder="Say something..." maxlength="200"
-            onkeydown="if(event.key==='Enter')sendChat()">
-          <button class="btn btn-secondary" onclick="sendChat()" style="padding:10px 16px;">Send</button>
+        <div id="categoryList" class="space-y-2.5"></div>
+
+        <div id="categoryAdmin"></div>
+
+        <div class="bg-white/90 rounded-2xl p-3 border border-sky-200 shadow-sm">
+          <div class="text-[11px] font-bold text-slate-700 uppercase mb-1.5">Players &bull; Current Score</div>
+          <div class="flex flex-wrap gap-x-3 gap-y-1 text-xs text-slate-600" id="categoryScores"></div>
         </div>
       </div>
     </div>
@@ -761,6 +183,7 @@
       </div>
       <div class="quiz-timer-display" id="quizTimerText"></div>
       <div class="question-text card" id="quizQuestion"></div>
+      <div id="quizMedia" class="hidden"></div>
       <div class="answer-grid" id="quizAnswers"></div>
       <div class="powerup-row" id="quizPowerups">
         <button class="powerup-btn" id="pwDouble" onclick="usePowerup('double')">&#10006;2 Double</button>
@@ -942,6 +365,9 @@
   <div class="toast-container" id="toasts"></div>
 
   <script src="/js/cards.js"></script>
+  <script src="/js/games.js"></script>
+  <script src="/js/quiz-ready.js"></script>
+  <script src="/js/music-fade.js"></script>
   <script>
     // --- Avatars ---
     const AVATARS = ['\u{1F438}', '\u{1F431}', '\u{1F984}', '\u{1F41D}', '\u{1F419}', '\u{1F99A}', '\u{1F427}', '\u{1F981}',
@@ -963,6 +389,7 @@
       pendingPowerup: null,
       lastQuizQuestionId: null,
       guessHistory: [],
+      reconnectToken: null,
       reconnectAttempts: 0,
       maxReconnect: 10,
       reconnectTimer: null,
@@ -978,6 +405,7 @@
     (function init() {
       const pathParts = window.location.pathname.split('/');
       state.code = pathParts[2]?.toUpperCase();
+      try { state.reconnectToken = localStorage.getItem('sh_reconnect_' + state.code); } catch { /* storage unavailable */ }
       const params = new URLSearchParams(window.location.search);
       const urlName = params.get('name')?.trim();
       const savedName = (() => { try { return localStorage.getItem('sh_player_name'); } catch { return null; } })();
@@ -985,24 +413,19 @@
 
       if (!state.code || state.code.length !== 4) {
         document.querySelector('.player-main').innerHTML =
-          '<div class="error-screen"><div class="card"><h2 style="margin-bottom:12px;">Invalid Room</h2>' +
-          '<p class="text-secondary">No valid room code in URL.</p><a href="/" class="btn btn-primary mt-2">Go Home</a></div></div>';
+          '<div class="device-screen bg-sky-100 border-4 border-white rounded-[2.5rem] p-6 text-center space-y-3">' +
+          '<h2 class="font-display text-2xl font-bold text-slate-800">Invalid Room</h2>' +
+          '<p class="text-sm text-slate-500">No valid room code in the link.</p>' +
+          '<a href="/" class="inline-block py-3 px-6 bg-sky-600 hover:bg-sky-700 text-white font-bold rounded-xl shadow-md shadow-sky-600/30">Go Home</a></div>';
         return;
       }
 
       document.getElementById('roomBadge').textContent = state.code;
-      if (navigator.share || navigator.clipboard) document.getElementById('shareBtn').style.display = 'inline';
+      if (navigator.share || navigator.clipboard) document.getElementById('shareBtn').classList.replace('hidden', 'flex');
 
       if (!state.name) {
-        // Show name entry form
-        document.querySelector('.player-main').innerHTML =
-          '<div style="display:flex;flex-direction:column;align-items:center;gap:16px;padding:20px;">' +
-          '<h2 style="font-size:1.5rem;">Join Room <span style="color:var(--neon-purple);font-family:monospace;letter-spacing:0.15em;">' + state.code + '</span></h2>' +
-          '<form id="nameForm" style="width:100%;max-width:360px;display:flex;flex-direction:column;gap:12px;">' +
-          '<input type="text" id="nameInput" placeholder="Enter your name" maxlength="20" autocomplete="off" spellcheck="false" autofocus ' +
-          'style="font-size:1.2rem;padding:16px;text-align:center;">' +
-          '<button type="submit" class="btn btn-primary" style="font-size:1.1rem;padding:16px;">Join Game</button>' +
-          '</form></div>';
+        showSection('nameSection');
+        document.getElementById('nameInput').focus();
         document.getElementById('nameForm').addEventListener('submit', function(e) {
           e.preventDefault();
           const name = document.getElementById('nameInput').value.trim();
@@ -1019,6 +442,7 @@
       try { localStorage.setItem('sh_player_name', state.name); } catch { /* ignore */ }
 
       document.getElementById('myName').textContent = state.name;
+      showSection('lobbySection');
 
       connect();
     })();
@@ -1037,7 +461,7 @@
         state.reconnectAttempts = 0;
         setConnectionStatus('connected', 'Connected');
         // Send join message
-        send({ type: 'JOIN_LOBBY', username: state.name });
+        send({ type: 'JOIN_LOBBY', username: state.name, reconnectToken: state.reconnectToken });
       };
 
       ws.onmessage = (e) => {
@@ -1082,6 +506,10 @@
     function handleMessage(msg) {
       switch (msg.type) {
         case 'JOIN_OK':
+          state.reconnectToken = msg.reconnectToken || null;
+          try {
+            if (state.reconnectToken) localStorage.setItem('sh_reconnect_' + state.code, state.reconnectToken);
+          } catch { /* keep the token in memory when storage is unavailable */ }
           state.playerId = msg.playerId;
           state.myIndex = msg.index ?? 0;
           if (msg.avatar) document.getElementById('myAvatar').textContent = msg.avatar;
@@ -1093,9 +521,16 @@
           state.players = lobbyState.players || [];
           state.isAdmin = state.players.some(p => p.playerId === state.playerId && p.isAdmin);
           state.gameSuggestions = lobbyState.gameSuggestions || {};
-          renderLobbyPlayers();
-          renderAdminControls();
-          updateSuggestVotes();
+          state.leadingGame = lobbyState.leadingGame || null;
+          const wasVoting = state.votingActive;
+          state.votingActive = !!lobbyState.votingActive;
+          state.availableCategories = lobbyState.availableCategories || [];
+          state.voteTallies = lobbyState.voteTallies || {};
+          if (!state.votingActive) state.myCategory = null;
+          renderLobby();
+          // Category vote opened/closed: move between dashboard and category picker
+          if (!state.gameType && state.votingActive && !wasVoting) showSection('categorySection');
+          if (!state.votingActive && isSectionActive('categorySection')) showSection('lobbySection');
           break;
         }
 
@@ -1120,7 +555,7 @@
           break;
 
         case 'CHAT_MESSAGE':
-          addChatMessage(msg.name, msg.text);
+          addChatMessage(msg.username || msg.name || 'Player', msg.text, msg.avatar);
           break;
 
         default:
@@ -1140,7 +575,7 @@
         // Show final state before returning to lobby
         switch (state.gameType) {
           case 'number-guess': renderNumberGuessState(msg); break;
-          case 'quiz': renderQuizState(msg); break;
+          case 'quiz': case 'music-quiz': renderQuizState(msg); break;
           case 'spy': renderSpyState(msg); break;
           case 'shithead': renderShitheadState(msg); break;
           case 'question-form': renderQuestionFormState(msg); break;
@@ -1153,7 +588,6 @@
           state.qfIndex = 0;
           state._lastQfMsg = null;
           state.grSelectedCard = null;
-          updateReadyBtn();
           showSection('lobbySection');
         }, 3000);
         return;
@@ -1170,7 +604,7 @@
 
       switch (state.gameType) {
         case 'number-guess': renderNumberGuessState(msg); break;
-        case 'quiz': renderQuizState(msg); break;
+        case 'quiz': case 'music-quiz': renderQuizState(msg); break;
         case 'spy': renderSpyState(msg); break;
         case 'shithead': renderShitheadState(msg); break;
         case 'question-form': renderQuestionFormState(msg); break;
@@ -1192,106 +626,118 @@
     }
 
     function getGameSectionId(game) {
-      const map = { 'number-guess': 'numberGuessSection', 'quiz': 'quizSection', 'spy': 'spySection', 'shithead': 'shitheadSection', 'question-form': 'questionFormSection', 'gin-rummy': 'ginRummySection', 'template': 'templateSection' };
+      const map = { 'number-guess': 'numberGuessSection', 'quiz': 'quizSection', 'music-quiz': 'quizSection', 'spy': 'spySection', 'shithead': 'shitheadSection', 'question-form': 'questionFormSection', 'gin-rummy': 'ginRummySection', 'template': 'templateSection' };
       return map[game] || 'lobbySection';
     }
 
-    // --- Lobby ---
-    function renderLobbyPlayers() {
-      const container = document.getElementById('lobbyPlayers');
-      if (state.players.length === 0) {
-        container.innerHTML = '<div style="color:var(--text-secondary);font-size:0.9rem;">Waiting for players...</div>';
-        return;
-      }
-
-      container.innerHTML = '<div class="player-list">' + state.players.map((p, i) => {
-        const avatar = AVATARS[i % AVATARS.length];
-        const readyText = p.ready
-          ? '<span class="player-ready">Ready</span>'
-          : '<span class="player-not-ready">Not ready</span>';
-        const pName = p.username || p.name;
-        const isMe = pName === state.name ? ' style="border-left:3px solid var(--neon-purple);padding-left:12px;"' : '';
-        return '<div class="player-item"' + isMe + '>' +
-          '<span class="player-avatar">' + avatar + '</span>' +
-          '<span class="player-name">' + escapeHtml(pName) + '</span>' +
-          readyText + '</div>';
-      }).join('') + '</div>';
+    function isSectionActive(id) {
+      return !!document.getElementById(id)?.classList.contains('active');
     }
 
-    function toggleReady() {
-      state.ready = !state.ready;
-      send({ type: 'SET_READY', ready: state.ready });
-      updateReadyBtn();
+    // --- Dashboard: vote for next activity ---
+    function connectedCount() {
+      return state.players.filter(p => p.connected !== false).length;
     }
 
-    function updateReadyBtn() {
-      const btn = document.getElementById('readyBtn');
-      if (state.ready) {
-        btn.textContent = 'Ready!';
-        btn.className = 'btn ready-btn is-ready';
+    function votesLabel(n) {
+      return n + ' vote' + (n === 1 ? '' : 's');
+    }
+
+    function gameBlocker(g) {
+      if (!g.hasUi) return 'Soon';
+      const n = connectedCount();
+      if (n < g.min) return g.min + '+ players';
+      if (n > g.max) return 'Max ' + g.max;
+      return null;
+    }
+
+    function renderLobby() {
+      renderVoteList();
+      renderAdminControls();
+      renderLobbyPlayers();
+      renderCategoryVote();
+      const back = document.getElementById('categoryReturn');
+      back.classList.toggle('hidden', !state.votingActive);
+      back.classList.toggle('flex', !!state.votingActive);
+    }
+
+    function renderVoteList() {
+      const counts = {};
+      Object.values(state.gameSuggestions || {}).forEach(g => { counts[g] = (counts[g] || 0) + 1; });
+      const mine = (state.gameSuggestions || {})[state.playerId];
+      const leader = SH_GAMES.find(g => g.type === state.leadingGame);
+      const rest = SH_GAMES.filter(g => g !== leader)
+        .sort((a, b) => (gameBlocker(a) ? 1 : 0) - (gameBlocker(b) ? 1 : 0));
+
+      let html = '';
+      if (leader) {
+        const yours = leader.type === mine ? ' &middot; your vote' : '';
+        html += '<button onclick="suggestGame(\'' + leader.type + '\')" class="w-full p-3.5 bg-sky-600 hover:bg-sky-700 text-white rounded-2xl shadow-md shadow-sky-600/25 flex items-center justify-between transition group border border-sky-500">' +
+          '<div class="flex items-center gap-3">' +
+            '<span class="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center text-lg">' + leader.icon + '</span>' +
+            '<div class="text-left">' +
+              '<div class="font-bold text-base leading-none">' + escapeHtml(leader.label) + '</div>' +
+              '<span class="text-[11px] text-sky-100">' + votesLabel(counts[leader.type] || 0) + ' (Most picked)' + yours + '</span>' +
+            '</div>' +
+          '</div>' +
+          '<i class="fa-solid fa-trophy text-xs opacity-75 group-hover:scale-110 transition"></i>' +
+        '</button>';
       } else {
-        btn.textContent = 'Tap to Ready Up';
-        btn.className = 'btn ready-btn btn-secondary';
+        html += '<div class="w-full p-3 rounded-2xl border border-dashed border-sky-300 bg-white/50 text-xs text-slate-500 text-center">No votes yet &mdash; tap a game to wish for it</div>';
       }
-    }
 
-    function updateSuggestVotes() {
-      const voteCounts = {};
-      Object.values(state.gameSuggestions || {}).forEach(game => {
-        voteCounts[game] = (voteCounts[game] || 0) + 1;
-      });
-      const map = {
-        'number-guess': 'suggestNumberGuess',
-        'quiz': 'suggestQuiz',
-        'spy': 'suggestSpy',
-        'shithead': 'suggestShithead',
-        'question-form': 'suggestQuestionForm',
-        'gin-rummy': 'suggestGinRummy'
-      };
-      Object.entries(map).forEach(([game, btnId]) => {
-        const btn = document.getElementById(btnId);
-        if (!btn) return;
-        const badge = btn.querySelector('.vote-count');
-        if (badge) {
-          const count = voteCounts[game] || 0;
-          badge.textContent = count > 0 ? count + ' vote' + (count > 1 ? 's' : '') : '';
-        }
-      });
+      html += '<div class="grid grid-cols-2 gap-2">' + rest.map(g => {
+        const blocker = gameBlocker(g);
+        const count = counts[g.type] || 0;
+        const isMine = g.type === mine;
+        const tone = blocker
+          ? 'bg-white/40 text-slate-400 border-sky-100 cursor-not-allowed'
+          : isMine
+            ? 'bg-white text-sky-900 border-sky-500 ring-2 ring-sky-300'
+            : 'bg-white/80 hover:bg-white text-slate-800 border-sky-200';
+        const meta = blocker || (count ? votesLabel(count) : '');
+        return '<button ' + (blocker ? 'disabled' : 'onclick="suggestGame(\'' + g.type + '\')"') +
+          ' class="activity-card p-2.5 rounded-xl border font-medium text-xs flex items-center justify-between gap-1.5 transition ' + tone + '">' +
+          '<span class="activity-label flex items-center gap-1.5 min-w-0"><span class="activity-icon">' + g.icon + '</span><span class="activity-name">' + escapeHtml(g.label) + '</span></span>' +
+          '<span class="text-[10px] shrink-0 ' + (blocker ? '' : 'text-sky-700 font-bold') + '">' + meta + '</span>' +
+        '</button>';
+      }).join('') + '</div>';
+
+      document.getElementById('voteList').innerHTML = html;
     }
 
     function suggestGame(game) {
       state.votedGame = game;
       send({ type: 'SUGGEST_GAME', gameType: game });
-
-      document.querySelectorAll('.suggest-btn').forEach(b => b.classList.remove('voted'));
-      const id = 'suggest' + game.split('-').map(w => w[0].toUpperCase() + w.slice(1)).join('');
-      const el = document.getElementById(id);
-      if (el) el.classList.add('voted');
     }
 
     function renderAdminControls() {
       const controls = document.getElementById('adminControls');
+      const leader = state.leadingGame ? shGame(state.leadingGame) : null;
+      const admin = state.players.find(p => p.isAdmin);
+
       if (!state.isAdmin) {
-        controls.style.display = 'none';
+        controls.innerHTML = leader
+          ? '<p class="text-center text-xs text-slate-500">Waiting for <b>' + escapeHtml(admin?.username || 'the admin') + '</b> to start ' + escapeHtml(leader.label) + '&hellip;</p>'
+          : '';
         return;
       }
-      controls.style.display = 'block';
-      const suggestions = Object.values(state.gameSuggestions || {});
-      const topGame = suggestions.length > 0 ? suggestions[suggestions.length - 1] : 'number-guess';
-      state.gameToStart = topGame;
-      const names = { 'number-guess': 'Number Guess', 'quiz': 'Quiz', 'spy': 'Spy Game', 'shithead': 'Shithead', 'question-form': 'Questions', 'gin-rummy': 'Gin Rummy', 'template': 'Template' };
 
       let html = '';
-      if (topGame === 'shithead') {
-        html += '<div class="card" style="margin-bottom:8px;padding:12px;">' +
-          '<div style="font-size:0.8rem;color:var(--text-secondary);margin-bottom:6px;">Number of decks</div>' +
-          '<div style="display:flex;gap:8px;">' +
-          '<button class="btn btn-secondary deck-opt' + (state.shitheadDecks === 1 ? ' is-ready' : '') + '" onclick="setShDecks(1)" style="flex:1;padding:10px;">1 deck<br><span style="font-size:0.75rem;opacity:0.7;">52 cards</span></button>' +
-          '<button class="btn btn-secondary deck-opt' + (state.shitheadDecks === 2 ? ' is-ready' : '') + '" onclick="setShDecks(2)" style="flex:1;padding:10px;">2 decks<br><span style="font-size:0.75rem;opacity:0.7;">104 cards</span></button>' +
-          '<button class="btn btn-secondary deck-opt' + (state.shitheadDecks === 4 ? ' is-ready' : '') + '" onclick="setShDecks(4)" style="flex:1;padding:10px;">4 decks<br><span style="font-size:0.75rem;opacity:0.7;">208 cards</span></button>' +
-          '</div></div>';
+      if (leader && leader.type === 'shithead') {
+        html += '<div class="grid grid-cols-3 gap-2">' + [1, 2, 4].map(n =>
+          '<button onclick="setShDecks(' + n + ')" class="p-2 rounded-xl border text-xs font-bold transition ' +
+          (state.shitheadDecks === n ? 'bg-sky-50 border-sky-500 text-sky-800' : 'bg-white/80 border-sky-200 text-slate-700') + '">' +
+          n + ' deck' + (n > 1 ? 's' : '') + '<br><span class="font-normal text-[10px] opacity-70">' + (52 * n) + ' cards</span></button>'
+        ).join('') + '</div>';
       }
-      html += '<button class="btn btn-primary" id="startGameBtn" onclick="startGame()" style="font-size:1.1rem;padding:16px;">Start ' + (names[topGame] || topGame) + '</button>';
+      if (leader) {
+        const label = leader.type === 'quiz' && !state.votingActive ? 'Start Quiz &rarr; pick category' : 'Start ' + escapeHtml(leader.label);
+        html += '<button onclick="startGame()" class="w-full py-3 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold text-sm shadow-md transition flex items-center justify-center gap-2">' +
+          '<i class="fa-solid fa-play"></i> ' + label + '</button>';
+      } else {
+        html += '<button disabled class="w-full py-3 bg-slate-300 text-white rounded-xl font-bold text-sm cursor-not-allowed">Waiting for votes&hellip;</button>';
+      }
       controls.innerHTML = html;
     }
 
@@ -1300,13 +746,89 @@
       renderAdminControls();
     }
 
+    // The server resolves the most-voted game (quiz first opens its category vote).
     function startGame() {
-      const gameType = state.gameToStart || 'number-guess';
       const config = {};
-      if (gameType === 'shithead') {
-        config.decks = state.shitheadDecks || 1;
-      }
-      send({ type: 'START_MINI_GAME', gameType, config });
+      if (state.leadingGame === 'shithead') config.decks = state.shitheadDecks || 1;
+      send({ type: 'START_VOTED_GAME', config });
+    }
+
+
+    // --- Players & current score ---
+    function sortedPlayers() {
+      return [...state.players].sort((a, b) => (b.sessionScore || 0) - (a.sessionScore || 0));
+    }
+
+    function renderLobbyPlayers() {
+      const container = document.getElementById('lobbyPlayers');
+      const rows = sortedPlayers().map(p => {
+        const isMe = p.playerId === state.playerId;
+        const voted = (state.gameSuggestions || {})[p.playerId];
+        const crown = p.isAdmin ? '<i class="fa-solid fa-crown text-amber-500 text-[10px]"></i> ' : '';
+        const vote = voted ? '<span class="text-[11px]" title="Voted ' + escapeHtml(shGame(voted).label) + '">' + shGame(voted).icon + '</span>' : '';
+        return '<div class="flex justify-between items-center py-1 px-2 rounded-lg ' +
+            (isMe ? 'bg-sky-50 text-slate-800 font-medium' : 'bg-slate-50 text-slate-600') + (p.connected === false ? ' opacity-50' : '') + '">' +
+          '<span class="flex items-center gap-1.5 min-w-0"><span>' + escapeHtml(p.avatar || '') + '</span>' + crown +
+            '<span class="truncate">' + escapeHtml(p.username || p.name) + (isMe ? ' (You)' : '') + '</span>' + vote + '</span>' +
+          '<span class="font-bold shrink-0 ' + (isMe ? 'text-sky-700' : 'text-slate-700') + '">' + (p.sessionScore || 0) + ' pts</span>' +
+        '</div>';
+      }).join('');
+
+      container.innerHTML =
+        '<div class="flex items-center justify-between mb-2">' +
+          '<span class="text-xs font-bold text-slate-700 uppercase">Players &middot; Score</span>' +
+          '<span class="text-[10px] text-slate-500 font-medium">' + connectedCount() + ' in lobby</span>' +
+        '</div>' +
+        '<div class="space-y-1.5 text-xs">' + (rows || '<div class="text-slate-500">Waiting for players...</div>') + '</div>';
+    }
+
+    // --- Quiz category vote ---
+    function renderCategoryVote() {
+      if (!state.votingActive) return;
+      const tallies = state.voteTallies || {};
+      const cats = state.availableCategories || [];
+      const max = Math.max(0, ...Object.values(tallies));
+      const isGeo = c => /geograph/i.test(c.name);
+
+      const voteMeta = c => {
+        const n = tallies[c.id] || 0;
+        return n ? votesLabel(n) + (n === max ? ' &middot; leading' : '') : '';
+      };
+
+      const featured = cats.filter(isGeo).map(c => {
+        const mine = state.myCategory === c.id;
+        return '<button onclick="voteCategory(' + c.id + ')" class="w-full p-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-xs transition flex items-center justify-between shadow-sm' +
+          (mine ? ' ring-2 ring-offset-2 ring-offset-sky-100 ring-emerald-400' : '') + '">' +
+          '<span class="flex items-center gap-1.5"><span>' + shCategoryIcon(c.name) + '</span>' + escapeHtml(shCategoryLabel(c.name)) + ' (Map Challenge)</span>' +
+          '<span class="text-[11px] bg-white/25 px-1.5 py-0.5 rounded">' + (voteMeta(c) || 'Vote') + '</span>' +
+        '</button>';
+      }).join('');
+
+      const others = cats.filter(c => !isGeo(c)).map(c => {
+        const mine = state.myCategory === c.id;
+        return '<button onclick="voteCategory(' + c.id + ')" class="p-3 rounded-xl border font-semibold text-xs transition flex flex-col items-center justify-center gap-0.5 shadow-sm ' +
+          (mine ? 'bg-white border-sky-500 ring-2 ring-sky-300 text-sky-900' : 'bg-white/85 hover:bg-white border-sky-200 text-slate-800') + '">' +
+          '<span class="flex items-center gap-1.5 text-center"><span>' + shCategoryIcon(c.name) + '</span>' + escapeHtml(shCategoryLabel(c.name)) + '</span>' +
+          '<span class="text-[10px] text-sky-700 font-bold min-h-[1em]">' + voteMeta(c) + '</span>' +
+        '</button>';
+      }).join('');
+
+      document.getElementById('categoryList').innerHTML = featured +
+        '<div class="grid grid-cols-2 gap-2 max-h-[45vh] overflow-y-auto no-scrollbar">' + others + '</div>';
+
+      document.getElementById('categoryAdmin').innerHTML = state.isAdmin
+        ? '<button onclick="startGame()" class="w-full py-3 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold text-sm shadow-md transition flex items-center justify-center gap-2"><i class="fa-solid fa-play"></i> Start Quiz</button>'
+        : '<p class="text-center text-xs text-slate-500">The admin starts the quiz when everyone has voted.</p>';
+
+      document.getElementById('categoryScores').innerHTML = sortedPlayers().map(p =>
+        '<span>' + escapeHtml(p.username || p.name) + ': <b class="text-sky-700">' + (p.sessionScore || 0) + '</b></span>'
+      ).join('');
+    }
+
+    function voteCategory(id) {
+      state.myCategory = id;
+      send({ type: 'CATEGORY_VOTE', categoryId: id });
+      renderCategoryVote();
     }
 
     // --- Chat ---
@@ -1327,11 +849,11 @@
       input.value = '';
     }
 
-    function addChatMessage(name, text) {
+    function addChatMessage(name, text, avatar) {
       const container = document.getElementById('lobbyChatMessages');
       const el = document.createElement('div');
       el.className = 'chat-msg';
-      el.innerHTML = '<span class="author">' + escapeHtml(name) + ':</span> ' + escapeHtml(text);
+      el.innerHTML = '<span class="author"><span class="chat-avatar" aria-hidden="true">' + escapeHtml(avatar || '💬') + '</span> ' + escapeHtml(name || 'Player') + '</span><span class="chat-text">' + escapeHtml(text) + '</span>';
       container.appendChild(el);
       container.scrollTop = container.scrollHeight;
       while (container.children.length > 50) container.removeChild(container.firstChild);
@@ -1416,6 +938,11 @@
       const grid = document.getElementById('quizAnswers');
       const powerupsEl = document.getElementById('quizPowerups');
 
+      if (msg.phase !== 'countdown') {
+        stopQuizReadyCountdown();
+        timerText.classList.remove('quiz-ready-number');
+      }
+
       // Reset per-question state when a new question arrives
       const q = msg.question || null;
       if (q && q.id && q.id !== state.lastQuizQuestionId) {
@@ -1423,6 +950,11 @@
         state.eliminatedAnswers = [];
         state.pendingPowerup = null;
         state.lastQuizQuestionId = q.id;
+      }
+
+      if (q && msg.selectedAnswer != null) {
+        const selectedIndex = q.answers.indexOf(msg.selectedAnswer);
+        if (selectedIndex !== -1) state.selectedAnswer = selectedIndex;
       }
 
       // Engine-provided eliminatedAnswers override local (keeps fifty powerup in sync)
@@ -1447,7 +979,8 @@
 
       if (msg.phase === 'countdown') {
         timerContainer.style.display = 'none';
-        timerText.textContent = 'Get ready...';
+        timerText.classList.add('quiz-ready-number');
+        startQuizReadyCountdown('quizTimerText', msg.timeLeft);
         questionEl.textContent = headerText || 'Get ready!';
         grid.innerHTML = '';
         powerupsEl.style.display = 'none';
@@ -1462,17 +995,11 @@
 
         // Save question state for re-renders (e.g. after answer selection)
         state._lastQuestion = q;
-        state._lastTimeLeft = msg.timeLeft;
-        state._lastTimeTotal = msg.timeTotal;
 
-        // Timer
+        // Timer: the server sends the time left; tick it down locally
         if (msg.timeLeft != null && msg.timeTotal) {
-          timerContainer.style.display = 'block';
-          const pct = (msg.timeLeft / msg.timeTotal) * 100;
-          timerBar.style.width = pct + '%';
-          timerBar.className = 'timer-bar' + (pct < 20 ? ' critical' : pct < 40 ? ' warning' : '');
-          timerText.textContent = Math.ceil(msg.timeLeft);
-        } else {
+          startQuizCountdown(msg.timeLeft, msg.timeTotal);
+        } else if (!state.quizCountdown) {
           timerContainer.style.display = 'none';
           timerText.textContent = '';
         }
@@ -1486,7 +1013,7 @@
           if (state.selectedAnswer === i) cls += ' selected';
           if (state.eliminatedAnswers.includes(i)) cls += ' eliminated';
           const disabled = state.selectedAnswer !== null ? ' disabled' : '';
-          return '<button class="' + cls + '"' + disabled + ' onclick="selectAnswer(' + i + ')">' +
+          return '<button class="' + cls + '"' + disabled + ' aria-pressed="' + (state.selectedAnswer === i) + '" onclick="selectAnswer(' + i + ')">' +
             '<strong>' + labels[i] + '.</strong> ' + escapeHtml(a) + '</button>';
         }).join('');
 
@@ -1504,19 +1031,160 @@
         const answers = (q && q.answers) || [];
         grid.innerHTML = answers.map((a, i) => {
           let cls = 'answer-btn ' + classes[i];
+          if (state.selectedAnswer === i) cls += ' selected';
           if (i === msg.correctIndex) cls += ' correct';
           else if (state.selectedAnswer === i) cls += ' incorrect';
           if (state.eliminatedAnswers.includes(i) && i !== msg.correctIndex) cls += ' eliminated';
-          return '<button class="' + cls + '" disabled>' +
+          return '<button class="' + cls + '" aria-pressed="' + (state.selectedAnswer === i) + '" disabled>' +
             '<strong>' + labels[i] + '.</strong> ' + escapeHtml(a) + '</button>';
         }).join('');
 
         powerupsEl.style.display = 'none';
       }
 
+      if (msg.phase !== 'question') stopQuizCountdown(msg.phase === 'countdown');
+      renderQuizMedia(msg);
+
       if (msg.score != null) {
         document.getElementById('quizScore').style.display = 'block';
         document.getElementById('quizScoreVal').textContent = msg.score;
+      }
+    }
+
+    // --- Question countdown (bar + seconds), ticked locally from the server's time left ---
+    function startQuizCountdown(timeLeft, timeTotal) {
+      state.quizDeadline = Date.now() + timeLeft * 1000;
+      state.quizTotal = timeTotal;
+      if (!state.quizCountdown) state.quizCountdown = setInterval(tickQuizCountdown, 250);
+      tickQuizCountdown();
+    }
+
+    function tickQuizCountdown() {
+      const left = Math.max(0, (state.quizDeadline - Date.now()) / 1000);
+      const pct = state.quizTotal ? (left / state.quizTotal) * 100 : 0;
+      // Only touch class/text when they change: Tailwind's CDN compiler re-runs on every class change
+      const bar = document.getElementById('quizTimerBar');
+      const container = document.getElementById('quizTimerContainer');
+      if (container.style.display !== 'block') container.style.display = 'block';
+      bar.style.width = pct + '%';
+      const cls = 'timer-bar' + (pct < 20 ? ' critical' : pct < 40 ? ' warning' : '');
+      if (bar.className !== cls) bar.className = cls;
+      const text = document.getElementById('quizTimerText');
+      const secText = String(Math.ceil(left));
+      if (text.textContent !== secText) text.textContent = secText;
+      if (left <= 0) stopQuizCountdown(true);
+    }
+
+    function stopQuizCountdown(keepDisplay) {
+      clearInterval(state.quizCountdown);
+      state.quizCountdown = null;
+      if (!keepDisplay) {
+        document.getElementById('quizTimerContainer').style.display = 'none';
+        document.getElementById('quizTimerText').textContent = '';
+      }
+    }
+
+    // --- Music Quiz audio: the clip plays on every phone (and the TV); big mute button per phone ---
+    const SILENT_CLIP = 'data:audio/wav;base64,UklGRogAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YWQAAACAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICA';
+    const phoneAudio = new Audio();
+    const phoneMusicFade = createMusicFade(phoneAudio);
+    let phoneAudioQuestion = null;
+    state.musicMuted = (() => { try { return localStorage.getItem('sh_music_muted') === '1'; } catch { return false; } })();
+    state.musicBlocked = false;
+    phoneAudio.muted = state.musicMuted;
+
+    // Phones only allow sound after a tap: unlock this one reusable element on the first tap
+    document.addEventListener('pointerdown', () => {
+      if (phoneAudioQuestion) {
+        phoneAudio.play().then(() => { state.musicBlocked = false; updateMusicBtn(); }).catch(() => {});
+        return;
+      }
+      phoneAudio.src = SILENT_CLIP;
+      phoneAudio.play().catch(() => {});
+    }, { once: true });
+
+    function syncPhoneMusic(msg) {
+      const q = msg.question;
+      const preview = q && q.media && q.media.preview;
+      const audible = msg.phase === 'question' || msg.phase === 'reveal';
+      if (!preview || !audible) {
+        if (!audible) stopPhoneMusic();
+        return;
+      }
+      // Re-renders within the same question keep the clip running
+      if (q.id === phoneAudioQuestion) { phoneMusicFade.sync(msg); return; }
+      if (msg.phase !== 'question') return;
+      phoneAudioQuestion = q.id;
+      state.musicBlocked = false;
+      phoneAudio.src = preview;
+      phoneMusicFade.start(msg.timeLeft);
+      phoneAudio.play().catch(() => { state.musicBlocked = true; updateMusicBtn(); });
+    }
+
+    function stopPhoneMusic() {
+      phoneMusicFade.stop();
+      if (phoneAudioQuestion) phoneAudio.pause();
+      phoneAudioQuestion = null;
+      state.musicBlocked = false;
+    }
+
+    function toggleMusicMute() {
+      if (state.musicBlocked) {
+        phoneAudio.play().then(() => { state.musicBlocked = false; updateMusicBtn(); }).catch(() => {});
+        return;
+      }
+      state.musicMuted = !state.musicMuted;
+      phoneAudio.muted = state.musicMuted;
+      try { localStorage.setItem('sh_music_muted', state.musicMuted ? '1' : '0'); } catch { /* ignore */ }
+      updateMusicBtn();
+    }
+
+    function musicBtnHtml() {
+      const [icon, label, tone] = state.musicBlocked
+        ? ['fa-play', 'Tap to hear', 'bg-sky-600 text-white shadow-md shadow-sky-600/30']
+        : state.musicMuted
+          ? ['fa-volume-xmark', 'Muted', 'bg-slate-200 text-slate-600']
+          : ['fa-volume-high', 'Sound on', 'bg-sky-100 text-sky-700'];
+      return '<button id="musicBtn" onclick="toggleMusicMute()" aria-label="' + label + '" class="shrink-0 w-16 h-16 rounded-2xl flex flex-col items-center justify-center gap-0.5 font-bold transition active:scale-95 ' + tone + '">' +
+        '<i class="fa-solid ' + icon + ' text-2xl"></i><span class="text-[10px] leading-none">' + label + '</span></button>';
+    }
+
+    function updateMusicBtn() {
+      const btn = document.getElementById('musicBtn');
+      if (btn) btn.outerHTML = musicBtnHtml();
+    }
+
+    // Music Quiz strip: now playing + mute during the question, the song at reveal
+    function renderQuizMedia(msg) {
+      syncPhoneMusic(msg);
+      const box = document.getElementById('quizMedia');
+      const media = msg.question && msg.question.media;
+      if (!media || (msg.phase !== 'question' && msg.phase !== 'reveal')) {
+        box.className = 'hidden';
+        box.innerHTML = '';
+        return;
+      }
+      box.className = 'device-screen bg-white/90 border border-sky-200 rounded-2xl p-3 flex items-center gap-3';
+      if (msg.phase === 'reveal' && media.artist) {
+        box.innerHTML =
+          (media.cover ? '<img src="' + escapeHtml(media.cover) + '" alt="" class="w-14 h-14 rounded-xl object-cover shadow-sm">' : '') +
+          '<div class="min-w-0 flex-1"><div class="font-bold text-slate-800 truncate">' + escapeHtml(media.title) + '</div>' +
+          '<div class="text-xs text-slate-500 truncate">' + escapeHtml(media.artist) + '</div></div>' +
+          musicBtnHtml();
+      } else {
+        box.innerHTML =
+          '<div class="flex-1 min-w-0">' +
+            '<div class="font-bold text-sm text-slate-700">Now playing&hellip;</div>' +
+            (msg.question.category ? '<div class="text-[11px] font-semibold text-sky-700 truncate">Genre: ' + escapeHtml(msg.question.category) + '</div>' : '') +
+            '<div class="flex items-end gap-1 h-6 mt-1">' +
+              '<span class="w-1.5 h-3 bg-sky-500 rounded-full animate-bounce"></span>' +
+              '<span class="w-1.5 h-5 bg-sky-600 rounded-full animate-pulse"></span>' +
+              '<span class="w-1.5 h-4 bg-sky-400 rounded-full animate-bounce"></span>' +
+              '<span class="w-1.5 h-6 bg-sky-700 rounded-full animate-pulse"></span>' +
+              '<span class="w-1.5 h-3 bg-sky-500 rounded-full animate-bounce"></span>' +
+            '</div>' +
+          '</div>' +
+          musicBtnHtml();
       }
     }
 
@@ -1539,6 +1207,7 @@
       const btns = document.querySelectorAll('#quizAnswers .answer-btn');
       btns.forEach((btn, i) => {
         btn.disabled = true;
+        btn.setAttribute('aria-pressed', String(i === index));
         if (i === index) btn.classList.add('selected');
       });
       document.getElementById('quizPowerups').style.display = 'none';

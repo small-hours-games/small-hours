@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#e0f2fe">
+  <title>Smallhours TV</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;700&family=Fredoka:wght@600;700&display=swap" rel="stylesheet">
+  <style>
+    :root { color-scheme: light; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 24px;
+      font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+      color: #1e293b;
+      background: linear-gradient(135deg, #f0f9ff 0%, #eff6ff 55%, #eef2ff 100%);
+    }
+    .logo {
+      width: 120px; height: 120px; border-radius: 36px;
+      background: linear-gradient(45deg, #0ea5e9, #2563eb);
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 20px 40px -12px rgba(14, 116, 144, 0.35);
+    }
+    .logo svg { width: 64px; height: 64px; fill: #fff; }
+    h1 { font-family: 'Fredoka', sans-serif; font-size: 64px; font-weight: 700; letter-spacing: -0.02em; }
+    p { font-size: 22px; font-weight: 500; color: #475569; }
+    .dots span {
+      display: inline-block; width: 14px; height: 14px; margin: 0 6px; border-radius: 50%;
+      background: #0284c7; animation: pulse 1.2s infinite ease-in-out;
+    }
+    .dots span:nth-child(2) { animation-delay: 0.2s; }
+    .dots span:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes pulse { 0%, 80%, 100% { opacity: 0.25; transform: scale(0.8); } 40% { opacity: 1; transform: scale(1); } }
+  </style>
+</head>
+<body>
+  <div class="logo" aria-hidden="true">
+    <!-- gamepad -->
+    <svg viewBox="0 0 640 512"><path d="M192 64C86 64 0 150 0 256s86 192 192 192h256c106 0 192-86 192-192S554 64 448 64H192zm304 248a40 40 0 1 1 0-80 40 40 0 1 1 0 80zm-64-96a40 40 0 1 1 0-80 40 40 0 1 1 0 80zM168 200c0-13.3 10.7-24 24-24s24 10.7 24 24v32h32c13.3 0 24 10.7 24 24s-10.7 24-24 24h-32v32c0 13.3-10.7 24-24 24s-24-10.7-24-24v-32h-32c-13.3 0-24-10.7-24-24s10.7-24 24-24h32v-32z"/></svg>
+  </div>
+  <h1>Smallhours</h1>
+  <p id="status">Creating a room&hellip;</p>
+  <div class="dots" aria-hidden="true"><span></span><span></span><span></span></div>
+
+  <script>
+    // TV entry point (used by the Android TV app): create a room, then show its host screen.
+    let attempt = 0;
+    async function createRoom() {
+      try {
+        const res = await fetch('/api/rooms', { method: 'POST' });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || !data.code) throw new Error(data.error || 'HTTP ' + res.status);
+        location.replace('/host/' + data.code + '?tv=1');
+      } catch (err) {
+        attempt++;
+        const wait = Math.min(30, 2 * attempt);
+        document.getElementById('status').textContent = 'Could not reach the server, trying again in ' + wait + ' s…';
+        setTimeout(createRoom, wait * 1000);
+      }
+    }
+    createRoom();
+  </script>
+</body>
+</html>

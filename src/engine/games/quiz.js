@@ -17,7 +17,7 @@ function seededShuffle(arr, seed) {
 }
 
 const PHASE_DURATIONS = {
-  countdown: 3000,
+  countdown: 5000,
   question: 15000,
   reveal: 4000,
   between: 5000,
@@ -26,30 +26,32 @@ const PHASE_DURATIONS = {
 const quiz = {
   async prepare(config, { usedQuestionIds }) {
     const amount = config.questionCount || 10;
+
     const result = await fetchQuestions(config.categoryId, amount);
     if (!result.ok) {
       throw new Error(`Failed to fetch questions: ${result.error.message}`);
     }
 
-    // Filter out questions already used in this room session
-    let unused = result.questions.filter(q => !usedQuestionIds.has(q.id));
-
-    // Supplement with a fresh fetch if not enough unused questions
-    if (unused.length < amount) {
+    // Shuffle the full pool, then prefer unseen questions. Set insertion order
+    // records recency so exhausted pools rotate oldest questions first.
+    let candidates = result.questions;
+    if (candidates.filter(q => !usedQuestionIds.has(q.id)).length < amount) {
       const supplement = await fetchQuestions(config.categoryId, amount);
-      if (supplement.ok) {
-        const existingIds = new Set(unused.map(q => q.id));
-        for (const q of supplement.questions) {
-          if (!usedQuestionIds.has(q.id) && !existingIds.has(q.id)) {
-            unused.push(q);
-            existingIds.add(q.id);
-          }
-          if (unused.length >= amount) break;
-        }
-      }
+      if (supplement.ok) candidates = [...candidates, ...supplement.questions];
     }
-
-    const selected = unused.slice(0, amount);
+    const pool = [...new Map(candidates.map(q => [q.id, q])).values()];
+    for (let i = pool.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [pool[i], pool[j]] = [pool[j], pool[i]];
+    }
+    const recency = new Map([...usedQuestionIds].map((id, i) => [id, i]));
+    const unused = pool.filter(q => !recency.has(q.id));
+    const repeats = pool.filter(q => recency.has(q.id))
+      .sort((a, b) => recency.get(a.id) - recency.get(b.id));
+    const selected = [...unused, ...repeats].slice(0, amount);
+    if (selected.length === 0) {
+      throw new Error('No questions available for this category');
+    }
     return {
       config: { ...config, questions: selected },
       trackIds: selected.map(q => q.id),
@@ -81,6 +83,8 @@ const quiz = {
       // { [playerId]: questionIndex } — tracks which question fifty was activated on
       fiftyActivatedOn: {},
       questionStartTime: null,
+      // Length of each question phase; the speed bonus scales with it
+      questionDuration: config.questionDuration || PHASE_DURATIONS.question,
       round: 0,
     };
   },
@@ -215,7 +219,7 @@ const quiz = {
             const isCorrect = answer.answerId === correctAnswer;
             if (isCorrect) {
               const elapsed = answer.timestamp - state.questionStartTime;
-              const timeRatio = Math.max(0, 1 - elapsed / PHASE_DURATIONS.question);
+              const timeRatio = Math.max(0, 1 - elapsed / (state.questionDuration || PHASE_DURATIONS.question));
               let points = Math.round(1000 * (0.5 + 0.5 * timeRatio));
 
               if (answer.powerupType === 'double') {
@@ -322,6 +326,14 @@ const quiz = {
           difficulty: question.difficulty,
         };
 
+        // Music Quiz: the clip is playable during the question; cover and names
+        // would give the answer away, so they only appear at reveal.
+        if (question.media) {
+          base.question.media = state.phase === 'reveal'
+            ? { ...question.media }
+            : { preview: question.media.preview };
+        }
+
         // Compute eliminatedAnswers for this player (fifty-fifty powerup).
         // Fifty is per-question: only eliminate if the player activated fifty
         // on this specific question (tracked via fiftyActivatedOn).
@@ -341,6 +353,7 @@ const quiz = {
         }
 
         base.hasAnswered = !!state.answers[playerId];
+        base.selectedAnswer = state.answers[playerId]?.answerId ?? null;
       }
     }
 
@@ -357,6 +370,9 @@ const quiz = {
         }
       }
       base.correctPlayers = whoGotItRight;
+      base.playerAnswers = Object.fromEntries(
+        Object.entries(state.answers).map(([pid, answer]) => [pid, answer.answerId])
+      );
     }
 
     if (state.phase === 'finished') {

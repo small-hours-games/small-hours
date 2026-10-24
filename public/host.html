@@ -3,553 +3,74 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Small Hours - Host</title>
-  <link rel="icon" type="image/png" href="/images/Shg-gemeni-trans.png">
-  <link rel="stylesheet" href="/css/style.css">
+  <meta name="theme-color" content="#e0f2fe">
+  <title>Smallhours - TV Screen</title>
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <script src="/js/tailwind-config.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
-  <style>
-    body {
-      display: flex;
-      flex-direction: column;
-      min-height: 100vh;
-    }
-
-    .host-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 20px 32px;
-      border-bottom: 1px solid var(--glass-border);
-    }
-
-    .host-logo {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .host-logo img {
-      height: 36px;
-      width: auto;
-    }
-
-    .host-logo-text {
-      font-size: 1.4rem;
-      font-weight: 900;
-      background: linear-gradient(135deg, var(--neon-purple), var(--neon-blue));
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-    }
-
-    .host-main {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      padding: 32px;
-      gap: 32px;
-    }
-
-    /* Lobby view */
-    .lobby-layout {
-      display: grid;
-      grid-template-columns: 1fr 2fr;
-      gap: 40px;
-      width: 100%;
-      max-width: 1100px;
-      align-items: start;
-    }
-
-    .join-panel {
-      text-align: center;
-    }
-
-    .join-panel .room-code {
-      color: var(--neon-purple);
-      text-shadow:
-        0 0 10px rgba(179, 71, 217, 0.5),
-        0 0 40px rgba(179, 71, 217, 0.25),
-        0 0 80px rgba(179, 71, 217, 0.1);
-      margin-bottom: 16px;
-    }
-
-    .join-label {
-      font-size: 1rem;
-      color: var(--text-secondary);
-      margin-bottom: 8px;
-    }
-
-    .join-url {
-      font-size: 0.9rem;
-      color: var(--neon-blue);
-      word-break: break-all;
-      margin-top: 12px;
-    }
-
-    #qrImage {
-      border-radius: 12px;
-      margin-top: 16px;
-      background: white;
-      padding: 8px;
-    }
-
-    .players-panel h2 {
-      font-size: 1.5rem;
-      margin-bottom: 16px;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-
-    .player-count {
-      font-size: 0.9rem;
-      color: var(--text-secondary);
-      font-weight: 400;
-    }
-
-    .player-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-      gap: 12px;
-    }
-
-    .player-card {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      padding: 16px;
-      border-radius: 12px;
-      background: rgba(255, 255, 255, 0.03);
-      border: 1px solid rgba(255, 255, 255, 0.05);
-      transition: all 0.3s;
-      animation: fadeIn 0.3s ease;
-    }
-
-    .player-card.ready {
-      border-color: rgba(57, 255, 20, 0.3);
-      background: rgba(57, 255, 20, 0.05);
-    }
-
-    .player-card .avatar {
-      font-size: 2rem;
-      width: 48px;
-      height: 48px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: rgba(179, 71, 217, 0.1);
-      border-radius: 50%;
-      flex-shrink: 0;
-    }
-
-    .player-card .info { flex: 1; }
-    .player-card .name {
-      font-weight: 600;
-      font-size: 1.1rem;
-    }
-
-    .player-card .status {
-      font-size: 0.8rem;
-      margin-top: 2px;
-    }
-
-    .player-card .admin-badge {
-      font-size: 0.7rem;
-      background: rgba(179, 71, 217, 0.2);
-      color: var(--neon-purple);
-      padding: 2px 8px;
-      border-radius: 10px;
-      font-weight: 600;
-    }
-
-    .waiting-msg {
-      text-align: center;
-      color: var(--text-secondary);
-      font-size: 1.2rem;
-      padding: 40px;
-      animation: pulse 2s ease-in-out infinite;
-    }
-
-    @keyframes pulse {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.5; }
-    }
-
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(10px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-
-    /* Game view */
-    .game-view {
-      width: 100%;
-      max-width: 1100px;
-      display: none;
-    }
-
-    .game-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 24px;
-    }
-
-    .game-title {
-      font-size: 1.6rem;
-      font-weight: 700;
-    }
-
-    .round-info {
-      color: var(--text-secondary);
-      font-size: 1rem;
-    }
-
-    .game-content {
-      min-height: 300px;
-    }
-
-    /* Number Guess game display */
-    .number-guess-display {
-      text-align: center;
-    }
-
-    .guess-round-label {
-      font-size: 1.2rem;
-      color: var(--text-secondary);
-      margin-bottom: 8px;
-    }
-
-    .guess-range {
-      font-size: 2rem;
-      font-weight: 700;
-      color: var(--neon-blue);
-      margin-bottom: 24px;
-    }
-
-    .guess-feedback {
-      font-size: 1.5rem;
-      font-weight: 600;
-      margin: 16px 0;
-      min-height: 2em;
-    }
-
-    /* Quiz game display */
-    .quiz-display { text-align: center; }
-
-    .quiz-question-text {
-      font-size: 2rem;
-      font-weight: 700;
-      margin-bottom: 16px;
-      line-height: 1.3;
-    }
-
-    .quiz-answers-display {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 16px;
-      max-width: 700px;
-      margin: 24px auto;
-    }
-
-    .quiz-answer-box {
-      padding: 24px;
-      border-radius: 12px;
-      font-size: 1.2rem;
-      font-weight: 600;
-      color: white;
-      text-align: center;
-    }
-
-    .quiz-answer-box.a { background: rgba(255, 71, 87, 0.6); }
-    .quiz-answer-box.b { background: rgba(77, 201, 246, 0.6); }
-    .quiz-answer-box.c { background: rgba(57, 255, 20, 0.4); }
-    .quiz-answer-box.d { background: rgba(255, 159, 67, 0.6); }
-
-    .quiz-answer-box.correct {
-      border: 3px solid var(--neon-green);
-      box-shadow: 0 0 20px rgba(57, 255, 20, 0.3);
-    }
-
-    .quiz-answer-box.eliminated {
-      opacity: 0.2;
-    }
-
-    .quiz-timer-large {
-      font-size: 4rem;
-      font-weight: 900;
-      margin: 16px 0;
-    }
-
-    /* Spy game display */
-    .spy-display { text-align: center; }
-
-    .spy-round-title {
-      font-size: 1.5rem;
-      margin-bottom: 16px;
-    }
-
-    .clue-list {
-      max-width: 500px;
-      margin: 16px auto;
-      text-align: left;
-    }
-
-    .clue-item {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      padding: 12px;
-      border-radius: 8px;
-      background: rgba(255, 255, 255, 0.03);
-      margin-bottom: 8px;
-      animation: fadeIn 0.3s ease;
-    }
-
-    .clue-author {
-      font-weight: 600;
-      color: var(--neon-blue);
-      min-width: 100px;
-    }
-
-    .clue-text {
-      flex: 1;
-      font-style: italic;
-    }
-
-    /* Question Form display */
-    .qf-display { text-align: center; max-width: 800px; margin: 0 auto; }
-
-    .qf-host-question {
-      font-size: 2rem;
-      font-weight: 700;
-      margin-bottom: 20px;
-      line-height: 1.3;
-    }
-
-    .qf-host-label {
-      font-size: 0.85rem;
-      color: var(--text-secondary);
-      text-transform: uppercase;
-      letter-spacing: 0.1em;
-      margin-bottom: 8px;
-    }
-
-    .qf-host-tally {
-      max-width: 500px;
-      margin: 16px auto;
-      text-align: left;
-    }
-
-    .qf-host-bar {
-      height: 40px;
-      border-radius: 8px;
-      display: flex;
-      align-items: center;
-      padding: 0 14px;
-      margin-bottom: 8px;
-      font-size: 1rem;
-      font-weight: 600;
-      transition: width 0.4s ease;
-    }
-
-    .qf-host-bar.a { background: rgba(255, 71, 87, 0.5); }
-    .qf-host-bar.b { background: rgba(77, 201, 246, 0.5); }
-    .qf-host-bar.c { background: rgba(57, 255, 20, 0.35); }
-    .qf-host-bar.d { background: rgba(255, 159, 67, 0.5); }
-    .qf-host-bar.yes { background: rgba(57, 255, 20, 0.35); }
-    .qf-host-bar.no { background: rgba(255, 71, 87, 0.5); }
-
-    .qf-host-response {
-      padding: 12px 16px;
-      border-radius: 8px;
-      background: rgba(255, 255, 255, 0.04);
-      margin-bottom: 8px;
-      font-size: 1.1rem;
-      text-align: left;
-      animation: fadeIn 0.3s ease;
-    }
-
-    .qf-host-average {
-      font-size: 5rem;
-      font-weight: 900;
-      color: var(--neon-blue);
-    }
-
-    .qf-host-nav {
-      display: flex;
-      gap: 12px;
-      justify-content: center;
-      margin-top: 20px;
-    }
-
-    .qf-host-nav button {
-      padding: 10px 24px;
-    }
-
-    .qf-waiting {
-      font-size: 1.2rem;
-      color: var(--text-secondary);
-      margin-top: 24px;
-    }
-
-    .qf-progress-dots {
-      display: flex;
-      gap: 6px;
-      justify-content: center;
-      margin-bottom: 16px;
-    }
-
-    .qf-dot {
-      width: 10px;
-      height: 10px;
-      border-radius: 50%;
-      background: rgba(255,255,255,0.15);
-    }
-
-    .qf-dot.active { background: var(--neon-purple); }
-
-    /* Scoreboard sidebar */
-    .scoreboard-panel {
-      position: fixed;
-      right: 0;
-      top: 0;
-      bottom: 0;
-      width: 280px;
-      background: var(--bg-card);
-      border-left: 1px solid var(--glass-border);
-      padding: 20px;
-      overflow-y: auto;
-      backdrop-filter: blur(12px);
-    }
-
-    .scoreboard-panel h3 {
-      font-size: 1rem;
-      text-transform: uppercase;
-      letter-spacing: 0.1em;
-      color: var(--text-secondary);
-      margin-bottom: 16px;
-    }
-
-    .score-entry {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      padding: 8px;
-      border-radius: 8px;
-      margin-bottom: 4px;
-    }
-
-    .score-entry:first-child {
-      background: rgba(179, 71, 217, 0.1);
-    }
-
-    .score-rank {
-      font-weight: 900;
-      min-width: 24px;
-      color: var(--text-secondary);
-    }
-
-    .score-entry:first-child .score-rank { color: var(--neon-purple); }
-
-    .score-name { flex: 1; font-weight: 500; }
-    .score-value {
-      font-weight: 700;
-      color: var(--neon-blue);
-    }
-
-    /* Chat panel */
-    .chat-panel {
-      position: fixed;
-      left: 0;
-      bottom: 0;
-      width: 300px;
-      max-height: 250px;
-      background: rgba(20, 20, 40, 0.9);
-      border-top: 1px solid var(--glass-border);
-      border-right: 1px solid var(--glass-border);
-      border-radius: 0 12px 0 0;
-      padding: 12px;
-      backdrop-filter: blur(12px);
-      display: flex;
-      flex-direction: column;
-    }
-
-    .chat-panel .messages {
-      flex: 1;
-      overflow-y: auto;
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-      max-height: 180px;
-      padding-right: 4px;
-    }
-
-    .chat-msg {
-      font-size: 0.85rem;
-      padding: 2px 0;
-      animation: fadeIn 0.2s ease;
-    }
-
-    .chat-msg .author {
-      font-weight: 600;
-      color: var(--neon-blue);
-    }
-
-    /* Responsive for TV */
-    @media (max-width: 768px) {
-      .lobby-layout {
-        grid-template-columns: 1fr;
-      }
-      .scoreboard-panel {
-        position: static;
-        width: 100%;
-        border-left: none;
-        border-top: 1px solid var(--glass-border);
-      }
-      .chat-panel {
-        width: 100%;
-        position: static;
-        border: 1px solid var(--glass-border);
-        border-radius: 12px;
-        margin-top: 16px;
-      }
-    }
-  </style>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Fredoka:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/smallhours.css">
+  <link rel="stylesheet" href="/css/host.css">
 </head>
-<body>
-  <div class="bg-animated"></div>
+<body class="text-slate-800 font-sans min-h-screen flex flex-col">
 
-  <!-- Connection status -->
-  <div class="connection-status disconnected" id="connStatus">
-    <span class="status-dot"></span>
-    <span id="connText">Connecting...</span>
-  </div>
-
-  <!-- Header -->
-  <header class="host-header">
-    <div class="host-logo"><img src="/images/Shg-gemeni-trans.png" alt="Small Hours Games"><span class="host-logo-text">Small Hours</span></div>
-    <div id="headerInfo" style="color: var(--text-secondary); font-size: 0.9rem;"></div>
-    <button id="muteBtn" onclick="toggleMute()" style="background:rgba(255,255,255,0.05);border:1px solid var(--glass-border);border-radius:8px;padding:6px 12px;cursor:pointer;color:var(--text-secondary);font-size:0.85rem;">🔊 Sound</button>
+  <!-- Top bar -->
+  <header class="bg-white/90 backdrop-blur-md border-b border-sky-100 sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-sky-500 to-blue-600 flex items-center justify-center text-white shadow-md shadow-sky-500/20">
+          <i class="fa-solid fa-gamepad text-lg"></i>
+        </div>
+        <span class="font-display text-2xl font-bold tracking-tight text-slate-900">Smallhours</span>
+        <span id="headerInfo" class="hidden sm:inline-block ml-1 text-xs font-semibold px-2 py-0.5 rounded-full bg-sky-100 text-sky-700"></span>
+      </div>
+      <div class="flex items-center gap-3">
+        <!-- Connection status (in the header so it never covers the Sound button) -->
+        <div class="connection-status disconnected" id="connStatus">
+          <span class="status-dot"></span>
+          <span id="connText">Connecting...</span>
+        </div>
+        <button id="muteBtn" onclick="toggleMute()" class="text-sm font-semibold px-3 py-1.5 rounded-lg text-slate-600 bg-white border border-sky-200 hover:bg-sky-50 transition">🔊 Sound</button>
+      </div>
+    </div>
   </header>
 
-  <!-- Main content -->
   <main class="host-main">
-    <!-- Lobby View -->
-    <div id="lobbyView" class="lobby-layout">
-      <div class="join-panel card">
-        <div class="join-label">Join at</div>
-        <div class="join-url" id="joinUrl"></div>
-        <div class="room-code room-code-large neon" id="roomCode">----</div>
-        <div id="qrContainer" style="border-radius:12px;margin-top:16px;background:white;padding:8px;width:180px;height:180px;display:flex;align-items:center;justify-content:center;"></div>
-      </div>
-      <div class="players-panel">
-        <h2>Players <span class="player-count" id="playerCount">(0)</span></h2>
-        <div class="player-grid" id="playerGrid">
-          <div class="waiting-msg">Waiting for players to join...</div>
+    <!-- Lobby: join info, live vote, players & score -->
+    <div id="lobbyView" class="w-full max-w-7xl grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)_minmax(0,1fr)] items-start">
+
+      <section class="device-screen bg-sky-100 border-4 border-white rounded-[2.5rem] p-6 flex flex-col items-center text-center">
+        <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-white/70 text-sky-800 border border-sky-200">
+          <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> Party Online
+        </span>
+        <p class="mt-5 text-xs font-bold uppercase tracking-wider text-slate-500">Join with Room Code</p>
+        <div class="font-mono font-bold text-6xl tracking-[0.2em] text-sky-900 bg-white/80 border border-sky-200 rounded-2xl px-5 py-3 mt-2 shadow-sm" id="roomCode">----</div>
+        <div id="qrContainer" class="mt-5 bg-white p-2 rounded-2xl border border-sky-200 shadow-sm w-[180px] h-[180px] flex items-center justify-center"></div>
+        <p class="mt-4 text-xs text-slate-500">Scan or open</p>
+        <p class="text-sm font-semibold text-sky-800 break-all" id="joinUrl"></p>
+      </section>
+
+      <section class="device-screen bg-sky-100 border-4 border-white rounded-[2.5rem] p-6 flex flex-col gap-4">
+        <div class="flex items-center justify-between pb-3 border-b border-sky-200">
+          <h2 class="font-display font-bold text-2xl text-slate-800" id="voteTitle">Vote for next activity</h2>
+          <span class="text-xs bg-emerald-100 text-emerald-800 font-semibold px-2 py-0.5 rounded-full border border-emerald-200" id="voteCount">0 votes</span>
         </div>
-      </div>
+        <div id="hostVotes" class="space-y-2.5"></div>
+        <p class="text-xs text-slate-500 text-center" id="voteHint">Wish for a game on your phone. The most picked game is chosen and the next phase begins.</p>
+      </section>
+
+      <section class="device-screen bg-sky-100 border-4 border-white rounded-[2.5rem] p-6 flex flex-col gap-3">
+        <div class="flex items-center justify-between pb-3 border-b border-sky-200">
+          <h2 class="font-display font-bold text-2xl text-slate-800">Players</h2>
+          <span class="text-xs text-slate-500 font-semibold" id="playerCount">(0)</span>
+        </div>
+        <div class="space-y-1.5" id="playerGrid">
+          <div class="text-sm text-slate-500">Waiting for players to join...</div>
+        </div>
+      </section>
     </div>
 
     <!-- Game View -->
@@ -559,39 +80,25 @@
           <div class="game-title" id="gameTitle">Game</div>
           <div class="round-info" id="roundInfo"></div>
         </div>
+        <div class="timer-seconds" id="timerSeconds" style="display:none;" aria-live="polite"></div>
       </div>
       <div class="timer-bar-container" id="timerContainer" style="display:none;">
         <div class="timer-bar" id="timerBar"></div>
       </div>
       <div class="game-content" id="gameContent"></div>
     </div>
+
   </main>
 
   <!-- Chat overlay -->
   <div class="chat-panel" id="chatPanel" style="display:none;">
-    <div class="messages" id="chatMessages"></div>
+    <div class="chat-title">Party chat</div>
+    <div class="messages" id="chatMessages" role="log" aria-label="Party chat messages" aria-live="polite"></div>
   </div>
 
   <!-- Scoreboard sidebar -->
   <div class="scoreboard-panel card" id="scorePanel" style="display:none;" role="region" aria-label="Live Scoreboard">
-    <h3 class="score-panel-title neon">Live Scores</h3>
     <div id="scoreList"></div>
-  </div>
-
-  <!-- Gift / winner share modal -->
-  <div id="giftModal" class="gift-modal" style="display:none;">
-    <div class="gift-modal-inner card">
-      <div class="gift-emoji">🎁</div>
-      <h2 class="neon" id="giftTitle">Vinnare!</h2>
-      <p class="gift-sub" id="giftSub"></p>
-      <div class="qr-box" id="giftQr"></div>
-      <div class="gift-code" id="giftCodeBox"></div>
-      <div class="btn-row">
-        <button class="btn btn-primary" id="giftCopyBtn">Kopiera länk</button>
-        <button class="btn btn-secondary" id="giftCloseBtn">Stäng</button>
-      </div>
-      <p class="gift-note">Ge presenten till en kompis — de scannar QR:en eller öppnar länken för att starta eget spel med vinnar-aura! 🏆</p>
-    </div>
   </div>
 
   <!-- Game story / narration overlay -->
@@ -604,14 +111,23 @@
     </div>
   </div>
 
+
   <!-- Toast container -->
   <div class="toast-container" id="toasts"></div>
 
   <script src="/js/cards.js"></script>
+  <script src="/js/games.js"></script>
+  <script src="/js/quiz-ready.js"></script>
+  <script src="/js/music-fade.js"></script>
   <script>
     // --- State ---
     const AVATARS = ['&#128056;', '&#128049;', '&#129412;', '&#128029;', '&#128025;', '&#129418;', '&#128039;', '&#129409;',
                      '&#128011;', '&#128036;', '&#128035;', '&#129428;', '&#128024;', '&#128016;', '&#129433;', '&#128023;'];
+
+    // Opened by the Android TV app (via /tv): recover on its own, never leave the host screen
+    const TV_MODE = new URLSearchParams(location.search).get('tv') === '1';
+    // TV WebViews report ~960 CSS px; lay out at 1280 (scaled to fit) for the wide lobby layout
+    if (TV_MODE) document.querySelector('meta[name="viewport"]')?.setAttribute('content', 'width=1280');
 
     const state = {
       code: null,
@@ -629,6 +145,7 @@
     function toggleMute() {
       isMuted = !isMuted;
       document.getElementById('muteBtn').textContent = isMuted ? '\uD83D\uDD07 Muted' : '\uD83D\uDD0A Sound';
+      if (musicAudio) musicAudio.muted = isMuted;
       if (isMuted) {
         audio._origPlay = audio._origPlay || audio.play;
         audio.play = () => {};
@@ -656,6 +173,7 @@
       }).catch(() => {});
 
       if (!state.code || state.code.length !== 4) {
+        if (TV_MODE) { location.replace('/tv'); return; }
         document.querySelector('.host-main').innerHTML =
           '<div class="card text-center" style="max-width:400px;"><h2>Invalid Room</h2><p class="mt-2 text-secondary">No valid room code in URL.</p><a href="/" class="btn btn-primary mt-2">Go Home</a></div>';
         return;
@@ -700,7 +218,12 @@
         }
       };
 
-      ws.onclose = () => {
+      ws.onclose = (e) => {
+        // TV app: the room is gone (e.g. the server restarted), so start a fresh one
+        if (TV_MODE && e && e.code === 4004) {
+          location.replace('/tv');
+          return;
+        }
         setConnectionStatus('disconnected', 'Disconnected');
         scheduleReconnect();
       };
@@ -711,7 +234,8 @@
     }
 
     function scheduleReconnect() {
-      if (state.reconnectAttempts >= state.maxReconnect) {
+      // The TV app has nobody to press refresh, so it keeps trying (every 30 s at most)
+      if (state.reconnectAttempts >= state.maxReconnect && !TV_MODE) {
         setConnectionStatus('disconnected', 'Connection lost');
         showToast('Connection lost. Please refresh the page.', 'error');
         return;
@@ -737,8 +261,12 @@
           break;
 
         case 'LOBBY_UPDATE':
-          state.players = (msg.state ? msg.state.players : msg.players) || [];
+          state.lobby = msg.state || msg;
+          state.players = state.lobby.players || [];
+          state.playerAvatars = state.playerAvatars || {};
+          state.players.forEach(p => { state.playerAvatars[p.playerId] = p.avatar; });
           renderPlayers();
+          renderHostVotes();
           break;
 
         case 'PLAYER_JOINED':
@@ -776,7 +304,7 @@
           break;
 
         case 'CHAT_MESSAGE':
-          addChatMessage(msg.name, msg.text);
+          addChatMessage(msg.username || msg.name || 'Player', msg.text, msg.avatar);
           break;
 
         case 'SERVER_RESTARTING':
@@ -791,27 +319,72 @@
     // --- Render: Lobby ---
     function renderPlayers() {
       const grid = document.getElementById('playerGrid');
-      const count = document.getElementById('playerCount');
-      count.textContent = '(' + state.players.length + ')';
+      const online = state.players.filter(p => p.connected !== false).length;
+      document.getElementById('playerCount').textContent = online + ' in lobby';
 
       if (state.players.length === 0) {
-        grid.innerHTML = '<div class="waiting-msg">Waiting for players to join...</div>';
+        grid.innerHTML = '<div class="text-sm text-slate-500">Waiting for players to join...</div>';
         return;
       }
 
-      grid.innerHTML = state.players.map((p, i) => {
-        const avatar = AVATARS[i % AVATARS.length];
-        const readyClass = p.ready ? 'ready' : '';
-        const statusText = p.ready
-          ? '<span style="color: var(--neon-green);">Ready</span>'
-          : '<span style="color: var(--text-secondary);">Not ready</span>';
-        const adminBadge = p.isAdmin ? '<span class="admin-badge">ADMIN</span>' : '';
+      const suggestions = (state.lobby && state.lobby.gameSuggestions) || {};
+      const ranked = [...state.players].sort((a, b) => (b.sessionScore || 0) - (a.sessionScore || 0));
+      grid.innerHTML = ranked.map((p, i) => {
+        const voted = suggestions[p.playerId];
+        const crown = p.isAdmin ? '<i class="fa-solid fa-crown text-amber-500 text-xs"></i>' : '';
+        return '<div class="flex justify-between items-center py-2 px-3 rounded-xl ' +
+            (i === 0 && p.sessionScore ? 'bg-white text-slate-800' : 'bg-white/60 text-slate-700') + (p.connected === false ? ' opacity-50' : '') + '">' +
+          '<span class="flex items-center gap-2 min-w-0 font-semibold">' +
+            '<span class="text-xl">' + escapeHtml(p.avatar || '') + '</span>' + crown +
+            '<span class="truncate">' + escapeHtml(p.username || p.name) + '</span>' +
+            (voted ? '<span class="text-sm" title="Voted ' + escapeHtml(shGame(voted).label) + '">' + shGame(voted).icon + '</span>' : '') +
+          '</span>' +
+          '<span class="font-bold text-sky-700 shrink-0">' + (p.sessionScore || 0) + ' pts</span>' +
+        '</div>';
+      }).join('');
+    }
 
-        return '<div class="player-card ' + readyClass + '">' +
-          '<div class="avatar">' + avatar + '</div>' +
-          '<div class="info">' +
-            '<div class="name">' + escapeHtml(p.username || p.name) + ' ' + adminBadge + '</div>' +
-            '<div class="status">' + statusText + '</div>' +
+    // Live tallies: game wishes, or the quiz category vote once it opens.
+    function renderHostVotes() {
+      const lobby = state.lobby || {};
+      const list = document.getElementById('hostVotes');
+      const title = document.getElementById('voteTitle');
+      const hint = document.getElementById('voteHint');
+      let rows, total;
+
+      if (lobby.votingActive) {
+        title.textContent = 'Quiz Category';
+        hint.textContent = 'Vote for a topic on your phone. The most picked category is played.';
+        const tallies = lobby.voteTallies || {};
+        total = Object.values(tallies).reduce((s, n) => s + n, 0);
+        rows = (lobby.availableCategories || [])
+          .map(c => ({ icon: shCategoryIcon(c.name), label: shCategoryLabel(c.name), count: tallies[c.id] || 0 }))
+          .sort((a, b) => b.count - a.count)
+          .slice(0, 8);
+      } else {
+        title.textContent = 'Vote for next activity';
+        hint.textContent = 'Wish for a game on your phone. The most picked game is chosen and the next phase begins.';
+        const counts = {};
+        Object.values(lobby.gameSuggestions || {}).forEach(g => { counts[g] = (counts[g] || 0) + 1; });
+        total = Object.values(counts).reduce((s, n) => s + n, 0);
+        rows = SH_GAMES.filter(g => g.hasUi || counts[g.type])
+          .map(g => ({ icon: g.icon, label: g.label, count: counts[g.type] || 0, leader: g.type === lobby.leadingGame }))
+          .sort((a, b) => b.leader - a.leader || b.count - a.count);
+      }
+
+      document.getElementById('voteCount').textContent = total + ' vote' + (total === 1 ? '' : 's');
+      const max = Math.max(1, ...rows.map(r => r.count));
+      const leadCount = Math.max(0, ...rows.map(r => r.count));
+      list.innerHTML = rows.map(r => {
+        const leading = r.leader || (lobby.votingActive && r.count > 0 && r.count === leadCount);
+        const pct = Math.round((r.count / max) * 100);
+        return '<div class="relative overflow-hidden rounded-2xl border ' +
+            (leading ? 'bg-sky-600 border-sky-500 text-white shadow-md shadow-sky-600/25' : 'bg-white/80 border-sky-200 text-slate-800') + '">' +
+          '<div class="absolute inset-y-0 left-0 ' + (leading ? 'bg-white/15' : 'bg-sky-100') + ' transition-all duration-500" style="width:' + pct + '%"></div>' +
+          '<div class="relative flex items-center justify-between px-4 py-3">' +
+            '<span class="flex items-center gap-3 font-bold text-lg"><span class="text-2xl">' + r.icon + '</span>' + escapeHtml(r.label) +
+              (leading ? '<span class="text-xs font-semibold bg-white/20 px-2 py-0.5 rounded-full">Most picked</span>' : '') + '</span>' +
+            '<span class="font-bold ' + (leading ? '' : 'text-sky-700') + '">' + r.count + '</span>' +
           '</div>' +
         '</div>';
       }).join('');
@@ -821,13 +394,18 @@
     function showGameView(msg) {
       state.gameEvents = [];
       document.getElementById('lobbyView').style.display = 'none';
-      document.getElementById('gameView').style.display = 'block';
+      document.getElementById('gameView').style.display = 'flex';
       document.getElementById('scorePanel').style.display = 'block';
-      document.getElementById('chatPanel').style.display = 'block';
+      // Chat only shows once someone has written something (no empty box in the corner)
+      if (document.getElementById('chatMessages').children.length) {
+        document.getElementById('chatPanel').style.display = 'flex';
+      }
+      document.body.classList.add('in-game');
 
       const titles = {
         'number-guess': 'Number Guess',
         'quiz': 'Quiz Time',
+        'music-quiz': 'Music Quiz',
         'spy': 'Spy Game',
         'shithead': 'Shithead',
         'question-form': 'Question Form',
@@ -843,8 +421,8 @@
       document.getElementById('gameTitle').textContent = titles[msg.gameType] || msg.gameType;
       document.getElementById('roundInfo').textContent = '';
 
-      // Narrate the game's story (intro + TTS voice).
-      playStory(msg.gameType);
+      // Narrate the game's story (intro + TTS voice), but not when rejoining a running game
+      if (!msg.resume && !['quiz', 'music-quiz'].includes(msg.gameType)) playStory(msg.gameType);
     }
 
     // --- Game story / narration ---
@@ -897,7 +475,7 @@
 
       switch (state.gameType) {
         case 'number-guess': renderNumberGuess(msg); break;
-        case 'quiz': renderQuiz(msg); break;
+        case 'quiz': case 'music-quiz': renderQuiz(msg); break;
         case 'spy': renderSpy(msg); break;
         case 'shithead': renderShithead(msg); break;
         case 'question-form': renderQuestionForm(msg); break;
@@ -950,11 +528,129 @@
       content.innerHTML = html;
     }
 
+    // --- Music Quiz audio (plays on the TV only) ---
+    let musicAudio = null;
+    let musicQuestionId = null;
+    let musicFade = null;
+
+    function syncMusic(msg) {
+      const q = msg.question;
+      const preview = q && q.media && q.media.preview;
+      const audible = msg.phase === 'question' || msg.phase === 'reveal';
+      if (!preview || !audible) {
+        if (!audible) stopMusic();
+        return;
+      }
+      // Re-renders within the same question keep the clip running
+      if (q.id === musicQuestionId) { musicFade.sync(msg); return; }
+      if (msg.phase !== 'question') return;
+      stopMusic();
+      musicQuestionId = q.id;
+      musicAudio = new Audio(preview);
+      musicAudio.muted = isMuted;
+      musicFade = createMusicFade(musicAudio);
+      musicFade.start(msg.timeLeft);
+      musicAudio.play().catch(showSoundUnlock);
+    }
+
+    function stopMusic() {
+      if (musicFade) musicFade.stop();
+      musicFade = null;
+      if (musicAudio) musicAudio.pause();
+      musicAudio = null;
+      musicQuestionId = null;
+      hideSoundUnlock();
+    }
+
+    // Browsers block autoplay until the page has been clicked once
+    function showSoundUnlock() {
+      if (document.getElementById('soundUnlock')) return;
+      const btn = document.createElement('button');
+      btn.id = 'soundUnlock';
+      btn.className = 'fixed top-20 left-1/2 -translate-x-1/2 z-[1400] px-6 py-3 bg-sky-600 hover:bg-sky-700 text-white font-bold rounded-2xl shadow-lg shadow-sky-600/30 flex items-center gap-2';
+      btn.innerHTML = '<i class="fa-solid fa-volume-high"></i> Tap to enable sound';
+      btn.onclick = () => {
+        if (musicAudio) musicAudio.play().catch(() => {});
+        hideSoundUnlock();
+      };
+      document.body.appendChild(btn);
+    }
+
+    function hideSoundUnlock() {
+      document.getElementById('soundUnlock')?.remove();
+    }
+
+    function musicPanel(msg) {
+      const media = msg.question && msg.question.media;
+      if (!media) return '';
+      if (msg.phase === 'reveal' && media.artist) {
+        return '<div class="flex items-center justify-center gap-5 my-1">' +
+          (media.cover ? '<img src="' + escapeHtml(media.cover) + '" alt="" class="w-28 h-28 rounded-2xl object-cover shadow-lg border-4 border-white">' : '') +
+          '<div class="text-left"><div class="font-display text-3xl font-bold text-slate-800">' + escapeHtml(media.title) + '</div>' +
+          '<div class="text-xl text-slate-500 font-semibold">' + escapeHtml(media.artist) + '</div></div>' +
+        '</div>';
+      }
+      const genre = msg.question.category
+        ? '<div class="text-center"><span class="inline-block px-4 py-1 rounded-full bg-sky-100 border border-sky-200 text-sky-800 font-bold text-lg">Genre: ' + escapeHtml(msg.question.category) + '</span></div>'
+        : '';
+      return genre + '<div class="flex items-end justify-center gap-2 h-12 my-1" aria-label="Song playing">' +
+        [8, 14, 10, 16, 6, 12, 9, 15, 7].map((h, i) =>
+          '<span class="w-3 rounded-full ' + (i % 2 ? 'bg-sky-600 animate-pulse' : 'bg-sky-400 animate-bounce') + '" style="height:' + (h * 3) + 'px;animation-delay:' + (i * 90) + 'ms"></span>'
+        ).join('') +
+      '</div>';
+    }
+
+    // --- Question countdown, ticked locally from the server's time left ---
+    const hostCountdown = { deadline: 0, total: 0, interval: null };
+
+    function startHostCountdown(timeLeft, timeTotal) {
+      hostCountdown.deadline = Date.now() + timeLeft * 1000;
+      hostCountdown.total = timeTotal;
+      if (!hostCountdown.interval) hostCountdown.interval = setInterval(tickHostCountdown, 250);
+      tickHostCountdown();
+    }
+
+    function tickHostCountdown() {
+      const left = Math.max(0, (hostCountdown.deadline - Date.now()) / 1000);
+      const pct = hostCountdown.total ? (left / hostCountdown.total) * 100 : 0;
+      const cls = 'timer-bar' + (pct < 20 ? ' critical' : pct < 40 ? ' warning' : '');
+      // Only touch class/text when they change: Tailwind's CDN compiler re-runs on every class change
+      const container = document.getElementById('timerContainer');
+      if (container.style.display !== 'block') container.style.display = 'block';
+      const bar = document.getElementById('timerBar');
+      bar.style.width = pct + '%';
+      if (bar.className !== cls) bar.className = cls;
+      const seconds = document.getElementById('timerSeconds');
+      const secCls = 'timer-seconds' + (pct < 20 ? ' critical' : pct < 40 ? ' warning' : '');
+      const secText = String(Math.ceil(left));
+      if (seconds.style.display) seconds.style.display = '';
+      if (seconds.textContent !== secText) seconds.textContent = secText;
+      if (seconds.className !== secCls) seconds.className = secCls;
+      if (left <= 0) stopHostCountdown(true);
+    }
+
+    function stopHostCountdown(keepDisplay) {
+      clearInterval(hostCountdown.interval);
+      hostCountdown.interval = null;
+      if (!keepDisplay) {
+        hostCountdown.deadline = 0;
+        document.getElementById('timerContainer').style.display = 'none';
+        document.getElementById('timerSeconds').style.display = 'none';
+      }
+    }
+
     function renderQuiz(msg) {
       const content = document.getElementById('gameContent');
       const timerContainer = document.getElementById('timerContainer');
       const timerBar = document.getElementById('timerBar');
       const roundInfo = document.getElementById('roundInfo');
+
+      // Quiz introductions must never cover a timed question.
+      document.getElementById('storyOverlay').style.display = 'none';
+      if (storyAudio) storyAudio.pause();
+      if (msg.phase !== 'countdown') stopQuizReadyCountdown();
+      syncMusic(msg);
+      if (msg.phase !== 'question') stopHostCountdown();
 
       // Progress indicator ("Question 3 of 10")
       if (msg.currentQuestion != null && msg.totalQuestions) {
@@ -965,9 +661,10 @@
         timerContainer.style.display = 'none';
         content.innerHTML = '<div class="quiz-display countdown-phase">' +
           '<div class="quiz-question-text">Get ready!</div>' +
-          '<div class="quiz-timer-large" aria-label="Countdown timer">&#9201;</div>' +
+          '<div class="quiz-ready-number" id="quizReadyNumber" role="timer" aria-label="Quiz starts in">5</div>' +
           '<div class="quiz-countdown-text">First question coming up...</div>' +
           '</div>';
+        startQuizReadyCountdown('quizReadyNumber', msg.timeLeft);
         return;
       }
 
@@ -983,12 +680,10 @@
 
       if (msg.phase === 'question') {
         const q = msg.question || {};
+        // One countdown only: the bar under the game title plus the seconds badge in the header
         let html = '<div class="quiz-display question-phase">' +
-          '<div class="quiz-progress">' +
-            '<span class="quiz-progress-label">Question ' + (msg.currentQuestion + 1) + ' of ' + msg.totalQuestions + '</span>' +
-            '<div class="timer-bar-container"><div class="timer-bar" id="inlineTimerBar" style="width: 100%"></div></div>' +
-          '</div>' +
           '<div class="quiz-question-text">' + escapeHtml(q.text || '') + '</div>' +
+          musicPanel(msg) +
           '<div class="quiz-answers-display">';
 
         const labels = ['A', 'B', 'C', 'D'];
@@ -1002,31 +697,20 @@
 
         html += '</div>';
 
-        if (msg.timeLeft != null && msg.timeTotal) {
-          timerContainer.style.display = 'block';
-          const pct = (msg.timeLeft / msg.timeTotal) * 100;
-          timerBar.style.width = pct + '%';
-          timerBar.className = 'timer-bar' + (pct < 20 ? ' critical' : pct < 40 ? ' warning' : '');
-          
-          // Also update inline timer bar
-          const inlineBar = document.getElementById('inlineTimerBar');
-          if (inlineBar) {
-            inlineBar.style.width = pct + '%';
-            inlineBar.className = 'timer-bar' + (pct < 20 ? ' critical' : pct < 40 ? ' warning' : '');
-          }
-
-          html += '<div class="quiz-timer-large" aria-live="polite" aria-label="' + Math.ceil(msg.timeLeft) + ' seconds remaining">' + Math.ceil(msg.timeLeft) + '</div>';
-        } else {
-          timerContainer.style.display = 'none';
-        }
+        const timed = msg.timeLeft != null && msg.timeTotal;
+        if (!timed) timerContainer.style.display = 'none';
 
         html += '</div>';
         content.innerHTML = html;
+        // Tick the countdown locally from the server's time left (bar + seconds badge)
+        if (timed) startHostCountdown(msg.timeLeft, msg.timeTotal);
+        else if (hostCountdown.deadline) tickHostCountdown();
       } else if (msg.phase === 'reveal') {
         timerContainer.style.display = 'none';
         const q = msg.question || {};
         let html = '<div class="quiz-display reveal-phase">' +
           '<div class="quiz-question-text">' + escapeHtml(q.text || '') + '</div>' +
+          musicPanel(msg) +
           '<div class="quiz-answers-display">';
 
         const labels = ['A', 'B', 'C', 'D'];
@@ -1035,10 +719,17 @@
           const isCorrect = i === msg.correctIndex;
           const mark = isCorrect ? '<span class="answer-mark correct" aria-label="Correct answer">&#9989;</span>' : '<span class="answer-mark incorrect" aria-label="Incorrect">&#10060;</span>';
           const correctClass = isCorrect ? ' correct' : ' incorrect';
+          const names = msg.playerNames || state.playerNames || {};
+          const guesses = Object.entries(msg.playerAnswers || {})
+            .filter(([, answer]) => answer === a)
+            .map(([pid]) => '<span class="answer-player">' + playerAvatarHtml(pid) +
+              '<span>' + escapeHtml(names[pid] || 'Player') + '</span></span>');
+          const guessHtml = '<span class="answer-guesses">' +
+            (guesses.length ? guesses.join(' ') : 'No guesses') + '</span>';
           html += '<button class="answer-btn answer-' + labels[i].toLowerCase() + correctClass + '" style="background:' + (isCorrect ? 'var(--neon-green)' : neonColors[i]) + '" disabled aria-disabled="true" aria-label="' + (isCorrect ? 'Correct answer: ' : 'Incorrect: ') + escapeHtml(a) + '">' +
             '<span class="answer-label">' + labels[i] + '.</span>' +
             '<span class="answer-text">' + escapeHtml(a) + '</span>' +
-            mark +
+            mark + guessHtml +
           '</button>';
         });
 
@@ -1103,7 +794,7 @@
           '<div class="qf-host-question">Waiting for answers...</div>' +
           '<div class="qf-waiting">' + submitted + ' / ' + total + ' players submitted</div>' +
           '<div style="margin-top:24px;">' +
-            '<div style="width:200px;height:8px;border-radius:4px;background:rgba(255,255,255,0.1);margin:0 auto;">' +
+            '<div style="width:200px;height:8px;border-radius:4px;background:rgba(15, 23, 42, 0.12);margin:0 auto;">' +
               '<div style="width:' + (total > 0 ? Math.round(submitted / total * 100) : 0) + '%;height:100%;border-radius:4px;background:var(--neon-purple);transition:width 0.3s;"></div>' +
             '</div>' +
           '</div>' +
@@ -1405,6 +1096,12 @@
       content.innerHTML = html;
     }
 
+    function playerAvatarHtml(playerId) {
+      const avatar = (state.playerAvatars || {})[playerId] ||
+        (state.players || []).find(p => p.playerId === playerId)?.avatar || '👤';
+      return '<span class="inline-player-avatar" aria-hidden="true">' + escapeHtml(avatar) + '</span> ';
+    }
+
     // Normalize each game's score shape into one unified scoreboard model.
     // Returns { roundLabel, status, entries:[{id,name,valueText,rank,isOut}] }.
     // `entries` is already sorted best-first; rank is 1-based.
@@ -1459,7 +1156,7 @@
           rank: i + 1,
           isOut: false,
         }));
-        if (gameType === 'quiz' && msg.totalQuestions) {
+        if ((gameType === 'quiz' || gameType === 'music-quiz') && msg.totalQuestions) {
           roundLabel = 'Fråga ' + ((msg.currentQuestion || 0) + 1) + ' / ' + msg.totalQuestions;
         } else if (gameType === 'spy' && msg.totalRounds) {
           roundLabel = 'Round ' + (msg.round || 0) + ' / ' + msg.totalRounds;
@@ -1488,46 +1185,11 @@
         const outBadge = e.isOut ? ' <span class="score-out-badge">UTE</span>' : '';
         return '<div class="score-entry card' + (e.isOut ? ' is-out' : '') + '" data-player-id="' + escapeHtml(e.id) + '">' +
           '<span class="score-rank ' + rankClass + '">' + e.rank + '</span>' +
-          '<span class="score-name">' + escapeHtml(e.name) + outBadge + '</span>' +
+          '<span class="score-name">' + playerAvatarHtml(e.id) + escapeHtml(e.name) + outBadge + '</span>' +
           '<span class="score-value">' + escapeHtml(e.valueText) + '</span></div>';
       }).join('');
 
       list.innerHTML = header + rows;
-    }
-
-    // --- Gift share modal ---
-    function renderGiftQr(text) {
-      const box = document.getElementById('giftQr');
-      box.innerHTML = '';
-      try {
-        new QRCode(box, { text, width: 180, height: 180, colorDark: '#0a0a1a', colorLight: '#ffffff', correctLevel: QRCode.CorrectLevel.M });
-      } catch (e) {
-        box.textContent = text;
-      }
-      return box;
-    }
-    function showGift(msg) {
-      const modal = document.getElementById('giftModal');
-      const title = document.getElementById('giftTitle');
-      const sub = document.getElementById('giftSub');
-      const qr = document.getElementById('giftQr');
-      const codeBox = document.getElementById('giftCodeBox');
-      const copyBtn = document.getElementById('giftCopyBtn');
-      const closeBtn = document.getElementById('giftCloseBtn');
-
-      const winnerName = (state.playerNames || {})[msg.winner] || 'Vinnaren';
-      const label = msg.gameLabel || 'spelet';
-      title.textContent = '🎉 ' + winnerName + ' vann ' + label + '!';
-      sub.textContent = 'Dela en present till en kompis:';
-      qr.innerHTML = '';
-      renderGiftQr(msg.giftUrl);
-      codeBox.textContent = msg.giftUrl;
-      copyBtn.onclick = async () => {
-        try { await navigator.clipboard.writeText(msg.giftUrl); copyBtn.textContent = 'Kopierad!'; }
-        catch { copyBtn.textContent = msg.giftUrl; }
-      };
-      closeBtn.onclick = () => { modal.style.display = 'none'; };
-      modal.style.display = 'flex';
     }
 
     function returnToLobby(msg) {
@@ -1536,9 +1198,6 @@
           const name = (state.playerNames || {})[msg.winner] || 'Someone';
           showToast(name + ' wins!', 'success');
           spawnConfetti();
-          if (msg.giftUrl) {
-            showGift(msg);
-          }
         }
         // Show final state for a few seconds then return to lobby
         setTimeout(() => {
@@ -1548,6 +1207,7 @@
           document.getElementById('gameView').style.display = 'none';
           document.getElementById('scorePanel').style.display = 'none';
           document.getElementById('timerContainer').style.display = 'none';
+          document.body.classList.remove('in-game');
         }, 4000);
       } else if (msg.phase === 'lobby') {
         state.gameType = null;
@@ -1556,17 +1216,18 @@
         document.getElementById('gameView').style.display = 'none';
         document.getElementById('scorePanel').style.display = 'none';
         document.getElementById('timerContainer').style.display = 'none';
+        document.body.classList.remove('in-game');
       }
     }
 
     // --- Chat ---
-    function addChatMessage(name, text) {
+    function addChatMessage(name, text, avatar) {
       const panel = document.getElementById('chatPanel');
       panel.style.display = 'flex';
       const container = document.getElementById('chatMessages');
       const el = document.createElement('div');
       el.className = 'chat-msg';
-      el.innerHTML = '<span class="author">' + escapeHtml(name) + ':</span> ' + escapeHtml(text);
+      el.innerHTML = '<span class="author"><span class="chat-avatar" aria-hidden="true">' + escapeHtml(avatar || '💬') + '</span> ' + escapeHtml(name || 'Player') + '</span><span class="chat-text">' + escapeHtml(text) + '</span>';
       container.appendChild(el);
       container.scrollTop = container.scrollHeight;
 
@@ -1596,7 +1257,7 @@
     }
 
     function spawnConfetti() {
-      const colors = ['#b347d9', '#4dc9f6', '#39ff14', '#ff6ec7', '#ff9f43', '#ff4757'];
+      const colors = ['#0284c7', '#0c82eb', '#059669', '#db2777', '#d97706', '#dc2626'];
       for (let i = 0; i < 60; i++) {
         const piece = document.createElement('div');
         piece.className = 'confetti-piece';
