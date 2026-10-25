@@ -12,10 +12,12 @@ Bring your friends. Bring questionable trivia confidence. Stay for the music rou
 
 ## Get the party started
 
-1. Open Small Hours in a browser and create a room.
-2. Open `/tv` on your shared screen, or `/host/CODE` to display an existing room.
-3. Join from your phones using the four-character room code or the QR code on the TV.
-4. Pick a nickname, vote for an activity, and let the room admin start the game.
+1. Open `/tv` on the shared screen to create a room automatically. Already have a room? Open `/host/CODE` instead.
+2. Join from your phones using the four-character room code or the QR code on the TV.
+3. Pick a nickname and vote for an activity. The first player to join becomes the room admin.
+4. Let the admin start the game. Quiz first opens a category vote; Music Quiz goes straight to its countdown.
+
+You can also create or join a room from the home page. Keep the TV and phones in the same room—the code is what connects them.
 
 The TV shows the questions, reveals, live scores, and party chat. Your phone holds your answers and game controls. Player avatars follow the action, so you can spot who picked *that* answer.
 
@@ -38,7 +40,9 @@ The engine also includes Number Guess, Spy, Högt/Lågt, Sjuan, Uno, Yatzy, Laby
 
 - **Vote together.** Players choose the next activity and trivia category from their phones.
 - **See the reveal.** Quiz answers show who guessed what, with player names and avatars.
-- **Keep the banter going.** Party chat appears on phones and the TV.
+- **Keep the banter going.** Party chat shows player names and avatars. On the TV it sits beneath the players in the lobby, then moves below the scoreboard during games.
+- **A lighter lobby.** White panels, soft blue backgrounds, colored activity cards, and a compact TV layout that keeps longer lists inside scrollable panels.
+- **A soundtrack while you wait.** Local tracks play quietly through the TV in the lobby and stop when gameplay starts. The little animal mascots sway at 136 BPM while music is audible. Reduced-motion preferences are respected.
 - **Accidental refresh?** Rejoin as the same player within the 30-second disconnect grace period, using the same browser with local storage available.
 - **Questions that rotate.** Unseen questions and songs come first; older picks return when the available pool runs out. History lasts for the room session.
 - **A proper TV option.** The [Android TV app](android-tv/README.md) opens the host display fullscreen and keeps the screen awake.
@@ -58,7 +62,7 @@ npm start
 
 Open **http://localhost:3001**. On phones and the TV, use the server computer's local network address, for example `http://192.168.1.50:3001`. Devices must be able to reach the server; `localhost` on a phone points to the phone itself.
 
-Internet access is needed for external trivia, music, and CDN-hosted frontend assets.
+Internet access is needed for external trivia, Music Quiz previews, and CDN-hosted frontend assets. Lobby music comes from local files.
 
 ### With Docker Compose
 
@@ -98,6 +102,30 @@ Copy `.env.example` to `.env` if you want to customize the server. Core play doe
 
 Trivia comes from OpenTrivia DB and is cached on disk. Music Quiz uses Deezer playlists and playable previews; availability depends on the upstream service.
 
+## Sound, music, and your own tracks
+
+**Lobby music** plays through the TV at 12% volume. Tracks rotate while everyone joins and votes, pause when a game starts (including its countdown), and resume when the display returns to the lobby. Phones stay quiet for the lobby soundtrack.
+
+To change the playlist:
+
+1. Add or remove audio files in [`music/`](music/). Supported extensions: `.mp3`, `.ogg`, `.m4a`, and `.wav`; playback support depends on the browser.
+2. For Docker deployments, rebuild and restart—the music folder is baked into the image.
+3. Refresh the TV page to reload the playlist.
+
+The server discovers the files automatically through `/api/lobby-music`. No playlist configuration or API key is required for local music.
+
+**Music Quiz** plays Deezer previews on the TV and phones. TV sound is controlled by the header's Sound button; phones have their own sound control. If a browser blocks autoplay, tap or press a key on the TV page, or use the phone's “Tap to hear” button.
+
+## Data and updates
+
+- `data/` contains generated trivia caches and speech audio. It is ignored by Git and mounted into Docker, so rebuilding the image preserves it.
+- Rooms, scores, and reconnect identities live in memory. A server restart ends current sessions; the TV entry page can create a new room.
+- `music/` contains the local lobby soundtrack. Android signing keys, build output, and APK copies are ignored by Git; see the [Android TV instructions](android-tv/README.md) for building and signing.
+- The original light-lobby mockup lives in [`smallhours-light-lobby/`](smallhours-light-lobby/). Its demo interactions are local only; the application uses the existing WebSocket backend.
+- GitHub Actions runs tests and publishes GHCR images from `main` and version tags. Pulling an image and building local source are separate deployment paths; use the commands above for the one you need.
+
+After a frontend update, refresh both TV and phone pages so they load the new JavaScript and styles.
+
 ## Under the hood
 
 JavaScript, end to end. **Node.js + Express + WebSockets** on the server; vanilla HTML, CSS, and browser JavaScript on the screens. No frontend build step.
@@ -121,6 +149,9 @@ Game timers arrive as synthetic actions from the session/transport side. The eng
 Useful places to start:
 
 - [`public/`](public/) — landing page, phone controller, TV display, and shared assets.
+- [`public/css/light-lobby.css`](public/css/light-lobby.css) — shared light-lobby styling and compact TV layout.
+- [`public/js/lobby-music.js`](public/js/lobby-music.js) — TV lobby playback and mascot motion state.
+- [`music/`](music/) — local lobby tracks.
 - [`src/engine/games/`](src/engine/games/) — game definitions, including the minimal [`template.js`](src/engine/games/template.js).
 - [`src/fetcher/`](src/fetcher/) — trivia, music, caching, and speech fetching.
 - [`tests/`](tests/) — engine, session, transport, integration, and frontend tests.
@@ -141,5 +172,7 @@ To add a game, start with `src/engine/games/template.js`. Define `setup`, `actio
 Keep rules in the engine, secrets out of player views, and the next round easy to start.
 
 ---
+
+**Good games. Better together.**
 
 *Party games best played in the small hours.*
