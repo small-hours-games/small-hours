@@ -1,0 +1,164 @@
+/* Adapted from the supplied smallhours-light-lobby reference. */
+.light-lobby {
+  --lobby-ink: #173b63;
+  --lobby-muted: #6e85a3;
+  --lobby-line: #cfe6ff;
+  --lobby-shadow: 0 18px 42px rgba(70,125,183,.10), 0 2px 8px rgba(70,125,183,.05);
+  color-scheme: light;
+  color: var(--lobby-ink);
+  background: radial-gradient(ellipse at 5% 25%,rgba(181,224,255,.5),transparent 30%), radial-gradient(ellipse at 100% 10%,rgba(222,225,255,.54),transparent 28%), linear-gradient(135deg,#f5fbff,#edf5ff 48%,#f7f8ff);
+}
+.light-lobby::before, .light-lobby::after { display: none; }
+.light-lobby header { background: rgba(255,255,255,.88); border-color: var(--lobby-line); }
+.light-lobby button:focus-visible, .light-lobby a:focus-visible { outline: 3px solid #258ef7; outline-offset: 3px; }
+.host-screen:not(.in-game) .host-main { justify-content: flex-start; padding: clamp(24px,3.5vw,54px) clamp(18px,3vw,48px) 20px; gap: 22px; }
+.host-screen #lobbyView { max-width: 1560px; grid-template-columns: minmax(240px,.94fr) minmax(370px,1.52fr) minmax(290px,1fr); gap: 16px; align-items: stretch; }
+.host-screen .lobby-panel, .light-lobby.phone-screen .device-screen, .light-lobby.landing-screen .device-screen {
+  background: rgba(255,255,255,.9);
+  border: 1px solid #baddff;
+  border-color: #baddff;
+  border-radius: 26px;
+  box-shadow: var(--lobby-shadow);
+}
+.host-screen .lobby-panel { padding: 26px 22px; }
+.host-screen .invite-panel { min-width: 0; }
+.host-screen #roomCode { width: 100%; max-width: 320px; font-size: clamp(2.2rem,3.3vw,3.5rem); letter-spacing: .18em; padding: 12px; background: linear-gradient(140deg,#f2faff,#fff); border-color: var(--lobby-line); box-shadow: none; }
+.host-screen #qrContainer { width: 192px; height: 192px; border-radius: 19px; }
+.host-screen #joinUrl { margin-top: 12px; padding: 11px; font-size: .8rem; border-radius: 15px; background: #edf8ff; width: 100%; }
+.invite-foot { margin-top: auto; padding-top: 24px; }
+.invite-foot > div { font-size: 2rem; }
+.invite-foot p { margin-top: 10px; color: #2787e5; font-size: .9rem; font-weight: 700; font-style: italic; }
+.host-screen .lobby-right-column { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.host-screen #lobbyChatMount { flex: 1; display: flex; min-height: 240px; }
+.host-screen #lobbyChatMount .chat-panel { position: static; width: 100%; max-height: 360px; min-height: 240px; border: 1px solid #baddff; border-radius: 26px; box-shadow: var(--lobby-shadow); padding: 20px; margin: 0; }
+.host-screen #lobbyChatMount .chat-title { font-size: 1.2rem; border-bottom: 1px solid var(--lobby-line); padding-bottom: 12px; }
+.host-screen #lobbyChatMount .chat-msg { background: transparent; border: 0; padding: 0; font-size: .95rem; }
+.host-screen #lobbyChatMount .chat-text { display: block; width: fit-content; max-width: 100%; padding: 9px 11px; border: 1px solid #e0efff; border-radius: 6px 15px 15px 15px; background: #edf6ff; color: #466789; }
+.host-screen #lobbyChatMount .messages:empty::before { content: 'The party starts here. Say hello from your phone!'; color: var(--lobby-muted); font-size: .9rem; line-height: 1.6; padding-top: 12px; }
+.host-screen #playerGrid { display: grid; grid-template-columns: minmax(0,1fr); gap: 8px; max-height: 240px; overflow-y: auto; }
+.lobby-player-avatar { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 50%; background: #e8f5ff; font-size: 1.2rem; flex-shrink: 0; }
+.lobby-game-list { display: flex; flex-direction: column; gap: 12px; }
+.light-lobby .lobby-game-option { display: flex; align-items: center; width: 100%; min-width: 0; min-height: 86px; padding: 13px 16px; gap: 14px; text-align: left; border: 1px solid #d6eaff; border-radius: 20px; background: linear-gradient(105deg,#fff,#f7fbff); color: var(--lobby-ink); transition: border-color .16s,box-shadow .16s; }
+.light-lobby .lobby-game-option.is-selected { border-color: #3aa0ff; background: linear-gradient(100deg,#e7f5ff,#f8fcff); box-shadow: inset 0 0 0 1px rgba(58,160,255,.08),0 5px 15px rgba(49,144,230,.08); }
+.light-lobby button.lobby-game-option:hover:not(:disabled) { border-color: #8bcaff; box-shadow: 0 7px 18px rgba(57,144,218,.09); }
+.light-lobby .lobby-game-option:disabled { opacity: .55; cursor: not-allowed; }
+.lobby-game-icon { width: 56px; height: 56px; display: grid; place-items: center; border-radius: 17px; font-size: 1.8rem; line-height: 1; flex-shrink: 0; background: linear-gradient(145deg,#628cff,#258ef7); box-shadow: inset 0 1px 0 rgba(255,255,255,.3),0 4px 9px rgba(40,80,120,.09); }
+[data-game="quiz"] .lobby-game-icon { background: linear-gradient(145deg,#ff537e,#e51e4f); }
+[data-game="music-quiz"] .lobby-game-icon { background: linear-gradient(145deg,#c56aff,#772ff4); }
+[data-game="shithead"] .lobby-game-icon { background: linear-gradient(145deg,#ffd96b,#ff9f00); }
+[data-game="gin-rummy"] .lobby-game-icon { background: linear-gradient(145deg,#59e6be,#0fa982); }
+.lobby-game-info { min-width: 0; flex: 1; }
+.lobby-game-name { display: block; font-weight: 800; font-size: 1rem; line-height: 1.3; overflow-wrap: anywhere; }
+.lobby-game-description { display: block; color: var(--lobby-muted); font-size: .75rem; line-height: 1.5; margin-top: 4px; }
+.lobby-vote-side { display: flex; align-items: center; flex-direction: column; gap: 5px; flex-shrink: 0; }
+.lobby-vote-count { min-width: 37px; height: 37px; display: grid; place-items: center; border-radius: 14px; background: #e7f5ff; color: #0878e7; font-size: .95rem; font-weight: 800; padding: 0 8px; }
+.is-selected .lobby-vote-count { background: linear-gradient(145deg,#2fa1ff,#1981f4); color: #fff; }
+.lobby-leading-label { color: #0675d6; background: #d8edff; padding: 3px 7px; border-radius: 99px; font-size: .6rem; font-weight: 800; }
+.lobby-footer { font-size: .8rem; color: #7890af; text-align: center; }
+.in-game .lobby-footer { display: none; }
+.phone-screen #lobbySection .device-screen { padding: 18px 14px; }
+.phone-screen .lobby-game-option { min-height: 82px; padding: 12px 10px; gap: 10px; border-radius: 17px; }
+.phone-screen .lobby-game-icon { width: 48px; height: 48px; font-size: 1.6rem; border-radius: 15px; }
+.phone-screen .lobby-game-name { font-size: .95rem; }
+.phone-screen .lobby-game-description { font-size: .7rem; }
+.phone-screen .lobby-chat { box-shadow: none; border-color: var(--lobby-line); }
+.phone-screen .lobby-chat .chat-messages { background: #f8fcff; }
+@media (min-width: 1800px) {
+  .host-screen .lobby-game-option { min-height: 100px; }
+  .host-screen .lobby-game-name { font-size: 1.2rem; }
+  .host-screen .lobby-game-description { font-size: .9rem; }
+}
+@media (max-width: 1120px) {
+  .host-screen #lobbyView { grid-template-columns: minmax(230px,.8fr) minmax(360px,1.25fr); }
+  .host-screen .lobby-right-column { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1.4fr; }
+}
+@media (max-width: 720px) {
+  .host-screen #lobbyView { grid-template-columns: minmax(0,1fr); }
+  .host-screen .lobby-right-column { grid-column: auto; display: flex; }
+  .host-screen:not(.in-game) .host-main { padding: 18px 13px; }
+  .host-screen .lobby-panel { padding: 22px 16px; }
+  .light-lobby .lobby-game-option { gap: 10px; padding: 11px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .light-lobby .lobby-game-option { transition: none; }
+}
+
+/* Fit the TV's actual viewport, including 720p displays and browser chrome. */
+@media (min-width: 1000px) {
+  .host-screen:not(.in-game) .host-main { padding: 18px 24px 12px; gap: 10px; min-height: 0; }
+  .host-screen #lobbyView {
+    grid-template-columns: minmax(0,.9fr) minmax(0,1.5fr) minmax(0,1fr);
+    height: calc(100dvh - 118px);
+    min-height: 420px;
+    gap: 12px;
+  }
+  .host-screen .lobby-panel { padding: 18px 16px; border-radius: 22px; min-height: 0; min-width: 0; }
+  .host-screen .lobby-right-column { grid-column: auto; display: flex; min-height: 0; gap: 12px; }
+  .host-screen .players-panel { flex: 0 1 42%; overflow: hidden; }
+  .host-screen #playerGrid { min-height: 0; max-height: none; }
+  .host-screen #lobbyChatMount { min-height: 0; flex: 1 1 0; }
+  .host-screen #lobbyChatMount .chat-panel { min-height: 0; max-height: none; padding: 16px; border-radius: 22px; }
+  .host-screen #lobbyChatMount .messages { overflow-y: auto; }
+  .host-screen .vote-panel { gap: 12px; }
+  .host-screen #hostVotes { min-height: 0; overflow-y: auto; padding: 2px; }
+  .host-screen .lobby-game-option { min-height: 70px; padding: 9px 12px; gap: 10px; border-radius: 16px; }
+  .host-screen .lobby-game-icon { width: 46px; height: 46px; font-size: 1.5rem; border-radius: 13px; }
+  .host-screen .lobby-game-name { font-size: 1rem; }
+  .host-screen .lobby-game-description { font-size: .72rem; }
+  .host-screen #voteTitle, .host-screen .players-panel h2 { font-size: 1.25rem; }
+  .host-screen #voteCount, .host-screen #playerCount { flex-shrink: 0; }
+  .host-screen #roomCode { font-size: clamp(2rem,3vw,3rem); padding: 8px; }
+  .host-screen .invite-panel { overflow-y: auto; }
+  .host-screen .invite-panel > p { margin-top: 10px; }
+  .host-screen #qrContainer { width: 164px; height: 164px; margin-top: 12px; flex-shrink: 0; }
+  .host-screen #qrContainer img, .host-screen #qrContainer canvas { width: 146px; height: 146px; }
+  .host-screen #joinUrl { padding: 8px; font-size: .72rem; }
+  .host-screen .invite-foot { padding-top: 12px; }
+  .host-screen .invite-foot > div { font-size: 1.5rem; }
+  .host-screen .invite-foot p { font-size: .78rem; margin-top: 5px; }
+  .host-screen .lobby-footer { font-size: .7rem; margin: 0; }
+
+  /* Keep chat within the scores column instead of over the game or scores. */
+  .host-screen.in-game { --tv-sidebar-width: 250px; }
+  body.host-screen.in-game .host-main { margin-right: var(--tv-sidebar-width); padding: 12px 18px; }
+  .host-screen.in-game .scoreboard-panel { width: var(--tv-sidebar-width); padding: 12px; }
+  .host-screen.in-game > .chat-panel { width: calc(var(--tv-sidebar-width) - 16px); right: 8px; bottom: 8px; height: 26dvh; max-height: 26dvh; padding: 10px; }
+  .host-screen.in-game.has-party-chat .scoreboard-panel { bottom: calc(26dvh + 16px); }
+  .host-screen.in-game .game-title { font-size: 1.7rem; }
+  .host-screen.in-game .quiz-question-text { font-size: clamp(1.3rem,2.2vw,1.8rem); }
+  .host-screen.in-game .quiz-answers-display { gap: 8px; }
+  body.host-screen.in-game .answer-btn { padding: 10px 12px; }
+}
+@media (min-width: 1000px) and (max-height: 760px) {
+  .host-screen .invite-foot { display: block; padding-top: 6px; }
+  .host-screen .invite-foot > div { font-size: 1.35rem; line-height: 1.2; }
+  .host-screen .invite-foot p { display: block; font-size: .78rem; line-height: 1.3; }
+  .host-screen .lobby-panel { padding: 14px; }
+  .host-screen #lobbyChatMount .chat-title { margin-bottom: 6px; padding-bottom: 6px; }
+  .host-screen #lobbyChatMount .chat-msg { font-size: .85rem; }
+  .host-screen .lobby-game-option { min-height: 66px; }
+}
+
+
+/* Two beats per left/right sway: 60 / 136 * 2 seconds. */
+.host-screen .invite-foot .lobby-mascots {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  padding: 5px 0;
+  font-size: clamp(2.2rem, 3vw, 3rem);
+  line-height: 1.2;
+}
+.lobby-mascots > span { display: inline-block; transform-origin: 50% 85%; }
+.lobby-music-playing .lobby-mascots > span {
+  animation: lobbyMascotWobble 0.882352941s ease-in-out infinite;
+}
+.lobby-music-playing .lobby-mascots > span:nth-child(2) { animation-direction: reverse; }
+@keyframes lobbyMascotWobble {
+  0%, 100% { transform: rotate(-7deg) translateY(0); }
+  25%, 75% { transform: rotate(0deg) translateY(-2px); }
+  50% { transform: rotate(7deg) translateY(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .lobby-music-playing .lobby-mascots > span { animation: none; }
+}

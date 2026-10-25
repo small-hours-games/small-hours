@@ -8,7 +8,7 @@ for (const page of ['player', 'host']) {
     it('reads the server username and renders names separately from escaped message text', () => {
       const container = { children: [], appendChild(el) { this.children.push(el); }, style: {} };
       const context = {
-        document: { getElementById: () => container, createElement: () => ({}) },
+        document: { body: { classList: { add() {} } }, getElementById: () => container, createElement: () => ({}) },
         escapeHtml: text => String(text).replaceAll('<', '&lt;').replaceAll('>', '&gt;'),
       };
       const start = source.indexOf('    function addChatMessage(');

@@ -12,6 +12,7 @@ import { STORIES } from '../session/stories.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const PUBLIC_DIR = path.resolve(__dirname, '../../public');
+const MUSIC_DIR = path.resolve(__dirname, '../../music');
 const AUDIO_DIR = path.resolve(__dirname, '../../data/audio');
 
 // Room-flood protection
@@ -26,6 +27,19 @@ let lastRoomCreateAt = 0;
  * @param {import('../session/manager.js').RoomManager} manager
  */
 export function setupRoutes(app, manager) {
+  app.get('/api/lobby-music', async (_req, res) => {
+    try {
+      const entries = await fs.promises.readdir(MUSIC_DIR, { withFileTypes: true });
+      const tracks = entries.filter(entry => entry.isFile() && /\.(mp3|ogg|m4a|wav)$/i.test(entry.name))
+        .map(entry => '/music/' + encodeURIComponent(entry.name)).sort();
+      res.json({ tracks });
+    } catch (err) {
+      if (err.code === 'ENOENT') return res.json({ tracks: [] });
+      res.status(500).json({ error: 'Could not load lobby music' });
+    }
+  });
+  app.use('/music', express.static(MUSIC_DIR, { index: false, dotfiles: 'deny' }));
+
   // Health check
   app.get('/health', (_req, res) => {
     const { roomCount, playerCount } = manager.stats();

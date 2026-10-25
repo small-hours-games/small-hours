@@ -8,3 +8,12 @@ tmp
 tests
 *.zip
 .env
+
+# Local tooling, references and Android intermediates are not server assets.
+.agents
+.codex
+.aws
+android-tv/build
+android-tv/dist
+android-tv/keystore
+smallhours-light-lobby

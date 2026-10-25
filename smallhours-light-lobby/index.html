@@ -1,0 +1,457 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#f4f8ff" />
+  <title>Smallhours — Game Lobby</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #173b63;
+      --ink-strong: #142f50;
+      --muted: #6e85a3;
+      --muted-2: #8ba0ba;
+      --line: #cfe6ff;
+      --line-strong: #abd9ff;
+      --blue: #258ef7;
+      --blue-strong: #0878e7;
+      --blue-soft: #e8f5ff;
+      --mint: #dcfbef;
+      --mint-ink: #068866;
+      --panel: rgba(255,255,255,.9);
+      --shadow: 0 18px 42px rgba(70, 125, 183, .10), 0 2px 8px rgba(70,125,183,.05);
+      --radius: 26px;
+    }
+    * { box-sizing: border-box; }
+    html { min-height: 100%; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--ink);
+      font-family: ui-rounded, "Nunito Sans", "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+      background:
+        radial-gradient(ellipse at 5% 25%, rgba(181,224,255,.50), transparent 30%),
+        radial-gradient(ellipse at 100% 10%, rgba(222,225,255,.54), transparent 28%),
+        linear-gradient(135deg, #f5fbff 0%, #edf5ff 48%, #f7f8ff 100%);
+    }
+    button, input { font: inherit; }
+    button { cursor: pointer; }
+    button:focus-visible, a:focus-visible, input:focus-visible { outline: 3px solid rgba(37,142,247,.45); outline-offset: 3px; }
+    .topbar {
+      height: 78px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+      padding: 0 clamp(20px, 4.8vw, 76px);
+      background: rgba(255,255,255,.88);
+      border-bottom: 1px solid rgba(207,230,255,.8);
+      backdrop-filter: blur(14px);
+      position: relative;
+      z-index: 2;
+    }
+    .brand { display: flex; align-items: center; gap: 14px; min-width: 0; }
+    .brand-mark {
+      width: 46px; height: 46px; border-radius: 16px;
+      display: grid; place-items: center; flex: 0 0 auto;
+      color: #fff; font-size: 23px;
+      background: linear-gradient(145deg, #247bf1, #13b2f4);
+      box-shadow: 0 7px 14px rgba(31,139,243,.23), inset 0 1px 0 rgba(255,255,255,.35);
+    }
+    .brand-name { color: #142033; font-weight: 950; letter-spacing: -.9px; font-size: 25px; }
+    .top-actions { display: flex; align-items: center; gap: 10px; }
+    .status-pill, .sound-button {
+      min-height: 38px; border-radius: 999px; padding: 8px 13px;
+      display: inline-flex; align-items: center; gap: 8px; white-space: nowrap;
+      border: 1px solid var(--line-strong); color: #526f90; background: rgba(255,255,255,.8);
+      font-size: 13px; font-weight: 700;
+    }
+    .status-pill { border-color: #a5f0d4; background: #edfff7; color: #058361; }
+    .status-dot { width: 9px; height: 9px; border-radius: 50%; background: #0aa779; box-shadow: 0 0 0 4px rgba(10,167,121,.09); }
+    .sound-button:hover { background: #eff8ff; }
+    .sound-button[aria-pressed="false"] { border-color: #a5f0d4; color: #078765; background: #edfff7; }
+
+    main { max-width: 1660px; margin: 0 auto; padding: clamp(28px, 4.2vw, 64px) clamp(18px, 3.3vw, 52px) 22px; }
+    .dashboard {
+      display: grid;
+      grid-template-columns: minmax(265px, .94fr) minmax(450px, 1.52fr) minmax(330px, 1fr);
+      gap: 16px;
+      align-items: stretch;
+    }
+    .panel {
+      min-width: 0;
+      background: var(--panel);
+      border: 1px solid rgba(186,221,255,.88);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(10px);
+    }
+    .invite-panel { padding: 28px 25px 23px; text-align: center; display: flex; flex-direction: column; align-items: center; }
+    .party-badge {
+      display: inline-flex; align-items: center; gap: 8px; border: 1px solid #c8e8ff;
+      padding: 8px 13px; border-radius: 999px; color: #0c6db7; background: #f2faff;
+      font-weight: 750; font-size: 13px;
+    }
+    .party-badge span { width: 9px; height: 9px; background: #29c87b; border-radius: 50%; }
+    .eyebrow { margin: 22px 0 11px; color: var(--muted); font-size: 12px; font-weight: 800; letter-spacing: .055em; }
+    .room-code {
+      width: 100%; max-width: 320px; padding: 10px 12px 13px;
+      color: #174269; background: linear-gradient(140deg,#f2faff,#fff);
+      border: 1px solid var(--line); border-radius: 19px;
+      font-size: clamp(36px, 3.1vw, 56px); font-weight: 900; letter-spacing: .22em;
+      line-height: 1.35; text-align: center; cursor: pointer;
+      transition: transform .16s, border-color .16s;
+    }
+    .room-code:hover { transform: translateY(-1px); border-color: #7fc7ff; }
+    .qr-wrap { margin-top: 20px; border: 1px solid #b8e0ff; background: white; border-radius: 19px; padding: 8px; box-shadow: 0 4px 12px rgba(56,142,212,.07); }
+    .qr-wrap img { display: block; width: 174px; height: 174px; image-rendering: pixelated; }
+    .scan-label { margin-top: 12px; color: var(--muted); font-size: 13px; }
+    .invite-link {
+      width: 100%; margin-top: 12px; padding: 11px 12px; border-radius: 15px;
+      display: flex; align-items: center; justify-content: space-between; gap: 8px;
+      color: #086ebd; text-decoration: none; font-size: 12px; font-weight: 750;
+      background: #edf8ff; border: 1px solid #deefff; transition: background .15s;
+    }
+    .invite-link:hover { background: #e1f2ff; }
+    .invite-link span:first-child { overflow-wrap: anywhere; text-align: left; }
+    .invite-link .link-icon { font-size: 18px; flex: 0 0 auto; }
+    .invite-foot { margin-top: auto; padding-top: 22px; }
+    .mascot-row { display: flex; justify-content: center; align-items: end; gap: 3px; font-size: 35px; filter: drop-shadow(0 7px 6px rgba(63,147,220,.12)); }
+    .tagline { margin: 7px 0 0; color: #2787e5; font-weight: 800; font-size: 14px; line-height: 1.35; font-style: italic; }
+
+    .vote-panel { padding: 28px 26px 22px; }
+    .panel-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 15px; }
+    .heading-title { display: flex; align-items: center; gap: 10px; min-width: 0; }
+    .heading-spark { font-size: 24px; color: #628cff; line-height: 1; }
+    h1, h2, h3, p { margin-top: 0; }
+    h1 { margin-bottom: 5px; color: var(--ink-strong); font-size: clamp(21px, 2vw, 28px); font-weight: 950; letter-spacing: -.7px; line-height: 1.2; }
+    .subheading { color: var(--muted); font-size: 13px; line-height: 1.45; margin-bottom: 0; }
+    .votes-pill { display: inline-flex; align-items: center; gap: 6px; padding: 7px 11px; border-radius: 999px; white-space: nowrap; background: #e7fff5; border: 1px solid #b5f3de; color: #07876a; font-size: 12px; font-weight: 800; }
+    .heading-rule { height: 1px; background: linear-gradient(90deg, #d9edff, #c7e5ff); margin: 18px 0 17px; }
+    .game-list { display: flex; flex-direction: column; gap: 12px; }
+    .game-option {
+      position: relative; width: 100%; display: flex; align-items: center; gap: 15px; text-align: left;
+      border: 1px solid #d6eaff; border-radius: 20px; padding: 13px 18px;
+      background: linear-gradient(105deg, rgba(255,255,255,.96), rgba(247,251,255,.92));
+      color: inherit; min-height: 82px; transition: transform .16s, border-color .16s, box-shadow .16s, background .16s;
+    }
+    .game-option:hover { transform: translateY(-1px); border-color: #8bcaff; box-shadow: 0 7px 18px rgba(57,144,218,.09); }
+    .game-option.is-selected { border: 1.5px solid #3aa0ff; background: linear-gradient(100deg,#e7f5ff,#f8fcff); box-shadow: inset 0 0 0 1px rgba(58,160,255,.08), 0 5px 15px rgba(49,144,230,.08); }
+    .game-icon { width: 59px; height: 59px; display: grid; place-items: center; border-radius: 17px; color: #fff; font-size: 30px; flex: 0 0 auto; box-shadow: inset 0 1px 0 rgba(255,255,255,.3), 0 4px 9px rgba(40,80,120,.09); }
+    .game-icon.quiz { background: linear-gradient(145deg,#ff537e,#e51e4f); }
+    .game-icon.music { background: linear-gradient(145deg,#c56aff,#772ff4); }
+    .game-icon.shithead { background: linear-gradient(145deg,#ffd96b,#ff9f00); }
+    .game-icon.rummy { background: linear-gradient(145deg,#59e6be,#0fa982); }
+    .game-info { min-width: 0; flex: 1; }
+    .game-name { color: #1a3b60; font-weight: 900; font-size: 16px; margin-bottom: 4px; }
+    .game-description { color: var(--muted); font-size: 12px; }
+    .vote-side { display: flex; align-items: center; flex-direction: column; gap: 5px; flex: 0 0 auto; }
+    .vote-count { min-width: 37px; height: 37px; padding: 0 8px; display: grid; place-items: center; border-radius: 14px; background: #e7f5ff; color: #0783ee; font-size: 15px; font-weight: 900; }
+    .is-selected .vote-count { background: linear-gradient(145deg,#2fa1ff,#1981f4); color: white; }
+    .vote-label { display: none; padding: 3px 8px; border-radius: 99px; color: #0675d6; background: #d8edff; font-size: 10px; font-weight: 900; }
+    .is-selected .vote-label { display: block; }
+    .vote-footnote { margin: 19px 5px 0; text-align: center; color: var(--muted); font-size: 11px; line-height: 1.45; }
+    .vote-status { min-height: 18px; margin: 10px 0 0; text-align: center; color: #1882db; font-size: 12px; font-weight: 750; }
+
+    .right-column { display: flex; flex-direction: column; gap: 12px; min-height: 600px; }
+    .players-panel { padding: 22px 22px 16px; flex: 0 0 auto; }
+    .small-panel-title { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+    .small-panel-title h2 { margin: 0; color: var(--ink-strong); font-size: 20px; font-weight: 950; letter-spacing: -.4px; }
+    .count-label { color: var(--muted); font-size: 12px; white-space: nowrap; }
+    .players-rule { margin: 14px 0 12px; height: 1px; background: #d6ecff; }
+    .player-list { display: grid; grid-template-columns: 1fr 1fr; gap: 11px 8px; }
+    .player { display: flex; align-items: center; gap: 8px; min-width: 0; font-size: 12px; font-weight: 750; color: #456483; }
+    .avatar { width: 31px; height: 31px; border-radius: 50%; display: grid; place-items: center; flex: 0 0 auto; font-size: 17px; border: 2px solid rgba(255,255,255,.9); box-shadow: 0 2px 5px rgba(37,89,145,.1); }
+    .avatar.blue { background: #ccecff; }.avatar.purple { background: #e5d9ff; }.avatar.mint { background: #c8f6e7; }.avatar.yellow { background: #ffe9b4; }
+    .online-dot { width: 6px; height: 6px; border-radius: 50%; background: #2ac58e; flex: 0 0 auto; }
+    .host-tag { color: #078a68; background: #ddfaef; padding: 4px 8px; border-radius: 99px; font-size: 10px; margin-left: auto; }
+
+    .chat-panel { display: flex; flex-direction: column; flex: 1 1 370px; min-height: 365px; padding: 20px 19px 16px; }
+    .chat-title { display: flex; align-items: center; gap: 9px; font-size: 18px !important; }
+    .chat-title .chat-symbol { color: #1686e8; font-size: 21px; }
+    .chat-rule { margin: 13px 0 14px; height: 1px; background: #d6ecff; flex: 0 0 auto; }
+    .messages { display: flex; flex-direction: column; gap: 15px; flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 0 2px 10px 0; scrollbar-width: thin; scrollbar-color: #c6e5ff transparent; }
+    .message { display: grid; grid-template-columns: 31px minmax(0,1fr); align-items: start; gap: 8px; }
+    .message-body { min-width: 0; }
+    .message-meta { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin: 1px 0 5px; }
+    .message-name { color: #486786; font-size: 11px; font-weight: 850; }
+    .message-time { color: #96a9c0; font-size: 9px; white-space: nowrap; }
+    .bubble { display: inline-block; max-width: 100%; border: 1px solid #e0efff; background: linear-gradient(120deg,#f3f9ff,#edf6ff); color: #466789; border-radius: 6px 15px 15px 15px; padding: 9px 11px; font-size: 12px; line-height: 1.4; overflow-wrap: anywhere; }
+    .message.mine .bubble { background: #e6f4ff; border-color: #d4eaff; }
+    .chat-compose { display: flex; align-items: center; gap: 7px; padding: 5px; border: 1px solid #cfe7ff; background: #f8fcff; border-radius: 17px; box-shadow: inset 0 1px 2px rgba(37,116,186,.025); flex: 0 0 auto; }
+    .emoji-button, .send-button { display: grid; place-items: center; flex: 0 0 auto; border: 0; }
+    .emoji-button { width: 34px; height: 34px; color: #7f9bb9; background: #fff; border: 1px solid #e0efff; border-radius: 12px; font-size: 17px; }
+    .emoji-button:hover { background: #edf7ff; }
+    .chat-input { min-width: 0; flex: 1; padding: 8px 3px; color: var(--ink); background: transparent; outline: 0; border: 0; font-size: 12px; }
+    .chat-input::placeholder { color: #93a9c2; }
+    .send-button { width: 37px; height: 37px; border-radius: 13px; color: white; background: linear-gradient(145deg,#33a5ff,#1680f4); font-size: 17px; box-shadow: 0 4px 8px rgba(37,142,247,.2); transition: transform .15s; }
+    .send-button:hover { transform: translateY(-1px); }
+    .send-button:disabled { cursor: not-allowed; opacity: .55; }
+    .footer-note { display: flex; justify-content: center; align-items: center; gap: 13px; color: #7890af; font-size: 12px; text-align: center; padding: 27px 10px 8px; }
+    .footer-note::before, .footer-note::after { content: ""; height: 1px; width: 32px; background: #bbd8ff; }
+    .footer-star { color: #8b8cff; font-size: 15px; }
+    .toast { position: fixed; z-index: 5; left: 50%; bottom: 24px; transform: translate(-50%, 15px); opacity: 0; pointer-events: none; background: #173b63; color: white; padding: 11px 16px; border-radius: 14px; box-shadow: 0 12px 25px rgba(15,55,95,.22); font-size: 13px; font-weight: 750; transition: all .2s; }
+    .toast.show { transform: translate(-50%,0); opacity: 1; }
+
+    @media (min-width: 1450px) { .right-column { min-height: 650px; } .players-panel { padding: 24px 23px 18px; } .chat-panel { padding: 22px 20px 18px; } }
+    @media (max-width: 1120px) {
+      main { padding-top: 28px; }
+      .dashboard { grid-template-columns: minmax(245px,.8fr) minmax(390px,1.25fr); }
+      .right-column { grid-column: 1 / -1; display: grid; grid-template-columns: minmax(240px,.8fr) minmax(390px,1.4fr); min-height: 0; }
+      .players-panel { align-self: start; }
+      .chat-panel { min-height: 330px; }
+      .invite-panel { min-height: 600px; }
+    }
+    @media (max-width: 720px) {
+      .topbar { height: 69px; padding: 0 16px; }
+      .brand { gap: 9px; }.brand-mark { width: 39px; height: 39px; border-radius: 13px; font-size: 20px; }.brand-name { font-size: 21px; }
+      .status-pill, .sound-button { min-height: 34px; padding: 7px 9px; font-size: 11px; gap: 6px; }
+      main { padding: 19px 13px 18px; }
+      .dashboard { grid-template-columns: 1fr; gap: 13px; }
+      .invite-panel { min-height: 0; padding: 23px 21px; }
+      .invite-foot { padding-top: 20px; }
+      .vote-panel { padding: 23px 16px 18px; }
+      .panel-heading { align-items: center; }
+      h1 { font-size: 22px; }
+      .heading-spark { display: none; }
+      .game-option { min-height: 76px; gap: 11px; padding: 11px; border-radius: 17px; }
+      .game-icon { width: 50px; height: 50px; font-size: 26px; border-radius: 15px; }
+      .game-name { font-size: 15px; }.game-description { font-size: 11px; }
+      .right-column { grid-column: auto; display: flex; gap: 13px; }
+      .players-panel { padding: 19px 17px 16px; }
+      .chat-panel { min-height: 360px; padding: 19px 15px 14px; }
+      .player-list { grid-template-columns: 1fr 1fr; }
+      .footer-note { font-size: 11px; padding-top: 21px; gap: 8px; }
+    }
+    @media (max-width: 380px) {
+      .brand-name { font-size: 18px; }
+      .top-actions { gap: 5px; }
+      .status-pill, .sound-button { padding: 6px 7px; font-size: 10px; }
+      .vote-side { gap: 3px; }.vote-count { min-width: 32px; height: 33px; border-radius: 11px; }
+      .game-option { gap: 9px; padding: 9px; }
+    }
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; } }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand" aria-label="Smallhours home">
+      <div class="brand-mark" aria-hidden="true">🎮</div>
+      <div class="brand-name">Smallhours</div>
+    </div>
+    <div class="top-actions">
+      <div class="status-pill"><span class="status-dot"></span><span>Connected</span></div>
+      <button class="sound-button" id="soundToggle" type="button" aria-pressed="true" aria-label="Toggle music status">🔇 <span>Muted</span></button>
+    </div>
+  </header>
+
+  <main>
+    <div class="dashboard">
+      <section class="panel invite-panel" aria-labelledby="inviteHeading">
+        <div class="party-badge"><span></span> Party Online</div>
+        <p class="eyebrow" id="inviteHeading">JOIN WITH ROOM CODE</p>
+        <button class="room-code" id="copyCode" type="button" aria-label="Copy room code 944C" title="Click to copy room code">944C</button>
+        <div class="qr-wrap"><img id="roomQr" alt="QR code linking to the player room" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAQgAAAEIAQAAAACLjVdSAAABjUlEQVR4nO2ZS47DMAxDySL3v/KbhSQ7nU1XowjjJqgRuFwwgj40Y/Then0CfBH/GCG4PUA8oL07hWkP4pLi3S0LWUhGrN0xTPviIa+3R5YwZu1OYdoYj7qI1DBu5zEQgWy5KuU5Ho8iLmkHAFnOJrJ2pzBtny+/7vp7CtO2/NjlkY1U9WvkMQUhEAAZhKyUrUUOy4+XhJ2aI+cKlkCml8cIRAoN4aqQlGSugpnCtA1RctSKRFndw708RiBi3poUHhECr5ZqxjBtRUSRyKpVkSzdPB5HXJEdlRN4N5DUZVOYdiJSpEcPBUUf4czzbRzfLIyzldxTZgrTZr0O5QgBW6KepsccjkfaHjVjY7bE+X8K07544HVcMdsl04n6NOukPFPKQZWOrZfbozHRXneCTGHa2T+kqpiIRQ6bA/XHzV+PlRSopJ06hmkjwrZUeiNXWxbH6bF3hL2+O1Cnu5lMexDIJUAcon0q079CvPnr4X0sZygk2hSmffHIlFjf5IyrWo7Lj5v+eJTHFzET8QPSOtLFfKAZ4gAAAABJRU5ErkJggg==" /></div>
+        <div class="scan-label">Scan or open</div>
+        <a class="invite-link" id="inviteLink" href="https://quiz.aldervall.se/player/944C" target="_blank" rel="noopener noreferrer">
+          <span>https://quiz.aldervall.se/player/944C</span><span class="link-icon" aria-hidden="true">↗</span>
+        </a>
+        <div class="invite-foot" aria-hidden="true">
+          <div class="mascot-row"><span>🧑🏻‍🎤</span><span>🧑🏽‍🚀</span><span>🧑🏾‍🎨</span></div>
+          <p class="tagline">Good games.<br/>Better together.</p>
+        </div>
+      </section>
+
+      <section class="panel vote-panel" aria-labelledby="voteHeading">
+        <div class="panel-heading">
+          <div>
+            <div class="heading-title"><span class="heading-spark" aria-hidden="true">✦</span><h1 id="voteHeading">Vote for next activity</h1></div>
+            <p class="subheading">Pick a game and help decide what we play next!</p>
+          </div>
+          <div class="votes-pill" aria-live="polite">♧ <span id="totalVotes">0 votes</span></div>
+        </div>
+        <div class="heading-rule"></div>
+        <div class="game-list" id="gameList" aria-label="Available games">
+          <button class="game-option" type="button" data-game="quiz" aria-pressed="false">
+            <span class="game-icon quiz" aria-hidden="true">🎯</span>
+            <span class="game-info"><span class="game-name" style="display:block">Quiz</span><span class="game-description">Test your knowledge</span></span>
+            <span class="vote-side"><span class="vote-count">0</span><span class="vote-label">Your vote</span></span>
+          </button>
+          <button class="game-option" type="button" data-game="music" aria-pressed="false">
+            <span class="game-icon music" aria-hidden="true">♫</span>
+            <span class="game-info"><span class="game-name" style="display:block">Music Quiz</span><span class="game-description">Name that tune</span></span>
+            <span class="vote-side"><span class="vote-count">0</span><span class="vote-label">Your vote</span></span>
+          </button>
+          <button class="game-option" type="button" data-game="shithead" aria-pressed="false">
+            <span class="game-icon shithead" aria-hidden="true">🃏</span>
+            <span class="game-info"><span class="game-name" style="display:block">Shithead</span><span class="game-description">The classic card game</span></span>
+            <span class="vote-side"><span class="vote-count">0</span><span class="vote-label">Your vote</span></span>
+          </button>
+          <button class="game-option" type="button" data-game="rummy" aria-pressed="false">
+            <span class="game-icon rummy" aria-hidden="true">♠</span>
+            <span class="game-info"><span class="game-name" style="display:block">Gin Rummy</span><span class="game-description">Strategy meets luck</span></span>
+            <span class="vote-side"><span class="vote-count">0</span><span class="vote-label">Your vote</span></span>
+          </button>
+        </div>
+        <p class="vote-footnote">Wish for a game on your phone. The most picked game is chosen<br class="wide-break"/> and the next phase begins.</p>
+        <p class="vote-status" id="voteStatus" role="status" aria-live="polite"></p>
+      </section>
+
+      <aside class="right-column" aria-label="Players and chat">
+        <section class="panel players-panel" aria-labelledby="playersHeading">
+          <div class="small-panel-title"><h2 id="playersHeading">♟ &nbsp;Players</h2><span class="count-label"><span id="playerCount">4</span> in lobby</span></div>
+          <div class="players-rule"></div>
+          <div class="player-list">
+            <div class="player"><span class="avatar blue">👤</span><span class="online-dot"></span><span>You</span><span class="host-tag">Host</span></div>
+            <div class="player"><span class="avatar purple">👾</span><span class="online-dot"></span><span>Alex</span></div>
+            <div class="player"><span class="avatar mint">🐸</span><span class="online-dot"></span><span>Jamie</span></div>
+            <div class="player"><span class="avatar yellow">🐣</span><span class="online-dot"></span><span>Taylor</span></div>
+          </div>
+        </section>
+
+        <section class="panel chat-panel" aria-labelledby="chatHeading">
+          <div class="small-panel-title"><h2 class="chat-title" id="chatHeading"><span class="chat-symbol" aria-hidden="true">●</span> Chat</h2></div>
+          <div class="chat-rule"></div>
+          <div class="messages" id="messages" role="log" aria-live="polite" aria-label="Chat messages">
+            <div class="message">
+              <span class="avatar purple">👾</span><div class="message-body"><div class="message-meta"><span class="message-name">Jamie</span><time class="message-time">10:24 AM</time></div><div class="bubble">This is awesome! 🎉</div></div>
+            </div>
+            <div class="message">
+              <span class="avatar mint">🐸</span><div class="message-body"><div class="message-meta"><span class="message-name">Taylor</span><time class="message-time">10:25 AM</time></div><div class="bubble">I'm in for quiz!</div></div>
+            </div>
+            <div class="message">
+              <span class="avatar yellow">🐣</span><div class="message-body"><div class="message-meta"><span class="message-name">Alex</span><time class="message-time">10:25 AM</time></div><div class="bubble">Same! Let's go 💪</div></div>
+            </div>
+            <div class="message mine">
+              <span class="avatar blue">👤</span><div class="message-body"><div class="message-meta"><span class="message-name">You</span><time class="message-time">10:26 AM</time></div><div class="bubble">Great! Let's get this party started!</div></div>
+            </div>
+          </div>
+          <form class="chat-compose" id="chatForm">
+            <button class="emoji-button" id="emojiButton" type="button" aria-label="Add a party emoji" title="Add emoji">☺</button>
+            <input class="chat-input" id="chatInput" name="message" maxlength="300" autocomplete="off" placeholder="Type a message..." aria-label="Type a chat message" />
+            <button class="send-button" id="sendButton" type="submit" aria-label="Send message">➤</button>
+          </form>
+        </section>
+      </aside>
+    </div>
+    <div class="footer-note"><span class="footer-star">✦</span><span>The most-voted game will be chosen next</span><span class="footer-star">✦</span></div>
+  </main>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script>
+    // Front-end demo only: votes and chat are local to this browser tab.
+    // Connect these event handlers to your backend/WebSocket to sync real players.
+    const gameNames = { quiz: 'Quiz', music: 'Music Quiz', shithead: 'Shithead', rummy: 'Gin Rummy' };
+    const voteCounts = { quiz: 0, music: 0, shithead: 0, rummy: 0 };
+    let myVote = null;
+    let muted = true;
+    let toastTimer;
+
+    const gameButtons = [...document.querySelectorAll('.game-option')];
+    const totalVotesEl = document.getElementById('totalVotes');
+    const voteStatus = document.getElementById('voteStatus');
+    const toastEl = document.getElementById('toast');
+
+    function showToast(message) {
+      toastEl.textContent = message;
+      toastEl.classList.add('show');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => toastEl.classList.remove('show'), 2100);
+    }
+
+    function renderVotes() {
+      const total = Object.values(voteCounts).reduce((sum, n) => sum + n, 0);
+      totalVotesEl.textContent = `${total} ${total === 1 ? 'vote' : 'votes'}`;
+      const max = Math.max(0, ...Object.values(voteCounts));
+      gameButtons.forEach(button => {
+        const game = button.dataset.game;
+        button.querySelector('.vote-count').textContent = voteCounts[game];
+        const isSelected = myVote === game;
+        button.classList.toggle('is-selected', isSelected);
+        button.setAttribute('aria-pressed', String(isSelected));
+        const label = button.querySelector('.vote-label');
+        if (isSelected) label.textContent = 'Your vote';
+        else if (total > 0 && voteCounts[game] === max && max > 0) label.textContent = 'Leading';
+        else label.textContent = '';
+        label.style.display = (isSelected || (total > 0 && voteCounts[game] === max && max > 0)) ? 'block' : 'none';
+      });
+    }
+
+    gameButtons.forEach(button => button.addEventListener('click', () => {
+      const nextVote = button.dataset.game;
+      if (myVote === nextVote) {
+        voteCounts[myVote] = Math.max(0, voteCounts[myVote] - 1);
+        myVote = null;
+        voteStatus.textContent = 'Your vote has been removed.';
+      } else {
+        if (myVote) voteCounts[myVote] = Math.max(0, voteCounts[myVote] - 1);
+        myVote = nextVote;
+        voteCounts[myVote] += 1;
+        voteStatus.textContent = `Your vote is for ${gameNames[myVote]}.`;
+      }
+      renderVotes();
+    }));
+
+    document.getElementById('soundToggle').addEventListener('click', event => {
+      muted = !muted;
+      const button = event.currentTarget;
+      button.setAttribute('aria-pressed', String(muted));
+      button.innerHTML = muted ? '🔇 <span>Muted</span>' : '🔊 <span>Sound on</span>';
+      showToast(muted ? 'Lobby sound muted' : 'Lobby sound enabled');
+      // This is only a UI toggle until a music/audio player is connected.
+    });
+
+    async function copyText(text, successMessage) {
+      try {
+        await navigator.clipboard.writeText(text);
+        showToast(successMessage);
+      } catch {
+        const helper = document.createElement('textarea');
+        helper.value = text; helper.style.position = 'fixed'; helper.style.opacity = '0';
+        document.body.appendChild(helper); helper.select();
+        const copied = document.execCommand('copy'); helper.remove();
+        showToast(copied ? successMessage : 'Copy failed — please copy it manually.');
+      }
+    }
+    document.getElementById('copyCode').addEventListener('click', () => copyText('944C', 'Room code copied: 944C'));
+    document.getElementById('inviteLink').addEventListener('click', event => {
+      if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+      // Clicking the link still opens the room; use the icon or this message to remind users they can copy it.
+    });
+    document.getElementById('inviteLink').addEventListener('contextmenu', () => {});
+
+    const chatForm = document.getElementById('chatForm');
+    const chatInput = document.getElementById('chatInput');
+    const messages = document.getElementById('messages');
+    function localTime() {
+      return new Intl.DateTimeFormat([], { hour: 'numeric', minute: '2-digit' }).format(new Date());
+    }
+    function sendMessage(text) {
+      const clean = text.trim();
+      if (!clean) return;
+      const row = document.createElement('div'); row.className = 'message mine';
+      const avatar = document.createElement('span'); avatar.className = 'avatar blue'; avatar.textContent = '👤';
+      const body = document.createElement('div'); body.className = 'message-body';
+      const meta = document.createElement('div'); meta.className = 'message-meta';
+      const name = document.createElement('span'); name.className = 'message-name'; name.textContent = 'You';
+      const time = document.createElement('time'); time.className = 'message-time'; time.textContent = localTime();
+      const bubble = document.createElement('div'); bubble.className = 'bubble'; bubble.textContent = clean;
+      meta.append(name, time); body.append(meta, bubble); row.append(avatar, body); messages.appendChild(row);
+      messages.scrollTop = messages.scrollHeight;
+    }
+    chatForm.addEventListener('submit', event => {
+      event.preventDefault();
+      const message = chatInput.value;
+      if (!message.trim()) return;
+      sendMessage(message);
+      chatInput.value = '';
+      chatInput.focus();
+    });
+    document.getElementById('emojiButton').addEventListener('click', () => {
+      chatInput.value += ' 🎉'; chatInput.focus();
+    });
+    renderVotes();
+  </script>
+</body>
+</html>
