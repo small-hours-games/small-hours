@@ -370,6 +370,7 @@
   <footer class="max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 pb-12 flex flex-wrap justify-between gap-4 text-sm text-[#a9b6d3]">
     <span class="font-display font-bold text-xl text-white">Smallhours</span>
     <span>Party games best played in the small hours</span>
+    <span id="buildInfo" class="w-full text-xs opacity-80" title="Running version"></span>
   </footer>
 
   <script>
@@ -481,6 +482,29 @@
         btn.disabled = false;
       }
     }
+
+    // Footer: which build is running, e.g. "v2.1.0 · 2dbdd0b · built 7 Nov 2026, 14:02"
+    function renderBuildInfo(info) {
+      const el = document.getElementById('buildInfo');
+      if (!el || !info || !info.version) return;
+      el.textContent = 'v' + info.version;
+      if (info.shortCommit) {
+        const link = document.createElement('a');
+        link.href = 'https://github.com/small-hours-games/small-hours/commit/' + info.commit;
+        link.target = '_blank';
+        link.rel = 'noopener';
+        link.className = 'hover:text-white underline-offset-2 hover:underline';
+        link.textContent = info.shortCommit;
+        el.append(' · ', link);
+      }
+      if (info.builtAt) {
+        const built = new Date(info.builtAt);
+        const when = built.toLocaleString(undefined, { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+        el.append(' · built ' + when);
+        el.title = 'Built ' + built.toISOString();
+      }
+    }
+    fetch('/api/version').then(r => r.ok ? r.json() : null).then(renderBuildInfo).catch(() => {});
 
     // Deep link: /?code=XXXX jumps straight to the nickname step
     const preset = new URLSearchParams(location.search).get('code');

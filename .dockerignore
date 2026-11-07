@@ -1,5 +1,9 @@
 node_modules
 .git
+# Keep only what src/version.js needs to name the commit.
+!.git/HEAD
+!.git/refs
+!.git/packed-refs
 .github
 .planning
 .claude
