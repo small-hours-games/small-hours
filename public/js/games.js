@@ -5,7 +5,7 @@ var SH_GAMES = [
   { type: 'quiz',          label: 'Quiz',         icon: '🎯', min: 1, max: 20, hasUi: true,  blurb: 'Trivia rounds, pick a category' },
   { type: 'music-quiz',    label: 'Music Quiz',   icon: '🎵', min: 1, max: 20, hasUi: true,  blurb: 'Guess the song, a new genre every question' },
   { type: 'shithead',      label: 'Shithead',     icon: '🃏', min: 2, max: 6,  hasUi: true,  blurb: 'Card game' },
-  { type: 'gin-rummy',     label: 'Gin Rummy',    icon: '♠️', min: 2, max: 4,  hasUi: true,  blurb: 'Card game' },
+  { type: 'gin-rummy',     label: 'Gin Rummy',    icon: '♠️', min: 2, max: 2,  hasUi: true,  blurb: 'Card game' },
 ];
 
 function shGame(type) {

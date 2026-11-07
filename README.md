@@ -30,7 +30,7 @@ These games are available in the dashboard:
 | 🎯 **Quiz** | 1–20 | Vote for a category, race the timer, and defend your trivia reputation. |
 | 🎵 **Music Quiz** | 1–20 | Hear the clip. Name the artist or song. Try not to sing the answer out loud. |
 | 🃏 **Shithead** | 2–6 | Empty your cards and avoid being the last player standing. |
-| ♠️ **Gin Rummy** | 2–4 | Build your hand, watch the discards, and pick your moment. |
+| ♠️ **Gin Rummy** | 2 | Build your hand, watch the discards, and pick your moment. |
 
 Music Quiz mixes genres and decades, rotates songs, and builds believable alternatives from the same playlist. Each quiz starts with a five-second countdown; music clips fade in for one second and out over the final two seconds of the question.
 
