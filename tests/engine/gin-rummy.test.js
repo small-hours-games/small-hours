@@ -1380,4 +1380,32 @@ describe('stock exhaustion', () => {
       expect(result.game.state.cumulative.p2).toBe(20);
     }
   });
+
+  it('view exposes stack previews, currentPlayer, live melds/deadwood, and lastDrawnCardId', () => {
+    const game = createTestGame(ginRummy, ['p1', 'p2']);
+    const customHand = [
+      card(5, 'h'), card(6, 'h'), card(7, 'h'), // run of 3
+      card(9, 'c'), card(9, 'd'), card(9, 's'), // set of 3
+      card(2, 'c'), card(4, 'd'), // deadwood = 6
+      card(10, 's'), card(10, 'h'),
+    ];
+    const playState = {
+      ...game.state,
+      phase: 'drawing',
+      currentPlayerIndex: 1,
+      turnPhase: 'draw',
+      hands: { ...game.state.hands, p2: customHand },
+      discard: [card(3, 'd'), card(8, 's')],
+    };
+    const drawn = act({ ...game, state: playState }, 'draw', 'p2', { source: 'discard' });
+    const view = viewFor(drawn.game, 'p2');
+    expect(view.currentPlayer).toBe('p2');
+    expect(view.discardCount).toBe(1);
+    expect(Array.isArray(view.discardPreview)).toBe(true);
+    expect(view.playerCardCounts.p2).toBe(11);
+    expect(Array.isArray(view.myMelds)).toBe(true);
+    expect(view.myMelds.length).toBeGreaterThanOrEqual(2);
+    expect(typeof view.myDeadwoodValue).toBe('number');
+    expect(view.lastDrawnCardId).toBe('8s_0');
+  });
 });

@@ -34,8 +34,8 @@ VERSION_CODE=2 VERSION_NAME=1.1 ./build.sh   # bump the version for an update
 
 There's no Gradle. The script uses the plain SDK tools (aapt2, javac, d8, zipalign,
 apksigner). The first run downloads JDK 17 and the Android command-line tools (~750 MB)
-into `~/.cache/smallhours-android/`. The icon and TV banner are drawn at build time by
-`tools/GenArt.java`.
+into `~/.cache/smallhours-android/`. The icon and TV banner are resized from the approved web logo in
+`../public/images/` by `tools/GenArt.java` at build time.
 
 ## Signing key — back it up
 

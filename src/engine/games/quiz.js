@@ -1,5 +1,7 @@
 // Small Hours - Quiz / Trivia Game
 import { fetchQuestions } from '../../fetcher/cached-fetcher.js';
+import { warmQuizNarration } from '../../fetcher/cached-narration.js';
+import { enrichQuestionsWithImages } from '../../fetcher/cached-question-images.js';
 
 /**
  * Deterministic shuffle seeded by an integer.
@@ -52,9 +54,18 @@ const quiz = {
     if (selected.length === 0) {
       throw new Error('No questions available for this category');
     }
+    const enriched = await enrichQuestionsWithImages(selected);
+    if (enriched.length > 0 && process.env.GEMINI_API_KEY) {
+      // Warm Question 1 up front (bounded to 3.5s) and continue caching the full set in the background
+      await Promise.race([
+        warmQuizNarration(enriched.slice(0, 1), { maxRetries: 0 }),
+        new Promise(resolve => setTimeout(resolve, 3500)),
+      ]).catch(() => {});
+    }
+    warmQuizNarration(enriched).catch(() => {});
     return {
-      config: { ...config, questions: selected },
-      trackIds: selected.map(q => q.id),
+      config: { ...config, questions: enriched },
+      trackIds: enriched.map(q => q.id),
     };
   },
 
@@ -325,6 +336,10 @@ const quiz = {
           category: question.category,
           difficulty: question.difficulty,
         };
+
+        if (question.image && !question.media) {
+          base.question.image = question.image;
+        }
 
         // Music Quiz: the clip is playable during the question; cover and names
         // would give the answer away, so they only appear at reveal.

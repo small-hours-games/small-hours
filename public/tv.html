@@ -7,7 +7,7 @@
   <title>Smallhours TV</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;700&family=Fredoka:wght@600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Fredoka:wght@600;700&display=swap" rel="stylesheet">
   <style>
     :root { color-scheme: light; }
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -17,37 +17,124 @@
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      gap: 24px;
+      gap: 28px;
       font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
-      color: #1e293b;
-      background: linear-gradient(135deg, #f0f9ff 0%, #eff6ff 55%, #eef2ff 100%);
+      color: #0f172a;
+      background:
+        radial-gradient(ellipse 80% 50% at 50% -10%, rgba(251, 191, 36, 0.35), transparent 65%),
+        radial-gradient(ellipse 60% 45% at 15% 20%, rgba(56, 189, 248, 0.35), transparent 60%),
+        radial-gradient(ellipse 60% 45% at 85% 20%, rgba(168, 85, 247, 0.28), transparent 60%),
+        linear-gradient(145deg, #f0f9ff 0%, #e0f2fe 50%, #eef2ff 100%);
+      overflow: hidden;
+      position: relative;
+      perspective: 1200px;
     }
-    .logo {
-      width: 120px; height: 120px; border-radius: 36px;
-      background: linear-gradient(45deg, #0ea5e9, #2563eb);
-      display: flex; align-items: center; justify-content: center;
-      box-shadow: 0 20px 40px -12px rgba(14, 116, 144, 0.35);
+    .studio-beams {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background:
+        conic-gradient(from 155deg at 20% -5%, transparent 0deg, rgba(255, 255, 255, 0.55) 14deg, transparent 28deg),
+        conic-gradient(from 180deg at 80% -5%, transparent 0deg, rgba(255, 255, 255, 0.55) 14deg, transparent 28deg);
+      animation: beamSweep 7s ease-in-out infinite alternate;
     }
-    .logo svg { width: 64px; height: 64px; fill: #fff; }
-    h1 { font-family: 'Fredoka', sans-serif; font-size: 64px; font-weight: 700; letter-spacing: -0.02em; }
-    p { font-size: 22px; font-weight: 500; color: #475569; }
+    @keyframes beamSweep {
+      0% { transform: rotate(-2deg) scale(1.02); opacity: 0.75; }
+      100% { transform: rotate(2deg) scale(1.05); opacity: 1; }
+    }
+    .studio-card {
+      position: relative;
+      z-index: 2;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 24px;
+      padding: 44px 56px;
+      border-radius: 36px;
+      background: rgba(255, 255, 255, 0.88);
+      border: 3px solid rgba(255, 255, 255, 0.95);
+      box-shadow:
+        0 28px 64px rgba(15, 23, 42, 0.14),
+        0 0 0 1px rgba(56, 189, 248, 0.25),
+        inset 0 2px 0 rgba(255, 255, 255, 0.9);
+      backdrop-filter: blur(16px);
+      text-align: center;
+    }
+    .studio-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 18px;
+      border-radius: 999px;
+      background: linear-gradient(135deg, #fef3c7, #fde68a);
+      border: 1.5px solid #f59e0b;
+      color: #92400e;
+      font-weight: 800;
+      font-size: 14px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      box-shadow: 0 4px 12px rgba(245, 158, 11, 0.22);
+    }
+    .studio-badge-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #ef4444;
+      box-shadow: 0 0 10px #ef4444;
+      animation: livePulse 1.2s ease-in-out infinite;
+    }
+    @keyframes livePulse {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.3); opacity: 0.6; }
+    }
+    .logo { width: min(640px, 82vw); height: auto; display: block; filter: drop-shadow(0 8px 18px rgba(14, 116, 144, 0.12)); }
+    .mascot-stage-preview {
+      display: flex;
+      align-items: center;
+      gap: 22px;
+      font-size: 46px;
+      padding: 8px 24px;
+      border-radius: 22px;
+      background: linear-gradient(135deg, #f0f9ff, #e0f2fe);
+      border: 1px solid #bae6fd;
+    }
+    .mascot-stage-preview span {
+      display: inline-block;
+      animation: mascotBounce 1.4s ease-in-out infinite;
+    }
+    .mascot-stage-preview span:nth-child(2) { animation-delay: 0.2s; font-size: 36px; }
+    .mascot-stage-preview span:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes mascotBounce {
+      0%, 100% { transform: translateY(0) rotate(-4deg); }
+      50% { transform: translateY(-8px) rotate(4deg); }
+    }
+    p { font-size: 22px; font-weight: 700; color: #334155; }
     .dots span {
       display: inline-block; width: 14px; height: 14px; margin: 0 6px; border-radius: 50%;
-      background: #0284c7; animation: pulse 1.2s infinite ease-in-out;
+      background: linear-gradient(135deg, #0284c7, #2563eb); animation: pulse 1.2s infinite ease-in-out;
     }
     .dots span:nth-child(2) { animation-delay: 0.2s; }
     .dots span:nth-child(3) { animation-delay: 0.4s; }
-    @keyframes pulse { 0%, 80%, 100% { opacity: 0.25; transform: scale(0.8); } 40% { opacity: 1; transform: scale(1); } }
+    @keyframes pulse { 0%, 80%, 100% { opacity: 0.25; transform: scale(0.8); } 40% { opacity: 1; transform: scale(1.1); } }
   </style>
+  <link rel="icon" type="image/png" sizes="64x64" href="/images/smallhours-favicon.png">
 </head>
 <body>
-  <div class="logo" aria-hidden="true">
-    <!-- gamepad -->
-    <svg viewBox="0 0 640 512"><path d="M192 64C86 64 0 150 0 256s86 192 192 192h256c106 0 192-86 192-192S554 64 448 64H192zm304 248a40 40 0 1 1 0-80 40 40 0 1 1 0 80zm-64-96a40 40 0 1 1 0-80 40 40 0 1 1 0 80zM168 200c0-13.3 10.7-24 24-24s24 10.7 24 24v32h32c13.3 0 24 10.7 24 24s-10.7 24-24 24h-32v32c0 13.3-10.7 24-24 24s-24-10.7-24-24v-32h-32c-13.3 0-24-10.7-24-24s10.7-24 24-24h32v-32z"/></svg>
+  <div class="studio-beams" aria-hidden="true"></div>
+  <div class="studio-card">
+    <div class="studio-badge">
+      <span class="studio-badge-dot"></span>
+      <span>Live Game Show Studio</span>
+    </div>
+    <img class="logo" src="/images/smallhours-logo.png" alt="Smallhours — Good games. Better together." width="1400" height="297">
+    <div class="mascot-stage-preview" aria-hidden="true">
+      <span>🦁</span>
+      <span>🃏⚡🃏</span>
+      <span>🐸</span>
+    </div>
+    <p id="status">Creating a room&hellip;</p>
+    <div class="dots" aria-hidden="true"><span></span><span></span><span></span></div>
   </div>
-  <h1>Smallhours</h1>
-  <p id="status">Creating a room&hellip;</p>
-  <div class="dots" aria-hidden="true"><span></span><span></span><span></span></div>
 
   <script>
     // TV entry point (used by the Android TV app): create a room, then show its host screen.

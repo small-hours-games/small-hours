@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="public/images/Shg-gemeni-trans.png" alt="Small Hours Games" width="220">
+  <img src="public/images/smallhours-logo.png" alt="Smallhours — Good games. Better together." width="460">
 </p>
 
 # Small Hours Games
@@ -39,6 +39,7 @@ The engine also includes Number Guess, Spy, Högt/Lågt, Sjuan, Uno, Yatzy, Laby
 ## Small touches, better game nights
 
 - **Vote together.** Players choose the next activity and trivia category from their phones.
+- **Your own quiz host.** Trivia questions and answer reveals are read through the TV, with an upbeat Gemini voice when configured and a browser speech fallback where supported. The TV Sound button controls narration too.
 - **See the reveal.** Quiz answers show who guessed what, with player names and avatars.
 - **Keep the banter going.** Party chat shows player names and avatars. On the TV it sits beneath the players in the lobby, then moves below the scoreboard during games.
 - **A lighter lobby.** White panels, soft blue backgrounds, colored activity cards, and a compact TV layout that keeps longer lists inside scrollable panels.
@@ -96,7 +97,7 @@ Copy `.env.example` to `.env` if you want to customize the server. Core play doe
 | --- | --- |
 | `PORT` | HTTP and WebSocket port; defaults to `3001`. |
 | `DOMAIN` | Domain used in room notification links. |
-| `GEMINI_API_KEY` | Optional generated speech. Replace the example placeholder to enable it. |
+| `GEMINI_API_KEY` | Gemini speech generation, including the game-show host voice. Requires a valid Gemini API key. |
 | `DISCORD_WEBHOOK_URL` | Optional notification when a room is created. |
 | `IMAGE_TAG` | Published Docker image tag; defaults to `latest`. |
 
@@ -104,7 +105,7 @@ Trivia comes from OpenTrivia DB and is cached on disk. Music Quiz uses Deezer pl
 
 ## Sound, music, and your own tracks
 
-**Lobby music** plays through the TV at 12% volume. Tracks rotate while everyone joins and votes, pause when a game starts (including its countdown), and resume when the display returns to the lobby. Phones stay quiet for the lobby soundtrack.
+**Lobby music** plays through the TV at 12% volume. Tracks rotate while everyone joins and votes. Playback fades in over 1.5 seconds on lobby entry, fades out over 1.2 seconds when a game starts (including its countdown), and fades out over each song's final two seconds before the next track fades in. Phones stay quiet for the lobby soundtrack.
 
 To change the playlist:
 

@@ -21,7 +21,7 @@ export const STORIES = {
     intro: 'En förrädare gömmer sig bland er. Tystnaden är livsfarlig, misstanken dödlig. Avslöja spionen innan klockan når midnatt.',
   },
   shithead: {
-    title: 'Shithead',
+    title: 'Palace',
     theme: 'orange',
     intro: 'Korten är lagda. Äran tillhör den som blir av med allt först. Den siste kvar bär skammens krona. Spela klokt, krigare.',
   },
