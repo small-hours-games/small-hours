@@ -1276,6 +1276,12 @@ body.in-game .mascot-duel-stage {
 }
 .host-screen:not(.in-game) .studio-spotlights { display: none; }
 .host-screen .studio-header { background: rgba(11, 21, 48, 0.9); border-color: #1e2e58; box-shadow: none; }
+.host-screen .build-badge {
+  font-size: 13px; font-weight: 700; letter-spacing: 0.02em; white-space: nowrap;
+  color: #dce3f2; background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 999px; padding: 4px 12px;
+}
+.host-screen .build-badge.hidden { display: none; }
 /* The colour logo has navy lettering: give it a white chip on the night header */
 .host-screen .studio-header .brand-logo { background: #fff; padding: 6px 12px; border-radius: 14px; box-sizing: content-box; width: 190px; }
 .host-screen .studio-on-air-badge { background: var(--night-sun); border-color: var(--night-sun); color: var(--night); box-shadow: none; }
