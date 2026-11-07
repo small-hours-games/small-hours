@@ -93,7 +93,7 @@ The `question-form` game is an optional in-app polling tool. Its definition and 
 
 Browser helpers are loaded by plain `<script>` tags and expose globals. Check script order and existing helpers before adding another module or dependency. For UI changes, verify the shared display and phone layout, including reconnect and finished-game states when affected.
 
-Card rendering lives in `public/js/cards.js` with SVGs/audio under `public/cards/`. Engine suits are `h`, `d`, `c`, `s`; ranks are numeric. Shithead's Ace-high rank 14 maps to the same card image as rank 1. Reuse the renderer and existing audio helpers.
+Gin Rummy and Palace use the card-table kit `public/js/table-cards.js` + `public/css/table-cards.css` (vector cards, stacks, 2-row rack/fan, tap / swipe-up / drag gestures, hand ordering), shared by phone and TV. Other card rendering lives in `public/js/cards.js` with SVGs/audio under `public/cards/`. Engine suits are `h`, `d`, `c`, `s`; ranks are numeric. Shithead's Ace-high rank 14 maps to the same card image as rank 1. Reuse the renderer and existing audio helpers.
 
 Use `smallhours-light-lobby/` as the lobby design reference. Current shared styling lives in `public/css/`; brand images live in `public/images/`.
 

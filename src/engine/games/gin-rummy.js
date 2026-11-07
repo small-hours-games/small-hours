@@ -307,6 +307,7 @@ function dealNewHand(state) {
     knockerMelds: null,
     knockerDeadwood: null,
     opponentMelds: null,
+    opponentLayoffs: null,
     opponentDeadwood: null,
     ginType: null,
     lastDrawFrom: null,
@@ -344,6 +345,7 @@ function setup({ players, config = {} }) {
     knockerMelds: null,
     knockerDeadwood: null,
     opponentMelds: null,
+    opponentLayoffs: null,
     opponentDeadwood: null,
     ginType: null,
     lastDrawFrom: null,
@@ -593,13 +595,18 @@ function knock(state, { playerId }) {
 
   // Auto-compute opponent melds
   const opponentResult = findOptimalMelds(opponentHand);
-  let opponentMelds = opponentResult.melds;
+  // The opponent keeps their own melds; deadwood they can lay off onto the
+  // knocker's melds is listed separately (it used to replace opponentMelds with
+  // the knocker's melds, which hid the opponent's own melds in the reveal).
+  const opponentMelds = opponentResult.melds;
   let opponentDeadwood = opponentResult.deadwood;
+  let opponentLayoffs = [];
 
   // Auto-apply layoffs (per D-07) — not for gin
   if (ginType !== 'gin' && ginType !== 'bigGin') {
     const layoffResult = applyLayoffs(opponentDeadwood, knockerResult.melds);
-    opponentMelds = layoffResult.updatedMelds;
+    const remainingIds = new Set(layoffResult.remainingDeadwood.map(c => c.id));
+    opponentLayoffs = opponentDeadwood.filter(c => !remainingIds.has(c.id));
     opponentDeadwood = layoffResult.remainingDeadwood;
   }
 
@@ -633,6 +640,7 @@ function knock(state, { playerId }) {
     knockerDeadwood: knockerResult.deadwood,
     opponentMelds,
     opponentDeadwood,
+    opponentLayoffs,
     ginType,
     handResult,
     cumulative: newCumulative,
@@ -758,6 +766,7 @@ function view(state, playerId) {
       knockerMelds: state.knockerMelds,
       knockerDeadwood: state.knockerDeadwood,
       opponentMelds: state.opponentMelds,
+      opponentLayoffs: state.opponentLayoffs,
       opponentDeadwood: state.opponentDeadwood,
       handResult: state.handResult,
       finalScores: state.finalScores,

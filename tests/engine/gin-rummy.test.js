@@ -1409,3 +1409,24 @@ describe('stock exhaustion', () => {
     expect(view.lastDrawnCardId).toBe('8s_0');
   });
 });
+
+describe('knock reveal keeps the opponent\'s own melds', () => {
+  it('lists layoffs separately instead of replacing opponentMelds with the knocker\'s melds', () => {
+    const c = (rank, suit) => ({ id: rank + suit + '_t', rank, suit });
+    let game = createTestGame(ginRummy, ['p1', 'p2']);
+    const knocker = game.state.players[game.state.currentPlayerIndex];
+    const opponent = game.state.players.find(id => id !== knocker);
+    const knockerHand = [c(5, 'h'), c(6, 'h'), c(7, 'h'), c(9, 's'), c(9, 'c'), c(9, 'd'), c(2, 's'), c(2, 'c'), c(2, 'd'), c(1, 's'), c(3, 'c')];
+    const opponentHand = [c(13, 's'), c(13, 'c'), c(13, 'd'), c(12, 's'), c(12, 'c'), c(12, 'd'), c(8, 'h'), c(4, 's'), c(11, 'c'), c(10, 'd')];
+    game = { ...game, state: { ...game.state, phase: 'drawing', turnPhase: 'discard', hands: { [knocker]: knockerHand, [opponent]: opponentHand } } };
+
+    const s = act(game, 'knock', knocker).game.state;
+    expect(s.phase).toBe('scoring');
+    const ownMeldIds = s.opponentMelds.flatMap(m => m.cards.map(x => x.id)).sort();
+    expect(ownMeldIds).toEqual(['12c_t', '12d_t', '12s_t', '13c_t', '13d_t', '13s_t']);
+    expect(s.opponentLayoffs.map(x => x.id)).toEqual(['8h_t']);
+    expect(s.opponentDeadwood.map(x => x.id).sort()).toEqual(['10d_t', '11c_t', '4s_t']);
+    expect(s.knockerMelds.find(m => m.type === 'run').cards).toHaveLength(3);
+    expect(s.handResult).toMatchObject({ winner: knocker, type: 'knock', points: 24 - 4 });
+  });
+});

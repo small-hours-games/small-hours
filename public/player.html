@@ -15,6 +15,7 @@
   <link rel="stylesheet" href="/css/smallhours.css">
   <link rel="stylesheet" href="/css/player.css">
   <link rel="stylesheet" href="/css/light-lobby.css">
+  <link rel="stylesheet" href="/css/table-cards.css">
   <link rel="icon" type="image/png" sizes="64x64" href="/images/smallhours-favicon.png">
   <link rel="apple-touch-icon" href="/images/smallhours-icon.png">
 </head>
@@ -229,94 +230,47 @@
       </div>
     </div>
 
-    <!-- SHITHEAD SECTION -->
-    <div class="section" id="shitheadSection">
-      <div id="shPhaseInfo" class="card text-center" style="padding:10px 12px;">
-        <span style="font-size:0.85rem;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.1em;">Palace</span>
+    <!-- SHITHEAD (PALACE) SECTION: card-table layout, see public/js/table-cards.js -->
+    <div class="section tc-screen" id="shitheadSection">
+      <div class="tc-topbar">
+        <div class="tc-status" id="shStatus"><span class="tc-dot" id="shStatusDot"></span><span id="shStatusText">Palace</span></div>
+        <span class="tc-pill tc-mono" id="shMeta">Palace</span>
       </div>
-
-      <!-- Swap Phase -->
-      <div id="shSwapView" style="display:none;">
-        <div class="card">
-          <div style="font-size:0.85rem;color:var(--text-secondary);margin-bottom:10px;">Tap a card in your hand and a face-up card to swap them. Put your strongest cards (2, 10, A, K) face-up!</div>
-          <div style="margin-bottom:14px;">
-            <div class="zone-header">
-              <span class="zone-title">Your Hand</span>
-              <span class="zone-count-badge" id="shSwapHandCount">3 cards</span>
-            </div>
-            <div id="shSwapHand" class="card-row"></div>
+      <div class="tc-opps" id="shOpps"></div>
+      <div class="tc-table tc-felt">
+        <div class="tc-wells">
+          <div class="tc-well" id="shDrawWell">
+            <span class="tc-well-label">Draw deck</span>
+            <div id="shDrawStack"></div>
+            <span class="tc-count" id="shDrawCount">0</span>
           </div>
-          <div style="margin-bottom:14px;">
-            <div class="zone-header">
-              <span class="zone-title">Face Up Table Cards</span>
-              <span class="zone-count-badge" id="shSwapFaceUpCount">3 cards</span>
-            </div>
-            <div id="shSwapFaceUp" class="card-row"></div>
+          <div class="tc-well" id="shPileWell" onclick="shTapPile()">
+            <span class="tc-well-label">Play pile</span>
+            <div id="shPileStack"></div>
+            <span class="tc-count" id="shPileCount">0</span>
           </div>
-          <button class="btn btn-primary" onclick="confirmShSwap()" id="shConfirmSwapBtn">Done Swapping</button>
         </div>
+        <div class="tc-rule" id="shRule"></div>
+        <div class="tc-last" id="shLast"></div>
       </div>
-
-      <!-- Play Phase -->
-      <div id="shPlayView" style="display:none;">
-        <!-- Table: Draw Stack + Play Pile -->
-        <div class="card text-center" style="padding:12px;">
-          <div class="phone-table-grid">
-            <div class="phone-stack-box" id="shDrawBox">
-              <div class="phone-stack-label">Draw Stack</div>
-              <div id="shDrawStackVisual" style="min-height:96px;display:flex;align-items:center;justify-content:center;"></div>
-              <div class="stack-count-pill">Deck: <span id="shDrawCount">0</span></div>
-            </div>
-            <div class="phone-stack-box" id="shPileBox">
-              <div class="phone-stack-label">Play Pile</div>
-              <div id="shPileTop" style="min-height:96px;display:flex;align-items:center;justify-content:center;">-</div>
-              <div class="stack-count-pill accent">Pile: <span id="shPileCount">0</span></div>
-            </div>
+      <div class="tc-hand-zone">
+        <div class="tc-table-cards" id="shTableCards"></div>
+        <div class="tc-hud-row">
+          <span id="shAssist"></span>
+          <button type="button" class="tc-cta" id="shCta" onclick="shCtaAction()">Palace</button>
+        </div>
+        <div class="tc-hand-area" id="shHand"></div>
+        <div class="tc-actionbar">
+          <div>
+            <button type="button" class="tc-btn" id="shLayoutBtn" onclick="shToggleLayout()">2-Row</button>
+            <button type="button" class="tc-btn" id="shSortRank" onclick="shSetSort('rank')">Rank</button>
+            <button type="button" class="tc-btn" id="shSortSuit" onclick="shSetSort('suit')">Suit</button>
           </div>
-          <div id="shRuleBanner" class="sh-rule-banner"></div>
-          <div id="shTurnInfo" style="font-size:0.95rem;margin-top:8px;"></div>
-        </div>
-
-        <!-- My cards -->
-        <div class="card" id="shHandSection">
-          <div class="zone-header">
-            <span class="zone-title">Your Hand</span>
-            <div style="display:flex;align-items:center;gap:6px;">
-              <span id="shQuickAssist"></span>
-              <span class="zone-count-badge" id="shHandCountBadge">0</span>
-            </div>
+          <div>
+            <button type="button" class="tc-btn tc-btn-warn" id="shPickUpBtn" onclick="pickUpPile()">Pick up pile</button>
           </div>
-          <div id="shHand" class="card-row"></div>
-        </div>
-
-        <div id="shTableCards" class="sh-table-cards">
-        <div class="card" id="shFaceUpSection">
-          <div class="zone-header">
-            <span class="zone-title">Face Up</span>
-            <span class="zone-count-badge" id="shFaceUpCountBadge">0</span>
-          </div>
-          <div id="shFaceUp" class="card-row"></div>
-        </div>
-
-        <div class="card" id="shFaceDownSection">
-          <div class="zone-header">
-            <span class="zone-title">Face Down (Blind)</span>
-            <span class="zone-count-badge" id="shFaceDownCountBadge">0</span>
-          </div>
-          <div id="shFaceDown" class="card-row"></div>
-        </div>
-
-        </div>
-
-        <!-- Action buttons -->
-        <div id="shActions" style="display:flex;gap:8px;margin-bottom:10px;">
-          <button class="btn btn-primary" onclick="playSelectedCards()" id="shPlayBtn" disabled style="flex:1.3;">Play Selected</button>
-          <button class="btn btn-secondary" onclick="pickUpPile()" id="shPickUpBtn" style="flex:1;">Pick Up Pile</button>
         </div>
       </div>
-
-      <!-- Other players info -->
-      <div class="card" id="shOtherPlayers" style="margin-top:8px;"></div>
     </div>
 
     <!-- QUESTION FORM SECTION -->
@@ -326,60 +280,48 @@
       <div id="qfNav" class="qf-nav"></div>
     </div>
 
-    <!-- GIN RUMMY SECTION -->
-    <div class="section" id="ginRummySection">
-      <div id="grPhaseInfo" class="card text-center" style="padding:10px 12px;display:flex;justify-content:space-between;align-items:center;">
-        <span style="font-size:0.85rem;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.1em;">Gin Rummy</span>
-        <span id="grHandNum" class="zone-count-badge"></span>
-        <span style="font-size:0.78rem;color:var(--text-secondary);">Opponent: <strong id="grOpponentCount" style="color:var(--text-primary);">10</strong> cards</span>
+    <!-- GIN RUMMY SECTION: card-table layout, see public/js/table-cards.js -->
+    <div class="section tc-screen" id="ginRummySection">
+      <div class="tc-topbar">
+        <div class="tc-status" id="grStatus"><span class="tc-dot" id="grStatusDot"></span><span id="grStatusText">Gin Rummy</span></div>
+        <span class="tc-pill" id="grOppPill"></span>
       </div>
-
-      <!-- Scores -->
-      <div class="card" style="display:flex;justify-content:space-around;padding:10px;" id="grScores"></div>
-
-      <!-- Table info: stock + discard (tappable when drawing) -->
-      <div class="card text-center" style="padding:12px;">
-        <div class="phone-table-grid">
-          <div class="phone-stack-box" id="grStockBox" onclick="grTapStack('stock')">
-            <div class="phone-stack-label">Stock Deck</div>
-            <div id="grStockStackVisual" style="min-height:96px;display:flex;align-items:center;justify-content:center;"></div>
-            <div class="stack-count-pill">Stock: <span id="grStockCount">0</span></div>
-            <div id="grStockTapHint" style="font-size:0.7rem;color:var(--neon-blue);font-weight:700;min-height:14px;"></div>
+      <div class="tc-chips" id="grChips"></div>
+      <div class="tc-sheet" id="grSheet" hidden></div>
+      <div class="tc-table tc-felt" id="grTable">
+        <div class="tc-wells">
+          <button type="button" class="tc-well" id="grStockWell" onclick="grTapStack('stock')">
+            <span class="tc-well-label">Stock</span>
+            <div id="grStockStack"></div>
+            <span class="tc-count" id="grStockCount">0</span>
+            <span class="tc-well-hint" id="grStockHint"></span>
+          </button>
+          <button type="button" class="tc-well" id="grDiscardWell" onclick="grTapStack('discard')">
+            <span class="tc-well-label">Discard</span>
+            <div id="grDiscardStack"></div>
+            <span class="tc-count" id="grDiscardCount">0</span>
+            <span class="tc-well-hint" id="grDiscardHint"></span>
+          </button>
+        </div>
+      </div>
+      <div class="tc-hand-zone">
+        <div class="tc-hud-row">
+          <div class="tc-hud" id="grHud"></div>
+          <button type="button" class="tc-cta" id="grCta" onclick="grCtaAction()">Gin Rummy</button>
+        </div>
+        <div class="tc-hand-area" id="grHand"></div>
+        <div class="tc-actionbar" id="grActionBar">
+          <div>
+            <button type="button" class="tc-btn" id="grLayoutBtn" onclick="grToggleLayout()">2-Row</button>
+            <button type="button" class="tc-btn" id="grSortMelds" onclick="grSetSortMode('melds')">Melds</button>
+            <button type="button" class="tc-btn" id="grSortRank" onclick="grSetSortMode('rank')">Rank</button>
+            <button type="button" class="tc-btn" id="grSortSuit" onclick="grSetSortMode('suit')">Suit</button>
           </div>
-          <div class="phone-stack-box" id="grDiscardBox" onclick="grTapStack('discard')">
-            <div class="phone-stack-label">Discard Pile</div>
-            <div id="grDiscardTop" style="min-height:96px;display:flex;align-items:center;justify-content:center;">-</div>
-            <div class="stack-count-pill accent">Discard: <span id="grDiscardCountBadge">0</span></div>
-            <div id="grDiscardTapHint" style="font-size:0.7rem;color:var(--neon-blue);font-weight:700;min-height:14px;"></div>
+          <div>
+            <button type="button" class="tc-btn" id="grDeclineBtn" onclick="grAction('declineUpcard')" hidden>Decline</button>
+            <button type="button" class="tc-btn tc-btn-knock" id="grKnockBtn" onclick="grAction('knock')" hidden>Knock</button>
           </div>
         </div>
-        <div id="grTurnInfo" style="font-size:0.92rem;margin-top:8px;"></div>
-      </div>
-
-      <!-- My hand -->
-      <div class="card" id="grHandSection">
-        <div class="zone-header" style="flex-wrap:wrap;gap:6px;">
-          <div style="display:flex;align-items:center;gap:6px;">
-            <span class="zone-title">Your Hand</span>
-            <span class="zone-count-badge" id="grHandCountBadge">10</span>
-            <span class="gr-deadwood-pill" id="grDeadwoodBadge">Deadwood: 0 pts</span>
-          </div>
-          <div class="gr-sort-bar" role="group" aria-label="Sort hand">
-            <button type="button" class="gr-sort-btn active" id="grSortMelds" onclick="grSetSortMode('melds')">Melds</button>
-            <button type="button" class="gr-sort-btn" id="grSortRank" onclick="grSetSortMode('rank')">Rank</button>
-            <button type="button" class="gr-sort-btn" id="grSortSuit" onclick="grSetSortMode('suit')">Suit</button>
-          </div>
-        </div>
-        <div id="grHand" class="card-row"></div>
-      </div>
-
-      <!-- Action buttons -->
-      <div id="grActions" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;"></div>
-
-      <!-- Scoring reveal -->
-      <div id="grScoringView" style="display:none;">
-        <div class="card" id="grHandResult" style="text-align:center;padding:16px;"></div>
-        <div class="card" id="grMeldsDisplay"></div>
       </div>
     </div>
 
@@ -401,6 +343,7 @@
   <div class="toast-container" id="toasts"></div>
 
   <script src="/js/cards.js"></script>
+  <script src="/js/table-cards.js"></script>
   <script src="/js/games.js"></script>
   <script src="/js/quiz-ready.js"></script>
   <script src="/js/music-fade.js"></script>
@@ -1374,108 +1317,294 @@
       document.getElementById('spyGuessBtn').disabled = true;
     }
 
-    // --- Card Stack Helper (3D layered visual for phone table) ---
-    function renderPhoneStackVisual(cards, totalCount, opts) {
-      opts = opts || {};
-      const w = opts.width || 68;
-      const h = opts.height || 96;
-      const count = totalCount || 0;
-      if (count <= 0) {
-        return '<div class="stack-visual-3d" style="width:' + (w + 14) + 'px;height:' + (h + 12) + 'px;">' +
-          '<div class="stack-empty-slot" style="width:' + w + 'px;height:' + h + 'px;">' + (opts.emptyLabel || 'Empty') + '</div>' +
-        '</div>';
+    // ===== Card table: Palace + Gin Rummy (rendering kit in /js/table-cards.js) =====
+    function tcLayout() {
+      if (!state.tcLayout) {
+        try { state.tcLayout = localStorage.getItem('sh_card_layout') || 'rack'; } catch { state.tcLayout = 'rack'; }
       }
-      const isFacedown = !!opts.facedown;
-      const layerCount = Math.min(3, Math.max(0, count - 1));
-      const preview = Array.isArray(cards) ? cards : (cards ? [cards] : []);
-      let html = '<div class="stack-visual-3d" style="width:' + (w + 14) + 'px;height:' + (h + 12) + 'px;">';
+      return state.tcLayout;
+    }
+    function tcSetLayout(layout) {
+      state.tcLayout = layout;
+      try { localStorage.setItem('sh_card_layout', layout); } catch { /* ignore */ }
+    }
+    function tcHandWidth(id) {
+      const el = document.getElementById(id);
+      const w = el && el.clientWidth ? el.clientWidth : window.innerWidth - 24;
+      return Math.max(240, Math.min(w, 560) - 6);
+    }
+    function tcName(id, msg) {
+      const names = (msg && msg.playerNames) || state.playerNames || {};
+      return names[id] || 'Player';
+    }
+    function tcAvatar(id) {
+      const p = (state.players || []).find(x => x.playerId === id);
+      return p && p.avatar ? p.avatar + ' ' : '';
+    }
+    function tcSetStatus(prefix, text, myTurn) {
+      document.getElementById(prefix + 'StatusText').textContent = text;
+      document.getElementById(prefix + 'Status').classList.toggle('tc-my-turn', !!myTurn);
+      document.getElementById(prefix + 'StatusDot').classList.toggle('tc-dot-live', !!myTurn);
+    }
+    function tcBuzz(key, isTurn) {
+      if (isTurn && !state[key] && navigator.vibrate) navigator.vibrate([50, 30, 50]);
+      state[key] = !!isTurn;
+    }
+    function tcSetCta(id, cta) {
+      const btn = document.getElementById(id);
+      btn.textContent = cta.label;
+      btn.disabled = !!cta.disabled;
+      btn.dataset.action = cta.action || '';
+      btn.classList.toggle('tc-cta-gin', cta.action === 'knock-gin');
+    }
 
-      for (let i = layerCount; i >= 1; i--) {
-        const dx = -i * 1.5;
-        const dy = i * 1.5;
-        const rot = (i % 2 === 0 ? 1 : -1) * (i * 0.4);
-        const layerCard = (!isFacedown && preview.length > i) ? preview[preview.length - 1 - i] : { rank: 0, suit: 'x' };
-        html += renderCardImg(layerCard, {
-          width: w,
-          height: h,
-          facedown: isFacedown || !layerCard.suit || layerCard.suit === 'x',
-          className: 'stack-layer-card',
-          style: 'width:' + w + 'px;height:' + h + 'px;transform:translate(' + dx + 'px,' + dy + 'px) rotate(' + rot + 'deg);opacity:' + (0.88 - i * 0.12) + ';'
-        });
-      }
-
-      const topCard = preview.length > 0 ? preview[preview.length - 1] : { rank: 0, suit: 'x' };
-      html += renderCardImg(topCard, {
-        width: w,
-        height: h,
-        facedown: isFacedown,
-        pileCard: !isFacedown,
-        className: 'stack-top-card',
-        style: 'width:' + w + 'px;height:' + h + 'px;'
-      });
-      html += '</div>';
-      return html;
+    // --- Palace (shithead engine) ---
+    function canPlayCard(rank, pileTopRank, pileCount) {
+      // Coerce to numbers defensively; mirrors canPlayOnPile in the engine
+      const r = Number(rank);
+      const top = pileTopRank == null ? null : Number(pileTopRank);
+      if (!pileCount) return true;
+      if (r === 2 || r === 10) return true; // 2 resets, 10 burns
+      if (top === null || isNaN(top)) return true;
+      if (top === 7) return r <= 7;
+      return r >= top;
     }
 
     function shRuleBannerText(pileTopRank, pileCount) {
-      if (!pileCount) return 'Pile is empty — play any card or pair/set';
+      if (!pileCount) return 'Pile is empty: play any card or set';
       const top = pileTopRank == null ? null : Number(pileTopRank);
-      if (top == null || isNaN(top)) return '2 resets pile (wild) • 10 burns pile';
-      const lbl = typeof cardRankLabel === 'function' ? cardRankLabel(top) : String(top);
-      if (top === 7) return 'Top is 7: play 7 or lower (2 resets • 10 burns)';
-      return 'Top is ' + lbl + ': play ' + lbl + ' or higher (2 resets • 7 lowers • 10 burns)';
+      if (top == null || isNaN(top)) return '2 resets the pile · 10 burns it';
+      const lbl = tcRankLabel(top);
+      if (top === 7) return 'Top is 7: play 7 or lower (2 resets · 10 burns)';
+      return 'Top is ' + lbl + ': play ' + lbl + ' or higher (2 resets · 7 lowers · 10 burns)';
     }
 
-    // --- Shithead ---
+    /** Which of my zones is in play: hand, then face-up, then face-down. */
+    function shZone(msg) {
+      if ((msg.myHand || []).length) return 'hand';
+      if ((msg.myFaceUp || []).length) return 'faceUp';
+      if ((msg.myFaceDownIds || []).length) return 'faceDown';
+      return 'none';
+    }
+
+    function shActiveZoneCards(msg) {
+      const zone = shZone(msg);
+      if (zone === 'hand') return msg.myHand;
+      if (zone === 'faceUp') return msg.myFaceUp;
+      return [];
+    }
+
+    /** The thumb button: what the next move is. Pure, for tests. */
+    function shCtaState(msg, selectedIds) {
+      if (msg.phase === 'finished') return { label: 'Game over', disabled: true };
+      if (msg.phase === 'swap') {
+        const ready = msg.swapConfirmed && msg.swapConfirmed[state.playerId];
+        return ready ? { label: 'Ready ✓ waiting for others', disabled: true } : { label: 'Done swapping', action: 'confirmSwap' };
+      }
+      if (!msg.isMyTurn) return { label: 'Waiting for ' + tcName(msg.currentPlayer, msg) + '…', disabled: true };
+      const zone = shZone(msg);
+      if (zone === 'faceDown') {
+        return selectedIds.length ? { label: 'Flip the blind card', action: 'playFaceDown' } : { label: 'Pick a face-down card', disabled: true };
+      }
+      const cards = shActiveZoneCards(msg);
+      const sel = cards.filter(c => selectedIds.includes(c.id));
+      if (sel.length) {
+        return { label: 'Play ' + (sel.length > 1 ? sel.length + '× ' + tcRankLabel(sel[0].rank) : tcCardShort(sel[0])), action: 'playCards' };
+      }
+      const pileCount = msg.pileCount || 0;
+      if (pileCount > 0 && !cards.some(c => canPlayCard(c.rank, msg.pileTopRank, pileCount))) {
+        return { label: 'Pick up the pile (' + pileCount + ')', action: 'pickUpPile' };
+      }
+      return { label: 'Tap cards to play', disabled: true };
+    }
+
     function renderShitheadState(msg) {
       state.shLastMsg = msg;
+      const zone = shZone(msg);
+      const pileCount = msg.pileCount || 0;
+      const myTurn = msg.phase === 'play' && !!msg.isMyTurn;
 
-      if (msg.phase === 'swap') {
-        document.getElementById('shSwapView').style.display = 'block';
-        document.getElementById('shPlayView').style.display = 'none';
-        renderShSwap(msg);
-      } else if (msg.phase === 'play' || msg.phase === 'finished') {
-        document.getElementById('shSwapView').style.display = 'none';
-        document.getElementById('shPlayView').style.display = 'block';
-        renderShPlay(msg);
+      // Keep only selections that are still in my active zone
+      const validIds = new Set(zone === 'faceDown' ? (msg.myFaceDownIds || []) : shActiveZoneCards(msg).map(c => c.id));
+      state.shSelectedCards = msg.phase === 'play' ? state.shSelectedCards.filter(id => validIds.has(id)) : [];
+
+      // Status line
+      let status = 'Palace';
+      if (msg.phase === 'swap') status = 'Swap: put your strongest cards face-up';
+      else if (msg.phase === 'finished') {
+        const place = (msg.finishOrder || []).indexOf(state.playerId);
+        status = place >= 0 ? 'You finished #' + (place + 1) : 'Game over';
+      } else if (myTurn) {
+        status = zone === 'faceUp' ? 'Your turn: play from your face-up cards'
+          : zone === 'faceDown' ? 'Your turn: flip a blind card!' : 'Your turn';
+      } else if ((msg.finishOrder || []).includes(state.playerId)) {
+        status = "You're out! Watching the others";
+      } else {
+        status = tcName(msg.currentPlayer, msg) + "'s turn";
+      }
+      tcSetStatus('sh', status, myTurn || (msg.phase === 'swap' && !(msg.swapConfirmed || {})[state.playerId]));
+      tcBuzz('shWasTurn', myTurn);
+      document.getElementById('shMeta').textContent = 'Deck ' + (msg.drawPileCount || 0);
+
+      renderShOtherPlayers(msg);
+
+      // Table: draw deck and play pile
+      document.getElementById('shDrawStack').innerHTML = renderTableStack(null, msg.drawPileCount || 0, { size: 'md', facedown: true, emptyLabel: 'Empty' });
+      document.getElementById('shDrawCount').textContent = (msg.drawPileCount || 0) + ' left';
+      const pilePreview = msg.pileTop ? [msg.pileTop] : [];
+      document.getElementById('shPileStack').innerHTML = renderTableStack(pilePreview, pileCount || pilePreview.length, { size: 'md', emptyLabel: 'Empty', highlight: myTurn && state.shSelectedCards.length > 0 });
+      document.getElementById('shPileCount').textContent = pileCount + (pileCount === 1 ? ' card' : ' cards');
+      document.getElementById('shPileWell').classList.toggle('tc-well-active', myTurn && state.shSelectedCards.length > 0);
+      document.getElementById('shRule').textContent = msg.phase === 'swap'
+        ? 'Tap a hand card, then a face-up card, to swap them. 2, 10 and A are strong face-up.'
+        : shRuleBannerText(msg.pileTopRank, pileCount);
+      const last = document.getElementById('shLast');
+      if (msg.lastPlayedBy && (msg.lastPlayedCards || []).length) {
+        const cards = msg.lastPlayedCards;
+        last.textContent = tcName(msg.lastPlayedBy, msg) + ' played ' + (cards.length > 1 ? cards.length + '× ' + tcRankLabel(cards[0].rank) : tcCardShort(cards[0]));
+      } else {
+        last.textContent = '';
       }
 
-      // Show other players
-      renderShOtherPlayers(msg);
+      // My table cards (face-up / face-down) above the hand
+      const faceUp = msg.myFaceUp || [];
+      const fdIds = msg.myFaceDownIds || [];
+      let table = '';
+      if (msg.phase === 'swap' || zone === 'hand') {
+        table += '<div class="tc-table-group"><span class="tc-group-label">Face up</span><div class="tc-row">' +
+          (faceUp.length ? faceUp.map(c => renderTableCard(c, {
+            size: 'md',
+            selected: msg.phase === 'swap' && state.shSwapSelected.faceUp === c.id,
+            dim: msg.phase !== 'swap',
+          })).join('') : '<span class="tc-group-label">none</span>') + '</div></div>';
+      }
+      if (zone !== 'faceDown' && fdIds.length) {
+        table += '<div class="tc-table-group"><span class="tc-group-label">Face down</span><div class="tc-row">' +
+          fdIds.map(() => renderTableCard(null, { size: 'sm', facedown: true, dataId: '' })).join('') + '</div></div>';
+      }
+      const tableEl = document.getElementById('shTableCards');
+      tableEl.innerHTML = table;
+      attachHandGestures(tableEl, {
+        onTap: id => { if (state.shLastMsg && state.shLastMsg.phase === 'swap') shSwapSelect('faceUp', id); },
+      });
+
+      // The rack: whatever zone I play from
+      let rackCards = [];
+      if (msg.phase === 'swap' || zone === 'hand') rackCards = msg.myHand || [];
+      else if (zone === 'faceUp') rackCards = faceUp;
+      const sortMode = state.shSortMode || 'rank';
+      let ordered = orderHand(rackCards, sortMode, state.shOrder);
+      let rackOpts;
+      if (msg.phase === 'swap') {
+        rackOpts = c => ({ selected: state.shSwapSelected.hand === c.id });
+      } else {
+        rackOpts = c => ({
+          selected: state.shSelectedCards.includes(c.id),
+          dim: myTurn && !canPlayCard(c.rank, msg.pileTopRank, pileCount),
+        });
+      }
+      if (msg.phase === 'play' && zone === 'faceDown') {
+        ordered = fdIds.map(id => ({ id }));
+        rackOpts = c => ({ facedown: true, selected: state.shSelectedCards.includes(c.id) });
+      }
+      const handEl = document.getElementById('shHand');
+      handEl.innerHTML = renderHandRack(ordered, {
+        layout: tcLayout(), width: tcHandWidth('shHand'), cardOpts: rackOpts,
+        emptyText: msg.phase === 'finished' ? 'Game over' : 'No cards left',
+      });
+      attachHandGestures(handEl, {
+        onTap: id => shTapCard(id),
+        onPlay: id => shSwipePlay(id),
+        onReorder: (id, targetId) => {
+          state.shOrder = tcMoveId(ordered.map(c => c.id), id, targetId);
+          state.shSortMode = 'custom';
+          renderShitheadState(state.shLastMsg);
+        },
+      });
+
+      // Thumb button and action bar
+      tcSetCta('shCta', shCtaState(msg, state.shSelectedCards));
+      document.getElementById('shLayoutBtn').textContent = tcLayout() === 'fan' ? 'Fan' : '2-Row';
+      document.getElementById('shSortRank').classList.toggle('tc-active', sortMode === 'rank');
+      document.getElementById('shSortSuit').classList.toggle('tc-active', sortMode === 'suit');
+      const pickUp = document.getElementById('shPickUpBtn');
+      pickUp.hidden = msg.phase !== 'play';
+      pickUp.disabled = !myTurn || pileCount === 0;
+      pickUp.textContent = 'Pick up' + (pileCount ? ' (' + pileCount + ')' : '');
+      updateShSelectionAssistUI();
     }
 
-    function renderShSwap(msg) {
-      const handDiv = document.getElementById('shSwapHand');
-      const faceUpDiv = document.getElementById('shSwapFaceUp');
-      const hand = (msg.myHand || []).slice().sort((a, b) => a.rank - b.rank);
-      const faceUp = (msg.myFaceUp || []).slice().sort((a, b) => a.rank - b.rank);
-
-      const hcEl = document.getElementById('shSwapHandCount');
-      if (hcEl) hcEl.textContent = hand.length + ' cards';
-      const fcEl = document.getElementById('shSwapFaceUpCount');
-      if (fcEl) fcEl.textContent = faceUp.length + ' cards';
-
-      handDiv.innerHTML = hand.map(c =>
-        renderCardImg(c, {width: 68, height: 96, onclick: "shSwapSelect('hand','" + c.id + "')", id: 'shSwapH_' + c.id})
-      ).join('');
-
-      faceUpDiv.innerHTML = faceUp.map(c =>
-        renderCardImg(c, {width: 68, height: 96, onclick: "shSwapSelect('faceUp','" + c.id + "')", id: 'shSwapF_' + c.id})
-      ).join('');
-
-      // Highlight selected
-      if (state.shSwapSelected.hand) {
-        const el = document.getElementById('shSwapH_' + state.shSwapSelected.hand);
-        if (el) el.classList.add('selected');
+    function shTapCard(id) {
+      const msg = state.shLastMsg;
+      if (!msg) return;
+      if (msg.phase === 'swap') { shSwapSelect('hand', id); return; }
+      if (msg.phase !== 'play') return;
+      const handEl = document.getElementById('shHand');
+      if (shZone(msg) === 'faceDown') {
+        if (msg.isMyTurn && state.shSelectedCards.includes(id)) { shPlayFaceDown(id); return; }
+        state.shSelectedCards = [id];
+        renderShitheadState(msg);
+        return;
       }
-      if (state.shSwapSelected.faceUp) {
-        const el = document.getElementById('shSwapF_' + state.shSwapSelected.faceUp);
-        if (el) el.classList.add('selected');
+      const card = shActiveZoneCards(msg).find(c => c.id === id);
+      if (!card) return;
+      if (msg.isMyTurn && !canPlayCard(card.rank, msg.pileTopRank, msg.pileCount || 0)) {
+        tcShake(handEl, id);
+        showToast(shRuleBannerText(msg.pileTopRank, msg.pileCount || 0), 'info');
+        return;
       }
+      if (state.shSelectedCards.includes(id)) {
+        // Second tap on a selected card plays the selection
+        if (msg.isMyTurn) { playSelectedCards(); return; }
+        state.shSelectedCards = state.shSelectedCards.filter(x => x !== id);
+      } else {
+        const first = shActiveZoneCards(msg).find(c => c.id === state.shSelectedCards[0]);
+        state.shSelectedCards = first && first.rank === card.rank ? [...state.shSelectedCards, id] : [id];
+      }
+      renderShitheadState(msg);
+    }
 
-      const confirmed = msg.swapConfirmed && msg.swapConfirmed[state.playerId];
-      document.getElementById('shConfirmSwapBtn').disabled = !!confirmed;
-      document.getElementById('shConfirmSwapBtn').textContent = confirmed ? '✓ Ready — Waiting for others' : 'Done Swapping';
+    function shSwipePlay(id) {
+      const msg = state.shLastMsg;
+      if (!msg || msg.phase !== 'play' || !msg.isMyTurn) { shTapCard(id); return; }
+      if (shZone(msg) === 'faceDown') { shPlayFaceDown(id); return; }
+      const cards = shActiveZoneCards(msg);
+      const card = cards.find(c => c.id === id);
+      if (!card) return;
+      if (!canPlayCard(card.rank, msg.pileTopRank, msg.pileCount || 0)) {
+        tcShake(document.getElementById('shHand'), id);
+        showToast(shRuleBannerText(msg.pileTopRank, msg.pileCount || 0), 'info');
+        return;
+      }
+      const sameRank = cards.filter(c => state.shSelectedCards.includes(c.id) && c.rank === card.rank).map(c => c.id);
+      state.shSelectedCards = sameRank.includes(id) ? sameRank : [...sameRank, id];
+      playSelectedCards();
+    }
+
+    function shTapPile() {
+      const msg = state.shLastMsg;
+      if (!msg || !msg.isMyTurn || !state.shSelectedCards.length) return;
+      if (shZone(msg) === 'faceDown') shPlayFaceDown(state.shSelectedCards[0]);
+      else playSelectedCards();
+    }
+
+    function shCtaAction() {
+      const action = document.getElementById('shCta').dataset.action;
+      if (action === 'confirmSwap') confirmShSwap();
+      else if (action === 'playCards') playSelectedCards();
+      else if (action === 'playFaceDown') shPlayFaceDown(state.shSelectedCards[0]);
+      else if (action === 'pickUpPile') pickUpPile();
+    }
+
+    function shToggleLayout() {
+      tcSetLayout(tcLayout() === 'fan' ? 'rack' : 'fan');
+      if (state.shLastMsg) renderShitheadState(state.shLastMsg);
+    }
+
+    function shSetSort(mode) {
+      state.shSortMode = mode;
+      state.shOrder = null;
+      if (state.shLastMsg) renderShitheadState(state.shLastMsg);
     }
 
     function shSwapSelect(source, cardId) {
@@ -1484,231 +1613,38 @@
       } else {
         state.shSwapSelected.faceUp = state.shSwapSelected.faceUp === cardId ? null : cardId;
       }
-
-      // If both selected, do the swap
       if (state.shSwapSelected.hand && state.shSwapSelected.faceUp) {
         send({ type: 'GAME_ACTION', action: { type: 'swapCard', handCardId: state.shSwapSelected.hand, faceUpCardId: state.shSwapSelected.faceUp } });
         state.shSwapSelected = { hand: null, faceUp: null };
       }
-
-      // Re-render to show selection (will be overwritten by next GAME_STATE)
-      document.querySelectorAll('#shSwapHand .playing-card, #shSwapFaceUp .playing-card').forEach(el => el.classList.remove('selected'));
-      if (state.shSwapSelected.hand) {
-        const el = document.getElementById('shSwapH_' + state.shSwapSelected.hand);
-        if (el) el.classList.add('selected');
-      }
-      if (state.shSwapSelected.faceUp) {
-        const el = document.getElementById('shSwapF_' + state.shSwapSelected.faceUp);
-        if (el) el.classList.add('selected');
-      }
+      if (state.shLastMsg) renderShitheadState(state.shLastMsg);
     }
 
     function confirmShSwap() {
       send({ type: 'GAME_ACTION', action: { type: 'confirmSwap' } });
     }
 
-    function shActiveZoneCards(msg) {
-      const hand = msg.myHand || [];
-      const faceUp = msg.myFaceUp || [];
-      return hand.length > 0 ? hand : faceUp;
-    }
-
     function updateShSelectionAssistUI() {
       const msg = state.shLastMsg;
-      if (!msg) return;
-      const activeCards = shActiveZoneCards(msg);
-      const selectedObjs = activeCards.filter(c => state.shSelectedCards.includes(c.id));
-      const playBtn = document.getElementById('shPlayBtn');
-      const assistSpan = document.getElementById('shQuickAssist');
-
-      if (playBtn) {
-        playBtn.disabled = !msg.isMyTurn || selectedObjs.length === 0;
-        if (selectedObjs.length > 0) {
-          const first = selectedObjs[0];
-          const shortLbl = typeof formatCardShort === 'function' ? formatCardShort(first) : first.id;
-          playBtn.textContent = selectedObjs.length > 1
-            ? 'Play ' + selectedObjs.length + '× ' + (typeof cardRankLabel === 'function' ? cardRankLabel(first.rank) : first.rank)
-            : 'Play ' + shortLbl;
-        } else {
-          playBtn.textContent = 'Play Selected';
-        }
-      }
-
-      if (assistSpan) {
-        if (msg.isMyTurn && selectedObjs.length > 0) {
-          const rank = selectedObjs[0].rank;
-          const sameRankCards = activeCards.filter(c => c.rank === rank);
-          if (sameRankCards.length > 1 && selectedObjs.length < sameRankCards.length) {
-            const rLabel = typeof cardRankLabel === 'function' ? cardRankLabel(rank) : rank;
-            assistSpan.innerHTML = '<button type="button" class="sh-quick-chip" onclick="shSelectAllRank(' + rank + ')">Select all ' + rLabel + 's (×' + sameRankCards.length + ')</button>';
-          } else {
-            assistSpan.innerHTML = '';
-          }
-        } else {
-          assistSpan.innerHTML = '';
-        }
+      const assist = document.getElementById('shAssist');
+      if (!msg || !assist) return;
+      assist.innerHTML = '';
+      if (msg.phase !== 'play' || !msg.isMyTurn || !state.shSelectedCards.length) return;
+      const cards = shActiveZoneCards(msg);
+      const first = cards.find(c => c.id === state.shSelectedCards[0]);
+      if (!first) return;
+      const same = cards.filter(c => c.rank === first.rank);
+      if (same.length > 1 && state.shSelectedCards.length < same.length) {
+        assist.innerHTML = '<button type="button" class="tc-btn tc-active" onclick="shSelectAllRank(' + first.rank + ')">All ' +
+          escapeHtml(tcRankLabel(first.rank)) + 's (×' + same.length + ')</button>';
       }
     }
 
     function shSelectAllRank(rank) {
       const msg = state.shLastMsg;
       if (!msg) return;
-      const activeCards = shActiveZoneCards(msg);
-      state.shSelectedCards = activeCards.filter(c => c.rank === Number(rank)).map(c => c.id);
-      document.querySelectorAll('#shHand .playing-card, #shFaceUp .playing-card').forEach(el => {
-        const id = el.getAttribute('onclick')?.match(/'([^']+)'/)?.[1];
-        if (id && state.shSelectedCards.includes(id)) el.classList.add('selected');
-        else el.classList.remove('selected');
-      });
-      updateShSelectionAssistUI();
-    }
-
-    function renderShPlay(msg) {
-      // Draw Stack + Play Pile 3D visuals
-      const drawCount = msg.drawPileCount != null ? msg.drawPileCount : 0;
-      const drawCountEl = document.getElementById('shDrawCount');
-      if (drawCountEl) drawCountEl.textContent = drawCount;
-      const drawVisualEl = document.getElementById('shDrawStackVisual');
-      if (drawVisualEl) {
-        drawVisualEl.innerHTML = renderPhoneStackVisual(null, drawCount, { width: 64, height: 90, facedown: true, emptyLabel: '0' });
-      }
-
-      const pileCount = msg.pileCount || 0;
-      document.getElementById('shPileCount').textContent = pileCount;
-      const pilePreview = (msg.pilePreview && msg.pilePreview.length > 0)
-        ? msg.pilePreview
-        : (msg.pileTop ? [msg.pileTop] : []);
-      document.getElementById('shPileTop').innerHTML = renderPhoneStackVisual(pilePreview, pileCount || (msg.pileTop ? 1 : 0), { width: 64, height: 90, facedown: false, emptyLabel: 'Empty' });
-
-      const ruleBanner = document.getElementById('shRuleBanner');
-      if (ruleBanner) {
-        ruleBanner.textContent = shRuleBannerText(msg.pileTopRank, pileCount);
-      }
-
-      // Turn info
-      const turnInfo = document.getElementById('shTurnInfo');
-      if (msg.isMyTurn) {
-        turnInfo.innerHTML = '<span style="color:var(--neon-green);font-weight:700;">Your turn!</span>';
-        if (!state.shWasTurn) {
-          if (navigator.vibrate) navigator.vibrate([50, 30, 50]);
-          state.shWasTurn = true;
-        }
-      } else {
-        state.shWasTurn = false;
-        const cpName = (msg.playerNames || {})[msg.currentPlayer] || 'other player';
-        turnInfo.innerHTML = '<span style="color:var(--text-secondary);">Waiting for ' + escapeHtml(cpName) + '...</span>';
-      }
-
-      const shitheadSection = document.getElementById('shitheadSection');
-      if (msg.isMyTurn) {
-        shitheadSection.classList.add('my-turn-glow');
-      } else {
-        shitheadSection.classList.remove('my-turn-glow');
-      }
-
-      // Prune stale selections not in active zone
-      const activeIds = new Set(shActiveZoneCards(msg).map(c => c.id));
-      state.shSelectedCards = state.shSelectedCards.filter(id => activeIds.has(id));
-
-      // Hand (sorted by rank, low to high)
-      const handDiv = document.getElementById('shHand');
-      const hand = (msg.myHand || []).slice().sort((a, b) => a.rank - b.rank);
-      const topRank = msg.pileTopRank;
-      const handBadge = document.getElementById('shHandCountBadge');
-      if (handBadge) handBadge.textContent = hand.length + (hand.length === 1 ? ' card' : ' cards');
-
-      handDiv.innerHTML = hand.length > 0 ? hand.map(c => {
-        const playable = msg.isMyTurn && canPlayCard(c.rank, topRank, pileCount);
-        return renderCardImg(c, {
-          width: 68,
-          height: 96,
-          selected: state.shSelectedCards.includes(c.id),
-          playable: msg.isMyTurn ? playable : undefined,
-          onclick: (playable || !msg.isMyTurn) ? "shToggleCard('" + c.id + "')" : null,
-          id: 'shCard_' + c.id
-        });
-      }).join('') : '<span style="color:var(--text-secondary);font-size:0.85rem;">Empty — play from Face Up!</span>';
-
-      // Face up (sorted by rank)
-      const faceUpDiv = document.getElementById('shFaceUp');
-      const faceUp = (msg.myFaceUp || []).slice().sort((a, b) => a.rank - b.rank);
-      const faceUpSection = document.getElementById('shFaceUpSection');
-      const faceUpBadge = document.getElementById('shFaceUpCountBadge');
-      if (faceUpBadge) faceUpBadge.textContent = faceUp.length + (faceUp.length === 1 ? ' card' : ' cards');
-
-      if (hand.length === 0 && faceUp.length > 0) {
-        faceUpSection.style.display = 'block';
-        faceUpDiv.innerHTML = faceUp.map(c => {
-          const playable = msg.isMyTurn && canPlayCard(c.rank, topRank, pileCount);
-          return renderCardImg(c, {
-            width: 68,
-            height: 96,
-            selected: state.shSelectedCards.includes(c.id),
-            playable: msg.isMyTurn ? playable : undefined,
-            onclick: (playable || !msg.isMyTurn) ? "shToggleCard('" + c.id + "')" : null
-          });
-        }).join('');
-      } else {
-        faceUpSection.style.display = faceUp.length > 0 ? 'block' : 'none';
-        faceUpDiv.innerHTML = faceUp.map(c =>
-          renderCardImg(c, {width: 60, height: 84, playable: false, style: 'opacity:0.65'})
-        ).join('');
-      }
-
-      // Face down
-      const faceDownSection = document.getElementById('shFaceDownSection');
-      const fdCount = msg.myFaceDownCount || 0;
-      const fdIds = msg.myFaceDownIds || [];
-      const fdBadge = document.getElementById('shFaceDownCountBadge');
-      if (fdBadge) fdBadge.textContent = fdCount + (fdCount === 1 ? ' card' : ' cards');
-
-      if (hand.length === 0 && faceUp.length === 0 && fdCount > 0) {
-        faceDownSection.style.display = 'block';
-        document.getElementById('shFaceDown').innerHTML = fdIds.map(id =>
-          renderCardImg({rank:0, suit:'x'}, {width: 68, height: 96, facedown: true, onclick: "shPlayFaceDown('" + id + "')"})
-        ).join('');
-      } else {
-        faceDownSection.style.display = fdCount > 0 ? 'block' : 'none';
-        document.getElementById('shFaceDown').innerHTML = Array.from({length: fdCount}, () =>
-          renderCardImg({rank:0, suit:'x'}, {width: 58, height: 82, facedown: true, style: 'opacity:0.55'})
-        ).join('');
-      }
-
-      document.getElementById('shTableCards').classList.toggle('stacked', faceUp.length > 0 && fdCount > 0);
-
-      // Enable/disable action buttons & assist
-      document.getElementById('shPickUpBtn').disabled = !msg.isMyTurn || (msg.pileCount || 0) === 0;
-      updateShSelectionAssistUI();
-    }
-
-    function shToggleCard(cardId) {
-      const msg = state.shLastMsg;
-      const activeCards = msg ? shActiveZoneCards(msg) : [];
-      const tappedCard = activeCards.find(c => c.id === cardId);
-
-      const idx = state.shSelectedCards.indexOf(cardId);
-      if (idx >= 0) {
-        state.shSelectedCards.splice(idx, 1);
-      } else {
-        // If user taps a card of a different rank than currently selected cards, switch selection to the new rank
-        if (tappedCard && state.shSelectedCards.length > 0) {
-          const firstSelected = activeCards.find(c => c.id === state.shSelectedCards[0]);
-          if (firstSelected && firstSelected.rank !== tappedCard.rank) {
-            state.shSelectedCards = [cardId];
-          } else {
-            state.shSelectedCards.push(cardId);
-          }
-        } else {
-          state.shSelectedCards.push(cardId);
-        }
-      }
-      // Re-render selection visually without waiting for server
-      document.querySelectorAll('#shHand .playing-card, #shFaceUp .playing-card').forEach(el => {
-        const id = el.getAttribute('onclick')?.match(/'([^']+)'/)?.[1];
-        if (id && state.shSelectedCards.includes(id)) el.classList.add('selected');
-        else el.classList.remove('selected');
-      });
-      updateShSelectionAssistUI();
+      state.shSelectedCards = shActiveZoneCards(msg).filter(c => c.rank === Number(rank)).map(c => c.id);
+      renderShitheadState(msg);
     }
 
     function playSelectedCards() {
@@ -1718,45 +1654,32 @@
     }
 
     function shPlayFaceDown(cardId) {
-      showToast('Playing face-down card...', 'info');
+      if (!cardId) return;
+      state.shSelectedCards = [];
       send({ type: 'GAME_ACTION', action: { type: 'playFaceDown', cardId: cardId } });
     }
 
     function pickUpPile() {
+      state.shSelectedCards = [];
       send({ type: 'GAME_ACTION', action: { type: 'pickUpPile' } });
     }
 
     function renderShOtherPlayers(msg) {
-      const container = document.getElementById('shOtherPlayers');
-      const names = msg.playerNames || {};
+      const container = document.getElementById('shOpps');
+      const finish = msg.finishOrder || [];
       const others = (msg.players || []).filter(p => p.playerId !== state.playerId);
-      if (others.length === 0) { container.style.display = 'none'; return; }
-      container.style.display = 'block';
-
-      container.innerHTML = '<div style="font-size:0.8rem;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px;">Other Players</div>' +
-        others.map(p => {
-          const name = names[p.playerId] || p.playerId;
-          const upCards = (p.faceUp || []).map(c => typeof formatCardShort === 'function' ? formatCardShort(c) : (c.rank + c.suit)).join(' ');
-          const status = p.isOut ? '<span style="color:var(--neon-green);font-weight:700;">✓ Out!</span>' :
-            'Hand: <strong>' + p.handCount + '</strong> • Up: <strong>' + (upCards || '0') + '</strong> • Down: <strong>' + p.faceDownCount + '</strong>';
-          const isCurrent = p.playerId === msg.currentPlayer ? ' style="border-left:3px solid var(--neon-purple);padding-left:8px;"' : '';
-          return '<div class="player-item"' + isCurrent + '>' +
-            '<span class="player-name">' + escapeHtml(name) + (p.playerId === msg.currentPlayer ? ' ▶' : '') + '</span>' +
-            '<span style="font-size:0.78rem;color:var(--text-secondary);">' + status + '</span></div>';
-        }).join('');
-    }
-
-    // Check if a card rank can be played on the current pile
-    function canPlayCard(rank, pileTopRank, pileCount) {
-      // Coerce to numbers defensively — JSON may produce strings in edge cases
-      const r = Number(rank);
-      const top = pileTopRank == null ? null : Number(pileTopRank);
-      if (pileCount === 0) return true;
-      if (r === 2) return true;  // 2 is a wild/reset — always playable
-      if (r === 10) return true; // 10 burns the pile — always playable
-      if (top === null || top === undefined || isNaN(top)) return true;
-      if (top === 7) return r <= 7;
-      return r >= top;
+      container.innerHTML = others.map(p => {
+        const turn = msg.phase === 'play' && p.playerId === msg.currentPlayer;
+        const place = finish.indexOf(p.playerId);
+        let detail;
+        if (msg.phase === 'swap') detail = (msg.swapConfirmed || {})[p.playerId] ? '✓ ready' : '⏳ swapping';
+        else if (p.isOut || place >= 0) detail = '✓ out' + (place >= 0 ? ' #' + (place + 1) : '');
+        else detail = '<span class="tc-mono">' + p.handCount + '🂠</span>' +
+          ((p.faceUp || []).length ? '<span class="tc-opp-cards">' + p.faceUp.map(c => renderTableCard(c, { size: 'sm', dataId: '' })).join('') + '</span>' : '') +
+          (p.faceDownCount ? '<span class="tc-mono">+' + p.faceDownCount + '▢</span>' : '');
+        return '<span class="tc-pill' + (turn ? ' tc-pill-turn' : '') + (place >= 0 ? ' tc-pill-out' : '') + '">' +
+          escapeHtml(tcAvatar(p.playerId) + tcName(p.playerId, msg)) + ' ' + detail + '</span>';
+      }).join('');
     }
 
     // --- UI Helpers ---
@@ -1767,256 +1690,183 @@
     }
 
     // --- Gin Rummy ---
-    function grSetSortMode(mode) {
-      state.grSortMode = mode;
-      ['melds', 'rank', 'suit'].forEach(m => {
-        const btn = document.getElementById('grSort' + m.charAt(0).toUpperCase() + m.slice(1));
-        if (btn) btn.classList.toggle('active', m === mode);
-      });
-      if (state.grLastMsg) {
-        renderGrHandSection(state.grLastMsg);
+    function grOpponentId(msg) {
+      return Object.keys(msg.cumulative || {}).find(id => id !== state.playerId) || null;
+    }
+
+    /** The thumb button: what the next move is. Pure, for tests. */
+    function grCtaState(msg, selectedId) {
+      if (msg.phase === 'scoring') return { label: 'Next hand', action: 'nextHand' };
+      if (msg.phase === 'finished') return { label: 'Game over', disabled: true };
+      if (!msg.isMyTurn) return { label: 'Waiting for ' + tcName(grOpponentId(msg), msg) + '…', disabled: true };
+      if (msg.phase === 'first_turn') return { label: 'Take ' + tcCardShort(msg.discardTop), action: 'takeUpcard' };
+      if (msg.turnPhase === 'draw') return { label: 'Draw from stock', action: 'drawStock' };
+      if (!selectedId) return { label: 'Tap a card to discard', disabled: true };
+      if (selectedId === msg.lastDrawnCardId) return { label: "Can't discard the card you just took", disabled: true };
+      const card = (msg.myHand || []).find(c => c.id === selectedId);
+      return card ? { label: 'Discard ' + tcCardShort(card), action: 'discard' } : { label: 'Tap a card to discard', disabled: true };
+    }
+
+    function grStatusText(msg) {
+      const opp = tcName(grOpponentId(msg), msg);
+      if (msg.phase === 'scoring') return 'Hand over';
+      if (msg.phase === 'finished') return 'Game over';
+      if (!msg.isMyTurn) {
+        if (msg.phase === 'first_turn') return opp + ' is deciding on the upcard';
+        return opp + (msg.turnPhase === 'draw' ? ' is drawing' : ' is discarding');
       }
+      if (msg.phase === 'first_turn') return 'Take the upcard or decline it';
+      if (msg.turnPhase === 'draw') return 'Tap Stock or Discard to draw';
+      if (msg.canKnock) return msg.myDeadwoodValue === 0 ? 'Gin! Declare it or discard' : 'You can knock, or discard a card';
+      return 'Discard: tap a card twice or swipe it up';
+    }
+
+    function renderGinRummyState(msg) {
+      state.grLastMsg = msg;
+      const me = state.playerId;
+      const oppId = grOpponentId(msg);
+      const playing = msg.phase !== 'scoring' && msg.phase !== 'finished';
+      const myTurn = playing && !!msg.isMyTurn;
+      const discardPhase = myTurn && msg.phase === 'drawing' && msg.turnPhase === 'discard';
+      const drawPhase = myTurn && (msg.phase === 'drawing' || msg.phase === 'first_turn_draw') && msg.turnPhase === 'draw';
+      const hand = msg.myHand || [];
+      if (!hand.some(c => c.id === state.grSelectedCard)) state.grSelectedCard = null;
+      if (!discardPhase) state.grSelectedCard = null;
+
+      tcSetStatus('gr', grStatusText(msg), myTurn);
+      tcBuzz('grWasTurn', myTurn);
+
+      // Opponent pill and score chips
+      const counts = msg.playerCardCounts || {};
+      const oppCount = counts[oppId] != null ? counts[oppId] : (msg.opponentCardCount || 0);
+      document.getElementById('grOppPill').className = 'tc-pill' + (playing && !msg.isMyTurn ? ' tc-pill-turn' : '');
+      document.getElementById('grOppPill').innerHTML = escapeHtml(tcAvatar(oppId) + tcName(oppId, msg)) + ' <span class="tc-mono">' + oppCount + '🂠</span>';
+      const cum = msg.cumulative || {};
+      const boxes = msg.boxes || {};
+      document.getElementById('grChips').innerHTML =
+        (msg.handNumber ? '<span class="tc-pill tc-mono">Hand ' + msg.handNumber + '</span>' : '') +
+        Object.keys(cum).map(id => '<span class="tc-pill">' + escapeHtml(id === me ? 'You' : tcName(id, msg)) +
+          ' <b class="tc-mono">' + (cum[id] || 0) + '</b>' + (boxes[id] ? ' <span class="tc-mono">▣' + boxes[id] + '</span>' : '') + '</span>').join('');
+
+      // Table wells
+      const stockCount = msg.stockCount || 0;
+      const discardCount = msg.discardCount != null ? msg.discardCount : (msg.discardTop ? 1 : 0);
+      const preview = (msg.discardPreview && msg.discardPreview.length) ? msg.discardPreview : (msg.discardTop ? [msg.discardTop] : []);
+      const canStock = drawPhase && stockCount > 0;
+      const canTakeDiscard = myTurn && !!msg.discardTop && (msg.phase === 'first_turn' || drawPhase);
+      const canDropDiscard = discardPhase && !!state.grSelectedCard && state.grSelectedCard !== msg.lastDrawnCardId;
+      document.getElementById('grStockStack').innerHTML = renderTableStack(null, stockCount, { size: 'md', facedown: true, emptyLabel: 'Empty', highlight: canStock });
+      document.getElementById('grStockCount').textContent = stockCount + ' left';
+      document.getElementById('grStockHint').textContent = canStock ? 'Tap to draw' : '';
+      document.getElementById('grStockWell').classList.toggle('tc-well-active', canStock);
+      document.getElementById('grDiscardStack').innerHTML = renderTableStack(preview, discardCount, { size: 'md', emptyLabel: 'Empty', highlight: canTakeDiscard || canDropDiscard });
+      document.getElementById('grDiscardCount').textContent = discardCount + (discardCount === 1 ? ' card' : ' cards');
+      document.getElementById('grDiscardHint').textContent = canDropDiscard ? 'Tap to discard' : canTakeDiscard ? (msg.phase === 'first_turn' ? 'Tap to take upcard' : 'Tap to take') : '';
+      document.getElementById('grDiscardWell').classList.toggle('tc-well-active', canTakeDiscard || canDropDiscard);
+      document.getElementById('grTable').hidden = !playing;
+
+      // Hand rack with meld glows
+      const melds = msg.myMelds || [];
+      const meldOf = tcMeldMap(melds);
+      const sortMode = state.grSortMode || 'melds';
+      const ordered = orderHand(hand, sortMode, state.grOrder, melds);
+      const handEl = document.getElementById('grHand');
+      handEl.hidden = !playing;
+      handEl.innerHTML = renderHandRack(ordered, {
+        layout: tcLayout(), width: tcHandWidth('grHand'),
+        cardOpts: c => ({ selected: state.grSelectedCard === c.id, meld: meldOf[c.id], isNew: msg.lastDrawnCardId === c.id }),
+      });
+      attachHandGestures(handEl, {
+        onTap: id => grSelectCard(id),
+        onPlay: id => grSwipeDiscard(id),
+        onReorder: (id, targetId) => {
+          state.grOrder = tcMoveId(ordered.map(c => c.id), id, targetId);
+          state.grSortMode = 'custom';
+          renderGinRummyState(state.grLastMsg);
+        },
+      });
+
+      // HUD: sets / runs / deadwood
+      const sets = melds.filter(m => m.type === 'set').length;
+      const runs = melds.filter(m => m.type !== 'set').length;
+      const dw = msg.myDeadwoodValue != null ? msg.myDeadwoodValue : null;
+      const hud = document.getElementById('grHud');
+      hud.hidden = !playing;
+      hud.innerHTML = '<span><i style="background:var(--tc-set)"></i>Sets <b>' + sets + '</b></span><span class="tc-sep">|</span>' +
+        '<span><i style="background:var(--tc-run)"></i>Runs <b>' + runs + '</b></span><span class="tc-sep">|</span>' +
+        '<span>DW <b class="tc-dw' + (dw != null && dw <= 10 ? ' tc-dw-ok' : '') + '">' + (dw == null ? '–' : dw) + '</b></span>';
+
+      // Thumb button, knock / decline, sort bar
+      tcSetCta('grCta', grCtaState(msg, state.grSelectedCard));
+      const knock = document.getElementById('grKnockBtn');
+      knock.hidden = !(discardPhase && msg.canKnock);
+      knock.textContent = dw === 0 ? 'GIN!' : 'Knock (' + dw + ')';
+      knock.classList.toggle('tc-btn-gin', dw === 0);
+      document.getElementById('grDeclineBtn').hidden = !(myTurn && msg.phase === 'first_turn');
+      document.getElementById('grActionBar').hidden = !playing;
+      document.getElementById('grLayoutBtn').textContent = tcLayout() === 'fan' ? 'Fan' : '2-Row';
+      ['melds', 'rank', 'suit'].forEach(m => {
+        document.getElementById('grSort' + m.charAt(0).toUpperCase() + m.slice(1)).classList.toggle('tc-active', m === sortMode);
+      });
+
+      // Result sheet
+      const sheet = document.getElementById('grSheet');
+      sheet.hidden = playing;
+      if (!playing) renderGrScoring(msg);
+    }
+
+    function grSelectCard(id) {
+      const msg = state.grLastMsg;
+      if (!msg) return;
+      const discardPhase = msg.isMyTurn && msg.phase === 'drawing' && msg.turnPhase === 'discard';
+      if (state.grSelectedCard === id && discardPhase) { grDiscard(); return; }
+      state.grSelectedCard = state.grSelectedCard === id ? null : id;
+      renderGinRummyState(msg);
+    }
+
+    function grSwipeDiscard(id) {
+      const msg = state.grLastMsg;
+      if (!msg || !(msg.isMyTurn && msg.phase === 'drawing' && msg.turnPhase === 'discard')) { grSelectCard(id); return; }
+      if (id === msg.lastDrawnCardId) {
+        tcShake(document.getElementById('grHand'), id);
+        showToast("You can't discard the card you just took", 'info');
+        return;
+      }
+      state.grSelectedCard = id;
+      grDiscard();
     }
 
     function grTapStack(source) {
       const msg = state.grLastMsg;
       if (!msg || !msg.isMyTurn) return;
-      if (msg.phase === 'first_turn' && source === 'discard') {
-        grAction('takeUpcard');
-      } else if (msg.phase === 'drawing' && msg.turnPhase === 'draw') {
-        if (source === 'stock' && (msg.stockCount || 0) > 0) {
-          grDraw('stock');
-        } else if (source === 'discard' && msg.discardTop) {
-          grDraw('discard');
-        }
+      if (msg.phase === 'first_turn' && source === 'discard') { grAction('takeUpcard'); return; }
+      if ((msg.phase === 'drawing' || msg.phase === 'first_turn_draw') && msg.turnPhase === 'draw') {
+        if (source === 'stock' && (msg.stockCount || 0) > 0) grDraw('stock');
+        else if (source === 'discard' && msg.discardTop) grDraw('discard');
+        return;
+      }
+      if (source === 'discard' && msg.turnPhase === 'discard' && state.grSelectedCard) {
+        if (state.grSelectedCard === msg.lastDrawnCardId) { showToast("You can't discard the card you just took", 'info'); return; }
+        grDiscard();
       }
     }
 
-    function renderGrCardWithTags(c, msg, extraBadgeText, extraBadgeClass) {
-      const isSelected = state.grSelectedCard === c.id;
-      const isNew = msg.lastDrawnCardId && msg.lastDrawnCardId === c.id;
-      let tagHtml = '';
-      if (isNew) {
-        tagHtml = '<span class="card-mini-tag new-tag">NEW</span>';
-      } else if (extraBadgeText) {
-        tagHtml = '<span class="card-mini-tag ' + (extraBadgeClass || 'meld-tag') + '">' + escapeHtml(extraBadgeText) + '</span>';
-      }
-      return '<div class="card-slot-wrap">' +
-        tagHtml +
-        renderCardImg(c, {
-          width: 68,
-          height: 96,
-          selected: isSelected,
-          onclick: "grSelectCard('" + c.id + "')"
-        }) +
-      '</div>';
+    function grCtaAction() {
+      const action = document.getElementById('grCta').dataset.action;
+      if (action === 'takeUpcard' || action === 'nextHand') grAction(action);
+      else if (action === 'drawStock') grDraw('stock');
+      else if (action === 'discard') grDiscard();
     }
 
-    function renderGrHandSection(msg) {
-      const hand = (msg.myHand || []).slice();
-      const handDiv = document.getElementById('grHand');
-      const countBadge = document.getElementById('grHandCountBadge');
-      if (countBadge) countBadge.textContent = hand.length + ' cards';
-
-      const dwBadge = document.getElementById('grDeadwoodBadge');
-      if (dwBadge) {
-        const dwVal = msg.myDeadwoodValue != null ? msg.myDeadwoodValue : 0;
-        dwBadge.textContent = 'Deadwood: ' + dwVal + ' pts' + (dwVal <= 10 ? ' (Knock ready!)' : '');
-        dwBadge.classList.toggle('knock-ready', dwVal <= 10);
-      }
-
-      const sortMode = state.grSortMode || 'melds';
-      ['melds', 'rank', 'suit'].forEach(m => {
-        const btn = document.getElementById('grSort' + m.charAt(0).toUpperCase() + m.slice(1));
-        if (btn) btn.classList.toggle('active', m === sortMode);
-      });
-
-      const melds = msg.myMelds || [];
-      const meldCardIds = new Set();
-      melds.forEach(m => (m.cards || []).forEach(c => meldCardIds.add(c.id)));
-
-      if (sortMode === 'melds' && melds.length > 0) {
-        let html = '<div class="gr-meld-clusters">';
-        melds.forEach((m, idx) => {
-          const label = m.type === 'set' ? 'Set ' + (idx + 1) : 'Run ' + (idx + 1);
-          html += '<div class="gr-meld-box">' +
-            '<span class="gr-meld-box-label">' + label + '</span>' +
-            (m.cards || []).map(c => renderGrCardWithTags(c, msg, 'MELD', 'meld-tag')).join('') +
-          '</div>';
-        });
-        const deadwoodCards = hand.filter(c => !meldCardIds.has(c.id)).sort((a, b) => a.rank - b.rank);
-        if (deadwoodCards.length > 0) {
-          html += '<div class="gr-meld-box deadwood-box">' +
-            '<span class="gr-meld-box-label">Deadwood</span>' +
-            deadwoodCards.map(c => renderGrCardWithTags(c, msg, null, null)).join('') +
-          '</div>';
-        }
-        html += '</div>';
-        handDiv.innerHTML = html;
-      } else {
-        const suitOrder = { s: 0, h: 1, c: 2, d: 3 };
-        if (sortMode === 'suit') {
-          hand.sort((a, b) => (suitOrder[a.suit] - suitOrder[b.suit]) || (a.rank - b.rank));
-        } else {
-          hand.sort((a, b) => (a.rank - b.rank) || (suitOrder[a.suit] - suitOrder[b.suit]));
-        }
-        handDiv.innerHTML = hand.map(c =>
-          renderGrCardWithTags(c, msg, meldCardIds.has(c.id) ? 'MELD' : null, 'meld-tag')
-        ).join('');
-      }
+    function grSetSortMode(mode) {
+      state.grSortMode = mode;
+      state.grOrder = null;
+      if (state.grLastMsg) renderGinRummyState(state.grLastMsg);
     }
 
-    function renderGinRummyState(msg) {
-      state.grLastMsg = msg;
-      const section = document.getElementById('ginRummySection');
-      const scoringView = document.getElementById('grScoringView');
-      const handSection = document.getElementById('grHandSection');
-      const actionsDiv = document.getElementById('grActions');
-
-      // Hand number
-      document.getElementById('grHandNum').textContent = msg.handNumber ? 'Hand ' + msg.handNumber : '';
-
-      // Scores
-      const scoresDiv = document.getElementById('grScores');
-      const pNames = state.playerNames || msg.playerNames || {};
-      const cum = msg.cumulative || {};
-      const boxes = msg.boxes || {};
-      const pids = Object.keys(cum);
-      scoresDiv.innerHTML = pids.map(pid =>
-        '<div style="text-align:center;">' +
-          '<div style="font-size:0.75rem;color:var(--text-secondary);">' + escapeHtml(pNames[pid] || pid) + '</div>' +
-          '<div style="font-size:1.3rem;font-weight:700;color:' + (pid === state.playerId ? 'var(--neon-blue)' : 'var(--text-primary)') + ';">' + (cum[pid] || 0) + '</div>' +
-          '<div style="font-size:0.65rem;color:var(--text-secondary);">' + (boxes[pid] || 0) + ' boxes</div>' +
-        '</div>'
-      ).join('');
-
-      // Stock / discard / opponent
-      const stockCount = msg.stockCount || 0;
-      document.getElementById('grStockCount').textContent = stockCount;
-      document.getElementById('grOpponentCount').textContent = msg.opponentCardCount || 0;
-
-      const stockVisualEl = document.getElementById('grStockStackVisual');
-      if (stockVisualEl) {
-        stockVisualEl.innerHTML = renderPhoneStackVisual(null, stockCount, { width: 64, height: 90, facedown: true, emptyLabel: '0' });
-      }
-
-      const discardCount = msg.discardCount != null ? msg.discardCount : (msg.discardTop ? 1 : 0);
-      const discardCountBadge = document.getElementById('grDiscardCountBadge');
-      if (discardCountBadge) discardCountBadge.textContent = discardCount;
-      const discardPreview = (msg.discardPreview && msg.discardPreview.length > 0)
-        ? msg.discardPreview
-        : (msg.discardTop ? [msg.discardTop] : []);
-      document.getElementById('grDiscardTop').innerHTML = renderPhoneStackVisual(discardPreview, discardCount, { width: 64, height: 90, facedown: false, emptyLabel: 'Empty' });
-
-      // Tappable stack highlights when drawing
-      const canTapStock = msg.isMyTurn && msg.phase === 'drawing' && msg.turnPhase === 'draw' && stockCount > 0;
-      const canTapDiscard = msg.isMyTurn && ((msg.phase === 'first_turn' && !!msg.discardTop) || (msg.phase === 'drawing' && msg.turnPhase === 'draw' && !!msg.discardTop));
-      const stockBox = document.getElementById('grStockBox');
-      const discardBox = document.getElementById('grDiscardBox');
-      if (stockBox) stockBox.classList.toggle('tappable-stack', !!canTapStock);
-      if (discardBox) discardBox.classList.toggle('tappable-stack', !!canTapDiscard);
-      const stockHint = document.getElementById('grStockTapHint');
-      if (stockHint) stockHint.textContent = canTapStock ? 'Tap to draw' : '';
-      const discardHint = document.getElementById('grDiscardTapHint');
-      if (discardHint) discardHint.textContent = canTapDiscard ? (msg.phase === 'first_turn' ? 'Tap to take upcard' : 'Tap to take') : '';
-
-      // Turn info
-      const turnInfo = document.getElementById('grTurnInfo');
-      if (msg.phase === 'scoring') {
-        turnInfo.innerHTML = '<span style="color:var(--neon-pink);font-weight:700;">Scoring</span>';
-      } else if (msg.phase === 'finished') {
-        turnInfo.innerHTML = '<span style="color:var(--neon-green);font-weight:700;">Game Over!</span>';
-      } else if (msg.isMyTurn) {
-        const phaseHint = msg.turnPhase === 'draw' ? 'Tap Stock or Discard to draw' : 'Select a card to discard (or Knock)';
-        if (msg.phase === 'first_turn') {
-          turnInfo.innerHTML = '<span style="color:var(--neon-green);font-weight:700;">Your turn — Take or decline the upcard</span>';
-        } else {
-          turnInfo.innerHTML = '<span style="color:var(--neon-green);font-weight:700;">Your turn — ' + phaseHint + '</span>';
-        }
-        if (navigator.vibrate) navigator.vibrate([50, 30, 50]);
-      } else {
-        turnInfo.innerHTML = '<span style="color:var(--text-secondary);">Opponent\'s turn...</span>';
-      }
-
-      // Turn glow
-      if (msg.isMyTurn && msg.phase !== 'scoring' && msg.phase !== 'finished') {
-        section.classList.add('my-turn-glow');
-      } else {
-        section.classList.remove('my-turn-glow');
-      }
-
-      // Scoring view
-      if (msg.phase === 'scoring' || msg.phase === 'finished') {
-        scoringView.style.display = 'block';
-        renderGrScoring(msg);
-      } else {
-        scoringView.style.display = 'none';
-      }
-
-      // Hand display
-      handSection.style.display = (msg.phase === 'scoring' || msg.phase === 'finished') ? 'none' : 'block';
-      if (msg.phase !== 'scoring' && msg.phase !== 'finished') {
-        renderGrHandSection(msg);
-      }
-
-      // Actions
-      actionsDiv.innerHTML = '';
-      if (msg.phase === 'first_turn' && msg.isMyTurn) {
-        actionsDiv.innerHTML =
-          '<button class="btn btn-primary" onclick="grAction(\'takeUpcard\')" style="flex:1;">Take Upcard' + (msg.discardTop && typeof formatCardShort === 'function' ? ' (' + formatCardShort(msg.discardTop) + ')' : '') + '</button>' +
-          '<button class="btn btn-secondary" onclick="grAction(\'declineUpcard\')" style="flex:1;">Decline</button>';
-      } else if (msg.phase === 'first_turn_draw' && msg.isMyTurn && msg.turnPhase === 'discard') {
-        actionsDiv.innerHTML = grDiscardKnockButtons(msg);
-      } else if (msg.phase === 'drawing' && msg.isMyTurn) {
-        if (msg.turnPhase === 'draw') {
-          actionsDiv.innerHTML =
-            '<button class="btn btn-primary" onclick="grDraw(\'stock\')" style="flex:1;">Draw Stock</button>' +
-            '<button class="btn btn-secondary" onclick="grDraw(\'discard\')" style="flex:1;">Take Discard' + (msg.discardTop && typeof formatCardShort === 'function' ? ' (' + formatCardShort(msg.discardTop) + ')' : '') + '</button>';
-        } else if (msg.turnPhase === 'discard') {
-          actionsDiv.innerHTML = grDiscardKnockButtons(msg);
-        }
-      } else if (msg.phase === 'scoring') {
-        actionsDiv.innerHTML = '<button class="btn btn-primary" onclick="grAction(\'nextHand\')" style="flex:1;">Next Hand</button>';
-      }
-    }
-
-    function grSelectedCardLabel() {
-      if (!state.grSelectedCard || !state.grLastMsg) return null;
-      const card = (state.grLastMsg.myHand || []).find(c => c.id === state.grSelectedCard);
-      if (!card) return null;
-      return typeof formatCardShort === 'function' ? formatCardShort(card) : card.id;
-    }
-
-    function grDiscardKnockButtons(msg) {
-      const selected = state.grSelectedCard;
-      const cardLbl = grSelectedCardLabel();
-      let html = '<button class="btn btn-primary" onclick="grDiscard()" id="grDiscardBtn" style="flex:1.2;"' +
-        (!selected ? ' disabled' : '') + '>' + (selected ? 'Discard ' + (cardLbl || '') : 'Discard (select a card)') + '</button>';
-      if (msg.canKnock) {
-        const dwVal = msg.myDeadwoodValue != null ? msg.myDeadwoodValue : '';
-        const knockLabel = dwVal === 0 ? 'GIN! 🌟' : 'Knock (' + dwVal + ' pts)!';
-        html += '<button class="btn btn-secondary" onclick="grAction(\'knock\')" style="flex:1;border-color:var(--neon-pink);color:var(--neon-pink);font-weight:800;">' + knockLabel + '</button>';
-      }
-      return html;
-    }
-
-    function grSelectCard(cardId) {
-      state.grSelectedCard = state.grSelectedCard === cardId ? null : cardId;
-      // Re-render hand selection
-      document.querySelectorAll('#grHand .playing-card').forEach(el => el.classList.remove('selected'));
-      if (state.grSelectedCard) {
-        const cards = document.querySelectorAll('#grHand .playing-card');
-        cards.forEach(el => {
-          if (el.getAttribute('onclick')?.includes("'" + state.grSelectedCard + "'")) el.classList.add('selected');
-        });
-      }
-      // Update discard button state
-      const btn = document.getElementById('grDiscardBtn');
-      if (btn) {
-        btn.disabled = !state.grSelectedCard;
-        const cardLbl = grSelectedCardLabel();
-        btn.textContent = state.grSelectedCard ? ('Discard ' + (cardLbl || '')) : 'Discard (select a card)';
-      }
+    function grToggleLayout() {
+      tcSetLayout(tcLayout() === 'fan' ? 'rack' : 'fan');
+      if (state.grLastMsg) renderGinRummyState(state.grLastMsg);
     }
 
     function grDraw(source) {
@@ -2036,67 +1886,45 @@
       send({ type: 'GAME_ACTION', action: { type: actionType } });
     }
 
+    /** Melds + deadwood of one player as glowing card groups. */
+    function grRevealHtml(title, melds, deadwood, size, layoffs) {
+      let html = '<div class="tc-reveal"><div class="tc-reveal-head"><span>' + escapeHtml(title) + '</span>' +
+        '<span>Deadwood ' + (deadwood || []).reduce((s, c) => s + Math.min(10, c.rank), 0) + '</span></div><div class="tc-meld-groups">';
+      (melds || []).forEach(m => {
+        html += '<div class="tc-meld-group">' + (m.cards || []).map(c => renderTableCard(c, { size: size, meld: m.type === 'set' ? 'set' : 'run', dataId: '' })).join('') + '</div>';
+      });
+      if ((layoffs || []).length) {
+        html += '<div class="tc-meld-group">' + layoffs.map(c => renderTableCard(c, { size: size, badge: 'laid off', dataId: '' })).join('') + '</div>';
+      }
+      if ((deadwood || []).length) {
+        html += '<div class="tc-meld-group tc-deadwood-group">' + deadwood.map(c => renderTableCard(c, { size: size, dataId: '' })).join('') + '</div>';
+      }
+      return html + '</div></div>';
+    }
+
     function renderGrScoring(msg) {
-      const pNames = state.playerNames || msg.playerNames || {};
-      const resultDiv = document.getElementById('grHandResult');
-      const meldsDiv = document.getElementById('grMeldsDisplay');
       const hr = msg.handResult || {};
-
-      let resultHtml = '';
+      const me = state.playerId;
+      const typeLabels = { knock: 'Knock', undercut: 'Undercut!', gin: 'Gin!', bigGin: 'Big Gin!', cancelled: 'Stock ran out' };
+      let html = '<div class="tc-sheet-kicker">' + escapeHtml(msg.phase === 'finished' ? 'Game over' : (typeLabels[hr.type] || 'Hand over')) + '</div>';
       if (hr.type === 'cancelled') {
-        resultHtml = '<div style="font-size:1.2rem;color:var(--text-secondary);">Hand cancelled (stock exhausted)</div>';
-      } else if (hr.type) {
-        const winnerName = pNames[hr.winner] || hr.winner;
-        const typeLabels = { knock: 'Knock', undercut: 'Undercut!', gin: 'GIN!', bigGin: 'BIG GIN!' };
-        const typeColors = { knock: 'var(--neon-blue)', undercut: 'var(--neon-pink)', gin: 'var(--neon-green)', bigGin: 'var(--neon-green)' };
-        resultHtml = '<div style="font-size:0.85rem;color:var(--text-secondary);text-transform:uppercase;">' + (typeLabels[hr.type] || hr.type) + '</div>' +
-          '<div style="font-size:1.3rem;font-weight:700;color:' + (typeColors[hr.type] || 'var(--text-primary)') + ';">' + escapeHtml(winnerName) + ' wins +' + (hr.points || 0) + ' pts</div>';
+        html += '<div class="tc-sheet-title">No points this hand</div>';
+      } else if (hr.winner) {
+        const good = hr.winner === me;
+        html += '<div class="tc-sheet-title ' + (good ? 'tc-good' : 'tc-bad') + '">' +
+          escapeHtml((good ? 'You win' : tcName(hr.winner, msg) + ' wins') + ' +' + (hr.points || 0)) + '</div>';
       }
-
-      if (msg.phase === 'finished' && msg.finalScores) {
-        resultHtml += '<div style="margin-top:12px;font-size:1rem;color:var(--neon-green);font-weight:700;">GAME OVER</div>';
-        const fs = msg.finalScores;
-        resultHtml += '<div style="margin-top:4px;">' + Object.entries(fs).map(([pid, score]) =>
-          '<span style="margin:0 8px;">' + escapeHtml(pNames[pid] || pid) + ': ' + score + '</span>'
-        ).join('') + '</div>';
+      if (msg.knocker) {
+        const oppId = Object.keys(msg.cumulative || {}).find(id => id !== msg.knocker);
+        const knockName = msg.knocker === me ? 'You' : tcName(msg.knocker, msg);
+        const oppName = oppId === me ? 'You' : tcName(oppId, msg);
+        html += grRevealHtml(knockName + ' (knocked)', msg.knockerMelds, msg.knockerDeadwood, 'sm');
+        html += grRevealHtml(oppName, msg.opponentMelds, msg.opponentDeadwood, 'sm', msg.opponentLayoffs);
       }
-      resultDiv.innerHTML = resultHtml;
-
-      // Show melds
-      let meldsHtml = '';
-      const knockerName = pNames[msg.knocker] || msg.knocker || 'Knocker';
-      const opponentId = Object.keys(msg.cumulative || {}).find(id => id !== msg.knocker);
-      const opponentName = pNames[opponentId] || opponentId || 'Opponent';
-
-      if (msg.knockerMelds) {
-        meldsHtml += '<div style="margin-bottom:10px;"><div style="font-size:0.82rem;font-weight:700;color:var(--text-secondary);margin-bottom:6px;">' + escapeHtml(knockerName) + '\'s Melds</div>';
-        meldsHtml += '<div class="card-row" style="flex-wrap:wrap;gap:6px;">' + (msg.knockerMelds || []).map(m =>
-          '<div style="display:flex;gap:3px;padding:5px;border:1px solid var(--glass-border);border-radius:8px;background:rgba(16,185,129,0.06);">' +
-          m.cards.map(c => renderCardImg(c, {width: 48, height: 68})).join('') +
-          '</div>'
-        ).join('') + '</div>';
-        if (msg.knockerDeadwood && msg.knockerDeadwood.length > 0) {
-          meldsHtml += '<div style="font-size:0.75rem;color:var(--text-secondary);margin-top:6px;">Deadwood: ' +
-            msg.knockerDeadwood.map(c => renderCardImg(c, {width: 42, height: 60, style: 'display:inline-block'})).join(' ') + '</div>';
-        }
-        meldsHtml += '</div>';
-      }
-
-      if (msg.opponentMelds) {
-        meldsHtml += '<div><div style="font-size:0.82rem;font-weight:700;color:var(--text-secondary);margin-bottom:6px;">' + escapeHtml(opponentName) + '\'s Melds</div>';
-        meldsHtml += '<div class="card-row" style="flex-wrap:wrap;gap:6px;">' + (msg.opponentMelds || []).map(m =>
-          '<div style="display:flex;gap:3px;padding:5px;border:1px solid var(--glass-border);border-radius:8px;background:rgba(13,148,136,0.06);">' +
-          m.cards.map(c => renderCardImg(c, {width: 48, height: 68})).join('') +
-          '</div>'
-        ).join('') + '</div>';
-        if (msg.opponentDeadwood && msg.opponentDeadwood.length > 0) {
-          meldsHtml += '<div style="font-size:0.75rem;color:var(--text-secondary);margin-top:6px;">Deadwood: ' +
-            msg.opponentDeadwood.map(c => renderCardImg(c, {width: 42, height: 60, style: 'display:inline-block'})).join(' ') + '</div>';
-        }
-        meldsHtml += '</div>';
-      }
-
-      meldsDiv.innerHTML = meldsHtml;
+      const totals = msg.finalScores || msg.cumulative || {};
+      html += '<div class="tc-scoreline">' + Object.keys(totals).map(id =>
+        '<span>' + escapeHtml(id === me ? 'You' : tcName(id, msg)) + ' <b>' + (totals[id] || 0) + '</b></span>').join('') + '</div>';
+      document.getElementById('grSheet').innerHTML = html;
     }
 
     // --- Template Game ---
