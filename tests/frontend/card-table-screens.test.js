@@ -152,3 +152,24 @@ describe('TV card tables never show private hands', () => {
     expect(html).toContain("'s turn");
   });
 });
+
+describe('TV card tables escape hostile values', () => {
+  const evil = '<img src=x onerror=alert(1)>';
+  it('Gin Rummy: numeric fields cannot inject markup', () => {
+    const html = tvRender('renderGinRummy', {
+      phase: 'drawing', turnPhase: 'draw', currentPlayer: 'p1', handNumber: evil,
+      cumulative: { p1: evil, p2: 3 }, boxes: { p1: evil, p2: 0 }, playerCardCounts: { p1: evil, p2: 10 },
+      stockCount: evil, discardCount: evil, discardTop: null, events: [],
+    });
+    expect(html).not.toContain('<img');
+  });
+
+  it('Palace: numeric fields cannot inject markup', () => {
+    const html = tvRender('renderShithead', {
+      phase: 'play', currentPlayer: 'p1', drawPileCount: evil, pileCount: evil, pileTopRank: 5,
+      players: [{ playerId: 'p1', handCount: evil, faceUp: [], faceDownCount: evil, isOut: false }],
+      finishOrder: [],
+    });
+    expect(html).not.toContain('<img');
+  });
+});

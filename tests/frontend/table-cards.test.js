@@ -113,3 +113,13 @@ describe('classifyHandGesture', () => {
     expect(kit.classifyHandGesture({ dx: 0, dy: 70 })).toBe('drag');
   });
 });
+
+describe('tcNum', () => {
+  it('keeps numbers and turns anything else into 0', () => {
+    expect(kit.tcNum(12)).toBe(12);
+    expect(kit.tcNum('7')).toBe(7);
+    expect(kit.tcNum('<img src=x onerror=alert(1)>')).toBe(0);
+    expect(kit.tcNum(undefined)).toBe(0);
+    expect(kit.tcNum(Infinity)).toBe(0);
+  });
+});

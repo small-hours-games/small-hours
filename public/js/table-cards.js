@@ -27,6 +27,12 @@ function tcEscape(text) {
     .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
 
+/** A finite number from any value (0 otherwise), for numbers written into HTML. */
+function tcNum(value) {
+  var n = Number(value);
+  return isFinite(n) ? n : 0;
+}
+
 function tcRankLabel(rank) {
   return TC_RANK_LABELS[rank] || String(rank == null ? '' : rank);
 }

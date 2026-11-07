@@ -1635,7 +1635,7 @@
       if (!first) return;
       const same = cards.filter(c => c.rank === first.rank);
       if (same.length > 1 && state.shSelectedCards.length < same.length) {
-        assist.innerHTML = '<button type="button" class="tc-btn tc-active" onclick="shSelectAllRank(' + first.rank + ')">All ' +
+        assist.innerHTML = '<button type="button" class="tc-btn tc-active" onclick="shSelectAllRank(' + tcNum(first.rank) + ')">All ' +
           escapeHtml(tcRankLabel(first.rank)) + 's (×' + same.length + ')</button>';
       }
     }
@@ -1674,9 +1674,9 @@
         let detail;
         if (msg.phase === 'swap') detail = (msg.swapConfirmed || {})[p.playerId] ? '✓ ready' : '⏳ swapping';
         else if (p.isOut || place >= 0) detail = '✓ out' + (place >= 0 ? ' #' + (place + 1) : '');
-        else detail = '<span class="tc-mono">' + p.handCount + '🂠</span>' +
+        else detail = '<span class="tc-mono">' + tcNum(p.handCount) + '🂠</span>' +
           ((p.faceUp || []).length ? '<span class="tc-opp-cards">' + p.faceUp.map(c => renderTableCard(c, { size: 'sm', dataId: '' })).join('') + '</span>' : '') +
-          (p.faceDownCount ? '<span class="tc-mono">+' + p.faceDownCount + '▢</span>' : '');
+          (p.faceDownCount ? '<span class="tc-mono">+' + tcNum(p.faceDownCount) + '▢</span>' : '');
         return '<span class="tc-pill' + (turn ? ' tc-pill-turn' : '') + (place >= 0 ? ' tc-pill-out' : '') + '">' +
           escapeHtml(tcAvatar(p.playerId) + tcName(p.playerId, msg)) + ' ' + detail + '</span>';
       }).join('');
@@ -1740,13 +1740,13 @@
       const counts = msg.playerCardCounts || {};
       const oppCount = counts[oppId] != null ? counts[oppId] : (msg.opponentCardCount || 0);
       document.getElementById('grOppPill').className = 'tc-pill' + (playing && !msg.isMyTurn ? ' tc-pill-turn' : '');
-      document.getElementById('grOppPill').innerHTML = escapeHtml(tcAvatar(oppId) + tcName(oppId, msg)) + ' <span class="tc-mono">' + oppCount + '🂠</span>';
+      document.getElementById('grOppPill').innerHTML = escapeHtml(tcAvatar(oppId) + tcName(oppId, msg)) + ' <span class="tc-mono">' + tcNum(oppCount) + '🂠</span>';
       const cum = msg.cumulative || {};
       const boxes = msg.boxes || {};
       document.getElementById('grChips').innerHTML =
-        (msg.handNumber ? '<span class="tc-pill tc-mono">Hand ' + msg.handNumber + '</span>' : '') +
+        (msg.handNumber ? '<span class="tc-pill tc-mono">Hand ' + tcNum(msg.handNumber) + '</span>' : '') +
         Object.keys(cum).map(id => '<span class="tc-pill">' + escapeHtml(id === me ? 'You' : tcName(id, msg)) +
-          ' <b class="tc-mono">' + (cum[id] || 0) + '</b>' + (boxes[id] ? ' <span class="tc-mono">▣' + boxes[id] + '</span>' : '') + '</span>').join('');
+          ' <b class="tc-mono">' + tcNum(cum[id]) + '</b>' + (boxes[id] ? ' <span class="tc-mono">▣' + tcNum(boxes[id]) + '</span>' : '') + '</span>').join('');
 
       // Table wells
       const stockCount = msg.stockCount || 0;
@@ -1794,7 +1794,7 @@
       hud.hidden = !playing;
       hud.innerHTML = '<span><i style="background:var(--tc-set)"></i>Sets <b>' + sets + '</b></span><span class="tc-sep">|</span>' +
         '<span><i style="background:var(--tc-run)"></i>Runs <b>' + runs + '</b></span><span class="tc-sep">|</span>' +
-        '<span>DW <b class="tc-dw' + (dw != null && dw <= 10 ? ' tc-dw-ok' : '') + '">' + (dw == null ? '–' : dw) + '</b></span>';
+        '<span>DW <b class="tc-dw' + (dw != null && dw <= 10 ? ' tc-dw-ok' : '') + '">' + (dw == null ? '–' : tcNum(dw)) + '</b></span>';
 
       // Thumb button, knock / decline, sort bar
       tcSetCta('grCta', grCtaState(msg, state.grSelectedCard));
@@ -1889,7 +1889,7 @@
     /** Melds + deadwood of one player as glowing card groups. */
     function grRevealHtml(title, melds, deadwood, size, layoffs) {
       let html = '<div class="tc-reveal"><div class="tc-reveal-head"><span>' + escapeHtml(title) + '</span>' +
-        '<span>Deadwood ' + (deadwood || []).reduce((s, c) => s + Math.min(10, c.rank), 0) + '</span></div><div class="tc-meld-groups">';
+        '<span>Deadwood ' + (deadwood || []).reduce((s, c) => s + Math.min(10, tcNum(c.rank)), 0) + '</span></div><div class="tc-meld-groups">';
       (melds || []).forEach(m => {
         html += '<div class="tc-meld-group">' + (m.cards || []).map(c => renderTableCard(c, { size: size, meld: m.type === 'set' ? 'set' : 'run', dataId: '' })).join('') + '</div>';
       });
@@ -1923,7 +1923,7 @@
       }
       const totals = msg.finalScores || msg.cumulative || {};
       html += '<div class="tc-scoreline">' + Object.keys(totals).map(id =>
-        '<span>' + escapeHtml(id === me ? 'You' : tcName(id, msg)) + ' <b>' + (totals[id] || 0) + '</b></span>').join('') + '</div>';
+        '<span>' + escapeHtml(id === me ? 'You' : tcName(id, msg)) + ' <b>' + tcNum(totals[id]) + '</b></span>').join('') + '</div>';
       document.getElementById('grSheet').innerHTML = html;
     }
 

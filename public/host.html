@@ -991,6 +991,7 @@
     // ===== Card table on the TV: Gin Rummy + Palace (kit in /js/table-cards.js) =====
     // Only shared fields are used here; per-player data never reaches host sockets.
     function tvFanHtml(count, size, max) {
+      count = tcNum(count);
       const shown = Math.min(max || 10, count || 0);
       let html = '<div class="tc-fan" aria-label="' + (count || 0) + ' cards in hand">';
       for (let i = 0; i < shown; i++) html += renderTableCard(null, { size: size || 'sm', facedown: true, dataId: '' });
@@ -1010,7 +1011,7 @@
 
     function tvRevealHtml(title, melds, deadwood, layoffs) {
       let html = '<div class="tc-reveal"><div class="tc-reveal-head"><span>' + escapeHtml(title) + '</span>' +
-        '<span>Deadwood ' + (deadwood || []).reduce((s, c) => s + Math.min(10, c.rank), 0) + '</span></div><div class="tc-meld-groups">';
+        '<span>Deadwood ' + (deadwood || []).reduce((s, c) => s + Math.min(10, tcNum(c.rank)), 0) + '</span></div><div class="tc-meld-groups">';
       (melds || []).forEach(m => {
         html += '<div class="tc-meld-group">' + (m.cards || []).map(c => renderTableCard(c, { size: 'md', meld: m.type === 'set' ? 'set' : 'run', dataId: '' })).join('') + '</div>';
       });
@@ -1048,28 +1049,30 @@
       else if (msg.phase === 'finished') status = 'Game over';
 
       const seat = pid => {
-        const count = (msg.playerCardCounts || {})[pid] != null ? msg.playerCardCounts[pid] : 10;
+        const count = tcNum((msg.playerCardCounts || {})[pid] != null ? msg.playerCardCounts[pid] : 10);
+        const pts = tcNum(cum[pid]);
+        const bx = tcNum(boxes[pid]);
         const turn = playing && pid === current;
         return tvSeatHtml(pid, names, {
           turn,
           tag: turn ? '▶ ' + action : null,
-          stats: '<span><span class="tc-seat-score">' + (cum[pid] || 0) + '</span> pts</span><span>' + (boxes[pid] || 0) + ((boxes[pid] || 0) === 1 ? ' box · ' : ' boxes · ') + count + ' cards</span>',
+          stats: '<span><span class="tc-seat-score">' + pts + '</span> pts</span><span>' + bx + (bx === 1 ? ' box · ' : ' boxes · ') + count + ' cards</span>',
           cards: playing ? tvFanHtml(count, 'sm', 11) : '',
         });
       };
 
       let html = '<div class="tc-tv tc-felt">';
       html += '<div class="tc-tv-status"><span class="tc-dot' + (playing ? ' tc-dot-live' : '') + '"></span>' +
-        (msg.handNumber ? '<span class="tc-mono">Hand ' + msg.handNumber + '</span> · ' : '') + escapeHtml(status) + '</div>';
+        (msg.handNumber ? '<span class="tc-mono">Hand ' + tcNum(msg.handNumber) + '</span> · ' : '') + escapeHtml(status) + '</div>';
       if (pids[1]) html += '<div class="tc-tv-seats">' + seat(pids[1]) + '</div>';
 
       if (playing) {
-        const discardCount = msg.discardCount != null ? msg.discardCount : (msg.discardTop ? 1 : 0);
+        const discardCount = tcNum(msg.discardCount != null ? msg.discardCount : (msg.discardTop ? 1 : 0));
         const preview = (msg.discardPreview && msg.discardPreview.length) ? msg.discardPreview : (msg.discardTop ? [msg.discardTop] : []);
         html += '<div class="tc-tv-center">' +
           '<div class="tc-well"><span class="tc-well-label">Stock</span>' +
             renderTableStack(null, msg.stockCount || 0, { size: 'xl', facedown: true, emptyLabel: 'Empty', highlight: msg.turnPhase === 'draw' }) +
-            '<span class="tc-count">' + (msg.stockCount || 0) + ' left</span></div>' +
+            '<span class="tc-count">' + tcNum(msg.stockCount) + ' left</span></div>' +
           '<div class="tc-well"><span class="tc-well-label">Discard</span>' +
             renderTableStack(preview, discardCount, { size: 'xl', emptyLabel: 'Empty', highlight: msg.phase === 'first_turn' }) +
             '<span class="tc-count">' + discardCount + (discardCount === 1 ? ' card' : ' cards') + '</span></div>' +
@@ -1169,11 +1172,11 @@
           side += '<div class="tc-tv-banner">' + escapeHtml((names[msg.lastPlayedBy] || 'Player') + ' played ' +
             (cards.length > 1 ? cards.length + '× ' + tcRankLabel(cards[0].rank) : tcCardShort(cards[0]))) + '</div>';
         }
-        const pileCount = msg.pileCount || 0;
+        const pileCount = tcNum(msg.pileCount);
         html += '<div class="tc-tv-center">' +
           '<div class="tc-well"><span class="tc-well-label">Draw deck</span>' +
             renderTableStack(null, msg.drawPileCount || 0, { size: pileSize, facedown: true, emptyLabel: 'Empty' }) +
-            '<span class="tc-count">' + (msg.drawPileCount || 0) + ' left</span></div>' +
+            '<span class="tc-count">' + tcNum(msg.drawPileCount) + ' left</span></div>' +
           '<div class="tc-well"><span class="tc-well-label">Play pile</span>' +
             renderTableStack(pilePreview, pileCount || pilePreview.length, { size: pileSize, emptyLabel: 'Empty' }) +
             '<span class="tc-count">' + pileCount + (pileCount === 1 ? ' card' : ' cards') + '</span></div>' +
