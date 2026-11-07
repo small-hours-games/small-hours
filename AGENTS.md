@@ -75,7 +75,7 @@ export default {
 - Clients connect to `/ws/host/:code` or `/ws/player/:code`.
 - Actions use `{ type: 'GAME_ACTION', action: { type: '<action-name>', ...payload } }`.
 - Treat socket identity as authoritative; inspect existing authorization and validation before adding handlers.
-- Preserve private information in per-player views: hands, answers, and hidden roles must only reach their intended viewers. Inspect the host broadcast path separately.
+- Preserve private information in per-player views: hands, answers, and hidden roles must only reach their intended viewers. Host/TV sockets get `getHostView` (`src/transport/host-view.js`): a game's optional `hostView(state)`, or the first player's view minus `my*` keys and a short list of other per-player keys. Name new private fields `my*` or add them to that list.
 - Keep game scores, session scores, and the shared scoreboard consistent. Inspect the scoreboard tests when changing result shapes.
 - Preserve reconnect, disconnect grace, admin reclaim, and timer cancellation behavior when changing lifecycle code.
 
@@ -105,7 +105,7 @@ Run focused tests for the behavior changed, then `npm test` for changes spanning
 - `src/engine/games/shithead.test.js` is a co-located exception; other tests are under `tests/`.
 - Frontend tests exercise browser code with lightweight test setups. Inspect the affected test's environment; do not assume every frontend test uses JSDOM.
 - For UI changes, report whether browser/phone/TV behavior was actually checked. A passing unit test does not establish visual correctness.
-- `/health` reports status, version, commit, uptime, room count, and player count.
+- `/health` reports status, version, commit, build time, uptime, room count, and player count. `/api/version` returns the same build info for the front-page footer; see `src/version.js`.
 
 ## Runtime data and integrations
 
@@ -120,5 +120,7 @@ Local context: server `10.10.0.21`, project `/opt/small-hours`. Confirm the exec
 For completed and verified **application changes**, the established project preference is to rebuild and restart with `docker compose build && docker compose up -d`, then check `/health`. Source is baked into the image, so restarting alone does not apply source changes. This does not apply to documentation-only changes.
 
 The repository also supports registry deployments: `.github/workflows/docker.yml` tests and publishes GHCR images on main and version tags. `./update.sh [tag]` pulls Git and the configured image, seeds questions, and restarts. Use it for registry updates or rollback; it does not deploy uncommitted local source changes. Inspect the script before running it in a dirty checkout.
+
+Versioning: `package.json` `version` is the release number shown on the front page and in `/health`; the commit comes from `GIT_SHA` (CI) or the checkout's `.git` refs, which `.dockerignore` keeps for local builds. To release, run `npm version patch|minor|major` (commit plus `vX.Y.Z` tag) and `git push --follow-tags`; CI fails a tag that does not match `package.json`.
 
 Environment-only changes require container recreation rather than an image rebuild. Read `docker-compose.yml` for the actual mounts, image, and health check. Restarting the server interrupts in-memory rooms.

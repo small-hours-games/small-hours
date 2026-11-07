@@ -15,6 +15,8 @@
   <link rel="stylesheet" href="/css/smallhours.css">
   <link rel="stylesheet" href="/css/player.css">
   <link rel="stylesheet" href="/css/light-lobby.css">
+  <link rel="icon" type="image/png" sizes="64x64" href="/images/smallhours-favicon.png">
+  <link rel="apple-touch-icon" href="/images/smallhours-icon.png">
 </head>
 <body class="light-lobby phone-screen text-slate-800 font-sans">
 
@@ -22,10 +24,8 @@
   <header class="bg-white/90 backdrop-blur-md border-b border-sky-100 sticky top-0 z-50">
     <div class="max-w-md mx-auto px-4 h-14 flex items-center justify-between gap-2">
       <a href="/" class="flex items-center gap-2.5 min-w-0">
-        <div class="w-9 h-9 shrink-0 rounded-2xl bg-gradient-to-tr from-sky-500 to-blue-600 flex items-center justify-center text-white shadow-md shadow-sky-500/20">
-          <i class="fa-solid fa-gamepad"></i>
-        </div>
-        <span class="font-display text-xl font-bold tracking-tight text-slate-900">Smallhours</span>
+        <img class="brand-symbol" src="/images/smallhours-icon.png" alt="" width="36" height="36">
+        <span class="brand-phone-name">Smallhours</span>
       </a>
       <div class="flex items-center gap-2 min-w-0">
         <button id="shareBtn" onclick="shareRoom()" aria-label="Share room" class="hidden w-8 h-8 rounded-full bg-sky-50 hover:bg-sky-100 text-sky-700 items-center justify-center">
@@ -84,46 +84,38 @@
 
     <!-- GAMES DASHBOARD -->
     <div class="section" id="lobbySection">
-      <div class="device-screen bg-sky-100 border-4 border-white rounded-[2.5rem] p-5 flex flex-col gap-4">
-        <div class="pt-1">
-          <div class="flex items-center justify-between pb-3 border-b border-sky-200">
-            <span class="font-display font-bold text-xl text-slate-800">Games Dashboard</span>
-          </div>
-          <div class="mt-3 p-2.5 rounded-xl bg-amber-50 border border-amber-200 text-[11px] leading-tight text-amber-900">
-            <span class="font-bold block text-amber-700 mb-0.5"><i class="fa-solid fa-lightbulb"></i> How it works</span>
-            Everyone wishes for a game. The most picked game is chosen and the next phase begins.
-          </div>
-          <button id="categoryReturn" onclick="showSection('categorySection')" class="hidden mt-3 w-full p-2.5 rounded-xl bg-white border border-sky-300 text-sky-800 text-xs font-bold items-center justify-between">
-            <span><i class="fa-solid fa-list-check"></i> Quiz category vote is open</span>
-            <i class="fa-solid fa-chevron-right text-[10px]"></i>
-          </button>
+      <div class="device-screen bg-sky-100 border-4 border-white rounded-[2rem] p-3.5 flex flex-col gap-2.5">
+        <div class="flex items-center justify-between pb-2 border-b border-sky-200">
+          <span class="font-display font-bold text-lg text-slate-800">Games Dashboard</span>
+          <span class="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-sky-200/80 text-sky-900">Tap to Vote</span>
         </div>
-
-        <div class="space-y-2.5">
-          <p class="text-xs font-bold text-slate-600 uppercase tracking-wide">Vote for next activity:</p>
-          <div id="voteList" class="space-y-2.5"></div>
-        </div>
+        <button id="categoryReturn" onclick="showSection('categorySection')" class="hidden w-full p-2.5 rounded-xl bg-white border-2 border-sky-400 text-sky-800 text-xs font-extrabold items-center justify-between shadow-sm">
+          <span><i class="fa-solid fa-list-check"></i> Quiz category vote is open &mdash; Tap to choose</span>
+          <i class="fa-solid fa-chevron-right text-xs"></i>
+        </button>
 
         <div id="adminControls" class="space-y-2"></div>
 
+        <div id="voteList"></div>
+
         <!-- Players & current score -->
-        <div class="bg-white/90 rounded-2xl p-3 border border-sky-200 shadow-sm" id="lobbyPlayers">
+        <div class="bg-white/95 rounded-xl p-2.5 border border-sky-200 shadow-sm max-h-28 overflow-y-auto" id="lobbyPlayers">
           <div class="text-xs text-slate-500">Waiting for players...</div>
         </div>
 
         <!-- Chat -->
-        <details class="bg-white/90 rounded-2xl border border-sky-200 shadow-sm lobby-chat group">
-          <summary class="cursor-pointer select-none px-3 py-2.5 text-xs font-bold text-slate-700 uppercase flex items-center justify-between">
-            <span><i class="fa-regular fa-comments text-sky-600"></i> Chat</span>
+        <details class="bg-white/95 rounded-xl border border-sky-200 shadow-sm lobby-chat group">
+          <summary class="cursor-pointer select-none px-3 py-2 text-xs font-bold text-slate-700 uppercase flex items-center justify-between">
+            <span><i class="fa-regular fa-comments text-sky-600"></i> Party Chat</span>
             <i class="fa-solid fa-chevron-down text-[10px] text-slate-400 group-open:rotate-180 transition"></i>
           </summary>
-          <div class="px-3 pb-3">
+          <div class="px-3 pb-2.5">
             <div class="chat-messages text-sm" id="lobbyChatMessages" role="log" aria-label="Party chat messages" aria-live="polite"></div>
             <div class="flex gap-2 mt-2">
               <input type="text" id="chatInput" placeholder="Say something..." maxlength="200"
-                class="flex-1 px-3 py-2 rounded-xl border border-slate-300 text-sm"
+                class="flex-1 px-3 py-1.5 rounded-xl border border-slate-300 text-sm"
                 onkeydown="if(event.key==='Enter')sendChat()">
-              <button onclick="sendChat()" class="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl text-sm">Send</button>
+              <button onclick="sendChat()" class="px-3.5 py-1.5 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl text-sm">Send</button>
             </div>
           </div>
         </details>
@@ -132,23 +124,23 @@
 
     <!-- QUIZ CATEGORY VOTE -->
     <div class="section" id="categorySection">
-      <div class="device-screen bg-sky-100 border-4 border-white rounded-[2.5rem] p-5 flex flex-col gap-3">
+      <div class="device-screen bg-sky-100 border-4 border-white rounded-[2.5rem] p-5 flex flex-col gap-3.5">
         <div class="pt-1">
           <div class="flex items-center justify-between pb-3 border-b border-sky-200">
-            <button onclick="showSection('lobbySection')" class="text-xs font-semibold text-sky-700 hover:underline flex items-center gap-1">
+            <button onclick="showSection('lobbySection')" class="text-xs font-bold text-sky-700 hover:underline flex items-center gap-1 px-2 py-1 rounded-lg bg-white/70">
               <i class="fa-solid fa-chevron-left text-[10px]"></i> Games
             </button>
-            <h2 class="font-display font-bold text-lg text-slate-800">Quiz Category</h2>
+            <h2 class="font-display font-bold text-lg text-slate-800">Pick Quiz Topic</h2>
             <span class="w-12"></span>
           </div>
-          <p class="text-[11px] text-slate-600 text-center mt-2 font-medium">Vote for a topic &mdash; the most picked category is played</p>
+          <p class="text-xs text-slate-600 text-center mt-2 font-semibold">Tap your favorite topic &mdash; most votes wins!</p>
         </div>
-
-        <div id="categoryList" class="space-y-2.5"></div>
 
         <div id="categoryAdmin"></div>
 
-        <div class="bg-white/90 rounded-2xl p-3 border border-sky-200 shadow-sm">
+        <div id="categoryList" class="space-y-2.5"></div>
+
+        <div class="bg-white/95 rounded-2xl p-3 border border-sky-200 shadow-sm">
           <div class="text-[11px] font-bold text-slate-700 uppercase mb-1.5">Players &bull; Current Score</div>
           <div class="flex flex-wrap gap-x-3 gap-y-1 text-xs text-slate-600" id="categoryScores"></div>
         </div>
@@ -179,20 +171,21 @@
 
     <!-- QUIZ SECTION -->
     <div class="section" id="quizSection">
+      <div class="quiz-top-meta" id="quizTopMeta">
+        <span class="quiz-meta-pill" id="quizRoundPill">Quiz</span>
+        <div class="quiz-timer-display" id="quizTimerText"></div>
+        <span class="quiz-meta-pill score-pill" id="quizScore" style="display:inline-flex;">&#11088; <span class="score-val" id="quizScoreVal">0</span> pts</span>
+      </div>
       <div class="timer-bar-container" id="quizTimerContainer" style="display:none;">
         <div class="timer-bar" id="quizTimerBar"></div>
       </div>
-      <div class="quiz-timer-display" id="quizTimerText"></div>
-      <div class="question-text card" id="quizQuestion"></div>
       <div id="quizMedia" class="hidden"></div>
+      <div class="question-text card" id="quizQuestion"></div>
       <div class="answer-grid" id="quizAnswers"></div>
       <div class="powerup-row" id="quizPowerups">
         <button class="powerup-btn" id="pwDouble" onclick="usePowerup('double')">&#10006;2 Double</button>
         <button class="powerup-btn" id="pwFifty" onclick="usePowerup('fifty')">50/50</button>
         <button class="powerup-btn" id="pwFreeze" onclick="usePowerup('freeze')">&#10052; Freeze</button>
-      </div>
-      <div class="my-score" id="quizScore" style="display:none;">
-        Score: <span class="score-val" id="quizScoreVal">0</span>
       </div>
     </div>
 
@@ -238,20 +231,26 @@
 
     <!-- SHITHEAD SECTION -->
     <div class="section" id="shitheadSection">
-      <div id="shPhaseInfo" class="card text-center" style="padding:12px;">
-        <span style="font-size:0.85rem;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.1em;">Shithead</span>
+      <div id="shPhaseInfo" class="card text-center" style="padding:10px 12px;">
+        <span style="font-size:0.85rem;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.1em;">Palace</span>
       </div>
 
       <!-- Swap Phase -->
       <div id="shSwapView" style="display:none;">
         <div class="card">
-          <div style="font-size:0.85rem;color:var(--text-secondary);margin-bottom:8px;">Swap hand cards with face-up cards</div>
-          <div style="margin-bottom:12px;">
-            <div style="font-size:0.8rem;color:var(--text-secondary);margin-bottom:4px;">Your Hand</div>
+          <div style="font-size:0.85rem;color:var(--text-secondary);margin-bottom:10px;">Tap a card in your hand and a face-up card to swap them. Put your strongest cards (2, 10, A, K) face-up!</div>
+          <div style="margin-bottom:14px;">
+            <div class="zone-header">
+              <span class="zone-title">Your Hand</span>
+              <span class="zone-count-badge" id="shSwapHandCount">3 cards</span>
+            </div>
             <div id="shSwapHand" class="card-row"></div>
           </div>
-          <div style="margin-bottom:12px;">
-            <div style="font-size:0.8rem;color:var(--text-secondary);margin-bottom:4px;">Face Up</div>
+          <div style="margin-bottom:14px;">
+            <div class="zone-header">
+              <span class="zone-title">Face Up Table Cards</span>
+              <span class="zone-count-badge" id="shSwapFaceUpCount">3 cards</span>
+            </div>
             <div id="shSwapFaceUp" class="card-row"></div>
           </div>
           <button class="btn btn-primary" onclick="confirmShSwap()" id="shConfirmSwapBtn">Done Swapping</button>
@@ -260,32 +259,58 @@
 
       <!-- Play Phase -->
       <div id="shPlayView" style="display:none;">
-        <!-- Pile -->
-        <div class="card text-center" style="padding:16px;">
-          <div style="font-size:0.8rem;color:var(--text-secondary);margin-bottom:4px;">Pile (<span id="shPileCount">0</span>)</div>
-          <div id="shPileTop" style="font-size:2.5rem;">-</div>
-          <div id="shTurnInfo" style="font-size:0.9rem;margin-top:8px;"></div>
+        <!-- Table: Draw Stack + Play Pile -->
+        <div class="card text-center" style="padding:12px;">
+          <div class="phone-table-grid">
+            <div class="phone-stack-box" id="shDrawBox">
+              <div class="phone-stack-label">Draw Stack</div>
+              <div id="shDrawStackVisual" style="min-height:96px;display:flex;align-items:center;justify-content:center;"></div>
+              <div class="stack-count-pill">Deck: <span id="shDrawCount">0</span></div>
+            </div>
+            <div class="phone-stack-box" id="shPileBox">
+              <div class="phone-stack-label">Play Pile</div>
+              <div id="shPileTop" style="min-height:96px;display:flex;align-items:center;justify-content:center;">-</div>
+              <div class="stack-count-pill accent">Pile: <span id="shPileCount">0</span></div>
+            </div>
+          </div>
+          <div id="shRuleBanner" class="sh-rule-banner"></div>
+          <div id="shTurnInfo" style="font-size:0.95rem;margin-top:8px;"></div>
         </div>
 
         <!-- My cards -->
-        <div class="card">
-          <div style="font-size:0.8rem;color:var(--text-secondary);margin-bottom:4px;">Your Hand</div>
+        <div class="card" id="shHandSection">
+          <div class="zone-header">
+            <span class="zone-title">Your Hand</span>
+            <div style="display:flex;align-items:center;gap:6px;">
+              <span id="shQuickAssist"></span>
+              <span class="zone-count-badge" id="shHandCountBadge">0</span>
+            </div>
+          </div>
           <div id="shHand" class="card-row"></div>
         </div>
 
+        <div id="shTableCards" class="sh-table-cards">
         <div class="card" id="shFaceUpSection">
-          <div style="font-size:0.8rem;color:var(--text-secondary);margin-bottom:4px;">Face Up</div>
+          <div class="zone-header">
+            <span class="zone-title">Face Up</span>
+            <span class="zone-count-badge" id="shFaceUpCountBadge">0</span>
+          </div>
           <div id="shFaceUp" class="card-row"></div>
         </div>
 
         <div class="card" id="shFaceDownSection">
-          <div style="font-size:0.8rem;color:var(--text-secondary);margin-bottom:4px;">Face Down</div>
+          <div class="zone-header">
+            <span class="zone-title">Face Down (Blind)</span>
+            <span class="zone-count-badge" id="shFaceDownCountBadge">0</span>
+          </div>
           <div id="shFaceDown" class="card-row"></div>
         </div>
 
+        </div>
+
         <!-- Action buttons -->
-        <div id="shActions" style="display:flex;gap:8px;">
-          <button class="btn btn-primary" onclick="playSelectedCards()" id="shPlayBtn" disabled style="flex:1;">Play Selected</button>
+        <div id="shActions" style="display:flex;gap:8px;margin-bottom:10px;">
+          <button class="btn btn-primary" onclick="playSelectedCards()" id="shPlayBtn" disabled style="flex:1.3;">Play Selected</button>
           <button class="btn btn-secondary" onclick="pickUpPile()" id="shPickUpBtn" style="flex:1;">Pick Up Pile</button>
         </div>
       </div>
@@ -298,48 +323,58 @@
     <div class="section" id="questionFormSection">
       <div class="qf-progress" id="qfProgress"></div>
       <div id="qfContent"></div>
-      <div class="qf-nav" id="qfNav"></div>
+      <div id="qfNav" class="qf-nav"></div>
     </div>
 
     <!-- GIN RUMMY SECTION -->
     <div class="section" id="ginRummySection">
-      <div id="grPhaseInfo" class="card text-center" style="padding:12px;">
-        <span style="font-size:0.85rem;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.1em;">Gin Rummy</span>
-        <span id="grHandNum" style="font-size:0.75rem;color:var(--text-secondary);margin-left:8px;"></span>
+      <div id="grPhaseInfo" class="card text-center" style="padding:10px 12px;display:flex;justify-content:space-between;align-items:center;">
+        <span style="font-size:0.85rem;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.1em;">Gin Rummy</span>
+        <span id="grHandNum" class="zone-count-badge"></span>
+        <span style="font-size:0.78rem;color:var(--text-secondary);">Opponent: <strong id="grOpponentCount" style="color:var(--text-primary);">10</strong> cards</span>
       </div>
 
       <!-- Scores -->
       <div class="card" style="display:flex;justify-content:space-around;padding:10px;" id="grScores"></div>
 
-      <!-- Table info: stock + discard -->
+      <!-- Table info: stock + discard (tappable when drawing) -->
       <div class="card text-center" style="padding:12px;">
-        <div style="display:flex;justify-content:space-around;align-items:center;">
-          <div>
-            <div style="font-size:0.75rem;color:var(--text-secondary);">Stock</div>
-            <div style="font-size:1.5rem;font-weight:700;" id="grStockCount">0</div>
+        <div class="phone-table-grid">
+          <div class="phone-stack-box" id="grStockBox" onclick="grTapStack('stock')">
+            <div class="phone-stack-label">Stock Deck</div>
+            <div id="grStockStackVisual" style="min-height:96px;display:flex;align-items:center;justify-content:center;"></div>
+            <div class="stack-count-pill">Stock: <span id="grStockCount">0</span></div>
+            <div id="grStockTapHint" style="font-size:0.7rem;color:var(--neon-blue);font-weight:700;min-height:14px;"></div>
           </div>
-          <div>
-            <div style="font-size:0.75rem;color:var(--text-secondary);">Discard</div>
-            <div id="grDiscardTop" style="font-size:1.5rem;">-</div>
-          </div>
-          <div>
-            <div style="font-size:0.75rem;color:var(--text-secondary);">Opponent</div>
-            <div style="font-size:1.5rem;font-weight:700;" id="grOpponentCount">0</div>
+          <div class="phone-stack-box" id="grDiscardBox" onclick="grTapStack('discard')">
+            <div class="phone-stack-label">Discard Pile</div>
+            <div id="grDiscardTop" style="min-height:96px;display:flex;align-items:center;justify-content:center;">-</div>
+            <div class="stack-count-pill accent">Discard: <span id="grDiscardCountBadge">0</span></div>
+            <div id="grDiscardTapHint" style="font-size:0.7rem;color:var(--neon-blue);font-weight:700;min-height:14px;"></div>
           </div>
         </div>
+        <div id="grTurnInfo" style="font-size:0.92rem;margin-top:8px;"></div>
       </div>
-
-      <!-- Turn info -->
-      <div id="grTurnInfo" class="card text-center" style="padding:8px;font-size:0.9rem;"></div>
 
       <!-- My hand -->
       <div class="card" id="grHandSection">
-        <div style="font-size:0.8rem;color:var(--text-secondary);margin-bottom:4px;">Your Hand</div>
+        <div class="zone-header" style="flex-wrap:wrap;gap:6px;">
+          <div style="display:flex;align-items:center;gap:6px;">
+            <span class="zone-title">Your Hand</span>
+            <span class="zone-count-badge" id="grHandCountBadge">10</span>
+            <span class="gr-deadwood-pill" id="grDeadwoodBadge">Deadwood: 0 pts</span>
+          </div>
+          <div class="gr-sort-bar" role="group" aria-label="Sort hand">
+            <button type="button" class="gr-sort-btn active" id="grSortMelds" onclick="grSetSortMode('melds')">Melds</button>
+            <button type="button" class="gr-sort-btn" id="grSortRank" onclick="grSetSortMode('rank')">Rank</button>
+            <button type="button" class="gr-sort-btn" id="grSortSuit" onclick="grSetSortMode('suit')">Suit</button>
+          </div>
+        </div>
         <div id="grHand" class="card-row"></div>
       </div>
 
       <!-- Action buttons -->
-      <div id="grActions" style="display:flex;gap:8px;flex-wrap:wrap;"></div>
+      <div id="grActions" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;"></div>
 
       <!-- Scoring reveal -->
       <div id="grScoringView" style="display:none;">
@@ -666,22 +701,22 @@
       const counts = {};
       Object.values(state.gameSuggestions || {}).forEach(g => { counts[g] = (counts[g] || 0) + 1; });
       const mine = (state.gameSuggestions || {})[state.playerId];
-      const leader = SH_GAMES.find(g => g.type === state.leadingGame);
-      const rest = SH_GAMES.filter(g => g !== leader)
-        .sort((a, b) => (gameBlocker(a) ? 1 : 0) - (gameBlocker(b) ? 1 : 0));
+      // Keep playable games in a stable order so cards don't jump under the player's thumb
+      const games = [...SH_GAMES].sort((a, b) => (gameBlocker(a) ? 1 : 0) - (gameBlocker(b) ? 1 : 0));
 
-      const games = leader ? [leader, ...rest] : rest;
       const html = '<div class="lobby-game-list">' + games.map(g => {
         const blocker = gameBlocker(g);
         const count = counts[g.type] || 0;
         const isMine = g.type === mine;
+        const isLeading = state.leadingGame === g.type && count > 0;
+        const badgeText = isMine ? '✓ Picked' : (isLeading ? '★ Leading' : '');
         return '<button class="lobby-game-option' + (isMine ? ' is-selected' : '') + '" data-game="' + g.type +
           '" aria-pressed="' + isMine + '" ' + (blocker ? 'disabled' : 'onclick="suggestGame(this.dataset.game)"') + '>' +
           '<span class="lobby-game-icon" aria-hidden="true">' + g.icon + '</span>' +
           '<span class="lobby-game-info"><span class="lobby-game-name">' + escapeHtml(g.label) + '</span>' +
           '<span class="lobby-game-description">' + escapeHtml(blocker || g.blurb) + '</span></span>' +
           '<span class="lobby-vote-side"><span class="lobby-vote-count">' + count + '</span>' +
-          (isMine ? '<span class="lobby-leading-label">Your vote</span>' : '') + '</span></button>';
+          (badgeText ? '<span class="lobby-leading-label">' + badgeText + '</span>' : '') + '</span></button>';
       }).join('') + '</div>';
 
       document.getElementById('voteList').innerHTML = html;
@@ -699,7 +734,8 @@
 
       if (!state.isAdmin) {
         controls.innerHTML = leader
-          ? '<p class="text-center text-xs text-slate-500">Waiting for <b>' + escapeHtml(admin?.username || 'the admin') + '</b> to start ' + escapeHtml(leader.label) + '&hellip;</p>'
+          ? '<div class="p-3 rounded-2xl bg-white/90 border border-sky-200 text-center text-xs text-slate-600 shadow-sm">' +
+            '<span class="font-bold text-slate-800">' + leader.icon + ' ' + escapeHtml(leader.label) + '</span> is leading &mdash; waiting for <b>' + escapeHtml(admin?.username || 'the host') + '</b> to press Start!</div>'
           : '';
         return;
       }
@@ -707,17 +743,20 @@
       let html = '';
       if (leader && leader.type === 'shithead') {
         html += '<div class="grid grid-cols-3 gap-2">' + [1, 2, 4].map(n =>
-          '<button onclick="setShDecks(' + n + ')" class="p-2 rounded-xl border text-xs font-bold transition ' +
-          (state.shitheadDecks === n ? 'bg-sky-50 border-sky-500 text-sky-800' : 'bg-white/80 border-sky-200 text-slate-700') + '">' +
-          n + ' deck' + (n > 1 ? 's' : '') + '<br><span class="font-normal text-[10px] opacity-70">' + (52 * n) + ' cards</span></button>'
+          '<button onclick="setShDecks(' + n + ')" class="p-2.5 rounded-xl border-2 text-xs font-extrabold transition ' +
+          (state.shitheadDecks === n ? 'bg-sky-50 border-sky-500 text-sky-900 shadow-sm' : 'bg-white/90 border-sky-200 text-slate-700') + '">' +
+          n + ' deck' + (n > 1 ? 's' : '') + '<br><span class="font-normal text-[10px] opacity-75">' + (52 * n) + ' cards</span></button>'
         ).join('') + '</div>';
       }
       if (leader) {
-        const label = leader.type === 'quiz' && !state.votingActive ? 'Start Quiz &rarr; pick category' : 'Start ' + escapeHtml(leader.label);
-        html += '<button onclick="startGame()" class="w-full py-3 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold text-sm shadow-md transition flex items-center justify-center gap-2">' +
-          '<i class="fa-solid fa-play"></i> ' + label + '</button>';
+        const label = leader.type === 'quiz' && !state.votingActive
+          ? 'Start Quiz &rarr; Pick Topic'
+          : 'Start ' + escapeHtml(leader.label) + ' Now';
+        html += '<button onclick="startGame()" id="startGameBtn" class="start-game-cta">' +
+          '<i class="fa-solid fa-play text-base"></i> <span>' + leader.icon + ' ' + label + '</span></button>';
       } else {
-        html += '<button disabled class="w-full py-3 bg-slate-300 text-white rounded-xl font-bold text-sm cursor-not-allowed">Waiting for votes&hellip;</button>';
+        html += '<button disabled id="startGameBtn" class="start-game-cta">' +
+          '<i class="fa-solid fa-hand-pointer"></i> <span>Tap a game below to enable Start</span></button>';
       }
       controls.innerHTML = html;
     }
@@ -749,7 +788,7 @@
         const vote = voted ? '<span class="text-[11px]" title="Voted ' + escapeHtml(shGame(voted).label) + '">' + shGame(voted).icon + '</span>' : '';
         return '<div class="flex justify-between items-center py-1 px-2 rounded-lg ' +
             (isMe ? 'bg-sky-50 text-slate-800 font-medium' : 'bg-slate-50 text-slate-600') + (p.connected === false ? ' opacity-50' : '') + '">' +
-          '<span class="flex items-center gap-1.5 min-w-0"><span>' + escapeHtml(p.avatar || '') + '</span>' + crown +
+          '<span class="flex items-center gap-1.5 min-w-0"><span class="lobby-avatar-glyph">' + escapeHtml(p.avatar || '🎮') + '</span>' + crown +
             '<span class="truncate">' + escapeHtml(p.username || p.name) + (isMe ? ' (You)' : '') + '</span>' + vote + '</span>' +
           '<span class="font-bold shrink-0 ' + (isMe ? 'text-sky-700' : 'text-slate-700') + '">' + (p.sessionScore || 0) + ' pts</span>' +
         '</div>';
@@ -778,28 +817,28 @@
 
       const featured = cats.filter(isGeo).map(c => {
         const mine = state.myCategory === c.id;
-        return '<button onclick="voteCategory(' + c.id + ')" class="w-full p-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-xs transition flex items-center justify-between shadow-sm' +
-          (mine ? ' ring-2 ring-offset-2 ring-offset-sky-100 ring-emerald-400' : '') + '">' +
-          '<span class="flex items-center gap-1.5"><span>' + shCategoryIcon(c.name) + '</span>' + escapeHtml(shCategoryLabel(c.name)) + ' (Map Challenge)</span>' +
-          '<span class="text-[11px] bg-white/25 px-1.5 py-0.5 rounded">' + (voteMeta(c) || 'Vote') + '</span>' +
+        return '<button onclick="voteCategory(' + c.id + ')" class="w-full p-3.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-extrabold text-sm transition flex items-center justify-between shadow-md' +
+          (mine ? ' ring-3 ring-offset-2 ring-offset-sky-100 ring-emerald-400' : '') + '">' +
+          '<span class="flex items-center gap-2"><span class="text-lg">' + shCategoryIcon(c.name) + '</span>' + escapeHtml(shCategoryLabel(c.name)) + ' (Map Challenge)</span>' +
+          '<span class="text-xs bg-white/25 px-2 py-0.5 rounded-lg">' + (voteMeta(c) || (mine ? '✓ Picked' : 'Vote')) + '</span>' +
         '</button>';
       }).join('');
 
       const others = cats.filter(c => !isGeo(c)).map(c => {
         const mine = state.myCategory === c.id;
-        return '<button onclick="voteCategory(' + c.id + ')" class="p-3 rounded-xl border font-semibold text-xs transition flex flex-col items-center justify-center gap-0.5 shadow-sm ' +
-          (mine ? 'bg-white border-sky-500 ring-2 ring-sky-300 text-sky-900' : 'bg-white/85 hover:bg-white border-sky-200 text-slate-800') + '">' +
-          '<span class="flex items-center gap-1.5 text-center"><span>' + shCategoryIcon(c.name) + '</span>' + escapeHtml(shCategoryLabel(c.name)) + '</span>' +
-          '<span class="text-[10px] text-sky-700 font-bold min-h-[1em]">' + voteMeta(c) + '</span>' +
+        return '<button onclick="voteCategory(' + c.id + ')" class="p-3.5 rounded-2xl border-2 font-bold text-xs transition flex flex-col items-center justify-center gap-1 shadow-sm ' +
+          (mine ? 'bg-sky-50 border-sky-500 ring-2 ring-sky-300 text-sky-900' : 'bg-white/95 hover:bg-white border-sky-200 text-slate-800') + '">' +
+          '<span class="flex items-center gap-1.5 text-center leading-snug"><span class="text-base">' + shCategoryIcon(c.name) + '</span>' + escapeHtml(shCategoryLabel(c.name)) + '</span>' +
+          '<span class="text-[11px] text-sky-700 font-extrabold min-h-[1em]">' + (voteMeta(c) || (mine ? '✓ Picked' : '')) + '</span>' +
         '</button>';
       }).join('');
 
       document.getElementById('categoryList').innerHTML = featured +
-        '<div class="grid grid-cols-2 gap-2 max-h-[45vh] overflow-y-auto no-scrollbar">' + others + '</div>';
+        '<div class="grid grid-cols-2 gap-2.5 max-h-[48vh] overflow-y-auto no-scrollbar">' + others + '</div>';
 
       document.getElementById('categoryAdmin').innerHTML = state.isAdmin
-        ? '<button onclick="startGame()" class="w-full py-3 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold text-sm shadow-md transition flex items-center justify-center gap-2"><i class="fa-solid fa-play"></i> Start Quiz</button>'
-        : '<p class="text-center text-xs text-slate-500">The admin starts the quiz when everyone has voted.</p>';
+        ? '<button onclick="startGame()" class="start-game-cta"><i class="fa-solid fa-play"></i> <span>🎯 Start Quiz Round Now</span></button>'
+        : '<div class="p-2.5 rounded-xl bg-white/85 border border-sky-200 text-center text-xs text-slate-600 font-medium">Waiting for the host to launch the quiz&hellip;</div>';
 
       document.getElementById('categoryScores').innerHTML = sortedPlayers().map(p =>
         '<span>' + escapeHtml(p.username || p.name) + ': <b class="text-sky-700">' + (p.sessionScore || 0) + '</b></span>'
@@ -957,6 +996,10 @@
       const headerText = (msg.currentQuestion != null && msg.totalQuestions)
         ? 'Question ' + (msg.currentQuestion + 1) + ' of ' + msg.totalQuestions
         : '';
+      const roundPill = document.getElementById('quizRoundPill');
+      if (roundPill) {
+        roundPill.textContent = headerText || (q && q.media ? '🎵 Music Quiz' : '🎯 Quiz');
+      }
 
       if (msg.phase === 'countdown') {
         timerContainer.style.display = 'none';
@@ -972,7 +1015,7 @@
         grid.innerHTML = '';
         powerupsEl.style.display = 'none';
       } else if (msg.phase === 'question') {
-        questionEl.textContent = (headerText ? headerText + ' — ' : '') + (q && q.text ? q.text : '');
+        questionEl.textContent = (q && q.text) ? q.text : headerText;
 
         // Save question state for re-renders (e.g. after answer selection)
         state._lastQuestion = q;
@@ -999,13 +1042,13 @@
         }).join('');
 
         // Powerups
-        powerupsEl.style.display = state.selectedAnswer === null ? 'flex' : 'none';
+        powerupsEl.style.display = state.selectedAnswer === null ? 'grid' : 'none';
         updatePowerupBtns();
 
       } else if (msg.phase === 'reveal') {
         timerContainer.style.display = 'none';
         timerText.textContent = '';
-        questionEl.textContent = (headerText ? headerText + ' — ' : '') + (q && q.text ? q.text : '');
+        questionEl.textContent = (q && q.text) ? q.text : headerText;
 
         const labels = ['A', 'B', 'C', 'D'];
         const classes = ['answer-a', 'answer-b', 'answer-c', 'answer-d'];
@@ -1027,7 +1070,7 @@
       renderQuizMedia(msg);
 
       if (msg.score != null) {
-        document.getElementById('quizScore').style.display = 'block';
+        document.getElementById('quizScore').style.display = 'inline-flex';
         document.getElementById('quizScoreVal').textContent = msg.score;
       }
     }
@@ -1140,29 +1183,41 @@
       syncPhoneMusic(msg);
       const box = document.getElementById('quizMedia');
       const media = msg.question && msg.question.media;
-      if (!media || (msg.phase !== 'question' && msg.phase !== 'reveal')) {
+      const image = msg.question && !media && msg.question.image;
+      if ((!media && !image) || (msg.phase !== 'question' && msg.phase !== 'reveal')) {
         box.className = 'hidden';
         box.innerHTML = '';
         return;
       }
-      box.className = 'device-screen bg-white/90 border border-sky-200 rounded-2xl p-3 flex items-center gap-3';
+      if (image) {
+        box.className = 'quiz-phone-image-wrap my-1 flex justify-center';
+        box.innerHTML = '<img src="' + escapeHtml(image) + '" alt="" class="quiz-phone-image max-h-24 w-auto rounded-xl object-contain shadow-sm border-2 border-white bg-white/85" loading="eager" onerror="this.parentElement.className=\'hidden\'">';
+        return;
+      }
+      box.className = 'device-screen bg-white/95 border-2 border-sky-200 rounded-xl p-2.5 flex items-center gap-3 shadow-sm';
       if (msg.phase === 'reveal' && media.artist) {
         box.innerHTML =
-          (media.cover ? '<img src="' + escapeHtml(media.cover) + '" alt="" class="w-14 h-14 rounded-xl object-cover shadow-sm">' : '') +
-          '<div class="min-w-0 flex-1"><div class="font-bold text-slate-800 truncate">' + escapeHtml(media.title) + '</div>' +
-          '<div class="text-xs text-slate-500 truncate">' + escapeHtml(media.artist) + '</div></div>' +
+          (media.cover ? '<img src="' + escapeHtml(media.cover) + '" alt="" class="w-16 h-16 rounded-xl object-cover shadow-md border border-slate-200">' : '') +
+          '<div class="min-w-0 flex-1">' +
+            '<div class="text-[10px] font-extrabold uppercase tracking-wider text-emerald-600 mb-0.5">&#127925; Answer Track</div>' +
+            '<div class="font-extrabold text-base text-slate-900 truncate">' + escapeHtml(media.title) + '</div>' +
+            '<div class="text-xs font-semibold text-slate-600 truncate">' + escapeHtml(media.artist) + '</div>' +
+          '</div>' +
           musicBtnHtml();
       } else {
         box.innerHTML =
           '<div class="flex-1 min-w-0">' +
-            '<div class="font-bold text-sm text-slate-700">Now playing&hellip;</div>' +
-            (msg.question.category ? '<div class="text-[11px] font-semibold text-sky-700 truncate">Genre: ' + escapeHtml(msg.question.category) + '</div>' : '') +
-            '<div class="flex items-end gap-1 h-6 mt-1">' +
-              '<span class="w-1.5 h-3 bg-sky-500 rounded-full animate-bounce"></span>' +
-              '<span class="w-1.5 h-5 bg-sky-600 rounded-full animate-pulse"></span>' +
-              '<span class="w-1.5 h-4 bg-sky-400 rounded-full animate-bounce"></span>' +
-              '<span class="w-1.5 h-6 bg-sky-700 rounded-full animate-pulse"></span>' +
-              '<span class="w-1.5 h-3 bg-sky-500 rounded-full animate-bounce"></span>' +
+            '<div class="flex items-center gap-2">' +
+              '<span class="font-extrabold text-sm text-slate-800">&#127911; Listen &amp; Guess</span>' +
+              (msg.question.category ? '<span class="px-2 py-0.5 rounded-full bg-sky-100 text-sky-800 text-[11px] font-extrabold truncate">' + escapeHtml(msg.question.category) + '</span>' : '') +
+            '</div>' +
+            '<div class="flex items-end gap-1.5 h-7 mt-2">' +
+              '<span class="w-2 h-3 bg-sky-500 rounded-full animate-bounce"></span>' +
+              '<span class="w-2 h-6 bg-sky-600 rounded-full animate-pulse"></span>' +
+              '<span class="w-2 h-4 bg-sky-400 rounded-full animate-bounce"></span>' +
+              '<span class="w-2 h-7 bg-sky-700 rounded-full animate-pulse"></span>' +
+              '<span class="w-2 h-3 bg-sky-500 rounded-full animate-bounce"></span>' +
+              '<span class="w-2 h-5 bg-sky-600 rounded-full animate-pulse"></span>' +
             '</div>' +
           '</div>' +
           musicBtnHtml();
@@ -1319,15 +1374,67 @@
       document.getElementById('spyGuessBtn').disabled = true;
     }
 
+    // --- Card Stack Helper (3D layered visual for phone table) ---
+    function renderPhoneStackVisual(cards, totalCount, opts) {
+      opts = opts || {};
+      const w = opts.width || 68;
+      const h = opts.height || 96;
+      const count = totalCount || 0;
+      if (count <= 0) {
+        return '<div class="stack-visual-3d" style="width:' + (w + 14) + 'px;height:' + (h + 12) + 'px;">' +
+          '<div class="stack-empty-slot" style="width:' + w + 'px;height:' + h + 'px;">' + (opts.emptyLabel || 'Empty') + '</div>' +
+        '</div>';
+      }
+      const isFacedown = !!opts.facedown;
+      const layerCount = Math.min(3, Math.max(0, count - 1));
+      const preview = Array.isArray(cards) ? cards : (cards ? [cards] : []);
+      let html = '<div class="stack-visual-3d" style="width:' + (w + 14) + 'px;height:' + (h + 12) + 'px;">';
+
+      for (let i = layerCount; i >= 1; i--) {
+        const dx = -i * 1.5;
+        const dy = i * 1.5;
+        const rot = (i % 2 === 0 ? 1 : -1) * (i * 0.4);
+        const layerCard = (!isFacedown && preview.length > i) ? preview[preview.length - 1 - i] : { rank: 0, suit: 'x' };
+        html += renderCardImg(layerCard, {
+          width: w,
+          height: h,
+          facedown: isFacedown || !layerCard.suit || layerCard.suit === 'x',
+          className: 'stack-layer-card',
+          style: 'width:' + w + 'px;height:' + h + 'px;transform:translate(' + dx + 'px,' + dy + 'px) rotate(' + rot + 'deg);opacity:' + (0.88 - i * 0.12) + ';'
+        });
+      }
+
+      const topCard = preview.length > 0 ? preview[preview.length - 1] : { rank: 0, suit: 'x' };
+      html += renderCardImg(topCard, {
+        width: w,
+        height: h,
+        facedown: isFacedown,
+        pileCard: !isFacedown,
+        className: 'stack-top-card',
+        style: 'width:' + w + 'px;height:' + h + 'px;'
+      });
+      html += '</div>';
+      return html;
+    }
+
+    function shRuleBannerText(pileTopRank, pileCount) {
+      if (!pileCount) return 'Pile is empty — play any card or pair/set';
+      const top = pileTopRank == null ? null : Number(pileTopRank);
+      if (top == null || isNaN(top)) return '2 resets pile (wild) • 10 burns pile';
+      const lbl = typeof cardRankLabel === 'function' ? cardRankLabel(top) : String(top);
+      if (top === 7) return 'Top is 7: play 7 or lower (2 resets • 10 burns)';
+      return 'Top is ' + lbl + ': play ' + lbl + ' or higher (2 resets • 7 lowers • 10 burns)';
+    }
+
     // --- Shithead ---
     function renderShitheadState(msg) {
-      // msg has: phase, currentPlayer, myHand, myFaceUp, myFaceDownCount, pileTop, pileCount, drawPileCount, players, finishOrder, isMyTurn, swapConfirmed
+      state.shLastMsg = msg;
 
       if (msg.phase === 'swap') {
         document.getElementById('shSwapView').style.display = 'block';
         document.getElementById('shPlayView').style.display = 'none';
         renderShSwap(msg);
-      } else if (msg.phase === 'play') {
+      } else if (msg.phase === 'play' || msg.phase === 'finished') {
         document.getElementById('shSwapView').style.display = 'none';
         document.getElementById('shPlayView').style.display = 'block';
         renderShPlay(msg);
@@ -1340,13 +1447,20 @@
     function renderShSwap(msg) {
       const handDiv = document.getElementById('shSwapHand');
       const faceUpDiv = document.getElementById('shSwapFaceUp');
+      const hand = (msg.myHand || []).slice().sort((a, b) => a.rank - b.rank);
+      const faceUp = (msg.myFaceUp || []).slice().sort((a, b) => a.rank - b.rank);
 
-      handDiv.innerHTML = (msg.myHand || []).slice().sort((a, b) => a.rank - b.rank).map(c =>
-        renderCardImg(c, {onclick: "shSwapSelect('hand','" + c.id + "')", id: 'shSwapH_' + c.id})
+      const hcEl = document.getElementById('shSwapHandCount');
+      if (hcEl) hcEl.textContent = hand.length + ' cards';
+      const fcEl = document.getElementById('shSwapFaceUpCount');
+      if (fcEl) fcEl.textContent = faceUp.length + ' cards';
+
+      handDiv.innerHTML = hand.map(c =>
+        renderCardImg(c, {width: 68, height: 96, onclick: "shSwapSelect('hand','" + c.id + "')", id: 'shSwapH_' + c.id})
       ).join('');
 
-      faceUpDiv.innerHTML = (msg.myFaceUp || []).slice().sort((a, b) => a.rank - b.rank).map(c =>
-        renderCardImg(c, {onclick: "shSwapSelect('faceUp','" + c.id + "')", id: 'shSwapF_' + c.id})
+      faceUpDiv.innerHTML = faceUp.map(c =>
+        renderCardImg(c, {width: 68, height: 96, onclick: "shSwapSelect('faceUp','" + c.id + "')", id: 'shSwapF_' + c.id})
       ).join('');
 
       // Highlight selected
@@ -1361,7 +1475,7 @@
 
       const confirmed = msg.swapConfirmed && msg.swapConfirmed[state.playerId];
       document.getElementById('shConfirmSwapBtn').disabled = !!confirmed;
-      document.getElementById('shConfirmSwapBtn').textContent = confirmed ? 'Confirmed' : 'Done Swapping';
+      document.getElementById('shConfirmSwapBtn').textContent = confirmed ? '✓ Ready — Waiting for others' : 'Done Swapping';
     }
 
     function shSwapSelect(source, cardId) {
@@ -1393,20 +1507,88 @@
       send({ type: 'GAME_ACTION', action: { type: 'confirmSwap' } });
     }
 
+    function shActiveZoneCards(msg) {
+      const hand = msg.myHand || [];
+      const faceUp = msg.myFaceUp || [];
+      return hand.length > 0 ? hand : faceUp;
+    }
+
+    function updateShSelectionAssistUI() {
+      const msg = state.shLastMsg;
+      if (!msg) return;
+      const activeCards = shActiveZoneCards(msg);
+      const selectedObjs = activeCards.filter(c => state.shSelectedCards.includes(c.id));
+      const playBtn = document.getElementById('shPlayBtn');
+      const assistSpan = document.getElementById('shQuickAssist');
+
+      if (playBtn) {
+        playBtn.disabled = !msg.isMyTurn || selectedObjs.length === 0;
+        if (selectedObjs.length > 0) {
+          const first = selectedObjs[0];
+          const shortLbl = typeof formatCardShort === 'function' ? formatCardShort(first) : first.id;
+          playBtn.textContent = selectedObjs.length > 1
+            ? 'Play ' + selectedObjs.length + '× ' + (typeof cardRankLabel === 'function' ? cardRankLabel(first.rank) : first.rank)
+            : 'Play ' + shortLbl;
+        } else {
+          playBtn.textContent = 'Play Selected';
+        }
+      }
+
+      if (assistSpan) {
+        if (msg.isMyTurn && selectedObjs.length > 0) {
+          const rank = selectedObjs[0].rank;
+          const sameRankCards = activeCards.filter(c => c.rank === rank);
+          if (sameRankCards.length > 1 && selectedObjs.length < sameRankCards.length) {
+            const rLabel = typeof cardRankLabel === 'function' ? cardRankLabel(rank) : rank;
+            assistSpan.innerHTML = '<button type="button" class="sh-quick-chip" onclick="shSelectAllRank(' + rank + ')">Select all ' + rLabel + 's (×' + sameRankCards.length + ')</button>';
+          } else {
+            assistSpan.innerHTML = '';
+          }
+        } else {
+          assistSpan.innerHTML = '';
+        }
+      }
+    }
+
+    function shSelectAllRank(rank) {
+      const msg = state.shLastMsg;
+      if (!msg) return;
+      const activeCards = shActiveZoneCards(msg);
+      state.shSelectedCards = activeCards.filter(c => c.rank === Number(rank)).map(c => c.id);
+      document.querySelectorAll('#shHand .playing-card, #shFaceUp .playing-card').forEach(el => {
+        const id = el.getAttribute('onclick')?.match(/'([^']+)'/)?.[1];
+        if (id && state.shSelectedCards.includes(id)) el.classList.add('selected');
+        else el.classList.remove('selected');
+      });
+      updateShSelectionAssistUI();
+    }
+
     function renderShPlay(msg) {
-      // Pile
-      document.getElementById('shPileCount').textContent = msg.pileCount || 0;
-      if (msg.pileTop) {
-        document.getElementById('shPileTop').innerHTML = renderCardImg(msg.pileTop, {width: 80, height: 112, pileCard: true, style: 'margin:0 auto'});
-      } else {
-        document.getElementById('shPileTop').innerHTML = '<div style="font-size:1.5rem;color:var(--text-secondary);padding:20px 0;">Empty</div>';
+      // Draw Stack + Play Pile 3D visuals
+      const drawCount = msg.drawPileCount != null ? msg.drawPileCount : 0;
+      const drawCountEl = document.getElementById('shDrawCount');
+      if (drawCountEl) drawCountEl.textContent = drawCount;
+      const drawVisualEl = document.getElementById('shDrawStackVisual');
+      if (drawVisualEl) {
+        drawVisualEl.innerHTML = renderPhoneStackVisual(null, drawCount, { width: 64, height: 90, facedown: true, emptyLabel: '0' });
+      }
+
+      const pileCount = msg.pileCount || 0;
+      document.getElementById('shPileCount').textContent = pileCount;
+      const pilePreview = (msg.pilePreview && msg.pilePreview.length > 0)
+        ? msg.pilePreview
+        : (msg.pileTop ? [msg.pileTop] : []);
+      document.getElementById('shPileTop').innerHTML = renderPhoneStackVisual(pilePreview, pileCount || (msg.pileTop ? 1 : 0), { width: 64, height: 90, facedown: false, emptyLabel: 'Empty' });
+
+      const ruleBanner = document.getElementById('shRuleBanner');
+      if (ruleBanner) {
+        ruleBanner.textContent = shRuleBannerText(msg.pileTopRank, pileCount);
       }
 
       // Turn info
       const turnInfo = document.getElementById('shTurnInfo');
       if (msg.isMyTurn) {
         turnInfo.innerHTML = '<span style="color:var(--neon-green);font-weight:700;">Your turn!</span>';
-        // Haptic feedback when it becomes your turn
         if (!state.shWasTurn) {
           if (navigator.vibrate) navigator.vibrate([50, 30, 50]);
           state.shWasTurn = true;
@@ -1424,30 +1606,43 @@
         shitheadSection.classList.remove('my-turn-glow');
       }
 
+      // Prune stale selections not in active zone
+      const activeIds = new Set(shActiveZoneCards(msg).map(c => c.id));
+      state.shSelectedCards = state.shSelectedCards.filter(id => activeIds.has(id));
+
       // Hand (sorted by rank, low to high)
       const handDiv = document.getElementById('shHand');
       const hand = (msg.myHand || []).slice().sort((a, b) => a.rank - b.rank);
       const topRank = msg.pileTopRank;
-      const pileCount = msg.pileCount || 0;
+      const handBadge = document.getElementById('shHandCountBadge');
+      if (handBadge) handBadge.textContent = hand.length + (hand.length === 1 ? ' card' : ' cards');
+
       handDiv.innerHTML = hand.length > 0 ? hand.map(c => {
         const playable = msg.isMyTurn && canPlayCard(c.rank, topRank, pileCount);
         return renderCardImg(c, {
+          width: 68,
+          height: 96,
           selected: state.shSelectedCards.includes(c.id),
           playable: msg.isMyTurn ? playable : undefined,
           onclick: (playable || !msg.isMyTurn) ? "shToggleCard('" + c.id + "')" : null,
           id: 'shCard_' + c.id
         });
-      }).join('') : '<span style="color:var(--text-secondary);font-size:0.85rem;">Empty</span>';
+      }).join('') : '<span style="color:var(--text-secondary);font-size:0.85rem;">Empty — play from Face Up!</span>';
 
       // Face up (sorted by rank)
       const faceUpDiv = document.getElementById('shFaceUp');
       const faceUp = (msg.myFaceUp || []).slice().sort((a, b) => a.rank - b.rank);
       const faceUpSection = document.getElementById('shFaceUpSection');
+      const faceUpBadge = document.getElementById('shFaceUpCountBadge');
+      if (faceUpBadge) faceUpBadge.textContent = faceUp.length + (faceUp.length === 1 ? ' card' : ' cards');
+
       if (hand.length === 0 && faceUp.length > 0) {
         faceUpSection.style.display = 'block';
         faceUpDiv.innerHTML = faceUp.map(c => {
           const playable = msg.isMyTurn && canPlayCard(c.rank, topRank, pileCount);
           return renderCardImg(c, {
+            width: 68,
+            height: 96,
             selected: state.shSelectedCards.includes(c.id),
             playable: msg.isMyTurn ? playable : undefined,
             onclick: (playable || !msg.isMyTurn) ? "shToggleCard('" + c.id + "')" : null
@@ -1456,7 +1651,7 @@
       } else {
         faceUpSection.style.display = faceUp.length > 0 ? 'block' : 'none';
         faceUpDiv.innerHTML = faceUp.map(c =>
-          renderCardImg(c, {playable: false, style: 'opacity:0.5'})
+          renderCardImg(c, {width: 60, height: 84, playable: false, style: 'opacity:0.65'})
         ).join('');
       }
 
@@ -1464,29 +1659,48 @@
       const faceDownSection = document.getElementById('shFaceDownSection');
       const fdCount = msg.myFaceDownCount || 0;
       const fdIds = msg.myFaceDownIds || [];
+      const fdBadge = document.getElementById('shFaceDownCountBadge');
+      if (fdBadge) fdBadge.textContent = fdCount + (fdCount === 1 ? ' card' : ' cards');
+
       if (hand.length === 0 && faceUp.length === 0 && fdCount > 0) {
         faceDownSection.style.display = 'block';
         document.getElementById('shFaceDown').innerHTML = fdIds.map(id =>
-          renderCardImg({rank:0, suit:'x'}, {facedown: true, onclick: "shPlayFaceDown('" + id + "')"})
+          renderCardImg({rank:0, suit:'x'}, {width: 68, height: 96, facedown: true, onclick: "shPlayFaceDown('" + id + "')"})
         ).join('');
       } else {
         faceDownSection.style.display = fdCount > 0 ? 'block' : 'none';
         document.getElementById('shFaceDown').innerHTML = Array.from({length: fdCount}, () =>
-          renderCardImg({rank:0, suit:'x'}, {facedown: true, style: 'opacity:0.5'})
+          renderCardImg({rank:0, suit:'x'}, {width: 58, height: 82, facedown: true, style: 'opacity:0.55'})
         ).join('');
       }
 
-      // Enable/disable action buttons
-      document.getElementById('shPlayBtn').disabled = !msg.isMyTurn || state.shSelectedCards.length === 0;
+      document.getElementById('shTableCards').classList.toggle('stacked', faceUp.length > 0 && fdCount > 0);
+
+      // Enable/disable action buttons & assist
       document.getElementById('shPickUpBtn').disabled = !msg.isMyTurn || (msg.pileCount || 0) === 0;
+      updateShSelectionAssistUI();
     }
 
     function shToggleCard(cardId) {
+      const msg = state.shLastMsg;
+      const activeCards = msg ? shActiveZoneCards(msg) : [];
+      const tappedCard = activeCards.find(c => c.id === cardId);
+
       const idx = state.shSelectedCards.indexOf(cardId);
       if (idx >= 0) {
         state.shSelectedCards.splice(idx, 1);
       } else {
-        state.shSelectedCards.push(cardId);
+        // If user taps a card of a different rank than currently selected cards, switch selection to the new rank
+        if (tappedCard && state.shSelectedCards.length > 0) {
+          const firstSelected = activeCards.find(c => c.id === state.shSelectedCards[0]);
+          if (firstSelected && firstSelected.rank !== tappedCard.rank) {
+            state.shSelectedCards = [cardId];
+          } else {
+            state.shSelectedCards.push(cardId);
+          }
+        } else {
+          state.shSelectedCards.push(cardId);
+        }
       }
       // Re-render selection visually without waiting for server
       document.querySelectorAll('#shHand .playing-card, #shFaceUp .playing-card').forEach(el => {
@@ -1494,7 +1708,7 @@
         if (id && state.shSelectedCards.includes(id)) el.classList.add('selected');
         else el.classList.remove('selected');
       });
-      document.getElementById('shPlayBtn').disabled = state.shSelectedCards.length === 0;
+      updateShSelectionAssistUI();
     }
 
     function playSelectedCards() {
@@ -1519,15 +1733,16 @@
       if (others.length === 0) { container.style.display = 'none'; return; }
       container.style.display = 'block';
 
-      container.innerHTML = '<div style="font-size:0.8rem;color:var(--text-secondary);margin-bottom:6px;">Other Players</div>' +
+      container.innerHTML = '<div style="font-size:0.8rem;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px;">Other Players</div>' +
         others.map(p => {
           const name = names[p.playerId] || p.playerId;
-          const status = p.isOut ? '<span style="color:var(--neon-green);">Out!</span>' :
-            'Hand: ' + p.handCount + ' | Up: ' + (p.faceUp ? p.faceUp.length : 0) + ' | Down: ' + p.faceDownCount;
+          const upCards = (p.faceUp || []).map(c => typeof formatCardShort === 'function' ? formatCardShort(c) : (c.rank + c.suit)).join(' ');
+          const status = p.isOut ? '<span style="color:var(--neon-green);font-weight:700;">✓ Out!</span>' :
+            'Hand: <strong>' + p.handCount + '</strong> • Up: <strong>' + (upCards || '0') + '</strong> • Down: <strong>' + p.faceDownCount + '</strong>';
           const isCurrent = p.playerId === msg.currentPlayer ? ' style="border-left:3px solid var(--neon-purple);padding-left:8px;"' : '';
           return '<div class="player-item"' + isCurrent + '>' +
-            '<span class="player-name">' + escapeHtml(name) + '</span>' +
-            '<span style="font-size:0.8rem;color:var(--text-secondary);">' + status + '</span></div>';
+            '<span class="player-name">' + escapeHtml(name) + (p.playerId === msg.currentPlayer ? ' ▶' : '') + '</span>' +
+            '<span style="font-size:0.78rem;color:var(--text-secondary);">' + status + '</span></div>';
         }).join('');
     }
 
@@ -1552,7 +1767,107 @@
     }
 
     // --- Gin Rummy ---
+    function grSetSortMode(mode) {
+      state.grSortMode = mode;
+      ['melds', 'rank', 'suit'].forEach(m => {
+        const btn = document.getElementById('grSort' + m.charAt(0).toUpperCase() + m.slice(1));
+        if (btn) btn.classList.toggle('active', m === mode);
+      });
+      if (state.grLastMsg) {
+        renderGrHandSection(state.grLastMsg);
+      }
+    }
+
+    function grTapStack(source) {
+      const msg = state.grLastMsg;
+      if (!msg || !msg.isMyTurn) return;
+      if (msg.phase === 'first_turn' && source === 'discard') {
+        grAction('takeUpcard');
+      } else if (msg.phase === 'drawing' && msg.turnPhase === 'draw') {
+        if (source === 'stock' && (msg.stockCount || 0) > 0) {
+          grDraw('stock');
+        } else if (source === 'discard' && msg.discardTop) {
+          grDraw('discard');
+        }
+      }
+    }
+
+    function renderGrCardWithTags(c, msg, extraBadgeText, extraBadgeClass) {
+      const isSelected = state.grSelectedCard === c.id;
+      const isNew = msg.lastDrawnCardId && msg.lastDrawnCardId === c.id;
+      let tagHtml = '';
+      if (isNew) {
+        tagHtml = '<span class="card-mini-tag new-tag">NEW</span>';
+      } else if (extraBadgeText) {
+        tagHtml = '<span class="card-mini-tag ' + (extraBadgeClass || 'meld-tag') + '">' + escapeHtml(extraBadgeText) + '</span>';
+      }
+      return '<div class="card-slot-wrap">' +
+        tagHtml +
+        renderCardImg(c, {
+          width: 68,
+          height: 96,
+          selected: isSelected,
+          onclick: "grSelectCard('" + c.id + "')"
+        }) +
+      '</div>';
+    }
+
+    function renderGrHandSection(msg) {
+      const hand = (msg.myHand || []).slice();
+      const handDiv = document.getElementById('grHand');
+      const countBadge = document.getElementById('grHandCountBadge');
+      if (countBadge) countBadge.textContent = hand.length + ' cards';
+
+      const dwBadge = document.getElementById('grDeadwoodBadge');
+      if (dwBadge) {
+        const dwVal = msg.myDeadwoodValue != null ? msg.myDeadwoodValue : 0;
+        dwBadge.textContent = 'Deadwood: ' + dwVal + ' pts' + (dwVal <= 10 ? ' (Knock ready!)' : '');
+        dwBadge.classList.toggle('knock-ready', dwVal <= 10);
+      }
+
+      const sortMode = state.grSortMode || 'melds';
+      ['melds', 'rank', 'suit'].forEach(m => {
+        const btn = document.getElementById('grSort' + m.charAt(0).toUpperCase() + m.slice(1));
+        if (btn) btn.classList.toggle('active', m === sortMode);
+      });
+
+      const melds = msg.myMelds || [];
+      const meldCardIds = new Set();
+      melds.forEach(m => (m.cards || []).forEach(c => meldCardIds.add(c.id)));
+
+      if (sortMode === 'melds' && melds.length > 0) {
+        let html = '<div class="gr-meld-clusters">';
+        melds.forEach((m, idx) => {
+          const label = m.type === 'set' ? 'Set ' + (idx + 1) : 'Run ' + (idx + 1);
+          html += '<div class="gr-meld-box">' +
+            '<span class="gr-meld-box-label">' + label + '</span>' +
+            (m.cards || []).map(c => renderGrCardWithTags(c, msg, 'MELD', 'meld-tag')).join('') +
+          '</div>';
+        });
+        const deadwoodCards = hand.filter(c => !meldCardIds.has(c.id)).sort((a, b) => a.rank - b.rank);
+        if (deadwoodCards.length > 0) {
+          html += '<div class="gr-meld-box deadwood-box">' +
+            '<span class="gr-meld-box-label">Deadwood</span>' +
+            deadwoodCards.map(c => renderGrCardWithTags(c, msg, null, null)).join('') +
+          '</div>';
+        }
+        html += '</div>';
+        handDiv.innerHTML = html;
+      } else {
+        const suitOrder = { s: 0, h: 1, c: 2, d: 3 };
+        if (sortMode === 'suit') {
+          hand.sort((a, b) => (suitOrder[a.suit] - suitOrder[b.suit]) || (a.rank - b.rank));
+        } else {
+          hand.sort((a, b) => (a.rank - b.rank) || (suitOrder[a.suit] - suitOrder[b.suit]));
+        }
+        handDiv.innerHTML = hand.map(c =>
+          renderGrCardWithTags(c, msg, meldCardIds.has(c.id) ? 'MELD' : null, 'meld-tag')
+        ).join('');
+      }
+    }
+
     function renderGinRummyState(msg) {
+      state.grLastMsg = msg;
       const section = document.getElementById('ginRummySection');
       const scoringView = document.getElementById('grScoringView');
       const handSection = document.getElementById('grHandSection');
@@ -1563,7 +1878,7 @@
 
       // Scores
       const scoresDiv = document.getElementById('grScores');
-      const pNames = state.playerNames || {};
+      const pNames = state.playerNames || msg.playerNames || {};
       const cum = msg.cumulative || {};
       const boxes = msg.boxes || {};
       const pids = Object.keys(cum);
@@ -1576,13 +1891,34 @@
       ).join('');
 
       // Stock / discard / opponent
-      document.getElementById('grStockCount').textContent = msg.stockCount || 0;
+      const stockCount = msg.stockCount || 0;
+      document.getElementById('grStockCount').textContent = stockCount;
       document.getElementById('grOpponentCount').textContent = msg.opponentCardCount || 0;
-      if (msg.discardTop) {
-        document.getElementById('grDiscardTop').innerHTML = renderCardImg(msg.discardTop, {width: 80, height: 112, pileCard: true, style: 'margin:0 auto'});
-      } else {
-        document.getElementById('grDiscardTop').innerHTML = '<span style="color:var(--text-secondary);">Empty</span>';
+
+      const stockVisualEl = document.getElementById('grStockStackVisual');
+      if (stockVisualEl) {
+        stockVisualEl.innerHTML = renderPhoneStackVisual(null, stockCount, { width: 64, height: 90, facedown: true, emptyLabel: '0' });
       }
+
+      const discardCount = msg.discardCount != null ? msg.discardCount : (msg.discardTop ? 1 : 0);
+      const discardCountBadge = document.getElementById('grDiscardCountBadge');
+      if (discardCountBadge) discardCountBadge.textContent = discardCount;
+      const discardPreview = (msg.discardPreview && msg.discardPreview.length > 0)
+        ? msg.discardPreview
+        : (msg.discardTop ? [msg.discardTop] : []);
+      document.getElementById('grDiscardTop').innerHTML = renderPhoneStackVisual(discardPreview, discardCount, { width: 64, height: 90, facedown: false, emptyLabel: 'Empty' });
+
+      // Tappable stack highlights when drawing
+      const canTapStock = msg.isMyTurn && msg.phase === 'drawing' && msg.turnPhase === 'draw' && stockCount > 0;
+      const canTapDiscard = msg.isMyTurn && ((msg.phase === 'first_turn' && !!msg.discardTop) || (msg.phase === 'drawing' && msg.turnPhase === 'draw' && !!msg.discardTop));
+      const stockBox = document.getElementById('grStockBox');
+      const discardBox = document.getElementById('grDiscardBox');
+      if (stockBox) stockBox.classList.toggle('tappable-stack', !!canTapStock);
+      if (discardBox) discardBox.classList.toggle('tappable-stack', !!canTapDiscard);
+      const stockHint = document.getElementById('grStockTapHint');
+      if (stockHint) stockHint.textContent = canTapStock ? 'Tap to draw' : '';
+      const discardHint = document.getElementById('grDiscardTapHint');
+      if (discardHint) discardHint.textContent = canTapDiscard ? (msg.phase === 'first_turn' ? 'Tap to take upcard' : 'Tap to take') : '';
 
       // Turn info
       const turnInfo = document.getElementById('grTurnInfo');
@@ -1591,9 +1927,9 @@
       } else if (msg.phase === 'finished') {
         turnInfo.innerHTML = '<span style="color:var(--neon-green);font-weight:700;">Game Over!</span>';
       } else if (msg.isMyTurn) {
-        const phaseHint = msg.turnPhase === 'draw' ? 'Draw a card' : 'Discard or knock';
+        const phaseHint = msg.turnPhase === 'draw' ? 'Tap Stock or Discard to draw' : 'Select a card to discard (or Knock)';
         if (msg.phase === 'first_turn') {
-          turnInfo.innerHTML = '<span style="color:var(--neon-green);font-weight:700;">Take or decline the upcard</span>';
+          turnInfo.innerHTML = '<span style="color:var(--neon-green);font-weight:700;">Your turn — Take or decline the upcard</span>';
         } else {
           turnInfo.innerHTML = '<span style="color:var(--neon-green);font-weight:700;">Your turn — ' + phaseHint + '</span>';
         }
@@ -1619,28 +1955,23 @@
 
       // Hand display
       handSection.style.display = (msg.phase === 'scoring' || msg.phase === 'finished') ? 'none' : 'block';
-      const hand = (msg.myHand || []).slice().sort((a, b) => a.rank - b.rank);
-      const handDiv = document.getElementById('grHand');
-      handDiv.innerHTML = hand.map(c =>
-        renderCardImg(c, {
-          selected: state.grSelectedCard === c.id,
-          onclick: "grSelectCard('" + c.id + "')"
-        })
-      ).join('');
+      if (msg.phase !== 'scoring' && msg.phase !== 'finished') {
+        renderGrHandSection(msg);
+      }
 
       // Actions
       actionsDiv.innerHTML = '';
       if (msg.phase === 'first_turn' && msg.isMyTurn) {
         actionsDiv.innerHTML =
-          '<button class="btn btn-primary" onclick="grAction(\'takeUpcard\')" style="flex:1;">Take Upcard</button>' +
+          '<button class="btn btn-primary" onclick="grAction(\'takeUpcard\')" style="flex:1;">Take Upcard' + (msg.discardTop && typeof formatCardShort === 'function' ? ' (' + formatCardShort(msg.discardTop) + ')' : '') + '</button>' +
           '<button class="btn btn-secondary" onclick="grAction(\'declineUpcard\')" style="flex:1;">Decline</button>';
       } else if (msg.phase === 'first_turn_draw' && msg.isMyTurn && msg.turnPhase === 'discard') {
         actionsDiv.innerHTML = grDiscardKnockButtons(msg);
       } else if (msg.phase === 'drawing' && msg.isMyTurn) {
         if (msg.turnPhase === 'draw') {
           actionsDiv.innerHTML =
-            '<button class="btn btn-primary" onclick="grDraw(\'stock\')" style="flex:1;">Draw from Stock</button>' +
-            '<button class="btn btn-secondary" onclick="grDraw(\'discard\')" style="flex:1;">Draw from Discard</button>';
+            '<button class="btn btn-primary" onclick="grDraw(\'stock\')" style="flex:1;">Draw Stock</button>' +
+            '<button class="btn btn-secondary" onclick="grDraw(\'discard\')" style="flex:1;">Take Discard' + (msg.discardTop && typeof formatCardShort === 'function' ? ' (' + formatCardShort(msg.discardTop) + ')' : '') + '</button>';
         } else if (msg.turnPhase === 'discard') {
           actionsDiv.innerHTML = grDiscardKnockButtons(msg);
         }
@@ -1649,12 +1980,22 @@
       }
     }
 
+    function grSelectedCardLabel() {
+      if (!state.grSelectedCard || !state.grLastMsg) return null;
+      const card = (state.grLastMsg.myHand || []).find(c => c.id === state.grSelectedCard);
+      if (!card) return null;
+      return typeof formatCardShort === 'function' ? formatCardShort(card) : card.id;
+    }
+
     function grDiscardKnockButtons(msg) {
       const selected = state.grSelectedCard;
-      let html = '<button class="btn btn-primary" onclick="grDiscard()" id="grDiscardBtn" style="flex:1;"' +
-        (!selected ? ' disabled' : '') + '>Discard' + (selected ? '' : ' (select a card)') + '</button>';
+      const cardLbl = grSelectedCardLabel();
+      let html = '<button class="btn btn-primary" onclick="grDiscard()" id="grDiscardBtn" style="flex:1.2;"' +
+        (!selected ? ' disabled' : '') + '>' + (selected ? 'Discard ' + (cardLbl || '') : 'Discard (select a card)') + '</button>';
       if (msg.canKnock) {
-        html += '<button class="btn btn-secondary" onclick="grAction(\'knock\')" style="flex:1;border-color:var(--neon-pink);color:var(--neon-pink);">Knock!</button>';
+        const dwVal = msg.myDeadwoodValue != null ? msg.myDeadwoodValue : '';
+        const knockLabel = dwVal === 0 ? 'GIN! 🌟' : 'Knock (' + dwVal + ' pts)!';
+        html += '<button class="btn btn-secondary" onclick="grAction(\'knock\')" style="flex:1;border-color:var(--neon-pink);color:var(--neon-pink);font-weight:800;">' + knockLabel + '</button>';
       }
       return html;
     }
@@ -1666,14 +2007,15 @@
       if (state.grSelectedCard) {
         const cards = document.querySelectorAll('#grHand .playing-card');
         cards.forEach(el => {
-          if (el.getAttribute('onclick')?.includes(state.grSelectedCard)) el.classList.add('selected');
+          if (el.getAttribute('onclick')?.includes("'" + state.grSelectedCard + "'")) el.classList.add('selected');
         });
       }
       // Update discard button state
       const btn = document.getElementById('grDiscardBtn');
       if (btn) {
         btn.disabled = !state.grSelectedCard;
-        btn.textContent = state.grSelectedCard ? 'Discard' : 'Discard (select a card)';
+        const cardLbl = grSelectedCardLabel();
+        btn.textContent = state.grSelectedCard ? ('Discard ' + (cardLbl || '')) : 'Discard (select a card)';
       }
     }
 
@@ -1695,7 +2037,7 @@
     }
 
     function renderGrScoring(msg) {
-      const pNames = state.playerNames || {};
+      const pNames = state.playerNames || msg.playerNames || {};
       const resultDiv = document.getElementById('grHandResult');
       const meldsDiv = document.getElementById('grMeldsDisplay');
       const hr = msg.handResult || {};
@@ -1708,7 +2050,7 @@
         const typeLabels = { knock: 'Knock', undercut: 'Undercut!', gin: 'GIN!', bigGin: 'BIG GIN!' };
         const typeColors = { knock: 'var(--neon-blue)', undercut: 'var(--neon-pink)', gin: 'var(--neon-green)', bigGin: 'var(--neon-green)' };
         resultHtml = '<div style="font-size:0.85rem;color:var(--text-secondary);text-transform:uppercase;">' + (typeLabels[hr.type] || hr.type) + '</div>' +
-          '<div style="font-size:1.3rem;font-weight:700;color:' + (typeColors[hr.type] || 'var(--text-primary)') + ';">' + escapeHtml(winnerName) + ' wins +' + (hr.points || 0) + '</div>';
+          '<div style="font-size:1.3rem;font-weight:700;color:' + (typeColors[hr.type] || 'var(--text-primary)') + ';">' + escapeHtml(winnerName) + ' wins +' + (hr.points || 0) + ' pts</div>';
       }
 
       if (msg.phase === 'finished' && msg.finalScores) {
@@ -1727,29 +2069,29 @@
       const opponentName = pNames[opponentId] || opponentId || 'Opponent';
 
       if (msg.knockerMelds) {
-        meldsHtml += '<div style="margin-bottom:8px;"><div style="font-size:0.8rem;color:var(--text-secondary);margin-bottom:4px;">' + escapeHtml(knockerName) + '\'s Melds</div>';
-        meldsHtml += '<div class="card-row" style="flex-wrap:wrap;gap:4px;">' + (msg.knockerMelds || []).map(m =>
-          '<div style="display:flex;gap:2px;margin-right:8px;padding:4px;border:1px solid var(--glass-border);border-radius:6px;">' +
-          m.cards.map(c => renderCardImg(c, {width: 40, height: 56})).join('') +
+        meldsHtml += '<div style="margin-bottom:10px;"><div style="font-size:0.82rem;font-weight:700;color:var(--text-secondary);margin-bottom:6px;">' + escapeHtml(knockerName) + '\'s Melds</div>';
+        meldsHtml += '<div class="card-row" style="flex-wrap:wrap;gap:6px;">' + (msg.knockerMelds || []).map(m =>
+          '<div style="display:flex;gap:3px;padding:5px;border:1px solid var(--glass-border);border-radius:8px;background:rgba(16,185,129,0.06);">' +
+          m.cards.map(c => renderCardImg(c, {width: 48, height: 68})).join('') +
           '</div>'
         ).join('') + '</div>';
         if (msg.knockerDeadwood && msg.knockerDeadwood.length > 0) {
-          meldsHtml += '<div style="font-size:0.7rem;color:var(--text-secondary);margin-top:4px;">Deadwood: ' +
-            msg.knockerDeadwood.map(c => renderCardImg(c, {width: 36, height: 50, style: 'display:inline-block'})).join(' ') + '</div>';
+          meldsHtml += '<div style="font-size:0.75rem;color:var(--text-secondary);margin-top:6px;">Deadwood: ' +
+            msg.knockerDeadwood.map(c => renderCardImg(c, {width: 42, height: 60, style: 'display:inline-block'})).join(' ') + '</div>';
         }
         meldsHtml += '</div>';
       }
 
       if (msg.opponentMelds) {
-        meldsHtml += '<div><div style="font-size:0.8rem;color:var(--text-secondary);margin-bottom:4px;">' + escapeHtml(opponentName) + '\'s Melds</div>';
-        meldsHtml += '<div class="card-row" style="flex-wrap:wrap;gap:4px;">' + (msg.opponentMelds || []).map(m =>
-          '<div style="display:flex;gap:2px;margin-right:8px;padding:4px;border:1px solid var(--glass-border);border-radius:6px;">' +
-          m.cards.map(c => renderCardImg(c, {width: 40, height: 56})).join('') +
+        meldsHtml += '<div><div style="font-size:0.82rem;font-weight:700;color:var(--text-secondary);margin-bottom:6px;">' + escapeHtml(opponentName) + '\'s Melds</div>';
+        meldsHtml += '<div class="card-row" style="flex-wrap:wrap;gap:6px;">' + (msg.opponentMelds || []).map(m =>
+          '<div style="display:flex;gap:3px;padding:5px;border:1px solid var(--glass-border);border-radius:8px;background:rgba(13,148,136,0.06);">' +
+          m.cards.map(c => renderCardImg(c, {width: 48, height: 68})).join('') +
           '</div>'
         ).join('') + '</div>';
         if (msg.opponentDeadwood && msg.opponentDeadwood.length > 0) {
-          meldsHtml += '<div style="font-size:0.7rem;color:var(--text-secondary);margin-top:4px;">Deadwood: ' +
-            msg.opponentDeadwood.map(c => renderCardImg(c, {width: 36, height: 50, style: 'display:inline-block'})).join(' ') + '</div>';
+          meldsHtml += '<div style="font-size:0.75rem;color:var(--text-secondary);margin-top:6px;">Deadwood: ' +
+            msg.opponentDeadwood.map(c => renderCardImg(c, {width: 42, height: 60, style: 'display:inline-block'})).join(' ') + '</div>';
         }
         meldsHtml += '</div>';
       }

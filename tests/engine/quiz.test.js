@@ -598,4 +598,25 @@ describe('Quiz answer visibility', () => {
     expect(getView(game, 'host').playerAnswers).toEqual({ p1: '2', p2: '3' });
     expect(getView(game, 'p1').selectedAnswer).toBe('2');
   });
+
+  it('exposes question.image in question and reveal phases for Quiz only (not Music Quiz)', () => {
+    const qWithImage = { ...Q1, image: 'https://upload.wikimedia.org/math.jpg' };
+    const qMusic = { ...Q2, image: 'https://should-not-show.jpg', media: { preview: 'https://clip.mp3' } };
+    let game = makeGame(['p1'], [qWithImage, qMusic]);
+
+    // Question 1: standard Quiz question with image
+    game = toQuestion(game);
+    expect(getView(game, 'host').question.image).toBe('https://upload.wikimedia.org/math.jpg');
+    expect(getView(game, 'p1').question.image).toBe('https://upload.wikimedia.org/math.jpg');
+
+    // Reveal 1: image remains visible
+    game = processAction(game, { type: 'timerExpired', phase: 'question' }).game;
+    expect(getView(game, 'host').question.image).toBe('https://upload.wikimedia.org/math.jpg');
+
+    // Question 2: Music Quiz question (has media) -> image is omitted
+    game = processAction(game, { type: 'timerExpired', phase: 'reveal' }).game;
+    game = processAction(game, { type: 'timerExpired', phase: 'between' }).game;
+    expect(getView(game, 'host').question.image).toBeUndefined();
+    expect(getView(game, 'host').question.media).toEqual({ preview: 'https://clip.mp3' });
+  });
 });

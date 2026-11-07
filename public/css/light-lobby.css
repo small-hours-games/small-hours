@@ -45,7 +45,39 @@
 .lobby-game-icon { width: 56px; height: 56px; display: grid; place-items: center; border-radius: 17px; font-size: 1.8rem; line-height: 1; flex-shrink: 0; background: linear-gradient(145deg,#628cff,#258ef7); box-shadow: inset 0 1px 0 rgba(255,255,255,.3),0 4px 9px rgba(40,80,120,.09); }
 [data-game="quiz"] .lobby-game-icon { background: linear-gradient(145deg,#ff537e,#e51e4f); }
 [data-game="music-quiz"] .lobby-game-icon { background: linear-gradient(145deg,#c56aff,#772ff4); }
-[data-game="shithead"] .lobby-game-icon { background: linear-gradient(145deg,#ffd96b,#ff9f00); }
+[data-game="shithead"] .lobby-game-icon {
+  position: relative;
+  overflow: hidden;
+  background: radial-gradient(circle at 30% 25%, #fde047 0%, #f59e0b 48%, #b45309 100%);
+  border: 1.5px solid rgba(254, 240, 138, 0.85);
+  box-shadow:
+    inset 0 2px 3px rgba(255, 255, 255, 0.65),
+    inset 0 -3px 6px rgba(120, 53, 15, 0.35),
+    0 6px 14px rgba(217, 119, 6, 0.28);
+  text-shadow: 0 2px 5px rgba(120, 53, 15, 0.45);
+}
+[data-game="shithead"] .lobby-game-icon::before,
+[data-game="shithead"] .lobby-game-icon::after {
+  content: '';
+  position: absolute;
+  width: 18px;
+  height: 25px;
+  border-radius: 3.5px;
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.92), rgba(241, 245, 249, 0.82));
+  border: 1px solid rgba(251, 191, 36, 0.65);
+  box-shadow: 0 2px 4px rgba(15, 23, 42, 0.18);
+  pointer-events: none;
+}
+[data-game="shithead"] .lobby-game-icon::before {
+  bottom: 4px;
+  left: 6px;
+  transform: rotate(-16deg);
+}
+[data-game="shithead"] .lobby-game-icon::after {
+  bottom: 4px;
+  right: 6px;
+  transform: rotate(16deg);
+}
 [data-game="gin-rummy"] .lobby-game-icon { background: linear-gradient(145deg,#59e6be,#0fa982); }
 .lobby-game-info { min-width: 0; flex: 1; }
 .lobby-game-name { display: block; font-weight: 800; font-size: 1rem; line-height: 1.3; overflow-wrap: anywhere; }
@@ -56,13 +88,88 @@
 .lobby-leading-label { color: #0675d6; background: #d8edff; padding: 3px 7px; border-radius: 99px; font-size: .6rem; font-weight: 800; }
 .lobby-footer { font-size: .8rem; color: #7890af; text-align: center; }
 .in-game .lobby-footer { display: none; }
-.phone-screen #lobbySection .device-screen { padding: 18px 14px; }
-.phone-screen .lobby-game-option { min-height: 82px; padding: 12px 10px; gap: 10px; border-radius: 17px; }
-.phone-screen .lobby-game-icon { width: 48px; height: 48px; font-size: 1.6rem; border-radius: 15px; }
-.phone-screen .lobby-game-name { font-size: .95rem; }
-.phone-screen .lobby-game-description { font-size: .7rem; }
-.phone-screen .lobby-chat { box-shadow: none; border-color: var(--lobby-line); }
-.phone-screen .lobby-chat .chat-messages { background: #f8fcff; }
+.phone-screen #lobbySection .device-screen { padding: 12px; }
+.phone-screen .lobby-game-list {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.phone-screen .lobby-game-option {
+  position: relative;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: flex-start;
+  min-height: 82px;
+  padding: 10px;
+  gap: 5px;
+  border-radius: 16px;
+  border-width: 2px;
+  box-shadow: 0 3px 10px rgba(15, 23, 42, 0.05);
+  transition: transform 0.14s ease, border-color 0.16s ease, box-shadow 0.16s ease;
+}
+.phone-screen .lobby-game-option:active:not(:disabled) { transform: scale(0.98); }
+.phone-screen .lobby-game-option.is-selected { border-color: #0284c7; background: linear-gradient(105deg, #e0f2fe, #f0f9ff); box-shadow: 0 5px 14px rgba(2, 132, 199, 0.16); }
+.phone-screen .lobby-game-icon { width: 36px; height: 36px; font-size: 1.25rem; border-radius: 11px; }
+.phone-screen .lobby-game-name { font-size: 0.9rem; font-weight: 800; color: #0f172a; line-height: 1.2; }
+.phone-screen .lobby-game-description {
+  font-size: 0.68rem;
+  color: #475569;
+  font-weight: 500;
+  line-height: 1.25;
+  margin-top: 2px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.phone-screen .lobby-vote-side {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  flex-direction: row-reverse;
+  align-items: center;
+  gap: 4px;
+}
+.phone-screen .lobby-vote-count {
+  min-width: 26px;
+  height: 26px;
+  border-radius: 9px;
+  font-size: 0.78rem;
+  padding: 0 6px;
+}
+.phone-screen .lobby-leading-label {
+  padding: 2px 6px;
+  font-size: 0.56rem;
+}
+.phone-screen .lobby-chat { box-shadow: none; border-color: var(--lobby-line); margin-top: 0; }
+.phone-screen .lobby-chat .chat-messages { background: #f8fcff; max-height: 110px; min-height: 44px; }
+.start-game-cta {
+  width: 100%;
+  padding: 12px 16px;
+  border-radius: 15px;
+  font-size: 0.98rem;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  color: #ffffff;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  border: 2px solid rgba(255, 255, 255, 0.45);
+  box-shadow: 0 8px 18px rgba(5, 150, 105, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: transform 0.14s ease, box-shadow 0.16s ease, filter 0.16s ease;
+}
+.start-game-cta:hover:not(:disabled) { filter: brightness(1.05); box-shadow: 0 12px 28px rgba(5, 150, 105, 0.4); }
+.start-game-cta:active:not(:disabled) { transform: scale(0.97); }
+.start-game-cta:disabled {
+  background: #cbd5e1;
+  color: #64748b;
+  border-color: #e2e8f0;
+  box-shadow: none;
+  cursor: not-allowed;
+}
 @media (min-width: 1800px) {
   .host-screen .lobby-game-option { min-height: 100px; }
   .host-screen .lobby-game-name { font-size: 1.2rem; }
@@ -140,25 +247,1308 @@
 }
 
 
-/* Two beats per left/right sway: 60 / 136 * 2 seconds. */
-.host-screen .invite-foot .lobby-mascots {
-  display: flex;
-  justify-content: center;
-  gap: 10px;
-  padding: 5px 0;
-  font-size: clamp(2.2rem, 3vw, 3rem);
-  line-height: 1.2;
-}
-.lobby-mascots > span { display: inline-block; transform-origin: 50% 85%; }
-.lobby-music-playing .lobby-mascots > span {
+/* Two beats per left/right sway: 60 / 136 * 2 seconds — applied to Contestant avatars next to player names. */
+.lobby-avatar-glyph {
+  display: inline-block;
+  transform-origin: 50% 85%;
   animation: lobbyMascotWobble 0.882352941s ease-in-out infinite;
 }
-.lobby-music-playing .lobby-mascots > span:nth-child(2) { animation-direction: reverse; }
+.studio-contestant-card:nth-child(even) .lobby-avatar-glyph {
+  animation-direction: reverse;
+}
 @keyframes lobbyMascotWobble {
-  0%, 100% { transform: rotate(-7deg) translateY(0); }
+  0%, 100% { transform: rotate(-9deg) translateY(0); }
   25%, 75% { transform: rotate(0deg) translateY(-2px); }
-  50% { transform: rotate(7deg) translateY(0); }
+  50% { transform: rotate(9deg) translateY(0); }
 }
 @media (prefers-reduced-motion: reduce) {
-  .lobby-music-playing .lobby-mascots > span { animation: none; }
+  .lobby-avatar-glyph { animation: none; }
 }
+
+/* Use the approved clock-controller artwork without a background tile. */
+.brand-logo { display: block; width: 224px; max-width: 100%; height: auto; flex-shrink: 0; }
+.brand-symbol { display: block; width: 36px; height: 36px; object-fit: contain; flex-shrink: 0; }
+.brand-phone-name { font-size: 1rem; font-weight: 800; color: #173b63; letter-spacing: -.04em; }
+.brand-hero { display: block; width: 100%; max-width: 340px; height: auto; margin: 0 auto; }
+@media (max-width: 640px) {
+  .brand-logo { width: 176px; }
+  .phone-screen header a { gap: 5px; }
+  .brand-symbol { width: 30px; height: 30px; }
+  .brand-phone-name { font-size: .9rem; }
+}
+@media (max-width: 360px) {
+  .phone-screen .brand-phone-name { display: none; }
+}
+
+/* ==========================================================================
+   TV Game-Show Studio Dashboard Polish
+   ========================================================================== */
+.host-screen.light-lobby {
+  background:
+    radial-gradient(ellipse 70% 45% at 50% -8%, rgba(251, 191, 36, 0.26), transparent 62%),
+    radial-gradient(ellipse 45% 40% at 8% 18%, rgba(56, 189, 248, 0.28), transparent 55%),
+    radial-gradient(ellipse 45% 40% at 92% 18%, rgba(168, 85, 247, 0.20), transparent 55%),
+    linear-gradient(145deg, #f0f9ff 0%, #e6f3ff 48%, #f3f4ff 100%);
+}
+
+.studio-spotlights {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background:
+    conic-gradient(from 156deg at 22% -6%, transparent 0deg, rgba(255, 255, 255, 0.5) 12deg, transparent 26deg),
+    conic-gradient(from 180deg at 78% -6%, transparent 0deg, rgba(255, 255, 255, 0.5) 12deg, transparent 26deg);
+  animation: studioBeamSweep 8s ease-in-out infinite alternate;
+}
+.in-game .studio-spotlights { display: none; }
+@keyframes studioBeamSweep {
+  0% { transform: rotate(-1.5deg) scale(1.02); opacity: 0.7; }
+  100% { transform: rotate(1.5deg) scale(1.04); opacity: 1; }
+}
+
+.studio-header {
+  box-shadow: 0 6px 24px rgba(15, 23, 42, 0.06);
+}
+.studio-on-air-badge {
+  padding: 5px 12px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #fef3c7, #fde68a);
+  border: 1.5px solid #f59e0b;
+  color: #92400e;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.2);
+}
+.studio-live-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #ef4444;
+  box-shadow: 0 0 8px #ef4444;
+  animation: studioLivePulse 1.2s ease-in-out infinite;
+}
+@keyframes studioLivePulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.3); opacity: 0.55; }
+}
+
+.host-screen .lobby-panel {
+  position: relative;
+  z-index: 1;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(244, 250, 255, 0.93) 100%);
+  border: 2px solid rgba(186, 221, 255, 0.95);
+  box-shadow:
+    0 20px 44px rgba(15, 52, 96, 0.11),
+    0 3px 10px rgba(15, 52, 96, 0.05),
+    inset 0 2px 0 rgba(255, 255, 255, 0.95);
+}
+
+.studio-vip-pill {
+  background: linear-gradient(135deg, #ecfdf5, #d1fae5);
+  color: #065f46;
+  border: 1.5px solid #6ee7b7;
+  box-shadow: 0 3px 10px rgba(16, 185, 129, 0.14);
+  letter-spacing: 0.06em;
+}
+
+.host-screen #roomCode.studio-room-code {
+  background: linear-gradient(145deg, #0f172a, #1e3a8a);
+  color: #fef08a;
+  border: 2px solid #38bdf8;
+  box-shadow:
+    0 10px 24px rgba(15, 23, 42, 0.22),
+    inset 0 1px 0 rgba(255, 255, 255, 0.22);
+  text-shadow: 0 2px 10px rgba(250, 204, 21, 0.35);
+}
+
+.qr-stage-frame {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 12px 10px 8px;
+  border-radius: 22px;
+  background: linear-gradient(145deg, #ffffff, #f0f9ff);
+  border: 2px solid #bae6fd;
+  box-shadow: 0 10px 24px rgba(2, 132, 199, 0.10);
+}
+.qr-scan-ribbon {
+  display: inline-block;
+  margin-bottom: 6px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  color: #ffffff;
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  box-shadow: 0 2px 6px rgba(217, 119, 6, 0.25);
+}
+.host-screen .qr-stage-frame #qrContainer {
+  margin-top: 0;
+  border: 1px solid #e0f2fe;
+  box-shadow: none;
+}
+
+.join-steps-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 8px;
+}
+.join-step-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: #f0f9ff;
+  border: 1px solid #bae6fd;
+  color: #0369a1;
+  font-size: 0.68rem;
+  font-weight: 700;
+}
+.join-step-pill b {
+  display: inline-grid;
+  place-items: center;
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  background: #0284c7;
+  color: #fff;
+  font-size: 0.62rem;
+}
+
+.studio-panel-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 11px;
+  background: linear-gradient(135deg, #e0f2fe, #bae6fd);
+  border: 1px solid #7dd3fc;
+  font-size: 1.1rem;
+  box-shadow: 0 3px 8px rgba(2, 132, 199, 0.12);
+}
+
+.lobby-game-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.lobby-game-players-pill {
+  display: inline-block;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  color: #475569;
+  font-size: 0.65rem;
+  font-weight: 800;
+}
+.lobby-vote-bar {
+  width: 100%;
+  height: 5px;
+  margin-top: 6px;
+  border-radius: 999px;
+  background: #e2e8f0;
+  overflow: hidden;
+}
+.lobby-vote-bar-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #38bdf8, #2563eb);
+  transition: width 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.is-selected .lobby-vote-bar-fill {
+  background: linear-gradient(90deg, #f59e0b, #ea580c);
+}
+.host-screen .light-lobby .lobby-game-option.is-selected,
+.host-screen .lobby-game-option.is-selected {
+  border: 2px solid #0284c7;
+  background: linear-gradient(105deg, #e0f2fe 0%, #fef9c3 100%);
+  box-shadow: 0 8px 20px rgba(2, 132, 199, 0.15);
+}
+.host-screen .is-selected .lobby-leading-label {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  color: #ffffff;
+  box-shadow: 0 2px 6px rgba(217, 119, 6, 0.28);
+}
+
+.studio-contestant-card {
+  border: 1.5px solid #dbeafe;
+  box-shadow: 0 3px 10px rgba(15, 23, 42, 0.04);
+  transition: transform 0.16s ease, box-shadow 0.16s ease;
+}
+.studio-contestant-card.is-score-leader {
+  background: linear-gradient(105deg, #fef9c3, #ffffff);
+  border-color: #facc15;
+  box-shadow: 0 6px 16px rgba(234, 179, 8, 0.16);
+}
+.lobby-player-avatar {
+  position: relative;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #e0f2fe, #bae6fd);
+  border: 1.5px solid #ffffff;
+  box-shadow: 0 2px 6px rgba(2, 132, 199, 0.16);
+}
+.contestant-online-dot {
+  position: absolute;
+  right: -1px;
+  bottom: -1px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #10b981;
+  border: 1.5px solid #ffffff;
+}
+.contestant-online-dot.is-offline {
+  background: #94a3b8;
+}
+.contestant-host-pill {
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: #fef3c7;
+  border: 1px solid #f59e0b;
+  color: #92400e;
+  font-size: 0.62rem;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+.contestant-vote-pill {
+  display: inline-grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 8px;
+  background: #f0f9ff;
+  border: 1px solid #bae6fd;
+  font-size: 0.85rem;
+  flex-shrink: 0;
+}
+.contestant-score-pill {
+  padding: 2px 9px;
+  border-radius: 999px;
+  background: #e0f2fe;
+  color: #0369a1;
+  font-size: 0.78rem;
+}
+
+/* ==========================================================================
+   3D Lion vs. Frog Card-Stack Duel Stage
+   Strictly bounded to the right of .invite-panel (never covers #qrContainer)
+   ========================================================================== */
+.mascot-duel-stage {
+  position: fixed;
+  left: 380px;
+  right: 24px;
+  bottom: 6px;
+  height: 175px;
+  z-index: 42;
+  pointer-events: none;
+  overflow: hidden;
+  perspective: 1100px;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.35s ease, visibility 0.35s ease;
+}
+body.in-game .mascot-duel-stage {
+  display: none !important;
+}
+.mascot-duel-stage.is-active {
+  opacity: 1;
+  visibility: visible;
+}
+
+.mascot-duel-arena {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+}
+
+.mascot-duel-banner {
+  position: absolute;
+  top: 4px;
+  left: 50%;
+  transform: translate3d(-50%, -32px, 40px) rotateX(14deg) scale(0.75);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 14px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #0f172a, #1e3a8a);
+  border: 2px solid #facc15;
+  color: #fef08a;
+  font-family: 'Fredoka', sans-serif;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.28);
+  opacity: 0;
+  transition: transform 0.45s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.35s ease;
+}
+.mascot-duel-stage.phase-enter .mascot-duel-banner,
+.mascot-duel-stage.phase-duel .mascot-duel-banner {
+  opacity: 1;
+  transform: translate3d(-50%, 0, 40px) rotateX(8deg) scale(1);
+}
+
+.duel-fighter {
+  position: absolute;
+  bottom: 8px;
+  width: 155px;
+  height: 185px;
+  transform-origin: bottom center;
+  transform-style: preserve-3d;
+  transition:
+    transform 0.75s cubic-bezier(0.22, 1, 0.36, 1),
+    left 0.95s cubic-bezier(0.4, 0, 0.2, 1),
+    right 0.95s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.duel-fighter-lion {
+  left: 16px;
+  transform: translate3d(-220px, 14px, 0) rotateY(22deg) scale(0.66);
+}
+.duel-fighter-frog {
+  right: 16px;
+  transform: translate3d(220px, 14px, 0) rotateY(-22deg) scale(0.66);
+}
+
+.mascot-duel-stage.phase-enter .duel-fighter-lion,
+.mascot-duel-stage.phase-duel .duel-fighter-lion {
+  left: 16px;
+  transform: translate3d(0, 0, 14px) rotateY(16deg) rotateZ(-2deg) scale(0.66);
+}
+.mascot-duel-stage.phase-enter .duel-fighter-frog,
+.mascot-duel-stage.phase-duel .duel-fighter-frog {
+  right: 16px;
+  transform: translate3d(0, 0, 14px) rotateY(-16deg) rotateZ(2deg) scale(0.66);
+}
+
+/* First duel exit: both mascots chase each other out to the LEFT */
+.mascot-duel-stage.phase-exit-left .duel-fighter-lion {
+  left: -220px;
+  transform: translate3d(0, 6px, 12px) rotateY(-24deg) rotateZ(-8deg) scale(0.66);
+}
+.mascot-duel-stage.phase-exit-left .duel-fighter-frog {
+  right: calc(100% + 180px);
+  transform: translate3d(0, 6px, 16px) rotateY(-24deg) rotateZ(-10deg) scale(0.66);
+}
+
+/* Second duel exit: both mascots chase each other out to the RIGHT */
+.mascot-duel-stage.phase-exit-right .duel-fighter-frog {
+  right: -220px;
+  transform: translate3d(0, 6px, 12px) rotateY(24deg) rotateZ(8deg) scale(0.66);
+}
+.mascot-duel-stage.phase-exit-right .duel-fighter-lion {
+  left: calc(100% + 180px);
+  transform: translate3d(0, 6px, 16px) rotateY(24deg) rotateZ(10deg) scale(0.66);
+}
+
+.fighter-shadow {
+  position: absolute;
+  bottom: -6px;
+  left: 20px;
+  right: 20px;
+  height: 22px;
+  border-radius: 50%;
+  background: radial-gradient(ellipse at center, rgba(15, 23, 42, 0.36) 0%, transparent 72%);
+  transform: rotateX(75deg) translateZ(-12px);
+}
+
+.fighter-3d-rig {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+  animation: fighterIdleBob 1.1s ease-in-out infinite alternate;
+}
+@keyframes fighterIdleBob {
+  0% { transform: translate3d(0, 0, 0) rotateZ(-1.5deg); }
+  100% { transform: translate3d(0, -7px, 6px) rotateZ(1.5deg); }
+}
+
+.duel-fighter.is-throwing .fighter-3d-rig {
+  animation: fighterThrowLunge 0.34s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+@keyframes fighterThrowLunge {
+  0% { transform: translate3d(0, 0, 0) scale(1); }
+  45% { transform: translate3d(12px, -10px, 24px) rotateZ(8deg) scale(1.06); }
+  100% { transform: translate3d(0, 0, 0) scale(1); }
+}
+.duel-fighter-frog.is-throwing .fighter-3d-rig {
+  animation: fighterThrowLungeFrog 0.34s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+@keyframes fighterThrowLungeFrog {
+  0% { transform: translate3d(0, 0, 0) scale(1); }
+  45% { transform: translate3d(-12px, -10px, 24px) rotateZ(-8deg) scale(1.06); }
+  100% { transform: translate3d(0, 0, 0) scale(1); }
+}
+
+.duel-fighter.is-hit .fighter-3d-rig {
+  animation: fighterHitRecoil 0.36s ease-out;
+}
+@keyframes fighterHitRecoil {
+  0% { transform: translate3d(0, 0, 0); }
+  35% { transform: translate3d(-14px, -6px, -10px) rotateZ(-12deg) scale(0.95); filter: brightness(1.25); }
+  100% { transform: translate3d(0, 0, 0); }
+}
+
+/* 3D Torso */
+.fighter-torso {
+  position: absolute;
+  bottom: 12px;
+  left: 36px;
+  width: 82px;
+  height: 68px;
+  border-radius: 26px 26px 18px 18px;
+  transform: translateZ(10px);
+  box-shadow:
+    inset -8px -8px 16px rgba(0, 0, 0, 0.22),
+    inset 6px 6px 12px rgba(255, 255, 255, 0.35),
+    0 8px 18px rgba(15, 23, 42, 0.25);
+}
+.fighter-torso-lion {
+  background: linear-gradient(145deg, #dc2626, #991b1b);
+  border: 2.5px solid #fbbf24;
+}
+.fighter-lapel {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 28px;
+  height: 38px;
+  background: linear-gradient(180deg, #fef08a, #f59e0b);
+  clip-path: polygon(0 0, 100% 0, 50% 100%);
+}
+.fighter-badge {
+  position: absolute;
+  top: 14px;
+  right: 12px;
+  color: #fde047;
+  font-size: 0.9rem;
+  text-shadow: 0 1px 4px rgba(0,0,0,0.4);
+}
+
+.fighter-torso-frog {
+  background: linear-gradient(145deg, #10b981, #047857);
+  border: 2.5px solid #a7f3d0;
+}
+.frog-belly {
+  position: absolute;
+  inset: 8px 14px 6px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 40% 35%, #fef9c3, #fde047 75%, #eab308);
+  box-shadow: inset -3px -4px 8px rgba(161, 98, 7, 0.25);
+}
+.frog-bowtie {
+  position: absolute;
+  top: -4px;
+  left: 50%;
+  transform: translateX(-50%) translateZ(8px);
+  font-size: 1.35rem;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
+}
+
+/* 3D Sculpted Lion Head */
+.fighter-head {
+  position: absolute;
+  top: 14px;
+  left: 28px;
+  width: 98px;
+  height: 94px;
+  transform-style: preserve-3d;
+  transform: translateZ(20px);
+}
+.fighter-crown {
+  position: absolute;
+  top: -22px;
+  left: 50%;
+  transform: translateX(-50%) translateZ(18px) rotateZ(-4deg);
+  font-size: 1.55rem;
+  filter: drop-shadow(0 4px 6px rgba(15, 23, 42, 0.35));
+}
+.lion-mane-ring {
+  position: absolute;
+  inset: -10px;
+  transform: translateZ(-6px);
+}
+.lion-mane-petal {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 34px;
+  height: 34px;
+  margin: -17px 0 0 -17px;
+  border-radius: 42%;
+  background: radial-gradient(circle at 30% 30%, #d97706, #92400e 75%, #78350f);
+  box-shadow: inset 2px 2px 5px rgba(254, 240, 138, 0.35), 0 3px 6px rgba(0, 0, 0, 0.28);
+  transform: rotate(calc(var(--petal-i) * 30deg)) translateY(-42px);
+}
+.lion-ear {
+  position: absolute;
+  top: 2px;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 40% 40%, #fbbf24, #d97706);
+  border: 3px solid #92400e;
+  transform: translateZ(4px);
+}
+.lion-ear-left { left: 4px; }
+.lion-ear-right { right: 4px; }
+
+.lion-face-sphere {
+  position: absolute;
+  inset: 8px;
+  border-radius: 46% 46% 44% 44%;
+  background: radial-gradient(circle at 35% 28%, #fde047 0%, #fbbf24 52%, #d97706 90%);
+  border: 2px solid #92400e;
+  box-shadow:
+    inset -8px -8px 16px rgba(146, 64, 14, 0.35),
+    inset 6px 6px 12px rgba(255, 255, 255, 0.5),
+    0 8px 16px rgba(15, 23, 42, 0.28);
+  transform: translateZ(10px);
+}
+.fighter-brow {
+  position: absolute;
+  top: 18px;
+  width: 20px;
+  height: 5px;
+  border-radius: 99px;
+  background: #78350f;
+}
+.fighter-brow-left { left: 14px; transform: rotate(12deg); }
+.fighter-brow-right { right: 14px; transform: rotate(-12deg); }
+
+.fighter-eye {
+  position: absolute;
+  top: 25px;
+  width: 15px;
+  height: 16px;
+  border-radius: 50%;
+  background: #ffffff;
+  border: 2px solid #451a03;
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.15);
+}
+.fighter-eye-left { left: 17px; }
+.fighter-eye-right { right: 17px; }
+.fighter-eye .pupil, .frog-eye-dome .pupil {
+  position: absolute;
+  top: 3px;
+  left: 4px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #0f172a;
+}
+.fighter-eye .pupil::after, .frog-eye-dome .pupil::after {
+  content: '';
+  position: absolute;
+  top: 1px;
+  left: 1px;
+  width: 2.5px;
+  height: 2.5px;
+  border-radius: 50%;
+  background: #ffffff;
+}
+
+.lion-snout {
+  position: absolute;
+  bottom: 10px;
+  left: 50%;
+  transform: translateX(-50%) translateZ(8px);
+  width: 40px;
+  height: 26px;
+  border-radius: 48%;
+  background: linear-gradient(180deg, #fef9c3, #fde68a);
+  border: 1.5px solid #b45309;
+  box-shadow: 0 3px 6px rgba(0,0,0,0.16);
+}
+.lion-nose {
+  width: 14px;
+  height: 10px;
+  margin: 3px auto 0;
+  border-radius: 50% 50% 60% 60%;
+  background: linear-gradient(180deg, #991b1b, #450a0a);
+}
+.lion-mouth {
+  width: 16px;
+  height: 6px;
+  margin: 2px auto 0;
+  border-bottom: 2.5px solid #78350f;
+  border-radius: 0 0 50% 50%;
+}
+
+/* 3D Sculpted Frog Head */
+.frog-eye-dome {
+  position: absolute;
+  top: -4px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #6ee7b7, #10b981 65%, #047857);
+  border: 2px solid #065f46;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.22);
+  transform: translateZ(14px);
+}
+.frog-eye-left { left: 12px; }
+.frog-eye-right { right: 12px; }
+.frog-eye-dome::before {
+  content: '';
+  position: absolute;
+  inset: 4px;
+  border-radius: 50%;
+  background: #ffffff;
+  border: 1.5px solid #064e3b;
+}
+.frog-eye-dome .pupil {
+  top: 9px;
+  left: 8px;
+  width: 9px;
+  height: 9px;
+}
+
+.frog-face-sphere {
+  position: absolute;
+  top: 14px;
+  left: 6px;
+  right: 6px;
+  bottom: 8px;
+  border-radius: 48% 48% 44% 44%;
+  background: radial-gradient(circle at 35% 28%, #6ee7b7 0%, #34d399 45%, #059669 90%);
+  border: 2px solid #065f46;
+  box-shadow:
+    inset -8px -8px 16px rgba(6, 78, 59, 0.35),
+    inset 6px 6px 12px rgba(255, 255, 255, 0.45),
+    0 8px 16px rgba(15, 23, 42, 0.26);
+  transform: translateZ(10px);
+}
+.frog-cheek {
+  position: absolute;
+  top: 26px;
+  width: 14px;
+  height: 9px;
+  border-radius: 50%;
+  background: rgba(244, 114, 182, 0.55);
+}
+.frog-cheek-left { left: 10px; }
+.frog-cheek-right { right: 10px; }
+.frog-smile {
+  position: absolute;
+  top: 28px;
+  left: 20px;
+  right: 20px;
+  height: 14px;
+  border-bottom: 3px solid #064e3b;
+  border-radius: 0 0 50% 50%;
+}
+.frog-vocal-sac {
+  position: absolute;
+  bottom: 4px;
+  left: 50%;
+  transform: translateX(-50%) translateZ(6px);
+  width: 44px;
+  height: 18px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 40%, #fef9c3, #fde047);
+  border: 1.5px solid #ca8a04;
+  animation: frogSacPulse 0.9s ease-in-out infinite alternate;
+}
+@keyframes frogSacPulse {
+  0% { transform: translateX(-50%) translateZ(6px) scale(0.95); }
+  100% { transform: translateX(-50%) translateZ(10px) scale(1.12); }
+}
+
+/* 3D Held Card Stacks */
+.fighter-arm-deck {
+  position: absolute;
+  bottom: 24px;
+  transform-style: preserve-3d;
+  transform: translateZ(30px);
+}
+.duel-fighter-lion .fighter-arm-deck { left: -6px; }
+.duel-fighter-frog .fighter-arm-deck { right: -6px; }
+
+.duel-card-stack {
+  position: relative;
+  width: 48px;
+  height: 66px;
+  transform-style: preserve-3d;
+}
+.duel-card-stack-lion {
+  transform: rotateX(42deg) rotateY(14deg) rotateZ(-12deg);
+}
+.duel-card-stack-frog {
+  transform: rotateX(42deg) rotateY(-14deg) rotateZ(12deg);
+}
+.duel-stack-card {
+  position: absolute;
+  inset: 0;
+  border-radius: 6px;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  box-shadow: 0 2px 4px rgba(15, 23, 42, 0.25);
+  transform: translate3d(0, calc(var(--stack-i) * -2.6px), calc(var(--stack-i) * 1.8px));
+  transition: transform 0.2s ease, opacity 0.2s ease;
+  overflow: hidden;
+}
+.duel-stack-card img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.duel-stack-card.is-thrown {
+  opacity: 0;
+  transform: translate3d(0, -36px, 30px) scale(0.6);
+}
+.duel-stack-count {
+  position: absolute;
+  bottom: -10px;
+  left: 50%;
+  transform: translateX(-50%) translateZ(26px);
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: #0f172a;
+  border: 1.5px solid #facc15;
+  color: #fef08a;
+  font-size: 0.68rem;
+  font-weight: 800;
+  box-shadow: 0 3px 8px rgba(0,0,0,0.35);
+}
+
+/* Throwing Arm */
+.fighter-arm-throw {
+  position: absolute;
+  bottom: 42px;
+  width: 28px;
+  height: 28px;
+  transform: translateZ(26px);
+}
+.duel-fighter-lion .fighter-arm-throw { right: 8px; }
+.duel-fighter-frog .fighter-arm-throw { left: 8px; }
+.fighter-paw {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.28);
+}
+.fighter-paw-lion {
+  background: radial-gradient(circle at 35% 35%, #fde047, #d97706);
+  border: 2px solid #92400e;
+}
+.fighter-paw-frog {
+  background: radial-gradient(circle at 35% 35%, #6ee7b7, #059669);
+  border: 2px solid #065f46;
+}
+
+/* Comic Callout Bubbles */
+.fighter-callout {
+  position: absolute;
+  top: -18px;
+  left: 50%;
+  transform: translate3d(-50%, 10px, 36px) scale(0.5);
+  white-space: nowrap;
+  padding: 4px 11px;
+  border-radius: 999px;
+  background: #ffffff;
+  border: 2px solid #0f172a;
+  color: #0f172a;
+  font-family: 'Fredoka', sans-serif;
+  font-size: 0.78rem;
+  font-weight: 700;
+  box-shadow: 0 6px 14px rgba(15, 23, 42, 0.22);
+  opacity: 0;
+  pointer-events: none;
+}
+.fighter-callout.is-popping {
+  animation: calloutPop 0.85s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+@keyframes calloutPop {
+  0% { opacity: 0; transform: translate3d(-50%, 12px, 36px) scale(0.5); }
+  25% { opacity: 1; transform: translate3d(-50%, -6px, 42px) scale(1.08); }
+  75% { opacity: 1; transform: translate3d(-50%, -8px, 42px) scale(1); }
+  100% { opacity: 0; transform: translate3d(-50%, -18px, 36px) scale(0.85); }
+}
+
+/* Flying 3D Cards */
+.duel-flying-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  transform-style: preserve-3d;
+}
+.duel-flying-card {
+  position: absolute;
+  bottom: 46px;
+  width: 38px;
+  height: 54px;
+  transform-style: preserve-3d;
+}
+.duel-flying-card-inner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+  border-radius: 7px;
+  box-shadow: 0 12px 22px rgba(15, 23, 42, 0.32);
+}
+.duel-flying-card-inner img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 7px;
+  background: #ffffff;
+  border: 1.5px solid #e2e8f0;
+  backface-visibility: hidden;
+}
+.duel-flying-card-inner .duel-card-back {
+  transform: rotateY(180deg);
+}
+
+.duel-flying-card.from-lion {
+  left: 140px;
+  animation: cardFlightFromLion 0.68s cubic-bezier(0.25, 0.8, 0.35, 1) forwards;
+}
+.duel-flying-card.from-frog {
+  right: 140px;
+  animation: cardFlightFromFrog 0.68s cubic-bezier(0.25, 0.8, 0.35, 1) forwards;
+}
+.duel-flying-card.from-lion.is-midair-clash {
+  animation: cardClashFromLion 0.68s cubic-bezier(0.25, 0.8, 0.35, 1) forwards;
+}
+.duel-flying-card.from-frog.is-midair-clash {
+  animation: cardClashFromFrog 0.68s cubic-bezier(0.25, 0.8, 0.35, 1) forwards;
+}
+
+@keyframes cardFlightFromLion {
+  0% {
+    left: 135px;
+    transform: translate3d(0, 0, 26px) rotateX(35deg) rotateY(0deg) rotateZ(-20deg) scale(0.85);
+    opacity: 1;
+  }
+  50% {
+    left: calc(50% - 26px);
+    transform: translate3d(0, var(--arc-y, -55px), 65px) rotateX(15deg) rotateY(180deg) rotateZ(180deg) scale(1.12);
+    opacity: 1;
+  }
+  85% {
+    left: calc(100% - 175px);
+    transform: translate3d(0, -8px, 32px) rotateX(45deg) rotateY(360deg) rotateZ(var(--spin-z, 540deg)) scale(0.95);
+    opacity: 1;
+  }
+  100% {
+    left: calc(100% - 150px);
+    transform: translate3d(18px, 35px, 10px) rotateX(65deg) rotateY(420deg) rotateZ(620deg) scale(0.5);
+    opacity: 0;
+  }
+}
+
+@keyframes cardFlightFromFrog {
+  0% {
+    right: 135px;
+    transform: translate3d(0, 0, 26px) rotateX(35deg) rotateY(0deg) rotateZ(20deg) scale(0.85);
+    opacity: 1;
+  }
+  50% {
+    right: calc(50% - 26px);
+    transform: translate3d(0, var(--arc-y, -55px), 65px) rotateX(15deg) rotateY(-180deg) rotateZ(-180deg) scale(1.12);
+    opacity: 1;
+  }
+  85% {
+    right: calc(100% - 175px);
+    transform: translate3d(0, -8px, 32px) rotateX(45deg) rotateY(-360deg) rotateZ(var(--spin-z, -540deg)) scale(0.95);
+    opacity: 1;
+  }
+  100% {
+    right: calc(100% - 150px);
+    transform: translate3d(-18px, 35px, 10px) rotateX(65deg) rotateY(-420deg) rotateZ(-620deg) scale(0.5);
+    opacity: 0;
+  }
+}
+
+@keyframes cardClashFromLion {
+  0% {
+    left: 135px;
+    transform: translate3d(0, 0, 26px) rotateX(35deg) rotateY(0deg) rotateZ(0deg) scale(0.85);
+    opacity: 1;
+  }
+  52% {
+    left: calc(50% - 34px);
+    transform: translate3d(0, -64px, 75px) rotateX(10deg) rotateY(180deg) rotateZ(260deg) scale(1.18);
+    opacity: 1;
+  }
+  100% {
+    left: calc(44% - 30px);
+    transform: translate3d(-25px, -120px, 90px) rotateX(70deg) rotateY(360deg) rotateZ(520deg) scale(0.4);
+    opacity: 0;
+  }
+}
+
+@keyframes cardClashFromFrog {
+  0% {
+    right: 135px;
+    transform: translate3d(0, 0, 26px) rotateX(35deg) rotateY(0deg) rotateZ(0deg) scale(0.85);
+    opacity: 1;
+  }
+  52% {
+    right: calc(50% - 34px);
+    transform: translate3d(0, -64px, 75px) rotateX(10deg) rotateY(-180deg) rotateZ(-260deg) scale(1.18);
+    opacity: 1;
+  }
+  100% {
+    right: calc(44% - 30px);
+    transform: translate3d(25px, -120px, 90px) rotateX(70deg) rotateY(-360deg) rotateZ(-520deg) scale(0.4);
+    opacity: 0;
+  }
+}
+
+.duel-clash-burst {
+  position: absolute;
+  bottom: 118px;
+  left: 50%;
+  transform: translate3d(-50%, 0, 85px);
+  padding: 5px 14px;
+  border-radius: 999px;
+  background: radial-gradient(circle, #fef08a 0%, #f97316 80%);
+  border: 2px solid #ffffff;
+  color: #7c2d12;
+  font-family: 'Fredoka', sans-serif;
+  font-size: 0.9rem;
+  font-weight: 800;
+  box-shadow: 0 0 24px rgba(249, 115, 22, 0.75);
+  animation: clashBurstPop 0.62s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+@keyframes clashBurstPop {
+  0% { transform: translate3d(-50%, 10px, 85px) scale(0.4); opacity: 0; }
+  35% { transform: translate3d(-50%, -8px, 95px) scale(1.2); opacity: 1; }
+  100% { transform: translate3d(-50%, -22px, 95px) scale(0.8); opacity: 0; }
+}
+
+@media (max-width: 900px) {
+  .mascot-duel-stage { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .mascot-duel-stage { display: none; }
+}
+
+/* ==========================================================================
+   Night lobby: late-night theme for the TV lobby and the phone dashboard.
+   Matches the landing page. Scoped to the lobby; in-game screens keep the
+   light theme above. One colour per game, yellow for the room code.
+   ========================================================================== */
+.light-lobby {
+  --night: #0b1530;
+  --night-panel: #13234a;
+  --night-raised: #1b2e5c;
+  --night-line: #22335f;
+  --night-line-strong: #34467a;
+  --night-muted: #a9b6d3;
+  --night-sun: #facc15;
+  --game-quiz: #38bdf8;
+  --game-music: #a78bfa;
+  --game-palace: #facc15;
+  --game-rummy: #fb7185;
+}
+
+/* --- TV lobby --- */
+.host-screen.light-lobby:not(.in-game) {
+  color: #fff;
+  background:
+    radial-gradient(1.5px 1.5px at 12% 18%, #fde68a 99%, transparent),
+    radial-gradient(1px 1px at 38% 9%, #fff 99%, transparent),
+    radial-gradient(1.5px 1.5px at 71% 14%, #fff 99%, transparent),
+    radial-gradient(1px 1px at 88% 34%, #fde68a 99%, transparent),
+    radial-gradient(1px 1px at 22% 78%, #fff 99%, transparent),
+    radial-gradient(ellipse 60% 40% at 100% 0%, rgba(56, 189, 248, 0.12), transparent 70%),
+    var(--night);
+}
+.host-screen:not(.in-game) .studio-spotlights { display: none; }
+.host-screen .studio-header { background: rgba(11, 21, 48, 0.9); border-color: #1e2e58; box-shadow: none; }
+/* The colour logo has navy lettering: give it a white chip on the night header */
+.host-screen .studio-header .brand-logo { background: #fff; padding: 6px 12px; border-radius: 14px; box-sizing: content-box; width: 190px; }
+.host-screen .studio-on-air-badge { background: var(--night-sun); border-color: var(--night-sun); color: var(--night); box-shadow: none; }
+.host-screen #headerInfo { background: var(--night-panel); border-color: var(--night-line); color: #dce3f2; }
+.host-screen #muteBtn { background: var(--night-panel); border-color: var(--night-line-strong); color: #fff; }
+.host-screen:not(.in-game) .lobby-panel {
+  background: var(--night-panel);
+  border: 1px solid var(--night-line);
+  box-shadow: 0 30px 60px -30px rgba(0, 0, 0, 0.7);
+  color: #fff;
+}
+.host-screen:not(.in-game) .lobby-panel .text-slate-800,
+.host-screen:not(.in-game) .lobby-panel .text-slate-700 { color: #fff; }
+.host-screen:not(.in-game) .lobby-panel .text-slate-500 { color: var(--night-muted); }
+.host-screen:not(.in-game) .lobby-panel .text-sky-900 { color: #dce3f2; }
+.host-screen:not(.in-game) .studio-panel-head { border-color: var(--night-line); }
+.host-screen:not(.in-game) .studio-panel-icon { background: var(--night); border-color: var(--night-line-strong); box-shadow: none; }
+.host-screen:not(.in-game) .studio-vip-pill { background: #0e3b3a; border-color: #155e57; color: #a7f3d0; box-shadow: none; }
+.host-screen:not(.in-game) #roomCode.studio-room-code {
+  font-family: 'Fredoka', system-ui, sans-serif;
+  background: var(--night);
+  color: var(--night-sun);
+  border: 1.5px solid var(--night-line-strong);
+  box-shadow: none;
+  text-shadow: none;
+}
+.host-screen:not(.in-game) .qr-stage-frame { background: #fff; border-color: #fff; box-shadow: none; }
+.host-screen:not(.in-game) .qr-scan-ribbon { background: var(--night); color: var(--night-sun); box-shadow: none; }
+.host-screen:not(.in-game) .qr-stage-frame #qrContainer { border-color: #fff; }
+.host-screen:not(.in-game) #joinUrl { background: var(--night); color: #dce3f2; }
+.host-screen:not(.in-game) .join-step-pill { background: var(--night); border-color: var(--night-line); color: #fff; }
+.host-screen:not(.in-game) .join-step-pill b { color: var(--night); }
+.host-screen:not(.in-game) .join-step-pill:nth-child(1) b { background: var(--game-quiz); }
+.host-screen:not(.in-game) .join-step-pill:nth-child(2) b { background: var(--game-music); }
+.host-screen:not(.in-game) .join-step-pill:nth-child(3) b { background: var(--night-sun); }
+.host-screen:not(.in-game) .invite-foot p { color: var(--night-sun); }
+.host-screen:not(.in-game) .studio-count-pill { background: var(--night); border-color: var(--night-line-strong); color: #a7f3d0; }
+.host-screen:not(.in-game) .lobby-footer { color: var(--night-muted); }
+
+/* Contestants */
+.host-screen:not(.in-game) .studio-contestant-card,
+.host-screen:not(.in-game) .studio-contestant-card.is-score-leader { background: var(--night); border-color: var(--night-line); box-shadow: none; color: #fff; }
+.host-screen:not(.in-game) .studio-contestant-card.is-score-leader { border-color: var(--night-sun); }
+.host-screen:not(.in-game) .studio-contestant-card .text-slate-800 { color: #fff; }
+.host-screen:not(.in-game) .lobby-player-avatar { background: var(--night-raised); border-color: var(--night-line-strong); box-shadow: none; }
+.host-screen:not(.in-game) .contestant-online-dot { border-color: var(--night); }
+.host-screen:not(.in-game) .contestant-host-pill { background: var(--night-sun); border-color: var(--night-sun); color: var(--night); }
+.host-screen:not(.in-game) .contestant-vote-pill { background: var(--night-raised); border-color: var(--night-line-strong); }
+.host-screen:not(.in-game) .contestant-score-pill { background: var(--night-raised); color: #fff; }
+
+/* Party chat in the lobby column */
+.host-screen:not(.in-game) #lobbyChatMount .chat-panel { background: var(--night-panel); border-color: var(--night-line); box-shadow: none; color: #fff; }
+.host-screen:not(.in-game) #lobbyChatMount .chat-title { color: #fff; border-color: var(--night-line); }
+.host-screen:not(.in-game) #lobbyChatMount .chat-text { background: var(--night); border-color: var(--night-line); color: #dce3f2; }
+.host-screen:not(.in-game) #lobbyChatMount .messages:empty::before { color: var(--night-muted); }
+
+/* --- Phone header --- */
+.phone-screen.light-lobby header { background: rgba(11, 21, 48, 0.94); border-color: #1e2e58; }
+.phone-screen .brand-symbol { background: #fff; border-radius: 10px; padding: 3px; }
+.phone-screen .brand-phone-name { color: #fff; font-family: 'Fredoka', system-ui, sans-serif; font-weight: 700; letter-spacing: 0; }
+.phone-screen #roomBadge { font-family: 'Fredoka', system-ui, sans-serif; background: var(--night-panel); border-color: var(--night-line-strong); color: var(--night-sun); }
+.phone-screen #shareBtn { background: var(--night-panel); color: #fff; }
+
+/* --- Phone dashboard --- */
+.phone-screen.light-lobby #lobbySection .device-screen { background: var(--night); border-color: var(--night-line); color: #fff; }
+.phone-screen #lobbySection .device-screen > .border-b { border-color: var(--night-line); }
+.phone-screen #lobbySection .device-screen > .border-b .text-slate-800 { color: #fff; }
+.phone-screen #lobbySection .device-screen > .border-b .bg-sky-200\/80 { background: var(--night-sun); color: var(--night); }
+.phone-screen #lobbySection #lobbyPlayers,
+.phone-screen #lobbySection .lobby-chat { background: var(--night-panel); border-color: var(--night-line); }
+.phone-screen #lobbySection #lobbyPlayers .text-slate-700,
+.phone-screen #lobbySection #lobbyPlayers .text-slate-800,
+.phone-screen #lobbySection .lobby-chat summary { color: #fff; }
+.phone-screen #lobbySection #lobbyPlayers .text-slate-600,
+.phone-screen #lobbySection #lobbyPlayers .text-slate-500 { color: var(--night-muted); }
+.phone-screen #lobbySection #lobbyPlayers .bg-slate-50 { background: var(--night); }
+.phone-screen #lobbySection #lobbyPlayers .bg-sky-50 { background: var(--night-raised); }
+.phone-screen #lobbySection #lobbyPlayers .text-sky-700 { color: var(--night-sun); }
+.phone-screen #lobbySection .lobby-chat .chat-messages { background: var(--night); color: #dce3f2; }
+.phone-screen #lobbySection .lobby-chat input { background: var(--night); border-color: var(--night-line-strong); color: #fff; }
+.phone-screen #lobbySection .lobby-chat button { background: var(--game-quiz); color: var(--night); }
+.phone-screen #lobbySection .start-game-cta { background: var(--night-sun); color: var(--night); border-color: transparent; box-shadow: none; }
+.phone-screen #lobbySection .start-game-cta:hover:not(:disabled) { box-shadow: none; filter: brightness(1.06); }
+.phone-screen #lobbySection .start-game-cta:disabled { background: var(--night-raised); color: var(--night-muted); }
+
+/* --- Game vote cards (TV and phone): solid game colour, navy ink --- */
+.host-screen:not(.in-game) .lobby-game-option,
+.phone-screen #lobbySection .lobby-game-option {
+  background: var(--night-raised);
+  border: 2px solid transparent;
+  box-shadow: none;
+  color: #fff;
+}
+.host-screen:not(.in-game) .lobby-game-option[data-game="quiz"],
+.phone-screen #lobbySection .lobby-game-option[data-game="quiz"] { background: var(--game-quiz); }
+.host-screen:not(.in-game) .lobby-game-option[data-game="music-quiz"],
+.phone-screen #lobbySection .lobby-game-option[data-game="music-quiz"] { background: var(--game-music); }
+.host-screen:not(.in-game) .lobby-game-option[data-game="shithead"],
+.phone-screen #lobbySection .lobby-game-option[data-game="shithead"] { background: var(--game-palace); }
+.host-screen:not(.in-game) .lobby-game-option[data-game="gin-rummy"],
+.phone-screen #lobbySection .lobby-game-option[data-game="gin-rummy"] { background: var(--game-rummy); }
+.host-screen:not(.in-game) .lobby-game-option:not([data-game="category"]),
+.phone-screen #lobbySection .lobby-game-option { color: var(--night); }
+.host-screen:not(.in-game) .lobby-game-option .lobby-game-name,
+.phone-screen #lobbySection .lobby-game-option .lobby-game-name { color: inherit; font-family: 'Fredoka', system-ui, sans-serif; font-weight: 700; }
+.host-screen:not(.in-game) .lobby-game-option .lobby-game-description,
+.phone-screen #lobbySection .lobby-game-option .lobby-game-description { color: inherit; opacity: 0.82; font-weight: 600; }
+.host-screen:not(.in-game) .lobby-game-option .lobby-game-icon,
+.phone-screen #lobbySection .lobby-game-option .lobby-game-icon { background: var(--night); border: 0; box-shadow: none; text-shadow: none; }
+.host-screen:not(.in-game) .lobby-game-option[data-game="shithead"] .lobby-game-icon::before,
+.host-screen:not(.in-game) .lobby-game-option[data-game="shithead"] .lobby-game-icon::after,
+.phone-screen #lobbySection .lobby-game-option[data-game="shithead"] .lobby-game-icon::before,
+.phone-screen #lobbySection .lobby-game-option[data-game="shithead"] .lobby-game-icon::after { display: none; }
+.host-screen:not(.in-game) .lobby-game-option .lobby-vote-count,
+.phone-screen #lobbySection .lobby-game-option .lobby-vote-count { background: var(--night); color: #fff; }
+.host-screen:not(.in-game) .lobby-game-option .lobby-leading-label,
+.phone-screen #lobbySection .lobby-game-option .lobby-leading-label { background: #fff; color: var(--night); box-shadow: none; }
+.host-screen:not(.in-game) .lobby-game-players-pill { background: rgba(11, 21, 48, 0.14); border-color: transparent; color: inherit; }
+.host-screen:not(.in-game) .lobby-vote-bar { background: rgba(11, 21, 48, 0.18); }
+.host-screen:not(.in-game) .lobby-vote-bar-fill,
+.host-screen:not(.in-game) .is-selected .lobby-vote-bar-fill { background: var(--night); }
+.host-screen:not(.in-game) .lobby-game-option[data-game="category"] .lobby-vote-bar { background: var(--night); }
+.host-screen:not(.in-game) .lobby-game-option[data-game="category"] .lobby-vote-bar-fill { background: var(--night-sun); }
+/* Leading / my vote: white ring so it reads on every game colour */
+.host-screen:not(.in-game) .lobby-game-option.is-selected,
+.phone-screen #lobbySection .lobby-game-option.is-selected {
+  border-color: #fff;
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.25);
+}
+.phone-screen #lobbySection .lobby-game-option.is-selected .lobby-vote-count { background: #fff; color: var(--night); }
+/* Not enough players yet: drop the colour instead of dimming it */
+.phone-screen #lobbySection .lobby-game-option[data-game]:disabled { background: var(--night-raised); color: var(--night-muted); opacity: 1; }
+.phone-screen #lobbySection .lobby-game-option:disabled .lobby-game-icon { opacity: 0.6; }
+
+/* ==========================================================================
+   Night games: the same theme through quizzes and card games, TV and phone.
+   Shared variables first (most game styles read these), then the light
+   Tailwind utilities the game templates use, then the hard-coded panels.
+   ========================================================================== */
+body.light-lobby {
+  --bg-primary: #0b1530;
+  --bg-card: #13234a;
+  --neon-purple: #38bdf8;
+  --neon-blue: #7dd3fc;
+  --neon-green: #34d399;
+  --neon-pink: #fb7185;
+  --neon-orange: #fbbf24;
+  --neon-red: #f87171;
+  --text-primary: #ffffff;
+  --text-secondary: #a9b6d3;
+  --glass-border: #22335f;
+  color-scheme: dark;
+  color: #fff;
+  background: var(--night);
+}
+.host-screen.light-lobby.in-game { background: var(--night); }
+
+/* Tailwind light utilities used in the game templates */
+.light-lobby .bg-white, .light-lobby .bg-white\/95, .light-lobby .bg-white\/90,
+.light-lobby .bg-white\/85, .light-lobby .bg-white\/80, .light-lobby .bg-white\/70 { background-color: var(--night-panel); }
+.light-lobby .bg-sky-100 { background-color: var(--night); }
+.light-lobby .bg-sky-50, .light-lobby .bg-slate-50, .light-lobby .bg-amber-100,
+.light-lobby .bg-sky-200\/80, .light-lobby .bg-slate-200 { background-color: var(--night-raised); }
+.light-lobby .hover\:bg-white:hover, .light-lobby .hover\:bg-sky-50:hover,
+.light-lobby .hover\:bg-sky-100:hover, .light-lobby .hover\:bg-slate-100:hover { background-color: var(--night-raised); }
+.light-lobby .text-slate-900, .light-lobby .text-slate-800, .light-lobby .text-slate-700 { color: #fff; }
+.light-lobby .text-slate-600, .light-lobby .text-slate-500, .light-lobby .text-slate-400 { color: var(--night-muted); }
+.light-lobby .text-sky-900, .light-lobby .text-sky-800, .light-lobby .text-sky-700, .light-lobby .text-sky-600 { color: #7dd3fc; }
+.light-lobby .text-emerald-600 { color: #34d399; }
+.light-lobby .border-white, .light-lobby .border-sky-100, .light-lobby .border-sky-200,
+.light-lobby .border-slate-200, .light-lobby .border-slate-300 { border-color: var(--night-line); }
+/* The QR code must stay black on white */
+.light-lobby #qrContainer { background-color: #fff; }
+
+/* Shared building blocks */
+.light-lobby .card { background: var(--night-panel); border-color: var(--night-line); box-shadow: none; }
+.light-lobby .btn-secondary { background: var(--night-raised); border-color: var(--night-line-strong); color: #fff; }
+.light-lobby .btn-secondary:hover { background: var(--night-line); border-color: var(--night-line-strong); }
+.light-lobby input, .light-lobby select, .light-lobby textarea { background: var(--night); border-color: var(--night-line-strong); color: #fff; }
+.light-lobby input::placeholder, .light-lobby textarea::placeholder { color: #7f8db0; }
+.light-lobby .toast { background: var(--night-panel); color: #fff; border-color: var(--night-line-strong); box-shadow: 0 10px 25px -8px rgba(0, 0, 0, 0.6); }
+.light-lobby .timer-bar-container, .light-lobby .quiz-display .timer-bar-container { background: rgba(255, 255, 255, 0.12); }
+.light-lobby .story-overlay { background: rgba(11, 21, 48, 0.94); }
+.light-lobby .quiz-ready-number { color: var(--night-sun); }
+.light-lobby .quiz-question-text { color: #fff; text-shadow: none; }
+.light-lobby .quiz-progress-label { color: var(--night-sun); }
+.light-lobby .game-title { color: #fff; }
+.light-lobby .player-card-counts { background: rgba(255, 255, 255, 0.05); }
+.light-lobby .pile-empty { border-color: rgba(255, 255, 255, 0.18); background: rgba(255, 255, 255, 0.03); }
+.light-lobby .score-entry:first-child { background: var(--night-raised); }
+.light-lobby .phone-screen .device-screen,
+.phone-screen.light-lobby .device-screen { background: var(--night); border-color: var(--night-line); color: #fff; }
+
+/* Quiz answers (TV and phone): the four game colours with navy ink.
+   .correct / .incorrect keep their !important reveal colours. */
+.light-lobby .answer-btn.answer-a,
+.light-lobby .answer-btn.answer-b,
+.light-lobby .answer-btn.answer-c,
+.light-lobby .answer-btn.answer-d { color: var(--night); box-shadow: none; }
+.light-lobby .answer-btn.answer-a { background: var(--game-rummy); }
+.light-lobby .answer-btn.answer-b { background: var(--game-quiz); }
+.light-lobby .answer-btn.answer-c { background: var(--neon-green); }
+.light-lobby .answer-btn.answer-d { background: var(--game-palace); }
+.light-lobby .answer-btn strong { background: rgba(11, 21, 48, 0.16); }
+.light-lobby .answer-btn.correct { color: var(--night) !important; }
+.light-lobby .answer-btn.incorrect { color: #fff; }
+
+/* --- TV: scores, chat and card tables --- */
+.host-screen .scoreboard-panel { background: var(--night-panel); border-color: var(--night-line); }
+.host-screen .chat-panel { background: var(--night-panel); border-color: var(--night-line); box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5); color: #fff; }
+.host-screen .chat-title { color: #fff; }
+.host-screen .chat-panel .chat-msg { background: var(--night); border-color: var(--night-line); color: #dce3f2; }
+.host-screen .chat-panel .chat-msg .author { color: var(--night-sun); }
+.host-screen .timer-seconds { background: var(--game-quiz); color: var(--night); box-shadow: none; }
+.host-screen .timer-seconds.warning { background: var(--night-sun); }
+.host-screen .timer-seconds.critical { background: var(--game-rummy); }
+.host-screen .quiz-question-image { border-color: var(--night-line-strong); background: var(--night-panel); }
+.host-screen .tv-stack-card,
+.host-screen .central-pile.tv-stack-card,
+.host-screen .gr-seat-panel { background: var(--night-panel); border-color: var(--night-line); box-shadow: none; }
+.host-screen .gr-seat-panel.current-turn { background: var(--night-raised); border-color: var(--night-sun); box-shadow: 0 0 0 3px rgba(250, 204, 21, 0.25); }
+.host-screen .tv-stack-label { color: var(--night-muted); }
+.host-screen .tv-stack-count-badge,
+.host-screen .tv-stack-count-badge.info-item,
+.host-screen .tv-stack-count-badge.pile-info { background: var(--game-quiz); color: var(--night); box-shadow: none; }
+.host-screen .tv-stack-count-badge.accent { background: var(--night-sun); color: var(--night); }
+.host-screen .tv-stack-count-badge.empty { background: var(--night-raised); color: var(--night-muted); }
+.host-screen .tv-rule-pill { background: var(--night-raised); color: #fff; border-color: var(--night-line-strong); }
+.host-screen .tv-rule-pill.special { background: var(--night-sun); color: var(--night); border-color: var(--night-sun); }
+.host-screen .tv-last-play-banner { background: var(--night-raised); color: #fff; border-color: var(--night-line-strong); }
+.host-screen .gr-seat-name { color: #fff; }
+.host-screen .gr-turn-pill { background: var(--night-sun); color: var(--night); border-color: var(--night-sun); }
+.host-screen .gr-seat-stats { border-color: var(--night-line); }
+.host-screen .mini-back-card { border-color: var(--night-line-strong); }
+.host-screen .gr-hand-fan-mini img { border-color: var(--night-line); }
+
+/* --- Phone: quiz --- */
+.phone-screen .quiz-top-meta { background: var(--night-panel); border-color: var(--night-line); box-shadow: none; }
+.phone-screen .quiz-meta-pill { background: var(--night-raised); color: #7dd3fc; }
+.phone-screen .quiz-meta-pill.score-pill { background: var(--night-sun); color: var(--night); border-color: transparent; }
+.phone-screen .quiz-section .question-text,
+.phone-screen #quizSection .question-text { background: var(--night-panel); border-color: var(--night-line); color: #fff; box-shadow: none; }
+.phone-screen .quiz-timer-display,
+.phone-screen .quiz-timer-display.quiz-ready-number { color: var(--night-sun); }
+.phone-screen .powerup-btn { background: var(--night-raised); border-color: var(--night-line-strong); color: #fff; box-shadow: none; }
+.phone-screen .powerup-btn.selected { background: var(--game-quiz); border-color: var(--game-quiz); color: var(--night); }
+.phone-screen .answer-btn.selected,
+.phone-screen #quizAnswers .answer-btn.selected { border-color: #fff; box-shadow: 0 0 0 3px var(--night-sun); }
+.phone-screen #quizAnswers .answer-btn.selected::after { background: var(--night-sun); color: var(--night); font-weight: 800; }
+
+/* --- Phone: card games --- */
+.phone-screen .phone-stack-box { background: var(--night-panel); border-color: var(--night-line); }
+.phone-screen .phone-stack-box.tappable-stack { background: var(--night-raised); border-color: var(--game-quiz); box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.2); }
+.phone-screen .stack-title, .phone-screen .phone-stack-label { color: var(--night-muted); }
+.phone-screen .stack-count-pill { background: var(--game-quiz); color: var(--night); }
+.phone-screen .stack-count-pill.accent { background: var(--night-sun); color: var(--night); }
+.phone-screen .stack-count-pill.empty { background: var(--night-raised); color: var(--night-muted); }
+.phone-screen .stack-empty-slot { border-color: var(--night-line-strong); color: var(--night-muted); background: rgba(255, 255, 255, 0.03); }
+.phone-screen .stack-subhint { color: #7dd3fc; }
+.phone-screen .zone-title { color: #fff; }
+.phone-screen .zone-count-badge { background: var(--night-raised); color: #7dd3fc; }
+.phone-screen .sh-rule-banner { background: var(--night-raised); border-color: var(--night-line-strong); color: #fff; }
+.phone-screen .sh-quick-chip { background: var(--night-sun); color: var(--night); }
+.phone-screen .gr-sort-bar { background: var(--night); border-color: var(--night-line-strong); }
+.phone-screen .gr-sort-btn { color: var(--night-muted); }
+.phone-screen .gr-sort-btn.active { background: var(--game-quiz); color: var(--night); }
+.phone-screen .gr-meld-box { background: rgba(52, 211, 153, 0.12); border-color: rgba(52, 211, 153, 0.55); }
+.phone-screen .gr-meld-box.deadwood-box { background: rgba(251, 113, 133, 0.12); border-color: rgba(251, 113, 133, 0.5); }
+.phone-screen .gr-meld-label { color: #6ee7b7; }
+.phone-screen .gr-meld-box.deadwood-box .gr-meld-label { color: #fda4af; }
+.phone-screen .sh-table-cards.stacked { background: var(--night-panel); border-color: var(--night-line); }
+.phone-screen .my-turn-glow { border-color: rgba(250, 204, 21, 0.6) !important; }
+.phone-screen .playing-card.facedown { border-color: var(--night-line-strong); }
+.phone-screen .lobby-chat .chat-messages { background: var(--night); }
+.phone-screen .lobby-chat .chat-msg { background: var(--night-panel); border-color: var(--night-line); color: #dce3f2; }
+.phone-screen .lobby-chat .chat-msg .author { color: var(--night-sun); }

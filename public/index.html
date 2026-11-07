@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="theme-color" content="#f4f8ff">
+  <meta name="theme-color" content="#0b1530">
   <title>Smallhours - Social Party Game Platform</title>
   <script src="https://cdn.tailwindcss.com/3.4.17"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -11,172 +11,367 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Fredoka:wght@500;600;700&display=swap" rel="stylesheet">
   <script src="/js/tailwind-config.js"></script>
+  <link rel="stylesheet" href="/css/light-lobby.css">
   <style>
-    .device-screen {
-      box-shadow: 0 20px 35px -10px rgba(14, 116, 144, 0.12), 0 8px 16px -6px rgba(0, 0, 0, 0.04);
+    /* Late-night landing: navy ground, one colour per game, yellow room-code accent. */
+    .night {
+      --night: #0b1530;
+      --night-2: #101d3f;
+      --panel: #13234a;
+      --panel-line: #22335f;
+      --line-strong: #34467a;
+      --muted: #a9b6d3;
+      --soft: #c3cdE3;
+      --sun: #facc15;
+      --sky: #38bdf8;
+      --lilac: #a78bfa;
+      --coral: #fb7185;
+      --mint: #34d399;
+      background: var(--night);
+      color: #fff;
     }
+    .night .font-display { letter-spacing: -0.01em; }
+    .night a:focus-visible, .night button:focus-visible, .night input:focus-visible { outline: 3px solid var(--sun); outline-offset: 3px; }
     .screen-view { display: none; }
     .screen-view.active { display: block; }
+    .star { position: absolute; border-radius: 50%; background: #fff; pointer-events: none; }
+    .night-card { background: var(--panel); border: 1px solid var(--panel-line); }
+    .night-input {
+      background: var(--night); border: 1.5px solid var(--line-strong); color: #fff;
+    }
+    .night-input::placeholder { color: #7f8db0; }
+    .night-input:focus { outline: none; border-color: var(--sky); box-shadow: 0 0 0 3px rgba(56,189,248,.25); }
+    .btn-sun { background: var(--sun); color: var(--night); }
+    .btn-sun:hover { background: #fde047; }
+    .btn-sky { background: var(--sky); color: var(--night); }
+    .btn-sky:hover { background: #7dd3fc; }
+    .btn-ghost { border: 1.5px solid var(--line-strong); color: #fff; }
+    .btn-ghost:hover { background: var(--panel); }
+    .game-card { color: var(--night); }
+    .game-icon { background: var(--night); }
+    .tag { background: rgba(11,21,48,.12); }
+    .tv-frame { background: #050b1c; border: 1px solid var(--panel-line); box-shadow: 0 40px 80px -30px rgba(0,0,0,.8); }
+    .phone-frame { background: #050b1c; box-shadow: 0 20px 40px -14px rgba(0,0,0,.8); }
+    .gather { background: #f5f1e6; color: var(--night); }
+    .gather-chip { background: #fff; border: 1.5px solid #e4dcc7; }
+    .gather-muted { color: #3b4256; }
+    @media (prefers-reduced-motion: reduce) { .night * { transition: none !important; animation: none !important; } }
   </style>
-  <link rel="stylesheet" href="/css/light-lobby.css">
+  <link rel="icon" type="image/png" sizes="64x64" href="/images/smallhours-favicon.png">
+  <link rel="apple-touch-icon" href="/images/smallhours-icon.png">
 </head>
-<body class="light-lobby landing-screen bg-gradient-to-br from-sky-50 via-blue-50/60 to-indigo-50/40 text-slate-800 font-sans min-h-screen flex flex-col">
+<body class="night landing-screen font-sans min-h-screen flex flex-col overflow-x-hidden">
 
   <!-- Top Navigation Bar -->
-  <header class="bg-white/90 backdrop-blur-md border-b border-sky-100 sticky top-0 z-50">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-      <a href="/" class="flex items-center gap-3">
-        <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-sky-500 to-blue-600 flex items-center justify-center text-white shadow-md shadow-sky-500/20">
-          <i class="fa-solid fa-gamepad text-lg"></i>
-        </div>
-        <span class="font-display text-2xl font-bold tracking-tight text-slate-900">Smallhours</span>
+  <header class="sticky top-0 z-50 bg-[#0b1530]/90 backdrop-blur-md border-b border-[#1e2e58]">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
+      <a href="/" class="flex items-center gap-3 text-white no-underline">
+        <span class="w-10 h-10 rounded-xl bg-white flex items-center justify-center -rotate-6 shadow-md">
+          <img src="/images/smallhours-icon.png" alt="" width="32" height="32" class="w-8 h-8">
+        </span>
+        <span class="flex flex-col leading-none">
+          <span class="font-display font-bold text-2xl">Smallhours</span>
+          <span class="text-[11px] font-semibold text-[#a9b6d3] mt-0.5">Good games. Better together.</span>
+        </span>
       </a>
-      <button onclick="openTvScreen()" id="tvBtn" class="hidden sm:flex text-xs sm:text-sm font-semibold px-3 py-1.5 rounded-lg text-slate-600 hover:bg-sky-100 hover:text-sky-800 transition items-center gap-1.5">
-        <i class="fa-solid fa-tv"></i> TV screen only
+      <nav class="hidden md:flex gap-7 text-sm font-semibold" aria-label="Main">
+        <a href="#how" class="text-[#dce3f2] hover:text-white">How it works</a>
+        <a href="#games" class="text-[#dce3f2] hover:text-white">Games</a>
+        <a href="#gatherings" class="text-[#dce3f2] hover:text-white">For your group</a>
+      </nav>
+      <button onclick="openTvScreen()" id="tvBtn" class="btn-ghost flex text-xs sm:text-sm font-semibold px-3 sm:px-4 min-h-[44px] rounded-full transition items-center gap-2">
+        <i class="fa-solid fa-tv"></i> <span class="hidden sm:inline">TV screen only</span><span class="sm:hidden">TV</span>
       </button>
     </div>
   </header>
 
-  <main class="flex-1 w-full mx-auto sm:p-6 lg:p-8 flex flex-col items-center sm:justify-center">
-    <div class="w-full flex flex-col items-center">
+  <main class="flex-1 w-full">
 
-      <!-- ================= 1. LANDING ================= -->
-      <section id="screen-landing" class="screen-view active w-full sm:max-w-sm">
-        <div class="device-screen bg-sky-100 sm:border-4 sm:border-white sm:rounded-[2.5rem] p-6 sm:shadow-xl relative overflow-hidden flex flex-col min-h-[calc(100vh-4rem)] sm:min-h-[640px] justify-between">
-          <div class="pt-8 text-center">
-            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-white/70 text-sky-800 border border-sky-200 mb-6">
-              <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> Party Online
-            </span>
-            <h1 class="font-display text-4xl sm:text-5xl font-bold text-slate-800 tracking-tight">Smallhours</h1>
-            <p class="text-sm text-slate-600 mt-2 font-medium">Late night party quizzes &amp; boardgames with friends.</p>
-          </div>
+    <!-- ================= HERO ================= -->
+    <section class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-10 sm:pt-14 pb-20 lg:pb-28 grid lg:grid-cols-2 gap-14 lg:gap-16 items-center">
+      <span class="star w-1.5 h-1.5 bg-[#fde68a] left-[8%] top-6" aria-hidden="true"></span>
+      <span class="star w-1 h-1 opacity-70 left-[46%] top-16" aria-hidden="true"></span>
+      <span class="star w-1.5 h-1.5 opacity-80 right-[6%] top-4" aria-hidden="true"></span>
+      <span class="star w-1 h-1 bg-[#fde68a] opacity-80 left-[30%] bottom-12" aria-hidden="true"></span>
 
-          <div class="space-y-5 my-auto">
-            <button onclick="showScreen('screen-create-profile')" class="w-full py-4 px-6 bg-sky-600 hover:bg-sky-700 active:scale-[0.98] transition font-bold text-lg text-white rounded-2xl shadow-lg shadow-sky-600/25 flex items-center justify-center gap-2 border border-sky-500">
-              <i class="fa-solid fa-plus-circle"></i> Create Room
-            </button>
+      <div class="flex flex-col gap-7 min-w-0">
+        <span class="self-start inline-flex items-center gap-2 px-3.5 py-2 rounded-full text-sm font-semibold night-card text-[#a7f3d0]">
+          <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> Party online
+        </span>
+        <h1 class="font-display font-bold text-5xl sm:text-6xl xl:text-7xl leading-[0.98]">
+          Turn any get-together into a <span class="text-[#facc15]">game show.</span>
+        </h1>
+        <p class="text-lg sm:text-xl leading-relaxed text-[#c3cde3] max-w-xl">
+          Put Smallhours on the TV, everyone scans the code with their phone, and the room votes on what to play: quizzes, music rounds and card games for family nights and friend groups alike.
+        </p>
 
-            <form id="codeForm" class="bg-white/80 backdrop-blur-sm p-4 rounded-2xl border border-sky-200 space-y-3 shadow-sm">
-              <label for="room-code-input" class="block text-xs font-bold uppercase tracking-wider text-slate-500">
-                Join with Room Code
-              </label>
-              <div class="flex gap-2">
-                <input id="room-code-input" type="text" placeholder="e.g. AB12" autocomplete="off" spellcheck="false" class="w-full uppercase font-mono tracking-widest text-center px-4 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500 bg-white font-semibold text-slate-800" />
-                <button type="submit" class="px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl active:scale-95 transition shadow-sm">
-                  Join
-                </button>
-              </div>
-              <p id="codeError" class="hidden text-xs font-semibold text-red-600"></p>
-            </form>
-          </div>
+        <div class="w-full max-w-lg">
 
-          <div class="text-center pb-2 text-xs text-slate-500">
-            One shared screen, everyone plays from their phone.
-          </div>
-        </div>
-      </section>
+          <!-- ================= 1. LANDING ================= -->
+          <section id="screen-landing" class="screen-view active">
+            <div class="flex flex-col gap-3.5">
+              <button onclick="showScreen('screen-create-profile')" class="btn-sun w-full min-h-[58px] px-6 rounded-2xl font-extrabold text-lg flex items-center justify-center gap-2.5 transition active:scale-[0.98]">
+                <i class="fa-solid fa-plus"></i> Create a room
+              </button>
 
-      <!-- ================= 2. CREATE ROOM - SET NICKNAME ================= -->
-      <section id="screen-create-profile" class="screen-view w-full sm:max-w-sm">
-        <div class="device-screen bg-sky-100 sm:border-4 sm:border-white sm:rounded-[2.5rem] p-6 sm:shadow-xl relative overflow-hidden flex flex-col min-h-[calc(100vh-4rem)] sm:min-h-[640px] justify-between">
-          <div class="pt-4 flex items-center justify-between">
-            <button onclick="showScreen('screen-landing')" aria-label="Back" class="w-9 h-9 rounded-full bg-white/80 hover:bg-white text-slate-700 flex items-center justify-center shadow-sm">
-              <i class="fa-solid fa-arrow-left text-sm"></i>
-            </button>
-            <span class="text-xs font-bold text-sky-800 bg-white/60 px-3 py-1 rounded-full uppercase tracking-wider">Host Setup</span>
-            <div class="w-9"></div>
-          </div>
-
-          <div class="my-auto space-y-6">
-            <div class="text-center">
-              <div class="w-20 h-20 mx-auto rounded-3xl bg-sky-200 border-2 border-sky-300 flex items-center justify-center text-sky-600 mb-3 shadow-inner">
-                <i class="fa-solid fa-crown text-3xl"></i>
-              </div>
-              <h2 class="text-2xl font-bold font-display text-slate-800">Host New Room</h2>
-              <p class="text-xs text-slate-500 mt-1">Pick a handle so friends can identify you</p>
+              <form id="codeForm" class="night-card p-3.5 rounded-2xl">
+                <label for="room-code-input" class="block text-xs font-bold uppercase tracking-wider text-[#a9b6d3] mb-2">
+                  Got a room code?
+                </label>
+                <div class="flex gap-2.5">
+                  <input id="room-code-input" type="text" placeholder="e.g. AB12" autocomplete="off" spellcheck="false" class="night-input w-full uppercase font-display text-xl tracking-[0.25em] text-center px-4 min-h-[50px] rounded-xl font-semibold" />
+                  <button type="submit" class="btn-sky px-6 min-h-[50px] font-bold rounded-xl active:scale-95 transition">
+                    Join
+                  </button>
+                </div>
+                <p id="codeError" class="hidden mt-2 text-sm font-semibold text-[#fda4af]"></p>
+              </form>
+              <p class="text-sm text-[#a9b6d3]">One shared screen, everyone plays from their phone.</p>
             </div>
+          </section>
 
-            <form id="createForm" class="bg-white/85 p-5 rounded-2xl border border-sky-200 shadow-sm space-y-4">
-              <div>
-                <label for="create-username" class="block text-xs font-bold text-slate-700 mb-1.5 uppercase">Nickname:</label>
-                <div class="relative">
-                  <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-                    <i class="fa-regular fa-user"></i>
-                  </span>
-                  <input id="create-username" type="text" maxlength="20" autocomplete="off" spellcheck="false" class="nickname-input w-full pl-10 pr-4 py-3 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500 font-semibold text-slate-800" placeholder="Username" />
+          <!-- ================= 2. CREATE ROOM - SET NICKNAME ================= -->
+          <section id="screen-create-profile" class="screen-view">
+            <div class="night-card rounded-3xl p-5 sm:p-6 flex flex-col gap-5">
+              <div class="flex items-center gap-3">
+                <button onclick="showScreen('screen-landing')" aria-label="Back" class="w-11 h-11 rounded-full bg-[#0b1530] hover:bg-[#1b2e5c] text-white flex items-center justify-center shrink-0">
+                  <i class="fa-solid fa-arrow-left text-sm"></i>
+                </button>
+                <div class="w-12 h-12 rounded-2xl btn-sun flex items-center justify-center shrink-0">
+                  <i class="fa-solid fa-crown text-xl"></i>
+                </div>
+                <div class="min-w-0">
+                  <h2 class="font-display font-bold text-2xl leading-tight">Host a new room</h2>
+                  <p class="text-sm text-[#a9b6d3]">Pick a name so friends know it’s you</p>
                 </div>
               </div>
-              <p id="createError" class="hidden text-xs font-semibold text-red-600"></p>
-              <div class="grid grid-cols-2 gap-3 pt-2">
-                <button type="button" onclick="showScreen('screen-landing')" class="w-full py-3 px-4 bg-white hover:bg-slate-100 text-slate-700 font-bold rounded-xl border border-slate-300 transition text-sm">
-                  Back
-                </button>
-                <button type="submit" id="createBtn" class="w-full py-3 px-4 bg-sky-600 hover:bg-sky-700 disabled:opacity-60 text-white font-bold rounded-xl shadow-md shadow-sky-600/30 transition text-sm">
-                  Create
-                </button>
-              </div>
-            </form>
-          </div>
 
-          <div class="text-center text-xs text-slate-500 pb-2">
-            You'll be the room admin and can open the TV screen from the dashboard.
-          </div>
-        </div>
-      </section>
-
-      <!-- ================= 3. JOINING ROOM - SET NICKNAME ================= -->
-      <section id="screen-join-profile" class="screen-view w-full sm:max-w-sm">
-        <div class="device-screen bg-sky-100 sm:border-4 sm:border-white sm:rounded-[2.5rem] p-6 sm:shadow-xl relative overflow-hidden flex flex-col min-h-[calc(100vh-4rem)] sm:min-h-[640px] justify-between">
-          <div class="pt-4 flex items-center justify-between">
-            <button onclick="showScreen('screen-landing')" aria-label="Back" class="w-9 h-9 rounded-full bg-white/80 hover:bg-white text-slate-700 flex items-center justify-center shadow-sm">
-              <i class="fa-solid fa-arrow-left text-sm"></i>
-            </button>
-            <div class="text-center">
-              <span class="text-[11px] font-bold text-slate-500 block uppercase">Joining Room</span>
-              <span class="join-code-label font-mono font-bold text-sky-900 tracking-widest text-sm bg-sky-200/80 px-2.5 py-0.5 rounded-md">#----</span>
+              <form id="createForm" class="flex flex-col gap-4">
+                <div>
+                  <label for="create-username" class="block text-xs font-bold text-[#a9b6d3] mb-1.5 uppercase tracking-wider">Nickname</label>
+                  <div class="relative">
+                    <span class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-[#7f8db0]">
+                      <i class="fa-regular fa-user"></i>
+                    </span>
+                    <input id="create-username" type="text" maxlength="20" autocomplete="off" spellcheck="false" class="nickname-input night-input w-full pl-11 pr-4 min-h-[50px] rounded-xl font-semibold" placeholder="Username" />
+                  </div>
+                </div>
+                <p id="createError" class="hidden text-sm font-semibold text-[#fda4af]"></p>
+                <div class="grid grid-cols-2 gap-3">
+                  <button type="button" onclick="showScreen('screen-landing')" class="btn-ghost w-full min-h-[50px] px-4 font-bold rounded-xl transition">
+                    Back
+                  </button>
+                  <button type="submit" id="createBtn" class="btn-sun w-full min-h-[50px] px-4 font-extrabold rounded-xl transition disabled:opacity-60">
+                    Create
+                  </button>
+                </div>
+              </form>
+              <p class="text-sm text-[#a9b6d3]">You’ll be the room admin and can open the TV screen from the dashboard.</p>
             </div>
-            <div class="w-9"></div>
-          </div>
+          </section>
 
-          <div class="my-auto space-y-6">
-            <div class="text-center">
-              <div class="w-20 h-20 mx-auto rounded-3xl bg-amber-100 border-2 border-amber-300 flex items-center justify-center text-amber-600 mb-3 shadow-inner">
-                <i class="fa-solid fa-dice text-3xl"></i>
-              </div>
-              <h2 class="text-2xl font-bold font-display text-slate-800">Enter Player Name</h2>
-              <p class="text-xs text-slate-500 mt-1">Connecting to party room <span class="join-code-label font-semibold text-slate-700">#----</span></p>
-            </div>
-
-            <form id="joinForm" class="bg-white/85 p-5 rounded-2xl border border-sky-200 shadow-sm space-y-4">
-              <div>
-                <label for="join-username" class="block text-xs font-bold text-slate-700 mb-1.5 uppercase">Nickname:</label>
-                <div class="relative">
-                  <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-                    <i class="fa-regular fa-face-smile"></i>
-                  </span>
-                  <input id="join-username" type="text" maxlength="20" autocomplete="off" spellcheck="false" class="nickname-input w-full pl-10 pr-4 py-3 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500 font-semibold text-slate-800" placeholder="Username" />
+          <!-- ================= 3. JOINING ROOM - SET NICKNAME ================= -->
+          <section id="screen-join-profile" class="screen-view">
+            <div class="night-card rounded-3xl p-5 sm:p-6 flex flex-col gap-5">
+              <div class="flex items-center gap-3">
+                <button onclick="showScreen('screen-landing')" aria-label="Back" class="w-11 h-11 rounded-full bg-[#0b1530] hover:bg-[#1b2e5c] text-white flex items-center justify-center shrink-0">
+                  <i class="fa-solid fa-arrow-left text-sm"></i>
+                </button>
+                <div class="w-12 h-12 rounded-2xl btn-sky flex items-center justify-center shrink-0">
+                  <i class="fa-solid fa-dice text-xl"></i>
+                </div>
+                <div class="min-w-0">
+                  <h2 class="font-display font-bold text-2xl leading-tight">What’s your name?</h2>
+                  <p class="text-sm text-[#a9b6d3]">Joining room <span class="join-code-label font-display font-bold tracking-widest text-[#facc15]">#----</span></p>
                 </div>
               </div>
-              <p id="joinError" class="hidden text-xs font-semibold text-red-600"></p>
-              <div class="grid grid-cols-2 gap-3 pt-2">
-                <button type="button" onclick="showScreen('screen-landing')" class="w-full py-3 px-4 bg-white hover:bg-slate-100 text-slate-700 font-bold rounded-xl border border-slate-300 transition text-sm">
-                  Back
-                </button>
-                <button type="submit" class="w-full py-3 px-4 bg-sky-600 hover:bg-sky-700 text-white font-bold rounded-xl shadow-md shadow-sky-600/30 transition text-sm">
-                  Join
-                </button>
-              </div>
-            </form>
-          </div>
 
-          <div class="text-center text-xs text-slate-500 pb-2">
-            Your name is remembered on this device.
+              <form id="joinForm" class="flex flex-col gap-4">
+                <div>
+                  <label for="join-username" class="block text-xs font-bold text-[#a9b6d3] mb-1.5 uppercase tracking-wider">Nickname</label>
+                  <div class="relative">
+                    <span class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-[#7f8db0]">
+                      <i class="fa-regular fa-face-smile"></i>
+                    </span>
+                    <input id="join-username" type="text" maxlength="20" autocomplete="off" spellcheck="false" class="nickname-input night-input w-full pl-11 pr-4 min-h-[50px] rounded-xl font-semibold" placeholder="Username" />
+                  </div>
+                </div>
+                <p id="joinError" class="hidden text-sm font-semibold text-[#fda4af]"></p>
+                <div class="grid grid-cols-2 gap-3">
+                  <button type="button" onclick="showScreen('screen-landing')" class="btn-ghost w-full min-h-[50px] px-4 font-bold rounded-xl transition">
+                    Back
+                  </button>
+                  <button type="submit" class="btn-sky w-full min-h-[50px] px-4 font-extrabold rounded-xl transition">
+                    Join
+                  </button>
+                </div>
+              </form>
+              <p class="text-sm text-[#a9b6d3]">Your name is remembered on this device.</p>
+            </div>
+          </section>
+
+        </div>
+      </div>
+
+      <!-- Hero visual: the TV lobby with two phones -->
+      <div class="relative min-w-0 pt-4 pb-36 px-2 sm:px-6" aria-hidden="true">
+        <div class="tv-frame rounded-3xl p-3">
+          <div class="bg-[#13234a] rounded-xl p-5 sm:p-6 flex flex-col gap-4">
+            <div class="flex justify-between items-center gap-3">
+              <div class="flex flex-col gap-1">
+                <span class="text-[11px] font-bold text-[#a9b6d3] tracking-widest uppercase">Room code</span>
+                <span class="font-display font-bold text-4xl tracking-[0.18em] text-[#facc15] leading-none">7X95</span>
+              </div>
+              <span class="text-xs sm:text-sm font-semibold text-[#a7f3d0] bg-[#0e3b3a] px-3 py-1.5 rounded-full">5 players in</span>
+            </div>
+            <span class="font-display font-semibold text-xl">Vote for the next game</span>
+            <div class="grid grid-cols-2 gap-2.5">
+              <div class="game-card bg-[#38bdf8] rounded-2xl px-3.5 py-3 flex justify-between items-center"><span class="font-display font-bold text-base sm:text-lg">Quiz</span><span class="font-extrabold">3</span></div>
+              <div class="game-card bg-[#a78bfa] rounded-2xl px-3.5 py-3 flex justify-between items-center"><span class="font-display font-bold text-base sm:text-lg">Music Quiz</span><span class="font-extrabold">1</span></div>
+              <div class="game-card bg-[#facc15] rounded-2xl px-3.5 py-3 flex justify-between items-center"><span class="font-display font-bold text-base sm:text-lg">Palace</span><span class="font-extrabold">1</span></div>
+              <div class="bg-[#1b2e5c] text-[#dce3f2] rounded-2xl px-3.5 py-3 flex justify-between items-center"><span class="font-display font-bold text-base sm:text-lg">Gin Rummy</span><span class="font-extrabold">0</span></div>
+            </div>
           </div>
         </div>
-      </section>
+        <div class="w-28 h-2.5 mx-auto bg-[#050b1c] rounded-b-lg"></div>
 
-    </div>
+        <div class="phone-frame absolute left-0 bottom-0 w-32 rounded-[22px] p-1.5 -rotate-[8deg]">
+          <div class="bg-[#fb7185] text-[#0b1530] rounded-2xl px-2.5 py-3.5 flex flex-col items-center gap-2">
+            <span class="w-11 h-11 rounded-full bg-white flex items-center justify-center text-2xl">🦊</span>
+            <span class="font-extrabold text-sm">Mormor</span>
+            <span class="text-[11px] font-bold bg-[#0b1530] text-white rounded-full px-2.5 py-1">Voted Quiz</span>
+          </div>
+        </div>
+        <div class="phone-frame absolute right-0 bottom-3 w-32 rounded-[22px] p-1.5 rotate-[7deg]">
+          <div class="bg-[#34d399] text-[#0b1530] rounded-2xl px-2.5 py-3.5 flex flex-col items-center gap-2">
+            <span class="w-11 h-11 rounded-full bg-white flex items-center justify-center text-2xl">🦁</span>
+            <span class="font-extrabold text-sm">Alex</span>
+            <span class="text-[11px] font-bold bg-[#0b1530] text-white rounded-full px-2.5 py-1">Host · 0 pts</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= HOW IT WORKS ================= -->
+    <section id="how" class="bg-[#101d3f] border-y border-[#1e2e58]">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 lg:py-24 flex flex-col gap-12">
+        <div class="flex flex-col gap-3 items-center text-center">
+          <span class="text-sm font-bold text-[#facc15] uppercase tracking-[0.12em]">One screen, every phone</span>
+          <h2 class="font-display font-bold text-4xl sm:text-5xl leading-tight">Playing in under a minute</h2>
+        </div>
+        <ol class="grid sm:grid-cols-3 gap-5">
+          <li class="night-card rounded-3xl p-7 flex flex-col gap-3.5">
+            <span class="font-display font-bold text-sm text-[#0b1530] bg-[#38bdf8] rounded-full px-3 py-1 self-start">Step 1</span>
+            <h3 class="font-display font-semibold text-2xl">Open the TV screen</h3>
+            <p class="leading-relaxed text-[#c3cde3]">Create a room and put it on the big screen. A room code and QR code show up straight away.</p>
+          </li>
+          <li class="night-card rounded-3xl p-7 flex flex-col gap-3.5">
+            <span class="font-display font-bold text-sm text-[#0b1530] bg-[#a78bfa] rounded-full px-3 py-1 self-start">Step 2</span>
+            <h3 class="font-display font-semibold text-2xl">Scan &amp; pick an avatar</h3>
+            <p class="leading-relaxed text-[#c3cde3]">Everyone scans with their own phone, types a name and picks an avatar. Their phone is now the controller.</p>
+          </li>
+          <li class="night-card rounded-3xl p-7 flex flex-col gap-3.5">
+            <span class="font-display font-bold text-sm text-[#0b1530] bg-[#facc15] rounded-full px-3 py-1 self-start">Step 3</span>
+            <h3 class="font-display font-semibold text-2xl">Vote &amp; play</h3>
+            <p class="leading-relaxed text-[#c3cde3]">The room votes on the next game. The most-picked one starts, and the points start counting.</p>
+          </li>
+        </ol>
+      </div>
+    </section>
+
+    <!-- ================= GAMES ================= -->
+    <section id="games" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 lg:py-28 flex flex-col gap-12">
+      <div class="flex flex-wrap justify-between items-end gap-5">
+        <h2 class="font-display font-bold text-4xl sm:text-5xl leading-tight">Tonight’s line-up</h2>
+        <p class="text-lg leading-relaxed text-[#c3cde3] max-w-md">Big group or just the two of you: there’s a game that fits the room.</p>
+      </div>
+      <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
+        <article class="game-card bg-[#38bdf8] rounded-[28px] p-7 flex flex-col gap-4 min-h-[290px]">
+          <span class="game-icon w-14 h-14 rounded-2xl text-[#38bdf8] flex items-center justify-center text-2xl"><i class="fa-solid fa-circle-question"></i></span>
+          <h3 class="font-display font-bold text-3xl">Quiz</h3>
+          <p class="font-medium leading-normal">Pick a topic and race the clock. The fastest right answers win the most points.</p>
+          <span class="tag mt-auto self-start text-sm font-bold rounded-full px-3 py-1.5">Whole group</span>
+        </article>
+        <article class="game-card bg-[#a78bfa] rounded-[28px] p-7 flex flex-col gap-4 min-h-[290px]">
+          <span class="game-icon w-14 h-14 rounded-2xl text-[#a78bfa] flex items-center justify-center text-2xl"><i class="fa-solid fa-music"></i></span>
+          <h3 class="font-display font-bold text-3xl">Music Quiz</h3>
+          <p class="font-medium leading-normal">Hear the track and guess the hit. Grandparents versus grandkids, settled at last.</p>
+          <span class="tag mt-auto self-start text-sm font-bold rounded-full px-3 py-1.5">Whole group</span>
+        </article>
+        <article class="game-card bg-[#facc15] rounded-[28px] p-7 flex flex-col gap-4 min-h-[290px]">
+          <span class="game-icon w-14 h-14 rounded-2xl text-[#facc15] flex items-center justify-center text-2xl"><i class="fa-solid fa-crown"></i></span>
+          <h3 class="font-display font-bold text-3xl">Palace</h3>
+          <p class="font-medium leading-normal">Beat the pile, and don’t be the last one holding cards.</p>
+          <span class="tag mt-auto self-start text-sm font-bold rounded-full px-3 py-1.5">2–6 players</span>
+        </article>
+        <article class="game-card bg-[#fb7185] rounded-[28px] p-7 flex flex-col gap-4 min-h-[290px]">
+          <span class="game-icon w-14 h-14 rounded-2xl text-[#fb7185] flex items-center justify-center text-2xl"><i class="fa-solid fa-diamond"></i></span>
+          <h3 class="font-display font-bold text-3xl">Gin Rummy</h3>
+          <p class="font-medium leading-normal">Build sets and runs, then knock low. A calm card duel when the party winds down.</p>
+          <span class="tag mt-auto self-start text-sm font-bold rounded-full px-3 py-1.5">Card duel</span>
+        </article>
+      </div>
+    </section>
+
+    <!-- ================= GATHERINGS ================= -->
+    <section id="gatherings" class="gather">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 lg:py-28 grid lg:grid-cols-2 gap-14 items-start">
+        <div class="flex flex-col gap-5">
+          <span class="text-sm font-bold text-[#b45309] uppercase tracking-[0.12em]">Made for get-togethers</span>
+          <h2 class="font-display font-bold text-4xl sm:text-5xl leading-tight">Everyone at the table, nobody stuck on rules.</h2>
+          <p class="text-lg leading-relaxed gather-muted">Smallhours is built for rooms full of different people: the cousin who knows every song, the uncle who loves trivia, the kids who just want to press buttons.</p>
+          <div class="flex flex-wrap gap-2.5">
+            <span class="gather-chip px-4 py-2.5 rounded-full font-semibold">Family dinners</span>
+            <span class="gather-chip px-4 py-2.5 rounded-full font-semibold">Holidays</span>
+            <span class="gather-chip px-4 py-2.5 rounded-full font-semibold">Birthday parties</span>
+            <span class="gather-chip px-4 py-2.5 rounded-full font-semibold">Friday game night</span>
+            <span class="gather-chip px-4 py-2.5 rounded-full font-semibold">Office parties</span>
+            <span class="gather-chip px-4 py-2.5 rounded-full font-semibold">Cabin weekends</span>
+          </div>
+        </div>
+        <div class="grid sm:grid-cols-2 gap-4">
+          <div class="bg-white rounded-3xl p-6 flex flex-col gap-2.5">
+            <span class="w-11 h-11 rounded-2xl bg-sky-100 text-sky-700 flex items-center justify-center text-lg"><i class="fa-solid fa-mobile-screen"></i></span>
+            <h3 class="font-display font-semibold text-xl">Phones are the controllers</h3>
+            <p class="gather-muted leading-normal">Scan the QR code and play in the browser. No controllers to pass around.</p>
+          </div>
+          <div class="bg-white rounded-3xl p-6 flex flex-col gap-2.5">
+            <span class="w-11 h-11 rounded-2xl bg-violet-100 text-violet-700 flex items-center justify-center text-lg"><i class="fa-solid fa-square-poll-vertical"></i></span>
+            <h3 class="font-display font-semibold text-xl">The room decides</h3>
+            <p class="gather-muted leading-normal">Everyone votes on the next game, so the evening keeps moving without one person running it.</p>
+          </div>
+          <div class="bg-white rounded-3xl p-6 flex flex-col gap-2.5">
+            <span class="w-11 h-11 rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center text-lg"><i class="fa-solid fa-trophy"></i></span>
+            <h3 class="font-display font-semibold text-xl">Points all night</h3>
+            <p class="gather-muted leading-normal">Scores carry across games, so there’s a champion of the whole evening.</p>
+          </div>
+          <div class="bg-white rounded-3xl p-6 flex flex-col gap-2.5">
+            <span class="w-11 h-11 rounded-2xl bg-rose-100 text-rose-700 flex items-center justify-center text-lg"><i class="fa-solid fa-comments"></i></span>
+            <h3 class="font-display font-semibold text-xl">Party chat</h3>
+            <p class="gather-muted leading-normal">Trash talk, cheers and inside jokes, right next to the game.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= CTA ================= -->
+    <section class="px-4 sm:px-6 lg:px-8 py-20 lg:py-28">
+      <div class="relative overflow-hidden max-w-6xl mx-auto bg-[#facc15] text-[#0b1530] rounded-[40px] px-6 sm:px-10 py-16 sm:py-20 flex flex-col items-center gap-6 text-center">
+        <h2 class="relative font-display font-bold text-4xl sm:text-6xl leading-none max-w-3xl">Lights low. TV on. Let’s play.</h2>
+        <p class="relative text-lg sm:text-xl max-w-xl text-[#2b3350]">Start a room now and send the code to the group.</p>
+        <div class="relative flex flex-wrap gap-3 justify-center">
+          <a href="#" onclick="startFromCta(event, 'screen-create-profile')" class="bg-[#0b1530] text-white font-extrabold text-lg px-8 min-h-[56px] rounded-2xl inline-flex items-center">Create a room</a>
+          <a href="#" onclick="startFromCta(event, 'screen-landing')" class="border-2 border-[#0b1530] font-bold text-lg px-7 min-h-[56px] rounded-2xl inline-flex items-center">Join with a code</a>
+        </div>
+      </div>
+    </section>
   </main>
+
+  <footer class="max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 pb-12 flex flex-wrap justify-between gap-4 text-sm text-[#a9b6d3]">
+    <span class="font-display font-bold text-xl text-white">Smallhours</span>
+    <span>Party games best played in the small hours</span>
+    <span id="buildInfo" class="w-full text-xs opacity-80" title="Running version"></span>
+  </footer>
 
   <script>
     let joinCode = null;
@@ -188,6 +383,14 @@
         if (!input.value) input.value = savedName();
         input.focus();
       }
+    }
+
+    // Bottom call-to-action: scroll back up to the hero form
+    function startFromCta(e, id) {
+      e.preventDefault();
+      showScreen(id);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      if (id === 'screen-landing') codeInput.focus({ preventScroll: true });
     }
 
     function savedName() {
@@ -279,6 +482,29 @@
         btn.disabled = false;
       }
     }
+
+    // Footer: which build is running, e.g. "v2.1.0 · 2dbdd0b · built 7 Nov 2026, 14:02"
+    function renderBuildInfo(info) {
+      const el = document.getElementById('buildInfo');
+      if (!el || !info || !info.version) return;
+      el.textContent = 'v' + info.version;
+      if (info.shortCommit) {
+        const link = document.createElement('a');
+        link.href = 'https://github.com/small-hours-games/small-hours/commit/' + info.commit;
+        link.target = '_blank';
+        link.rel = 'noopener';
+        link.className = 'hover:text-white underline-offset-2 hover:underline';
+        link.textContent = info.shortCommit;
+        el.append(' · ', link);
+      }
+      if (info.builtAt) {
+        const built = new Date(info.builtAt);
+        const when = built.toLocaleString(undefined, { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+        el.append(' · built ' + when);
+        el.title = 'Built ' + built.toISOString();
+      }
+    }
+    fetch('/api/version').then(r => r.ok ? r.json() : null).then(renderBuildInfo).catch(() => {});
 
     // Deep link: /?code=XXXX jumps straight to the nickname step
     const preset = new URLSearchParams(location.search).get('code');

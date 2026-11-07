@@ -703,17 +703,25 @@ function nextHand(state, { playerId }) {
 function view(state, playerId) {
   const opponentId = state.players.find(id => id !== playerId);
   const discardTop = state.discard.length > 0 ? state.discard[state.discard.length - 1] : null;
-  const isMyTurn = state.players[state.currentPlayerIndex] === playerId;
+  const currentPlayer = state.players[state.currentPlayerIndex];
+  const isMyTurn = currentPlayer === playerId;
+  const playerCardCounts = Object.fromEntries(
+    state.players.map(id => [id, (state.hands[id] || []).length])
+  );
 
   const base = {
     phase: state.phase,
+    currentPlayer,
     isMyTurn,
     handNumber: state.handNumber,
     cumulative: state.cumulative,
     scores: { ...(state.finalScores || state.cumulative) },
     boxes: state.boxes,
     stockCount: state.stock.length,
+    discardCount: state.discard.length,
     discardTop,
+    discardPreview: state.discard.slice(-3),
+    playerCardCounts,
     winner: state.winner,
     turnPhase: state.turnPhase,
     events: (state.events || []).slice(-10),
@@ -722,16 +730,19 @@ function view(state, playerId) {
   // Play phases: hide opponent cards
   const playPhases = ['first_turn', 'first_turn_draw', 'drawing'];
   if (playPhases.includes(state.phase)) {
-    // canKnock only relevant during discard phase
-    let canKnock = false;
-    if (state.turnPhase === 'discard' && isMyTurn) {
-      const myResult = findOptimalMelds(state.hands[playerId] || []);
-      canKnock = myResult.deadwoodValue <= 10;
-    }
+    const myHand = state.hands[playerId] || [];
+    const myResult = myHand.length > 0
+      ? findOptimalMelds(myHand)
+      : { melds: [], deadwood: [], deadwoodValue: 0 };
+    const canKnock = state.turnPhase === 'discard' && isMyTurn && myResult.deadwoodValue <= 10;
 
     return {
       ...base,
-      myHand: state.hands[playerId] || [],
+      myHand,
+      myMelds: myResult.melds,
+      myDeadwood: myResult.deadwood,
+      myDeadwoodValue: myResult.deadwoodValue,
+      lastDrawnCardId: isMyTurn && state.turnPhase === 'discard' ? state.lastDrawnCardId : null,
       opponentCardCount: (state.hands[opponentId] || []).length,
       canKnock,
     };

@@ -5,6 +5,7 @@
 
 // Suit mapping: engine uses lowercase single char, SVGs use uppercase full name
 const SUIT_MAP = { h: 'HEART', d: 'DIAMOND', c: 'CLUB', s: 'SPADE' };
+const SUIT_SYMBOL_MAP = { h: '\u2665', d: '\u2666', c: '\u2663', s: '\u2660' };
 
 // Rank mapping: engine uses numeric, SVGs use number with face-card suffix
 const RANK_MAP = {
@@ -12,6 +13,23 @@ const RANK_MAP = {
   8: '8', 9: '9', 10: '10', 11: '11-JACK', 12: '12-QUEEN', 13: '13-KING',
   14: '1'  // Shithead uses rank 14 for Ace-high; maps to same SVG as rank 1
 };
+const RANK_LABEL_MAP = {
+  1: 'A', 2: '2', 3: '3', 4: '4', 5: '5', 6: '6', 7: '7',
+  8: '8', 9: '9', 10: '10', 11: 'J', 12: 'Q', 13: 'K', 14: 'A'
+};
+
+function cardRankLabel(rank) {
+  return RANK_LABEL_MAP[rank] || String(rank || '');
+}
+
+function cardSuitSymbol(suit) {
+  return SUIT_SYMBOL_MAP[suit] || '';
+}
+
+function formatCardShort(c) {
+  if (!c) return '';
+  return cardRankLabel(c.rank) + cardSuitSymbol(c.suit);
+}
 
 function cardSvgSrc(c) {
   var suit = SUIT_MAP[c.suit] || c.suit.toUpperCase();

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest';
-import { synthesizeSpeech } from '../../src/fetcher/gemini-tts.js';
+import { synthesizeSpeech, extractCleanPcm, wrapPcmAsWav } from '../../src/fetcher/gemini-tts.js';
 
 beforeEach(() => {
   vi.stubGlobal('fetch', vi.fn());
@@ -84,6 +84,50 @@ describe('synthesizeSpeech', () => {
       expect(body.contents[0].parts[0].text).toBe('Test text');
       expect(body.generationConfig.responseModalities).toEqual(['AUDIO']);
       expect(body.generationConfig.speechConfig.voiceConfig.prebuiltVoiceConfig.voiceName).toBe('Enceladus');
+    });
+
+    it('uses a deeper host voice and brisk delivery instructions for game-show narration', async () => {
+      mockApiResponse(SUCCESS_RESPONSE);
+      await synthesizeSpeech('What is the capital of France?', { style: 'game-show' });
+      const body = JSON.parse(fetch.mock.calls[0][1].body);
+      expect(body.generationConfig.speechConfig.voiceConfig.prebuiltVoiceConfig.voiceName).toBe('Charon');
+      expect(body.contents[0].parts[0].text).toContain('television quiz-show host');
+      expect(body.contents[0].parts[0].text).toContain('deeper, lower-pitched male voice');
+      expect(body.contents[0].parts[0].text).toContain('Do not add commentary, clues');
+      expect(body.contents[0].parts[0].text).toContain('Transcript:\nWhat is the capital of France?');
+    });
+
+    it('falls back to secondary Gemini TTS models when primary model returns 429', async () => {
+      fetch
+        .mockResolvedValueOnce({
+          ok: false,
+          status: 429,
+          text: () => Promise.resolve('Quota exceeded'),
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          json: () => Promise.resolve(SUCCESS_RESPONSE),
+          text: () => Promise.resolve(JSON.stringify(SUCCESS_RESPONSE)),
+        });
+
+      const result = await synthesizeSpeech('Question 3?', { style: 'game-show' });
+      expect(result.ok).toBe(true);
+      expect(fetch).toHaveBeenCalledTimes(2);
+      expect(fetch.mock.calls[0][0]).toContain('gemini-2.5-flash-preview-tts');
+      expect(fetch.mock.calls[1][0]).toContain('gemini-3.1-flash-tts-preview');
+    });
+
+    it('strips nested RIFF/WAVE header and trailing C2PA watermark chunk to prevent 0.3s white noise', () => {
+      const purePcm = Buffer.alloc(4800, 0x12);
+      const innerWav = wrapPcmAsWav(purePcm, 24000, 1, 16);
+      const c2paTail = Buffer.from('000017b86a756d62c2pa.editedApplied imperceptible SynthID watermark', 'latin1');
+      const gemini38Payload = Buffer.concat([innerWav, c2paTail]);
+
+      const cleaned = extractCleanPcm(gemini38Payload);
+      expect(cleaned.length).toBe(purePcm.length);
+      expect(cleaned.equals(purePcm)).toBe(true);
+      expect(cleaned.includes(Buffer.from('c2pa'))).toBe(false);
     });
 
     it('uses custom voice when provided', async () => {

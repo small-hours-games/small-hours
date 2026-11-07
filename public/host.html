@@ -15,18 +15,23 @@
   <link rel="stylesheet" href="/css/smallhours.css">
   <link rel="stylesheet" href="/css/host.css">
   <link rel="stylesheet" href="/css/light-lobby.css">
+  <link rel="icon" type="image/png" sizes="64x64" href="/images/smallhours-favicon.png">
+  <link rel="apple-touch-icon" href="/images/smallhours-icon.png">
 </head>
 <body class="light-lobby host-screen text-slate-800 font-sans min-h-screen flex flex-col">
 
+  <!-- Studio ambient spotlights (lobby only) -->
+  <div class="studio-spotlights" aria-hidden="true"></div>
+
   <!-- Top bar -->
-  <header class="bg-white/90 backdrop-blur-md border-b border-sky-100 sticky top-0 z-50">
+  <header class="studio-header bg-white/90 backdrop-blur-md border-b border-sky-100 sticky top-0 z-50">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
       <div class="flex items-center gap-3">
-        <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-sky-500 to-blue-600 flex items-center justify-center text-white shadow-md shadow-sky-500/20">
-          <i class="fa-solid fa-gamepad text-lg"></i>
-        </div>
-        <span class="font-display text-2xl font-bold tracking-tight text-slate-900">Smallhours</span>
-        <span id="headerInfo" class="hidden sm:inline-block ml-1 text-xs font-semibold px-2 py-0.5 rounded-full bg-sky-100 text-sky-700"></span>
+        <img class="brand-logo" src="/images/smallhours-logo.png" alt="Smallhours — Good games. Better together." width="1400" height="297">
+        <span class="studio-on-air-badge hidden md:inline-flex items-center gap-1.5">
+          <span class="studio-live-dot"></span> LIVE STUDIO
+        </span>
+        <span id="headerInfo" class="hidden sm:inline-block ml-1 text-xs font-extrabold px-3 py-1 rounded-full bg-sky-100 text-sky-800 border border-sky-200 shadow-sm"></span>
       </div>
       <div class="flex items-center gap-3">
         <!-- Connection status (in the header so it never covers the Sound button) -->
@@ -44,34 +49,47 @@
     <div id="lobbyView" class="w-full max-w-7xl grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)_minmax(0,1fr)] items-start">
 
       <section class="invite-panel lobby-panel device-screen bg-sky-100 border-4 border-white rounded-[2.5rem] p-6 flex flex-col items-center text-center">
-        <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-white/70 text-sky-800 border border-sky-200">
-          <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> Party Online
+        <span class="studio-vip-pill inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full text-xs font-extrabold">
+          <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> JOIN THE GAME SHOW
         </span>
-        <p class="mt-5 text-xs font-bold uppercase tracking-wider text-slate-500">Join with Room Code</p>
-        <div class="font-mono font-bold text-6xl tracking-[0.2em] text-sky-900 bg-white/80 border border-sky-200 rounded-2xl px-5 py-3 mt-2 shadow-sm" id="roomCode">----</div>
-        <div id="qrContainer" class="mt-5 bg-white p-2 rounded-2xl border border-sky-200 shadow-sm w-[180px] h-[180px] flex items-center justify-center"></div>
-        <p class="mt-4 text-xs text-slate-500">Scan or open</p>
-        <p class="text-sm font-semibold text-sky-800 break-all" id="joinUrl"></p>
-        <div class="invite-foot"><div class="lobby-mascots" aria-hidden="true"><span>🐸</span><span>🦊</span><span>🦁</span></div><p>Good games.<br>Better together.</p></div>
+        <p class="mt-3 text-xs font-extrabold uppercase tracking-widest text-slate-500">Room Code</p>
+        <div class="studio-room-code font-mono font-bold text-6xl tracking-[0.2em] text-sky-900 bg-white border-2 border-sky-200 rounded-2xl px-5 py-3 mt-1.5" id="roomCode">----</div>
+        <div class="qr-stage-frame mt-3">
+          <span class="qr-scan-ribbon">📱 SCAN WITH PHONE</span>
+          <div id="qrContainer" class="bg-white p-2 rounded-2xl border border-sky-200 shadow-sm w-[180px] h-[180px] flex items-center justify-center"></div>
+        </div>
+        <p class="text-sm font-bold text-sky-900 break-all mt-2" id="joinUrl"></p>
+        <div class="join-steps-row" aria-hidden="true">
+          <span class="join-step-pill"><b>1</b> Scan QR</span>
+          <span class="join-step-pill"><b>2</b> Pick Avatar</span>
+          <span class="join-step-pill"><b>3</b> Vote!</span>
+        </div>
+        <div class="invite-foot"><p>Good games.<br>Better together.</p></div>
       </section>
 
       <section class="vote-panel lobby-panel device-screen bg-sky-100 border-4 border-white rounded-[2.5rem] p-6 flex flex-col gap-4">
-        <div class="flex items-center justify-between pb-3 border-b border-sky-200">
-          <h2 class="font-display font-bold text-2xl text-slate-800" id="voteTitle">Vote for next activity</h2>
-          <span class="text-xs bg-emerald-100 text-emerald-800 font-semibold px-2 py-0.5 rounded-full border border-emerald-200" id="voteCount">0 votes</span>
+        <div class="studio-panel-head flex items-center justify-between pb-3 border-b border-sky-200">
+          <div class="flex items-center gap-2.5">
+            <span class="studio-panel-icon" aria-hidden="true">🎬</span>
+            <h2 class="font-display font-bold text-2xl text-slate-800" id="voteTitle">Vote for next activity</h2>
+          </div>
+          <span class="studio-count-pill text-xs bg-emerald-100 text-emerald-800 font-extrabold px-3 py-1 rounded-full border border-emerald-300" id="voteCount">0 votes</span>
         </div>
         <div id="hostVotes" class="space-y-2.5"></div>
-        <p class="text-xs text-slate-500 text-center" id="voteHint">Wish for a game on your phone. The most picked game is chosen and the next phase begins.</p>
+        <p class="text-xs text-slate-500 text-center font-medium" id="voteHint">Wish for a game on your phone. The most picked game is chosen and the next phase begins.</p>
       </section>
 
       <div class="lobby-right-column">
       <section class="players-panel lobby-panel device-screen bg-sky-100 border-4 border-white rounded-[2.5rem] p-6 flex flex-col gap-3">
-        <div class="flex items-center justify-between pb-3 border-b border-sky-200">
-          <h2 class="font-display font-bold text-2xl text-slate-800">Players</h2>
-          <span class="text-xs text-slate-500 font-semibold" id="playerCount">(0)</span>
+        <div class="studio-panel-head flex items-center justify-between pb-3 border-b border-sky-200">
+          <div class="flex items-center gap-2">
+            <span class="studio-panel-icon" aria-hidden="true">🌟</span>
+            <h2 class="font-display font-bold text-2xl text-slate-800">Contestants</h2>
+          </div>
+          <span class="studio-count-pill text-xs text-sky-800 bg-sky-100 border border-sky-200 px-2.5 py-1 rounded-full font-extrabold" id="playerCount">(0)</span>
         </div>
         <div class="space-y-1.5" id="playerGrid">
-          <div class="text-sm text-slate-500">Waiting for players to join...</div>
+          <div class="studio-empty-players text-sm text-slate-500">Waiting for players to join... Scan the QR code on your phone!</div>
         </div>
       </section>
       <div id="lobbyChatMount"></div>
@@ -118,6 +136,9 @@
   </div>
 
 
+  <!-- 3D Lion vs. Frog Card-Stack Duel Stage (strictly bounded right of .invite-panel) -->
+  <div id="mascotDuelStage" class="mascot-duel-stage" aria-hidden="true"></div>
+
   <!-- Toast container -->
   <div class="toast-container" id="toasts"></div>
 
@@ -126,6 +147,8 @@
   <script src="/js/quiz-ready.js"></script>
   <script src="/js/music-fade.js"></script>
   <script src="/js/lobby-music.js"></script>
+  <script src="/js/quiz-narrator.js"></script>
+  <script src="/js/mascot-duel.js"></script>
   <script>
     // --- State ---
     const AVATARS = ['&#128056;', '&#128049;', '&#129412;', '&#128029;', '&#128025;', '&#129418;', '&#128039;', '&#129409;',
@@ -149,9 +172,13 @@
 
     // Mute toggle
     let isMuted = false;
+    const quizNarrator = createQuizNarrator();
+    document.addEventListener('pointerdown', () => quizNarrator.retry());
+    document.addEventListener('keydown', () => quizNarrator.retry());
     const lobbyMusic = createLobbyMusic(new Audio(), playing => {
       document.body.classList.toggle('lobby-music-playing', playing);
     });
+    const mascotDuel = typeof createMascotDuel === 'function' ? createMascotDuel() : null;
     document.addEventListener('pointerdown', () => lobbyMusic.retry());
     document.addEventListener('keydown', () => lobbyMusic.retry());
     function toggleMute() {
@@ -159,6 +186,7 @@
       document.getElementById('muteBtn').textContent = isMuted ? '\uD83D\uDD07 Muted' : '\uD83D\uDD0A Sound';
       if (musicAudio) musicAudio.muted = isMuted;
       lobbyMusic.setMuted(isMuted);
+      quizNarrator.setMuted(isMuted);
       if (isMuted) {
         audio._origPlay = audio._origPlay || audio.play;
         audio.play = () => {};
@@ -205,6 +233,7 @@
         new QRCode(qrContainer, { text: joinUrl, width: 164, height: 164, colorDark: '#000000', colorLight: '#ffffff' });
       }
 
+      if (mascotDuel) mascotDuel.start();
       connect();
     })();
 
@@ -338,7 +367,7 @@
       document.getElementById('playerCount').textContent = online + ' in lobby';
 
       if (state.players.length === 0) {
-        grid.innerHTML = '<div class="text-sm text-slate-500">Waiting for players to join...</div>';
+        grid.innerHTML = '<div class="studio-empty-players text-sm text-slate-500">Waiting for players to join... Scan the QR code on your phone!</div>';
         return;
       }
 
@@ -346,15 +375,24 @@
       const ranked = [...state.players].sort((a, b) => (b.sessionScore || 0) - (a.sessionScore || 0));
       grid.innerHTML = ranked.map((p, i) => {
         const voted = suggestions[p.playerId];
-        const crown = p.isAdmin ? '<i class="fa-solid fa-crown text-amber-500 text-xs"></i>' : '';
-        return '<div class="flex justify-between items-center py-2 px-3 rounded-xl ' +
-            (i === 0 && p.sessionScore ? 'bg-white text-slate-800' : 'bg-white/60 text-slate-700') + (p.connected === false ? ' opacity-50' : '') + '">' +
-          '<span class="flex items-center gap-2 min-w-0 font-semibold">' +
-            '<span class="lobby-player-avatar">' + escapeHtml(p.avatar || '') + '</span>' + crown +
-            '<span class="truncate">' + escapeHtml(p.username || p.name) + '</span>' +
-            (voted ? '<span class="text-sm" title="Voted ' + escapeHtml(shGame(voted).label) + '">' + shGame(voted).icon + '</span>' : '') +
+        const isLeader = i === 0 && (p.sessionScore || 0) > 0;
+        const crown = p.isAdmin ? '<span class="contestant-host-pill" title="Room Host">👑 HOST</span>' : '';
+        const votedBadge = voted
+          ? '<span class="contestant-vote-pill" title="Voted ' + escapeHtml(shGame(voted).label) + '">' + shGame(voted).icon + '</span>'
+          : '';
+        return '<div class="studio-contestant-card flex justify-between items-center py-2 px-3 rounded-xl ' +
+            (isLeader ? 'is-score-leader bg-white text-slate-800' : 'bg-white/80 text-slate-700') +
+            (p.connected === false ? ' opacity-50' : '') + '">' +
+          '<span class="flex items-center gap-2.5 min-w-0 font-semibold">' +
+            '<span class="lobby-player-avatar">' +
+              '<span class="lobby-avatar-glyph">' + escapeHtml(p.avatar || '🎮') + '</span>' +
+              '<span class="contestant-online-dot' + (p.connected === false ? ' is-offline' : '') + '"></span>' +
+            '</span>' +
+            '<span class="truncate font-bold text-slate-800">' + escapeHtml(p.username || p.name) + '</span>' +
+            crown +
+            votedBadge +
           '</span>' +
-          '<span class="font-bold text-sky-700 shrink-0">' + (p.sessionScore || 0) + ' pts</span>' +
+          '<span class="contestant-score-pill font-bold text-sky-700 shrink-0">' + (p.sessionScore || 0) + ' pts</span>' +
         '</div>';
       }).join('');
     }
@@ -383,7 +421,7 @@
         Object.values(lobby.gameSuggestions || {}).forEach(g => { counts[g] = (counts[g] || 0) + 1; });
         total = Object.values(counts).reduce((s, n) => s + n, 0);
         rows = SH_GAMES.filter(g => g.hasUi || counts[g.type])
-          .map(g => ({ type: g.type, blurb: g.blurb, icon: g.icon, label: g.label, count: counts[g.type] || 0, leader: g.type === lobby.leadingGame }))
+          .map(g => ({ type: g.type, blurb: g.blurb, players: g.players, icon: g.icon, label: g.label, count: counts[g.type] || 0, leader: g.type === lobby.leadingGame }))
           .sort((a, b) => b.leader - a.leader || b.count - a.count);
       }
 
@@ -391,12 +429,17 @@
       const leadCount = Math.max(0, ...rows.map(r => r.count));
       list.innerHTML = rows.map(r => {
         const leading = r.leader || (lobby.votingActive && r.count > 0 && r.count === leadCount);
+        const pct = total > 0 ? Math.round((r.count / total) * 100) : 0;
+        const playersTag = r.players ? '<span class="lobby-game-players-pill">' + escapeHtml(r.players) + 'p</span>' : '';
         return '<div class="lobby-game-option' + (leading ? ' is-selected' : '') + '" data-game="' + escapeHtml(r.type || 'category') + '">' +
           '<span class="lobby-game-icon" aria-hidden="true">' + r.icon + '</span>' +
-          '<div class="lobby-game-info"><div class="lobby-game-name">' + escapeHtml(r.label) + '</div>' +
-          '<div class="lobby-game-description">' + escapeHtml(r.blurb || 'Choose this topic on your phone') + '</div></div>' +
+          '<div class="lobby-game-info">' +
+            '<div class="lobby-game-title-row"><div class="lobby-game-name">' + escapeHtml(r.label) + '</div>' + playersTag + '</div>' +
+            '<div class="lobby-game-description">' + escapeHtml(r.blurb || 'Choose this topic on your phone') + '</div>' +
+            '<div class="lobby-vote-bar" aria-hidden="true"><div class="lobby-vote-bar-fill" style="width:' + pct + '%"></div></div>' +
+          '</div>' +
           '<div class="lobby-vote-side"><span class="lobby-vote-count">' + r.count + '</span>' +
-          (leading ? '<span class="lobby-leading-label">Most picked</span>' : '') + '</div></div>';
+          (leading ? '<span class="lobby-leading-label">★ Most picked</span>' : '') + '</div></div>';
       }).join('');
     }
 
@@ -411,6 +454,8 @@
 
     // --- Render: Game ---
     function showGameView(msg) {
+      quizNarrator.stop();
+      if (mascotDuel) mascotDuel.setLobbyActive(false);
       placePartyChat(true);
       lobbyMusic.setActive(false);
       state.gameEvents = [];
@@ -428,7 +473,7 @@
         'quiz': 'Quiz Time',
         'music-quiz': 'Music Quiz',
         'spy': 'Spy Game',
-        'shithead': 'Shithead',
+        'shithead': 'Palace',
         'question-form': 'Question Form',
         'gin-rummy': 'Gin Rummy',
         'hilow': 'Högt/Lågt',
@@ -672,6 +717,7 @@
       if (storyAudio) storyAudio.pause();
       if (msg.phase !== 'countdown') stopQuizReadyCountdown();
       syncMusic(msg);
+      quizNarrator.sync({ ...msg, gameType: state.gameType });
       if (msg.phase !== 'question') stopHostCountdown();
 
       // Progress indicator ("Question 3 of 10")
@@ -702,9 +748,13 @@
 
       if (msg.phase === 'question') {
         const q = msg.question || {};
+        const imageHtml = q.image && !q.media
+          ? '<div class="quiz-image-wrap"><img src="' + escapeHtml(q.image) + '" alt="" class="quiz-question-image" loading="eager" onerror="this.parentElement.style.display=\'none\'"></div>'
+          : '';
         // One countdown only: the bar under the game title plus the seconds badge in the header
         let html = '<div class="quiz-display question-phase">' +
           '<div class="quiz-question-text">' + escapeHtml(q.text || '') + '</div>' +
+          imageHtml +
           musicPanel(msg) +
           '<div class="quiz-answers-display">';
 
@@ -730,8 +780,12 @@
       } else if (msg.phase === 'reveal') {
         timerContainer.style.display = 'none';
         const q = msg.question || {};
+        const imageHtml = q.image && !q.media
+          ? '<div class="quiz-image-wrap"><img src="' + escapeHtml(q.image) + '" alt="" class="quiz-question-image" loading="eager" onerror="this.parentElement.style.display=\'none\'"></div>'
+          : '';
         let html = '<div class="quiz-display reveal-phase">' +
           '<div class="quiz-question-text">' + escapeHtml(q.text || '') + '</div>' +
+          imageHtml +
           musicPanel(msg) +
           '<div class="quiz-answers-display">';
 
@@ -763,20 +817,22 @@
     function renderSpy(msg) {
       const content = document.getElementById('gameContent');
       const round = msg.round || '?';
-      const clues = msg.clues || [];
+      const names = msg.playerNames || {};
+      // Engine sends clues as { playerId: text }; the secret word only arrives at reveal.
+      const clues = Object.entries(msg.clues || {}).map(([id, text]) => ({ name: names[id] || 'Player', text }));
 
       let html = '<div class="spy-display">' +
         '<div class="spy-round-title">Round ' + round + '</div>';
 
-      if (msg.phase === 'clue') {
+      if (msg.phase === 'clues') {
         html += '<p class="text-secondary">Players are giving clues...</p>';
       } else if (msg.phase === 'guess') {
         html += '<p class="text-secondary">The spy is guessing the word...</p>';
-      } else if (msg.phase === 'reveal') {
+      } else if (msg.phase === 'reveal' || msg.phase === 'score') {
         html += '<p style="font-size:1.5rem;margin:16px 0;">The word was: <strong style="color:var(--neon-green);">' +
-          escapeHtml(msg.word || '???') + '</strong></p>';
-        if (msg.spyName) {
-          html += '<p>The spy was: <strong style="color:var(--neon-pink);">' + escapeHtml(msg.spyName) + '</strong></p>';
+          escapeHtml(msg.revealedWord || '???') + '</strong></p>';
+        if (msg.spy) {
+          html += '<p>The spy was: <strong style="color:var(--neon-pink);">' + escapeHtml(names[msg.spy] || 'Player') + '</strong></p>';
         }
       }
 
@@ -874,6 +930,58 @@
       }
     }
 
+    function renderTvStackVisual(cards, totalCount, opts) {
+      opts = opts || {};
+      const w = opts.width || 120;
+      const h = opts.height || 168;
+      const count = totalCount || 0;
+      if (count <= 0) {
+        return '<div class="tv-stack-3d" style="width:' + (w + 18) + 'px;height:' + (h + 18) + 'px;">' +
+          '<div class="pile-empty" style="width:' + w + 'px;height:' + h + 'px;" aria-label="Empty pile">' + (opts.emptyLabel || 'Empty') + '</div>' +
+        '</div>';
+      }
+      const isFacedown = !!opts.facedown;
+      const layerCount = Math.min(3, Math.max(0, count - 1));
+      const preview = Array.isArray(cards) ? cards : (cards ? [cards] : []);
+      let html = '<div class="tv-stack-3d" style="width:' + (w + 18) + 'px;height:' + (h + 18) + 'px;">';
+
+      for (let i = layerCount; i >= 1; i--) {
+        const dx = -i * 2;
+        const dy = i * 2;
+        const rot = (i % 2 === 0 ? 1 : -1) * (i * 0.4);
+        const layerCard = (!isFacedown && preview.length > i) ? preview[preview.length - 1 - i] : { rank: 0, suit: 'x' };
+        html += renderCardImg(layerCard, {
+          width: w,
+          height: h,
+          facedown: isFacedown || !layerCard.suit || layerCard.suit === 'x',
+          className: 'stack-layer-card',
+          style: 'width:' + w + 'px;height:' + h + 'px;transform:translate(' + dx + 'px,' + dy + 'px) rotate(' + rot + 'deg);opacity:' + (0.88 - i * 0.12) + ';'
+        });
+      }
+
+      const topCard = preview.length > 0 ? preview[preview.length - 1] : { rank: 0, suit: 'x' };
+      html += '<div class="pile-top-card" style="position:relative;z-index:5;">' +
+        renderCardImg(topCard, {
+          width: w,
+          height: h,
+          facedown: isFacedown,
+          pileCard: !isFacedown,
+          style: 'width:' + w + 'px;height:' + h + 'px;'
+        }) +
+      '</div>';
+      html += '</div>';
+      return html;
+    }
+
+    function shitheadRuleHintText(pileTopRank, pileCount) {
+      if (!pileCount) return 'Empty pile — any card can be played';
+      const top = pileTopRank == null ? null : Number(pileTopRank);
+      if (top == null || isNaN(top)) return '2 resets (wild) • 10 burns pile';
+      const rankLbl = typeof cardRankLabel === 'function' ? cardRankLabel(top) : String(top);
+      if (top === 7) return 'Top is 7 — play 7 or lower (2 resets, 10 burns)';
+      return 'Beat or match ' + rankLbl + '+ (2 resets, 7 lowers, 10 burns)';
+    }
+
     function renderGinRummy(msg) {
       const content = document.getElementById('gameContent');
       const names = state.playerNames || msg.playerNames || {};
@@ -903,31 +1011,62 @@
 
       let html = '<div style="text-align:center;">';
 
-      // Scores bar
-      html += '<div style="display:flex;justify-content:center;gap:40px;margin:16px 0;">';
+      // Hand info
+      if (msg.handNumber) {
+        html += '<div style="color:var(--text-secondary);font-size:1rem;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;margin:4px 0 10px;">Hand ' + msg.handNumber + '</div>';
+      }
+
+      // Player seats row with scores, boxes, turn status, and visual mini card fan
+      html += '<div class="gr-seats-row">';
       pids.forEach(pid => {
-        html += '<div>' +
-          '<div style="font-size:1.1rem;font-weight:700;color:var(--text-primary);">' + escapeHtml(names[pid] || pid) + '</div>' +
-          '<div style="font-size:2rem;font-weight:900;color:var(--neon-blue);">' + (cum[pid] || 0) + '</div>' +
-          '<div style="font-size:0.8rem;color:var(--text-secondary);">' + (boxes[pid] || 0) + ' boxes</div>' +
-        '</div>';
+        const isCurrent = msg.currentPlayer === pid && msg.phase !== 'scoring' && msg.phase !== 'finished';
+        const cardCount = (msg.playerCardCounts && msg.playerCardCounts[pid] != null) ? msg.playerCardCounts[pid] : 10;
+        let turnTag = '';
+        if (isCurrent) {
+          const actionLabel = msg.phase === 'first_turn'
+            ? 'Upcard Decision'
+            : (msg.turnPhase === 'draw' ? 'Drawing...' : 'Discarding / Knock');
+          turnTag = '<span class="tv-stack-count-badge accent" style="font-size:0.78rem;padding:3px 10px;">▶ ' + actionLabel + '</span>';
+        }
+        html += '<div class="gr-seat-panel' + (isCurrent ? ' current-turn' : '') + '">' +
+          '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">' +
+            '<div style="font-size:1.15rem;font-weight:800;color:var(--text-primary);">' + playerAvatarHtml(pid) + escapeHtml(names[pid] || pid) + '</div>' +
+            turnTag +
+          '</div>' +
+          '<div style="display:flex;justify-content:space-between;align-items:baseline;margin-top:4px;">' +
+            '<div><span style="font-size:2rem;font-weight:900;color:var(--neon-blue);">' + (cum[pid] || 0) + '</span> <span style="font-size:0.8rem;color:var(--text-secondary);">pts</span></div>' +
+            '<div style="font-size:0.85rem;color:var(--text-secondary);font-weight:600;">' + (boxes[pid] || 0) + ' boxes • ' + cardCount + ' cards</div>' +
+          '</div>';
+        if (msg.phase !== 'scoring' && msg.phase !== 'finished' && cardCount > 0) {
+          const fanCount = Math.min(11, cardCount);
+          html += '<div class="gr-hand-fan-mini" aria-label="' + cardCount + ' cards in hand">';
+          for (let i = 0; i < fanCount; i++) {
+            html += renderCardImg({ rank: 0, suit: 'x' }, { width: 26, height: 38, facedown: true });
+          }
+          html += '</div>';
+        }
+        html += '</div>';
       });
       html += '</div>';
 
-      // Hand info
-      if (msg.handNumber) {
-        html += '<div style="color:var(--text-secondary);font-size:1rem;margin:8px 0;">Hand ' + msg.handNumber + '</div>';
-      }
+      // Table Arena: Stock 3D stack + Discard 3D stack
+      const discardCount = msg.discardCount != null ? msg.discardCount : (msg.discardTop ? 1 : 0);
+      const discardPreview = (msg.discardPreview && msg.discardPreview.length > 0)
+        ? msg.discardPreview
+        : (msg.discardTop ? [msg.discardTop] : []);
 
-      // Table: stock + discard
-      html += '<div style="display:flex;justify-content:center;gap:40px;margin:16px 0;align-items:center;">';
-      html += '<div><div style="font-size:0.85rem;color:var(--text-secondary);">Stock</div><div style="font-size:1.8rem;font-weight:700;">' + (msg.stockCount || 0) + '</div></div>';
-      if (msg.discardTop) {
-        html += '<div><div style="font-size:0.85rem;color:var(--text-secondary);">Discard</div>' + renderCardImg(msg.discardTop, {width: 68, height: 96, pileCard: true}) + '</div>';
-      } else {
-        html += '<div><div style="font-size:0.85rem;color:var(--text-secondary);">Discard</div><div style="color:var(--text-secondary);">Empty</div></div>';
-      }
-      html += '</div>';
+      html += '<div class="tv-table-arena">' +
+        '<div class="tv-stack-card">' +
+          '<div class="tv-stack-label">Stock Pile</div>' +
+          renderTvStackVisual(null, msg.stockCount || 0, { width: 112, height: 156, facedown: true, emptyLabel: '0' }) +
+          '<div class="tv-stack-count-badge">Stock: ' + (msg.stockCount || 0) + ' cards</div>' +
+        '</div>' +
+        '<div class="tv-stack-card">' +
+          '<div class="tv-stack-label">Discard Pile</div>' +
+          renderTvStackVisual(discardPreview, discardCount, { width: 112, height: 156, facedown: false, emptyLabel: 'Empty' }) +
+          '<div class="tv-stack-count-badge accent">Discard: ' + discardCount + (msg.discardTop && typeof formatCardShort === 'function' ? ' (' + formatCardShort(msg.discardTop) + ')' : '') + '</div>' +
+        '</div>' +
+      '</div>';
 
       // Phase / turn
       if (msg.phase === 'scoring') {
@@ -939,10 +1078,10 @@
           const typeLabels = { knock: 'Knock', undercut: 'Undercut!', gin: 'GIN!', bigGin: 'BIG GIN!' };
           const typeColors = { knock: 'var(--neon-blue)', undercut: 'var(--neon-pink)', gin: 'var(--neon-green)', bigGin: 'var(--neon-green)' };
           html += '<div style="font-size:1.8rem;font-weight:700;color:' + (typeColors[hr.type] || 'var(--text-primary)') + ';margin:12px 0;">' + (typeLabels[hr.type] || hr.type) + '</div>';
-          html += '<div style="font-size:1.3rem;">' + escapeHtml(winnerName) + ' wins +' + (hr.points || 0) + '</div>';
+          html += '<div style="font-size:1.3rem;font-weight:700;">' + escapeHtml(winnerName) + ' wins +' + (hr.points || 0) + ' pts</div>';
         }
 
-        // Show melds
+        // Show melds with larger cards
         if (msg.knockerMelds) {
           const knockerName = names[msg.knocker] || msg.knocker;
           const oppId = pids.find(id => id !== msg.knocker);
@@ -950,22 +1089,34 @@
 
           html += '<div style="display:flex;gap:24px;justify-content:center;flex-wrap:wrap;margin-top:16px;">';
           // Knocker melds
-          html += '<div class="card" style="padding:12px;min-width:200px;"><div style="font-size:0.85rem;color:var(--text-secondary);margin-bottom:8px;">' + escapeHtml(knockerName) + '</div>';
+          html += '<div class="card" style="padding:14px 18px;min-width:240px;">' +
+            '<div style="font-size:0.95rem;font-weight:700;color:var(--text-primary);margin-bottom:10px;">' + escapeHtml(knockerName) + ' (Knocker)</div>' +
+            '<div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center;">';
           (msg.knockerMelds || []).forEach(m => {
-            html += '<div style="display:flex;gap:2px;margin-bottom:4px;">' + m.cards.map(c => renderCardImg(c, {width: 40, height: 56})).join('') + '</div>';
+            html += '<div style="display:flex;gap:3px;padding:6px;background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.3);border-radius:10px;">' +
+              m.cards.map(c => renderCardImg(c, {width: 52, height: 74})).join('') + '</div>';
           });
+          html += '</div>';
           if (msg.knockerDeadwood && msg.knockerDeadwood.length > 0) {
-            html += '<div style="font-size:0.75rem;color:var(--text-secondary);margin-top:6px;">Deadwood: ' + msg.knockerDeadwood.map(c => renderCardImg(c, {width: 36, height: 50})).join('') + '</div>';
+            html += '<div style="font-size:0.8rem;color:var(--text-secondary);margin-top:8px;">Deadwood (' + (hr.knockerDeadwood ?? '') + ' pts): ' +
+              '<div style="display:inline-flex;gap:3px;vertical-align:middle;margin-left:4px;">' +
+              msg.knockerDeadwood.map(c => renderCardImg(c, {width: 44, height: 62})).join('') + '</div></div>';
           }
           html += '</div>';
 
           // Opponent melds
-          html += '<div class="card" style="padding:12px;min-width:200px;"><div style="font-size:0.85rem;color:var(--text-secondary);margin-bottom:8px;">' + escapeHtml(oppName) + '</div>';
+          html += '<div class="card" style="padding:14px 18px;min-width:240px;">' +
+            '<div style="font-size:0.95rem;font-weight:700;color:var(--text-primary);margin-bottom:10px;">' + escapeHtml(oppName) + '</div>' +
+            '<div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center;">';
           (msg.opponentMelds || []).forEach(m => {
-            html += '<div style="display:flex;gap:2px;margin-bottom:4px;">' + m.cards.map(c => renderCardImg(c, {width: 40, height: 56})).join('') + '</div>';
+            html += '<div style="display:flex;gap:3px;padding:6px;background:rgba(13,148,136,0.08);border:1px solid rgba(13,148,136,0.3);border-radius:10px;">' +
+              m.cards.map(c => renderCardImg(c, {width: 52, height: 74})).join('') + '</div>';
           });
+          html += '</div>';
           if (msg.opponentDeadwood && msg.opponentDeadwood.length > 0) {
-            html += '<div style="font-size:0.75rem;color:var(--text-secondary);margin-top:6px;">Deadwood: ' + msg.opponentDeadwood.map(c => renderCardImg(c, {width: 36, height: 50})).join('') + '</div>';
+            html += '<div style="font-size:0.8rem;color:var(--text-secondary);margin-top:8px;">Deadwood (' + (hr.opponentDeadwood ?? '') + ' pts): ' +
+              '<div style="display:inline-flex;gap:3px;vertical-align:middle;margin-left:4px;">' +
+              msg.opponentDeadwood.map(c => renderCardImg(c, {width: 44, height: 62})).join('') + '</div></div>';
           }
           html += '</div>';
           html += '</div>';
@@ -977,15 +1128,15 @@
           html += '<div style="font-size:1.5rem;color:var(--neon-blue);">' + escapeHtml(names[winner] || winner) + ' wins!</div>';
         }
       } else {
-        // Playing phase — show whose turn
+        // Playing phase — show last action
         const events = msg.events || [];
         const lastEvent = events.length > 0 ? events[events.length - 1] : null;
         if (lastEvent) {
           const evName = names[lastEvent.playerId] || lastEvent.playerId || '';
           if (lastEvent.type === 'draw') {
-            html += '<div style="color:var(--text-secondary);font-size:1rem;margin:8px 0;">' + escapeHtml(evName) + ' drew from ' + lastEvent.source + '</div>';
+            html += '<div class="tv-last-play-banner">' + escapeHtml(evName) + ' drew from ' + escapeHtml(lastEvent.source) + '</div>';
           } else if (lastEvent.type === 'discard') {
-            html += '<div style="color:var(--text-secondary);font-size:1rem;margin:8px 0;">' + escapeHtml(evName) + ' discarded</div>';
+            html += '<div class="tv-last-play-banner">' + escapeHtml(evName) + ' discarded' + (lastEvent.card && typeof formatCardShort === 'function' ? ' ' + formatCardShort(lastEvent.card) : '') + '</div>';
           }
         }
       }
@@ -1017,7 +1168,7 @@
 
       if (msg.phase === 'swap') {
         html += '<div class="phase-title swap-title">Swap Phase</div>' +
-          '<p class="phase-subtitle">Players are arranging their cards...</p>';
+          '<p class="phase-subtitle">Players are arranging their best cards face-up on their phones...</p>';
         // Show swap confirmation status
         if (msg.swapConfirmed) {
           html += '<div class="swap-status-grid">';
@@ -1033,21 +1184,44 @@
           html += '</div>';
         }
       } else if (msg.phase === 'play' || msg.phase === 'finished') {
-        // --- Central pile ---
-        html += '<div class="central-pile" aria-label="Central play pile">';
-        if (msg.pileTop) {
-          html += '<div class="pile-top-card">' + renderCardImg(msg.pileTop, {width: 120, height: 168, pileCard: true}) + '</div>';
-          html += '<div class="pile-info">Pile: ' + (msg.pileCount || 0) + ' cards</div>';
-        } else {
-          html += '<div class="pile-empty" aria-label="Empty pile">Empty</div>';
-          html += '<div class="pile-info">Pile: 0 cards</div>';
-        }
-        html += '</div>';
+        const pilePreview = (msg.pilePreview && msg.pilePreview.length > 0)
+          ? msg.pilePreview
+          : (msg.pileTop ? [msg.pileTop] : []);
 
-        // --- Info bar ---
-        html += '<div class="shithead-info-bar">';
-        if (msg.drawPileCount != null) html += '<span class="info-item">Draw: ' + msg.drawPileCount + '</span>';
+        // --- Table Arena: Draw Stack + Central Play Pile ---
+        html += '<div class="tv-table-arena">';
+
+        // Draw Stack
+        if (msg.drawPileCount != null) {
+          html += '<div class="tv-stack-card" aria-label="Draw pile">' +
+            '<div class="tv-stack-label">Draw Deck</div>' +
+            renderTvStackVisual(null, msg.drawPileCount, { width: 120, height: 168, facedown: true, emptyLabel: '0' }) +
+            '<div class="tv-stack-count-badge info-item">Draw: ' + msg.drawPileCount + '</div>' +
+          '</div>';
+        }
+
+        // Central Play Pile
+        html += '<div class="central-pile tv-stack-card" aria-label="Central play pile">' +
+          '<div class="tv-stack-label">Play Pile</div>' +
+          renderTvStackVisual(pilePreview, msg.pileCount || (msg.pileTop ? 1 : 0), { width: 120, height: 168, facedown: false, emptyLabel: 'Empty' }) +
+          '<div class="pile-info tv-stack-count-badge accent">Pile: ' + (msg.pileCount || 0) + ' cards</div>' +
+        '</div>';
+
         html += '</div>';
+        html += '<div style="text-align:center;"><span class="tv-rule-pill">' + escapeHtml(shitheadRuleHintText(msg.pileTopRank, msg.pileCount || 0)) + '</span></div>';
+
+        // Last played banner
+        if (msg.lastPlayedBy && msg.lastPlayedCards && msg.lastPlayedCards.length > 0) {
+          const actorName = names[msg.lastPlayedBy] || msg.lastPlayedBy;
+          const cardSummary = typeof formatCardShort === 'function'
+            ? (msg.lastPlayedCards.length > 1
+                ? msg.lastPlayedCards.length + '× ' + formatCardShort(msg.lastPlayedCards[0])
+                : formatCardShort(msg.lastPlayedCards[0]))
+            : (msg.lastPlayedCards.length + ' card(s)');
+          html += '<div style="text-align:center;"><span class="tv-last-play-banner">' +
+            escapeHtml(actorName) + ' played ' + escapeHtml(cardSummary) +
+          '</span></div>';
+        }
 
         if (msg.phase === 'finished') {
           html += '<div class="game-finished">';
@@ -1073,7 +1247,7 @@
             html += '<div class="player-panel card' + currentTurnClass + outClass + '" data-player-id="' + escapeHtml(p.playerId) + '"' + ariaCurrent + '>';
             // Name header with turn indicator
             html += '<div class="player-header">';
-            html += '<span class="player-name">' + escapeHtml(name) + '</span>';
+            html += '<span class="player-name">' + playerAvatarHtml(p.playerId) + escapeHtml(name) + '</span>';
             if (isCurrent) {
               html += '<span class="turn-indicator neon-green" aria-label="Current turn">▶</span>';
             }
@@ -1083,15 +1257,27 @@
             html += '</div>';
 
             // Card counts
+            const handCount = p.handCount || 0;
+            const fdCount = p.faceDownCount || 0;
             html += '<div class="player-card-counts">';
-            html += '<span class="count-item"><span class="count-label">Hand:</span> <span class="count-value">' + (p.handCount || 0) + '</span></span>';
-            html += '<span class="count-item"><span class="count-label">Down:</span> <span class="count-value">' + (p.faceDownCount || 0) + '</span></span>';
+            html += '<span class="count-item"><span class="count-label">Hand:</span> <span class="count-value">' + handCount + '</span></span>';
+            html += '<span class="count-item"><span class="count-label">Down:</span> <span class="count-value">' + fdCount + '</span></span>';
             html += '</div>';
+
+            html += '<div class="palace-table-cards">';
+            // Visual mini face-down card slots
+            if (fdCount > 0 && !isOut) {
+              html += '<div class="mini-back-row" aria-label="' + fdCount + ' face down cards">';
+              for (let i = 0; i < Math.min(3, fdCount); i++) {
+                html += renderCardImg({ rank: 0, suit: 'x' }, { width: 58, height: 82, facedown: true });
+              }
+              html += '</div>';
+            }
 
             // Face-up cards (visible to all) — fanned layout
             if (p.faceUp && p.faceUp.length > 0) {
               html += '<div class="face-up-fan" aria-label="Face up cards">';
-              
+
               // Group cards by rank+suit
               const groups = {};
               p.faceUp.forEach(c => {
@@ -1103,11 +1289,12 @@
               Object.values(groups).sort((a, b) => a.card.rank - b.card.rank).forEach((g, idx) => {
                 const c = g.card;
                 const countBadge = g.count > 1 ? '<span class="count-badge">' + g.count + '</span>' : '';
-                html += '<div class="fan-card" style="--card-index: ' + idx + ';">' + countBadge + renderCardImg(c, {width: 50, height: 70}) + '</div>';
+                html += '<div class="fan-card" style="--card-index: ' + idx + ';">' + countBadge + renderCardImg(c, {width: 58, height: 82}) + '</div>';
               });
               html += '</div>';
             }
 
+            html += '</div>';
             html += '</div>';
           });
         }
@@ -1215,6 +1402,7 @@
     }
 
     function returnToLobby(msg) {
+      quizNarrator.stop();
       if (msg.phase === 'finished') {
         if (msg.winner) {
           const name = (state.playerNames || {})[msg.winner] || 'Someone';
@@ -1232,6 +1420,7 @@
           document.body.classList.remove('in-game');
           placePartyChat(false);
           lobbyMusic.setActive(true);
+          if (mascotDuel) mascotDuel.setLobbyActive(true);
         }, 4000);
       } else if (msg.phase === 'lobby') {
         state.gameType = null;
@@ -1243,6 +1432,7 @@
         document.body.classList.remove('in-game');
         placePartyChat(false);
         lobbyMusic.setActive(true);
+        if (mascotDuel) mascotDuel.setLobbyActive(true);
       }
     }
 

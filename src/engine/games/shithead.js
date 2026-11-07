@@ -395,6 +395,9 @@ function pickUpPile(state, { playerId }) {
 
 function view(state, playerId) {
   const pileTop = state.pile.length > 0 ? state.pile[state.pile.length - 1] : null;
+  const remaining = state.phase === 'finished'
+    ? state.players.filter(id => !state.finishOrder.includes(id))
+    : [];
 
   // Live standing derived from finishOrder (mirrors endIf scoring):
   // players who have gone out rank above those still in.
@@ -415,7 +418,11 @@ function view(state, playerId) {
     pileTop,
     pileTopRank: getTopRank(state.pile),
     pileCount: state.pile.length,
+    pilePreview: state.pile.slice(-4),
     drawPileCount: state.drawPile.length,
+    lastPlayedBy: state.lastPlayedBy || null,
+    lastPlayedCards: state.lastPlayedCards || [],
+    loser: state.phase === 'finished' ? (remaining[0] || null) : undefined,
     players: state.players.map(id => ({
       playerId: id,
       handCount: (state.hands[id] || []).length,

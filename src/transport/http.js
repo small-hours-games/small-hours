@@ -5,9 +5,9 @@ import { fileURLToPath } from 'url';
 import path from 'path';
 import fs from 'fs';
 import express from 'express';
-import { randomBytes } from 'node:crypto';
 import { notifyRoomCreated } from '../notifications/discord.js';
 import { STORIES } from '../session/stories.js';
+import { BUILD_INFO } from '../version.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -45,12 +45,18 @@ export function setupRoutes(app, manager) {
     const { roomCount, playerCount } = manager.stats();
     res.json({
       status: 'ok',
-      version: process.env.APP_VERSION || 'dev',
-      commit: process.env.GIT_SHA || null,
+      version: BUILD_INFO.version,
+      commit: BUILD_INFO.commit,
+      builtAt: BUILD_INFO.builtAt,
       uptime: process.uptime(),
       rooms: roomCount,
       players: playerCount,
     });
+  });
+
+  // Running build, shown on the front page
+  app.get('/api/version', (_req, res) => {
+    res.json(BUILD_INFO);
   });
 
   // List rooms — expose counts only, never room codes, to avoid room-code
@@ -96,36 +102,39 @@ export function setupRoutes(app, manager) {
       res.status(400).json({ error: 'text required' });
       return;
     }
-    // Lazy import to avoid crashing if module has issues.
-    const { synthesizeSpeech } = await import('../fetcher/gemini-tts.js');
-    const result = await synthesizeSpeech(text, { voice: req.body.voice || 'Enceladus' });
+    const { getNarration } = await import('../fetcher/cached-narration.js');
+    const result = await getNarration(text, {
+      voice: req.body.voice || undefined,
+      style: req.body.style === 'game-show' ? 'game-show' : undefined,
+    });
     if (!result.ok) {
       res.status(502).json({ error: result.error.message });
       return;
     }
-    // Persist to data/audio so it can be cached + served.
-    if (!fs.existsSync(AUDIO_DIR)) fs.mkdirSync(AUDIO_DIR, { recursive: true });
-    const id = randomBytes(12).toString('base64url');
-    const filePath = path.join(AUDIO_DIR, `tts_${id}.wav`);
-    fs.writeFileSync(filePath, result.audioData);
-    res.json({ url: `/api/audio/tts/${id}`, cached: true });
+    res.json({ url: `/api/audio/tts/${result.id}`, cached: result.cached });
   });
 
-  // Serve generated TTS audio (saved as tts_<id>.wav)
+  // Serve generated or cached TTS audio (tts_<id>.wav, tts_<id>.mp3, or <otdb_id>.wav)
   app.get('/api/audio/tts/:id', (req, res) => {
     const { id } = req.params;
-    // Guard against path traversal: id must be a plain base64url slug.
+    // Guard against path traversal: id must be a plain base64url/hex slug.
     if (!/^[a-zA-Z0-9_-]+$/.test(id)) {
       res.status(400).json({ error: 'Invalid id' });
       return;
     }
-    const filePath = path.join(AUDIO_DIR, `tts_${id}.wav`);
-    if (!fs.existsSync(filePath)) {
-      res.status(404).json({ error: 'Audio not found' });
-      return;
+    const candidates = [
+      { file: path.join(AUDIO_DIR, `tts_${id}.wav`), type: 'audio/wav' },
+      { file: path.join(AUDIO_DIR, `tts_${id}.mp3`), type: 'audio/mpeg' },
+      { file: path.join(AUDIO_DIR, `${id}.wav`), type: 'audio/wav' },
+    ];
+    for (const candidate of candidates) {
+      if (fs.existsSync(candidate.file)) {
+        res.setHeader('Content-Type', candidate.type);
+        res.sendFile(candidate.file);
+        return;
+      }
     }
-    res.setHeader('Content-Type', 'audio/wav');
-    res.sendFile(filePath);
+    res.status(404).json({ error: 'Audio not found' });
   });
 
   // Serve cached TTS audio files

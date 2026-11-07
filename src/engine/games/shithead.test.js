@@ -180,4 +180,21 @@ describe('Shithead view — pileTopRank for rank-2 piles', () => {
     const view = shithead.view(state, 'alice');
     expect(view.pileTopRank).toBe(9);
   });
+
+  it('view exposes pilePreview (up to 4 cards), lastPlayedBy, lastPlayedCards, and loser when finished', () => {
+    const state = makeState({
+      hands: { alice: [{ id: '8h_0', suit: 'h', rank: 8 }, { id: '8s_0', suit: 's', rank: 8 }], bob: [{ id: '4c_0', suit: 'c', rank: 4 }] },
+      pile: [
+        { id: '3c_0', suit: 'c', rank: 3 },
+        { id: '4d_0', suit: 'd', rank: 4 },
+        { id: '5h_0', suit: 'h', rank: 5 },
+      ],
+    });
+    const res = shithead.actions.playCards(state, { playerId: 'alice', cardIds: ['8h_0', '8s_0'] });
+    const view = shithead.view(res.state, 'bob');
+    expect(view.pilePreview).toHaveLength(4);
+    expect(view.lastPlayedBy).toBe('alice');
+    expect(view.lastPlayedCards).toHaveLength(2);
+    expect(view.loser).toBe('bob');
+  });
 });

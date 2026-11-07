@@ -372,6 +372,16 @@ describe('Room - startGame (registry)', () => {
     await room.startGame('number-guess', {});
     expect(room.gameSuggestions.size).toBe(0);
   });
+
+  it('offers gin-rummy only to exactly 2 connected players, matching its engine setup', async () => {
+    const room = new Room('TEST');
+    room.addPlayer('Alice');
+    room.addPlayer('Bob');
+    expect(room.availableGames().map(g => g.type)).toContain('gin-rummy');
+    room.addPlayer('Carol');
+    expect(room.availableGames().map(g => g.type)).not.toContain('gin-rummy');
+    await expect(room.startGame('gin-rummy', {})).rejects.toThrow(/supports at most 2 players/);
+  });
 });
 
 // -----------------------------------------------------------------------

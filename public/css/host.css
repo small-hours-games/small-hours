@@ -589,6 +589,24 @@
       max-width: 920px;
     }
 
+    .quiz-image-wrap {
+      display: flex;
+      justify-content: center;
+      margin: 4px auto;
+    }
+
+    .quiz-question-image {
+      max-height: clamp(120px, 22vh, 210px);
+      max-width: min(420px, 70vw);
+      width: auto;
+      height: auto;
+      object-fit: contain;
+      border-radius: 16px;
+      border: 4px solid #ffffff;
+      background: rgba(255, 255, 255, 0.85);
+      box-shadow: 0 10px 24px -6px rgba(15, 23, 42, 0.18);
+    }
+
     body.in-game .quiz-question-text {
       font-size: 2rem;
       margin: 0;
@@ -679,3 +697,254 @@
 .score-name { overflow-wrap: anywhere; min-width: 0; }
 .quiz-display .answer-guesses { display: flex; flex-wrap: wrap; justify-content: center; gap: 5px 10px; }
 .answer-player { display: inline-flex; align-items: center; gap: 4px; }
+
+/* ===== TV Card Games: Shithead & Gin Rummy Table Arena ===== */
+.tv-table-arena {
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  gap: 28px;
+  flex-wrap: wrap;
+  margin: 4px auto;
+  width: 100%;
+  max-width: 960px;
+}
+
+.tv-stack-card,
+.central-pile.tv-stack-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 16px 24px;
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.92);
+  border: 2px solid #bae6fd;
+  box-shadow: 0 12px 30px -10px rgba(14, 116, 144, 0.16);
+  min-width: 220px;
+}
+
+.tv-stack-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  margin-bottom: 8px;
+}
+
+.tv-stack-label {
+  font-size: 0.9rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #475569;
+}
+
+.tv-stack-count-badge,
+.tv-stack-count-badge.info-item,
+.tv-stack-count-badge.pile-info {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 1rem;
+  font-weight: 900;
+  background: #0284c7;
+  color: #ffffff;
+  border: none;
+  box-shadow: 0 4px 10px rgba(2, 132, 199, 0.25);
+}
+
+.tv-stack-count-badge.info-item::before {
+  content: none;
+}
+
+.tv-stack-count-badge.accent {
+  background: #059669;
+  color: #ffffff;
+  box-shadow: 0 4px 10px rgba(5, 150, 105, 0.25);
+}
+
+.tv-stack-count-badge.empty {
+  background: #cbd5e1;
+  color: #475569;
+  box-shadow: none;
+}
+
+.tv-stack-3d {
+  position: relative;
+  width: 144px;
+  height: 186px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 4px auto;
+}
+
+.tv-stack-3d .stack-layer-card {
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  pointer-events: none;
+  border-radius: 10px;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.22);
+}
+
+.tv-stack-3d .pile-top-card {
+  position: relative;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tv-rule-pill {
+  display: inline-block;
+  margin-top: 6px;
+  padding: 5px 14px;
+  border-radius: 999px;
+  font-size: 0.9rem;
+  font-weight: 800;
+  background: #e0f2fe;
+  color: #0369a1;
+  border: 1px solid #7dd3fc;
+}
+
+.tv-rule-pill.special {
+  background: #fef3c7;
+  color: #92400e;
+  border-color: #fcd34d;
+}
+
+.tv-last-play-banner {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #0f172a;
+  background: rgba(255, 255, 255, 0.85);
+  border: 1px solid #bae6fd;
+  padding: 6px 16px;
+  border-radius: 999px;
+}
+
+.mini-back-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  margin-top: 2px;
+}
+
+.mini-back-card {
+  width: 16px;
+  height: 22px;
+  border-radius: 3px;
+  border: 1px solid #0284c7;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.2);
+}
+
+.gr-seats-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(240px, 380px));
+  gap: 20px;
+  justify-content: center;
+  width: 100%;
+  margin: 6px auto;
+}
+
+.gr-seat-panel {
+  padding: 14px 18px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.88);
+  border: 2px solid #bae6fd;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  transition: all 0.25s ease;
+}
+
+.gr-seat-panel.current-turn {
+  border-color: var(--neon-green);
+  box-shadow: 0 0 24px rgba(5, 150, 105, 0.28);
+  background: #ffffff;
+}
+
+.gr-seat-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.gr-seat-name {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: #0f172a;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.gr-turn-pill {
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 800;
+  background: #d1fae5;
+  color: #065f46;
+  border: 1px solid #6ee7b7;
+}
+
+.gr-seat-stats {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 6px;
+  border-top: 1px solid #e0f2fe;
+}
+
+.gr-hand-fan-mini {
+  display: inline-flex;
+  align-items: center;
+}
+
+.gr-hand-fan-mini img {
+  width: 24px;
+  height: 34px;
+  margin-left: -12px;
+  border-radius: 4px;
+  border: 1px solid #fff;
+  box-shadow: 0 2px 5px rgba(15, 23, 42, 0.25);
+}
+
+.gr-hand-fan-mini img:first-child {
+  margin-left: 0;
+}
+
+/* Palace: face-up cards sit over the face-down table cards. */
+.palace-table-cards {
+  display: grid;
+  justify-content: center;
+  padding: 6px 0 14px;
+}
+.palace-table-cards .mini-back-row,
+.palace-table-cards .face-up-fan {
+  grid-area: 1 / 1;
+  justify-content: center;
+  align-items: start;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-height: 82px;
+  flex-wrap: nowrap;
+}
+.palace-table-cards .mini-back-row { transform: translateY(12px); }
+.palace-table-cards .face-up-fan { position: relative; z-index: 1; }
+
+.palace-table-cards .fan-card .playing-card {
+  width: 58px;
+  height: 82px;
+}

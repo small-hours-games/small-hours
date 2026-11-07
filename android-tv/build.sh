@@ -13,9 +13,8 @@ cd "$(dirname "$0")"
 
 TOOLS=${SMALLHOURS_ANDROID_TOOLS:-$HOME/.cache/smallhours-android}
 TV_URL=${TV_URL:-https://quiz.aldervall.se/tv}
-VERSION_CODE=${VERSION_CODE:-1}
-VERSION_NAME=${VERSION_NAME:-1.0}
-FONT=${FONT:-/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf}
+VERSION_CODE=${VERSION_CODE:-2}
+VERSION_NAME=${VERSION_NAME:-1.1}
 BUILD_TOOLS_VERSION=34.0.0
 PLATFORM_VERSION=android-34
 
@@ -55,9 +54,9 @@ cat > build/res/values/config.xml <<EOF
 </resources>
 EOF
 
-echo "Drawing icon + banner..."
+echo "Preparing branded icon + banner..."
 javac -d build/art tools/GenArt.java
-java -Djava.awt.headless=true -cp build/art GenArt build/res "$FONT"
+java -Djava.awt.headless=true -cp build/art GenArt build/res ../public/images
 
 echo "Linking resources..."
 "$BT/aapt2" compile --dir build/res -o build/res.zip
