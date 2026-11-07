@@ -1,0 +1,29 @@
+name: Version bump
+
+# Every change to main must raise package.json "version" (shown on the TV and
+# front page), so each deploy is identifiable. See AGENTS.md > Versioning.
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  version-raised:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: package.json version is higher than on main
+        run: |
+          base=$(git show "origin/${{ github.base_ref }}:package.json" | node -p "JSON.parse(require('fs').readFileSync(0, 'utf8')).version")
+          head=$(node -p "require('./package.json').version")
+          echo "main: $base  this PR: $head"
+          node -e '
+            const [a, b] = process.argv.slice(1).map(v => v.split(/[.-]/).slice(0, 3).map(Number));
+            for (let i = 0; i < 3; i++) { if (b[i] > a[i]) process.exit(0); if (b[i] < a[i]) break; }
+            console.error("::error::Raise the version: npm version patch --no-git-tag-version (or minor for features)");
+            process.exit(1);
+          ' "$base" "$head"

@@ -11,6 +11,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Fredoka:wght@500;600;700&display=swap" rel="stylesheet">
   <script src="/js/tailwind-config.js"></script>
+  <script src="/js/build-info.js"></script>
   <link rel="stylesheet" href="/css/light-lobby.css">
   <style>
     /* Late-night landing: navy ground, one colour per game, yellow room-code accent. */
@@ -70,7 +71,10 @@
           <img src="/images/smallhours-icon.png" alt="" width="32" height="32" class="w-8 h-8">
         </span>
         <span class="flex flex-col leading-none">
-          <span class="font-display font-bold text-2xl">Smallhours</span>
+          <span class="flex items-baseline gap-2">
+            <span class="font-display font-bold text-2xl">Smallhours</span>
+            <span id="headerVersion" class="hidden text-[10px] font-semibold tracking-wide text-[#a9b6d3] bg-white/10 border border-white/15 rounded-full px-2 py-0.5 whitespace-nowrap"></span>
+          </span>
           <span class="text-[11px] font-semibold text-[#a9b6d3] mt-0.5">Good games. Better together.</span>
         </span>
       </a>
@@ -485,8 +489,9 @@
 
     // Footer: which build is running, e.g. "v2.1.0 · 2dbdd0b · built 7 Nov 2026, 14:02"
     function renderBuildInfo(info) {
+      shFillBuildBadge(document.getElementById('headerVersion'), info);
       const el = document.getElementById('buildInfo');
-      if (!el || !info || !info.version) return;
+      if (!el) return;
       el.textContent = 'v' + info.version;
       if (info.shortCommit) {
         const link = document.createElement('a');
@@ -498,13 +503,11 @@
         el.append(' · ', link);
       }
       if (info.builtAt) {
-        const built = new Date(info.builtAt);
-        const when = built.toLocaleString(undefined, { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
-        el.append(' · built ' + when);
-        el.title = 'Built ' + built.toISOString();
+        el.append(' · built ' + shBuildTime(info));
+        el.title = 'Built ' + new Date(info.builtAt).toISOString();
       }
     }
-    fetch('/api/version').then(r => r.ok ? r.json() : null).then(renderBuildInfo).catch(() => {});
+    shLoadBuildInfo(renderBuildInfo);
 
     // Deep link: /?code=XXXX jumps straight to the nickname step
     const preset = new URLSearchParams(location.search).get('code');

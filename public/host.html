@@ -34,6 +34,8 @@
         <span id="headerInfo" class="hidden sm:inline-block ml-1 text-xs font-extrabold px-3 py-1 rounded-full bg-sky-100 text-sky-800 border border-sky-200 shadow-sm"></span>
       </div>
       <div class="flex items-center gap-3">
+        <!-- Running build; refreshed on every (re)connect so a deploy shows up on the TV -->
+        <span id="buildBadge" class="build-badge hidden"></span>
         <!-- Connection status (in the header so it never covers the Sound button) -->
         <div class="connection-status disconnected" id="connStatus">
           <span class="status-dot"></span>
@@ -144,6 +146,7 @@
 
   <script src="/js/cards.js"></script>
   <script src="/js/games.js"></script>
+  <script src="/js/build-info.js"></script>
   <script src="/js/quiz-ready.js"></script>
   <script src="/js/music-fade.js"></script>
   <script src="/js/lobby-music.js"></script>
@@ -250,6 +253,7 @@
       ws.onopen = () => {
         state.reconnectAttempts = 0;
         setConnectionStatus('connected', 'Connected');
+        shLoadBuildInfo(info => shFillBuildBadge(document.getElementById('buildBadge'), info));
       };
 
       ws.onmessage = (e) => {
