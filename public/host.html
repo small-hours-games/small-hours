@@ -817,20 +817,22 @@
     function renderSpy(msg) {
       const content = document.getElementById('gameContent');
       const round = msg.round || '?';
-      const clues = msg.clues || [];
+      const names = msg.playerNames || {};
+      // Engine sends clues as { playerId: text }; the secret word only arrives at reveal.
+      const clues = Object.entries(msg.clues || {}).map(([id, text]) => ({ name: names[id] || 'Player', text }));
 
       let html = '<div class="spy-display">' +
         '<div class="spy-round-title">Round ' + round + '</div>';
 
-      if (msg.phase === 'clue') {
+      if (msg.phase === 'clues') {
         html += '<p class="text-secondary">Players are giving clues...</p>';
       } else if (msg.phase === 'guess') {
         html += '<p class="text-secondary">The spy is guessing the word...</p>';
-      } else if (msg.phase === 'reveal') {
+      } else if (msg.phase === 'reveal' || msg.phase === 'score') {
         html += '<p style="font-size:1.5rem;margin:16px 0;">The word was: <strong style="color:var(--neon-green);">' +
-          escapeHtml(msg.word || '???') + '</strong></p>';
-        if (msg.spyName) {
-          html += '<p>The spy was: <strong style="color:var(--neon-pink);">' + escapeHtml(msg.spyName) + '</strong></p>';
+          escapeHtml(msg.revealedWord || '???') + '</strong></p>';
+        if (msg.spy) {
+          html += '<p>The spy was: <strong style="color:var(--neon-pink);">' + escapeHtml(names[msg.spy] || 'Player') + '</strong></p>';
         }
       }
 

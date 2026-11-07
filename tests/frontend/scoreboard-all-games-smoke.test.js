@@ -63,8 +63,9 @@ const names = { alice: 'Alice', bob: 'Bob', carol: 'Carol' };
 
 describe('scoreboard covers ALL games end-to-end through the engine', () => {
   it('number-guess: shows "gissningar kvar", not raw score', () => {
-    const game = createGame(numberGuess, { players: ['alice', 'bob'], config: { secret: 50, maxRounds: 10 } });
-    let g = game;
+    const game = createGame(numberGuess, { players: ['alice', 'bob'], config: { maxRounds: 10 } });
+    // setup() picks a random secret; pin it so alice's guesses can never win by chance
+    let g = { ...game, state: { ...game.state, secret: 50 } };
     // alice guesses twice, bob guesses once
     g = processAction(g, { type: 'guess', playerId: 'alice', number: 25 }).game;
     g = processAction(g, { type: 'guess', playerId: 'alice', number: 75 }).game;

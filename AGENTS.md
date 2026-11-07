@@ -75,7 +75,7 @@ export default {
 - Clients connect to `/ws/host/:code` or `/ws/player/:code`.
 - Actions use `{ type: 'GAME_ACTION', action: { type: '<action-name>', ...payload } }`.
 - Treat socket identity as authoritative; inspect existing authorization and validation before adding handlers.
-- Preserve private information in per-player views: hands, answers, and hidden roles must only reach their intended viewers. Inspect the host broadcast path separately.
+- Preserve private information in per-player views: hands, answers, and hidden roles must only reach their intended viewers. Host/TV sockets get `getHostView` (`src/transport/host-view.js`): a game's optional `hostView(state)`, or the first player's view minus `my*` keys and a short list of other per-player keys. Name new private fields `my*` or add them to that list.
 - Keep game scores, session scores, and the shared scoreboard consistent. Inspect the scoreboard tests when changing result shapes.
 - Preserve reconnect, disconnect grace, admin reclaim, and timer cancellation behavior when changing lifecycle code.
 

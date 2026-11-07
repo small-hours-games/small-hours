@@ -3,6 +3,7 @@
 import { processAction, getView, checkEnd } from '../../engine/engine.js';
 import { saveAnswers } from '../../fetcher/question-file.js';
 import { handleStartCategoryVote } from './vote.js';
+import { getHostView } from '../host-view.js';
 
 /**
  * Handle START_VOTED_GAME message — admin starts whichever game the players voted for most.
@@ -159,15 +160,8 @@ export function handleGameAction(ws, meta, room, msg, ctx) {
   }
 
   // Broadcast shared state to host displays only (not players — they got personal views above)
-  const hostView = getView(room.game, room.players.keys().next().value);
+  const hostView = getHostView(room.game, room.players.keys().next().value);
   const sharedState = { type: 'GAME_STATE', ...hostView, ...clock, playerNames };
-  delete sharedState.myHand;
-  delete sharedState.myFaceUp;
-  delete sharedState.myFaceDownCount;
-  delete sharedState.myFaceDownIds;
-  delete sharedState.myGuesses;
-  delete sharedState.isMyTurn;
-  delete sharedState.swapConfirmed;
   if (events.length > 0) sharedState.events = events;
   broadcastToRoom(room.code, sharedState, { hostsOnly: true });
 

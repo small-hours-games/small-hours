@@ -11,6 +11,7 @@ import * as lobbyHandlers from './handlers/lobby.js';
 import * as gameHandlers from './handlers/game.js';
 import * as chatHandlers from './handlers/chat.js';
 import * as voteHandlers from './handlers/vote.js';
+import { getHostView } from './host-view.js';
 
 const GAME_PHASE_DURATIONS = {
   quiz: QUIZ_DURATIONS,
@@ -192,7 +193,7 @@ export function setupWebSocket(server, manager) {
     }
 
     // Broadcast to host displays
-    const hostView = getView(room.game, room.players.keys().next().value);
+    const hostView = getHostView(room.game, room.players.keys().next().value);
     const sharedState = { type: 'GAME_STATE', ...hostView, ...clock, playerNames };
     if (events.length > 0) sharedState.events = events;
     broadcastToRoom(room.code, sharedState, { hostsOnly: true });
@@ -300,7 +301,7 @@ export function setupWebSocket(server, manager) {
       send(ws, { type: 'MINI_GAME_STARTING', gameType: room.gameType, resume: true });
       send(ws, {
         type: 'GAME_STATE',
-        ...(firstPlayer ? getView(room.game, firstPlayer) : { phase: room.game.state.phase }),
+        ...getHostView(room.game, firstPlayer),
         ...timing(room),
         gameType: room.gameType,
         playerNames: getPlayerNames(room),
