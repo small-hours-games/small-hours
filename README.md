@@ -81,6 +81,15 @@ To update a source deployment after changing the code, rebuild and restart with 
 curl http://localhost:3001/health
 ```
 
+The front page footer shows the running build, for example `v2.1.0 · 2dbdd0b · built 7 Nov 2026, 14:02`: the version from `package.json`, the Git commit (linked to GitHub) and when the image was built. After an update, reload the front page to confirm the new build is live. `/api/version` returns the same as JSON.
+
+To cut a release, bump the version and tag it in one step, then push:
+
+```bash
+npm version minor        # or patch / major: updates package.json, commits, tags v2.1.0
+git push --follow-tags   # CI tests and publishes ghcr.io/...:2.1.0, :2.1 and :latest
+```
+
 For published images, [`update.sh`](update.sh) pulls the configured GHCR image, seeds questions, and restarts the service. Pass a released tag to deploy or roll back to that version:
 
 ```bash

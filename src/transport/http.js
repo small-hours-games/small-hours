@@ -8,6 +8,7 @@ import express from 'express';
 import { randomBytes } from 'node:crypto';
 import { notifyRoomCreated } from '../notifications/discord.js';
 import { STORIES } from '../session/stories.js';
+import { BUILD_INFO } from '../version.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -45,12 +46,18 @@ export function setupRoutes(app, manager) {
     const { roomCount, playerCount } = manager.stats();
     res.json({
       status: 'ok',
-      version: process.env.APP_VERSION || 'dev',
-      commit: process.env.GIT_SHA || null,
+      version: BUILD_INFO.version,
+      commit: BUILD_INFO.commit,
+      builtAt: BUILD_INFO.builtAt,
       uptime: process.uptime(),
       rooms: roomCount,
       players: playerCount,
     });
+  });
+
+  // Running build, shown on the front page
+  app.get('/api/version', (_req, res) => {
+    res.json(BUILD_INFO);
   });
 
   // List rooms — expose counts only, never room codes, to avoid room-code
