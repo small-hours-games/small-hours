@@ -15,6 +15,7 @@
   <link rel="stylesheet" href="/css/smallhours.css">
   <link rel="stylesheet" href="/css/host.css">
   <link rel="stylesheet" href="/css/light-lobby.css">
+  <link rel="stylesheet" href="/css/table-cards.css">
   <link rel="icon" type="image/png" sizes="64x64" href="/images/smallhours-favicon.png">
   <link rel="apple-touch-icon" href="/images/smallhours-icon.png">
 </head>
@@ -145,6 +146,7 @@
   <div class="toast-container" id="toasts"></div>
 
   <script src="/js/cards.js"></script>
+  <script src="/js/table-cards.js"></script>
   <script src="/js/games.js"></script>
   <script src="/js/build-info.js"></script>
   <script src="/js/quiz-ready.js"></script>
@@ -986,165 +988,124 @@
       return 'Beat or match ' + rankLbl + '+ (2 resets, 7 lowers, 10 burns)';
     }
 
+    // ===== Card table on the TV: Gin Rummy + Palace (kit in /js/table-cards.js) =====
+    // Only shared fields are used here; per-player data never reaches host sockets.
+    function tvFanHtml(count, size, max) {
+      count = tcNum(count);
+      const shown = Math.min(max || 10, count || 0);
+      let html = '<div class="tc-fan" aria-label="' + (count || 0) + ' cards in hand">';
+      for (let i = 0; i < shown; i++) html += renderTableCard(null, { size: size || 'sm', facedown: true, dataId: '' });
+      if (count > shown) html += '<span class="tc-fan-more">+' + (count - shown) + '</span>';
+      return html + '</div>';
+    }
+
+    function tvSeatHtml(pid, names, opts) {
+      const cls = 'tc-seat' + (opts.turn ? ' tc-seat-turn' : '') + (opts.out ? ' tc-seat-out' : '');
+      return '<div class="' + cls + '" data-player-id="' + escapeHtml(pid) + '"' + (opts.turn ? ' aria-current="true"' : '') + '>' +
+        '<div class="tc-seat-head"><div class="tc-seat-name">' + playerAvatarHtml(pid) + '<span>' + escapeHtml(names[pid] || 'Player') + '</span></div>' +
+        (opts.tag ? '<span class="tc-seat-tag ' + (opts.tagClass || '') + '">' + escapeHtml(opts.tag) + '</span>' : '') + '</div>' +
+        (opts.stats ? '<div class="tc-seat-stats">' + opts.stats + '</div>' : '') +
+        (opts.cards ? '<div class="tc-seat-cards">' + opts.cards + '</div>' : '') +
+      '</div>';
+    }
+
+    function tvRevealHtml(title, melds, deadwood, layoffs) {
+      let html = '<div class="tc-reveal"><div class="tc-reveal-head"><span>' + escapeHtml(title) + '</span>' +
+        '<span>Deadwood ' + (deadwood || []).reduce((s, c) => s + Math.min(10, tcNum(c.rank)), 0) + '</span></div><div class="tc-meld-groups">';
+      (melds || []).forEach(m => {
+        html += '<div class="tc-meld-group">' + (m.cards || []).map(c => renderTableCard(c, { size: 'md', meld: m.type === 'set' ? 'set' : 'run', dataId: '' })).join('') + '</div>';
+      });
+      if ((layoffs || []).length) {
+        html += '<div class="tc-meld-group">' + layoffs.map(c => renderTableCard(c, { size: 'md', badge: 'laid off', dataId: '' })).join('') + '</div>';
+      }
+      if ((deadwood || []).length) {
+        html += '<div class="tc-meld-group tc-deadwood-group">' + deadwood.map(c => renderTableCard(c, { size: 'md', dataId: '' })).join('') + '</div>';
+      }
+      return html + '</div></div>';
+    }
+
     function renderGinRummy(msg) {
       const content = document.getElementById('gameContent');
       const names = state.playerNames || msg.playerNames || {};
       const cum = msg.cumulative || {};
       const boxes = msg.boxes || {};
       const pids = Object.keys(cum);
+      const playing = msg.phase !== 'scoring' && msg.phase !== 'finished';
 
-      // Sound transitions for Gin Rummy
-      if (lastGrState.round != null && msg.round > lastGrState.round) {
-        audio.play('deck_redraw');
-      }
-      if (msg.phase === 'scoring' && lastGrState.phase !== 'scoring') {
-        audio.play('win');
-      }
-      if (msg.phase === 'finished' && lastGrState.phase !== 'finished') {
-        audio.play('win');
-      }
+      // Sounds (TV speakers)
+      if (lastGrState.handNumber != null && msg.handNumber > lastGrState.handNumber) audio.play('deck_redraw');
+      if ((msg.phase === 'scoring' || msg.phase === 'finished') && lastGrState.phase !== msg.phase) audio.play('win');
       if (msg.phase === 'drawing' && lastGrState.phase === 'drawing') {
-        if (msg.stockCount != null && lastGrState.stockCount != null && msg.stockCount < lastGrState.stockCount) {
-          audio.play('draw');
-        }
-        if (msg.discardCount != null && lastGrState.discardCount != null && msg.discardCount > lastGrState.discardCount) {
-          audio.play('place');
-        }
+        if (msg.stockCount < lastGrState.stockCount) audio.play('draw');
+        if (msg.discardCount > lastGrState.discardCount) audio.play('place');
       }
-      lastGrState = { round: msg.round, phase: msg.phase, stockCount: msg.stockCount, discardCount: msg.discardCount };
+      lastGrState = { handNumber: msg.handNumber, phase: msg.phase, stockCount: msg.stockCount, discardCount: msg.discardCount };
 
-      let html = '<div style="text-align:center;">';
+      const current = msg.currentPlayer;
+      const action = msg.phase === 'first_turn' ? 'deciding on the upcard' : (msg.turnPhase === 'draw' ? 'drawing' : 'discarding');
+      let status = 'Gin Rummy';
+      if (playing && current) status = (names[current] || 'Player') + ' is ' + action;
+      else if (msg.phase === 'scoring') status = 'Hand over';
+      else if (msg.phase === 'finished') status = 'Game over';
 
-      // Hand info
-      if (msg.handNumber) {
-        html += '<div style="color:var(--text-secondary);font-size:1rem;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;margin:4px 0 10px;">Hand ' + msg.handNumber + '</div>';
-      }
+      const seat = pid => {
+        const count = tcNum((msg.playerCardCounts || {})[pid] != null ? msg.playerCardCounts[pid] : 10);
+        const pts = tcNum(cum[pid]);
+        const bx = tcNum(boxes[pid]);
+        const turn = playing && pid === current;
+        return tvSeatHtml(pid, names, {
+          turn,
+          tag: turn ? '▶ ' + action : null,
+          stats: '<span><span class="tc-seat-score">' + pts + '</span> pts</span><span>' + bx + (bx === 1 ? ' box · ' : ' boxes · ') + count + ' cards</span>',
+          cards: playing ? tvFanHtml(count, 'sm', 11) : '',
+        });
+      };
 
-      // Player seats row with scores, boxes, turn status, and visual mini card fan
-      html += '<div class="gr-seats-row">';
-      pids.forEach(pid => {
-        const isCurrent = msg.currentPlayer === pid && msg.phase !== 'scoring' && msg.phase !== 'finished';
-        const cardCount = (msg.playerCardCounts && msg.playerCardCounts[pid] != null) ? msg.playerCardCounts[pid] : 10;
-        let turnTag = '';
-        if (isCurrent) {
-          const actionLabel = msg.phase === 'first_turn'
-            ? 'Upcard Decision'
-            : (msg.turnPhase === 'draw' ? 'Drawing...' : 'Discarding / Knock');
-          turnTag = '<span class="tv-stack-count-badge accent" style="font-size:0.78rem;padding:3px 10px;">▶ ' + actionLabel + '</span>';
-        }
-        html += '<div class="gr-seat-panel' + (isCurrent ? ' current-turn' : '') + '">' +
-          '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">' +
-            '<div style="font-size:1.15rem;font-weight:800;color:var(--text-primary);">' + playerAvatarHtml(pid) + escapeHtml(names[pid] || pid) + '</div>' +
-            turnTag +
-          '</div>' +
-          '<div style="display:flex;justify-content:space-between;align-items:baseline;margin-top:4px;">' +
-            '<div><span style="font-size:2rem;font-weight:900;color:var(--neon-blue);">' + (cum[pid] || 0) + '</span> <span style="font-size:0.8rem;color:var(--text-secondary);">pts</span></div>' +
-            '<div style="font-size:0.85rem;color:var(--text-secondary);font-weight:600;">' + (boxes[pid] || 0) + ' boxes • ' + cardCount + ' cards</div>' +
-          '</div>';
-        if (msg.phase !== 'scoring' && msg.phase !== 'finished' && cardCount > 0) {
-          const fanCount = Math.min(11, cardCount);
-          html += '<div class="gr-hand-fan-mini" aria-label="' + cardCount + ' cards in hand">';
-          for (let i = 0; i < fanCount; i++) {
-            html += renderCardImg({ rank: 0, suit: 'x' }, { width: 26, height: 38, facedown: true });
-          }
-          html += '</div>';
-        }
-        html += '</div>';
-      });
-      html += '</div>';
+      let html = '<div class="tc-tv tc-felt">';
+      html += '<div class="tc-tv-status"><span class="tc-dot' + (playing ? ' tc-dot-live' : '') + '"></span>' +
+        (msg.handNumber ? '<span class="tc-mono">Hand ' + tcNum(msg.handNumber) + '</span> · ' : '') + escapeHtml(status) + '</div>';
+      if (pids[1]) html += '<div class="tc-tv-seats">' + seat(pids[1]) + '</div>';
 
-      // Table Arena: Stock 3D stack + Discard 3D stack
-      const discardCount = msg.discardCount != null ? msg.discardCount : (msg.discardTop ? 1 : 0);
-      const discardPreview = (msg.discardPreview && msg.discardPreview.length > 0)
-        ? msg.discardPreview
-        : (msg.discardTop ? [msg.discardTop] : []);
-
-      html += '<div class="tv-table-arena">' +
-        '<div class="tv-stack-card">' +
-          '<div class="tv-stack-label">Stock Pile</div>' +
-          renderTvStackVisual(null, msg.stockCount || 0, { width: 112, height: 156, facedown: true, emptyLabel: '0' }) +
-          '<div class="tv-stack-count-badge">Stock: ' + (msg.stockCount || 0) + ' cards</div>' +
-        '</div>' +
-        '<div class="tv-stack-card">' +
-          '<div class="tv-stack-label">Discard Pile</div>' +
-          renderTvStackVisual(discardPreview, discardCount, { width: 112, height: 156, facedown: false, emptyLabel: 'Empty' }) +
-          '<div class="tv-stack-count-badge accent">Discard: ' + discardCount + (msg.discardTop && typeof formatCardShort === 'function' ? ' (' + formatCardShort(msg.discardTop) + ')' : '') + '</div>' +
-        '</div>' +
-      '</div>';
-
-      // Phase / turn
-      if (msg.phase === 'scoring') {
-        const hr = msg.handResult || {};
-        if (hr.type === 'cancelled') {
-          html += '<div style="font-size:1.5rem;color:var(--text-secondary);margin:16px 0;">Hand cancelled (stock exhausted)</div>';
-        } else if (hr.type) {
-          const winnerName = names[hr.winner] || hr.winner;
-          const typeLabels = { knock: 'Knock', undercut: 'Undercut!', gin: 'GIN!', bigGin: 'BIG GIN!' };
-          const typeColors = { knock: 'var(--neon-blue)', undercut: 'var(--neon-pink)', gin: 'var(--neon-green)', bigGin: 'var(--neon-green)' };
-          html += '<div style="font-size:1.8rem;font-weight:700;color:' + (typeColors[hr.type] || 'var(--text-primary)') + ';margin:12px 0;">' + (typeLabels[hr.type] || hr.type) + '</div>';
-          html += '<div style="font-size:1.3rem;font-weight:700;">' + escapeHtml(winnerName) + ' wins +' + (hr.points || 0) + ' pts</div>';
-        }
-
-        // Show melds with larger cards
-        if (msg.knockerMelds) {
-          const knockerName = names[msg.knocker] || msg.knocker;
-          const oppId = pids.find(id => id !== msg.knocker);
-          const oppName = names[oppId] || oppId;
-
-          html += '<div style="display:flex;gap:24px;justify-content:center;flex-wrap:wrap;margin-top:16px;">';
-          // Knocker melds
-          html += '<div class="card" style="padding:14px 18px;min-width:240px;">' +
-            '<div style="font-size:0.95rem;font-weight:700;color:var(--text-primary);margin-bottom:10px;">' + escapeHtml(knockerName) + ' (Knocker)</div>' +
-            '<div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center;">';
-          (msg.knockerMelds || []).forEach(m => {
-            html += '<div style="display:flex;gap:3px;padding:6px;background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.3);border-radius:10px;">' +
-              m.cards.map(c => renderCardImg(c, {width: 52, height: 74})).join('') + '</div>';
-          });
-          html += '</div>';
-          if (msg.knockerDeadwood && msg.knockerDeadwood.length > 0) {
-            html += '<div style="font-size:0.8rem;color:var(--text-secondary);margin-top:8px;">Deadwood (' + (hr.knockerDeadwood ?? '') + ' pts): ' +
-              '<div style="display:inline-flex;gap:3px;vertical-align:middle;margin-left:4px;">' +
-              msg.knockerDeadwood.map(c => renderCardImg(c, {width: 44, height: 62})).join('') + '</div></div>';
-          }
-          html += '</div>';
-
-          // Opponent melds
-          html += '<div class="card" style="padding:14px 18px;min-width:240px;">' +
-            '<div style="font-size:0.95rem;font-weight:700;color:var(--text-primary);margin-bottom:10px;">' + escapeHtml(oppName) + '</div>' +
-            '<div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center;">';
-          (msg.opponentMelds || []).forEach(m => {
-            html += '<div style="display:flex;gap:3px;padding:6px;background:rgba(13,148,136,0.08);border:1px solid rgba(13,148,136,0.3);border-radius:10px;">' +
-              m.cards.map(c => renderCardImg(c, {width: 52, height: 74})).join('') + '</div>';
-          });
-          html += '</div>';
-          if (msg.opponentDeadwood && msg.opponentDeadwood.length > 0) {
-            html += '<div style="font-size:0.8rem;color:var(--text-secondary);margin-top:8px;">Deadwood (' + (hr.opponentDeadwood ?? '') + ' pts): ' +
-              '<div style="display:inline-flex;gap:3px;vertical-align:middle;margin-left:4px;">' +
-              msg.opponentDeadwood.map(c => renderCardImg(c, {width: 44, height: 62})).join('') + '</div></div>';
-          }
-          html += '</div>';
-          html += '</div>';
-        }
-      } else if (msg.phase === 'finished' && msg.finalScores) {
-        html += '<div style="font-size:2rem;color:var(--neon-green);margin:16px 0;">Game Over!</div>';
-        const winner = msg.winner;
-        if (winner) {
-          html += '<div style="font-size:1.5rem;color:var(--neon-blue);">' + escapeHtml(names[winner] || winner) + ' wins!</div>';
+      if (playing) {
+        const discardCount = tcNum(msg.discardCount != null ? msg.discardCount : (msg.discardTop ? 1 : 0));
+        const preview = (msg.discardPreview && msg.discardPreview.length) ? msg.discardPreview : (msg.discardTop ? [msg.discardTop] : []);
+        html += '<div class="tc-tv-center">' +
+          '<div class="tc-well"><span class="tc-well-label">Stock</span>' +
+            renderTableStack(null, msg.stockCount || 0, { size: 'xl', facedown: true, emptyLabel: 'Empty', highlight: msg.turnPhase === 'draw' }) +
+            '<span class="tc-count">' + tcNum(msg.stockCount) + ' left</span></div>' +
+          '<div class="tc-well"><span class="tc-well-label">Discard</span>' +
+            renderTableStack(preview, discardCount, { size: 'xl', emptyLabel: 'Empty', highlight: msg.phase === 'first_turn' }) +
+            '<span class="tc-count">' + discardCount + (discardCount === 1 ? ' card' : ' cards') + '</span></div>' +
+        '</div>';
+        const last = (msg.events || []).slice(-1)[0];
+        if (last && (last.type === 'draw' || last.type === 'discard')) {
+          const who = names[last.playerId] || 'Player';
+          const text = last.type === 'draw'
+            ? who + ' drew from the ' + (last.source === 'discard' ? 'discard pile' : 'stock')
+            : who + ' discarded' + (msg.discardTop && msg.discardTop.id === last.cardId ? ' ' + tcCardShort(msg.discardTop) : '');
+          html += '<div class="tc-tv-banner">' + escapeHtml(text) + '</div>';
         }
       } else {
-        // Playing phase — show last action
-        const events = msg.events || [];
-        const lastEvent = events.length > 0 ? events[events.length - 1] : null;
-        if (lastEvent) {
-          const evName = names[lastEvent.playerId] || lastEvent.playerId || '';
-          if (lastEvent.type === 'draw') {
-            html += '<div class="tv-last-play-banner">' + escapeHtml(evName) + ' drew from ' + escapeHtml(lastEvent.source) + '</div>';
-          } else if (lastEvent.type === 'discard') {
-            html += '<div class="tv-last-play-banner">' + escapeHtml(evName) + ' discarded' + (lastEvent.card && typeof formatCardShort === 'function' ? ' ' + formatCardShort(lastEvent.card) : '') + '</div>';
-          }
+        const hr = msg.handResult || {};
+        const labels = { knock: 'Knock', undercut: 'Undercut!', gin: 'Gin!', bigGin: 'Big Gin!', cancelled: 'Stock ran out' };
+        html += '<div class="tc-tv-result">';
+        html += '<div class="tc-sheet-kicker">' + escapeHtml(msg.phase === 'finished' ? 'Game over' : (labels[hr.type] || 'Hand over')) + '</div>';
+        if (msg.phase === 'finished' && msg.winner) {
+          html += '<div class="tc-sheet-title tc-good">' + escapeHtml((names[msg.winner] || 'Player') + ' wins the game!') + '</div>';
+        } else if (hr.type === 'cancelled') {
+          html += '<div class="tc-sheet-title">No points this hand</div>';
+        } else if (hr.winner) {
+          html += '<div class="tc-sheet-title tc-good">' + escapeHtml((names[hr.winner] || 'Player') + ' wins +' + (hr.points || 0)) + '</div>';
         }
+        if (msg.knocker) {
+          const oppId = pids.find(id => id !== msg.knocker);
+          html += tvRevealHtml((names[msg.knocker] || 'Player') + ' (knocked)', msg.knockerMelds, msg.knockerDeadwood);
+          html += tvRevealHtml(names[oppId] || 'Player', msg.opponentMelds, msg.opponentDeadwood, msg.opponentLayoffs);
+        }
+        html += '</div>';
       }
 
+      if (pids[0]) html += '<div class="tc-tv-seats">' + seat(pids[0]) + '</div>';
       html += '</div>';
       content.innerHTML = html;
     }
@@ -1153,158 +1114,79 @@
       const content = document.getElementById('gameContent');
       const names = state.playerNames || msg.playerNames || {};
 
-      // Sound transitions for Shithead
+      // Sounds (TV speakers)
       if (msg.phase === 'play' || msg.phase === 'finished') {
-        if (lastShState.pileCount != null && msg.pileCount === 0 && lastShState.pileCount > 0) {
-          audio.play('deck_redraw');
-        } else if (lastShState.drawPileCount != null && msg.drawPileCount < lastShState.drawPileCount) {
-          audio.play('draw');
-        } else if (lastShState.pileCount != null && msg.pileCount > lastShState.pileCount) {
-          audio.play('place');
-        }
-        if (msg.phase === 'finished' && lastShState.phase !== 'finished') {
-          audio.play('win');
-        }
+        if (lastShState.pileCount != null && msg.pileCount === 0 && lastShState.pileCount > 0) audio.play('deck_redraw');
+        else if (lastShState.drawPileCount != null && msg.drawPileCount < lastShState.drawPileCount) audio.play('draw');
+        else if (lastShState.pileCount != null && msg.pileCount > lastShState.pileCount) audio.play('place');
+        if (msg.phase === 'finished' && lastShState.phase !== 'finished') audio.play('win');
       }
       lastShState = { pileCount: msg.pileCount || 0, drawPileCount: msg.drawPileCount, phase: msg.phase };
 
-      let html = '<div class="shithead-display ' + msg.phase + '-phase">';
+      const players = msg.players || [];
+      const finish = msg.finishOrder || [];
+      const many = players.length > 4; // compact seats so 5-6 players fit a 1080p TV
+      const pileSize = many ? 'lg' : 'xl';
+      let status = 'Palace';
+      if (msg.phase === 'swap') status = 'Swap phase: everyone picks their face-up cards';
+      else if (msg.phase === 'finished') status = 'Game over';
+      else if (msg.currentPlayer) status = (names[msg.currentPlayer] || 'Player') + "'s turn";
 
-      if (msg.phase === 'swap') {
-        html += '<div class="phase-title swap-title">Swap Phase</div>' +
-          '<p class="phase-subtitle">Players are arranging their best cards face-up on their phones...</p>';
-        // Show swap confirmation status
-        if (msg.swapConfirmed) {
-          html += '<div class="swap-status-grid">';
-          for (const [id, confirmed] of Object.entries(msg.swapConfirmed)) {
-            const name = names[id] || id;
-            const iconClass = confirmed ? 'confirmed' : 'pending';
-            const icon = confirmed ? '✓' : '⏳';
-            html += '<div class="swap-status-card card">' +
-              '<span class="status-icon ' + iconClass + '">' + icon + '</span>' +
-              '<span class="status-name">' + escapeHtml(name) + '</span>' +
-            '</div>';
-          }
-          html += '</div>';
+      const seat = p => {
+        const place = finish.indexOf(p.playerId);
+        const out = p.isOut || place >= 0;
+        const turn = msg.phase === 'play' && p.playerId === msg.currentPlayer;
+        let tag = null;
+        let tagClass = '';
+        if (msg.phase === 'swap') { tag = (msg.swapConfirmed || {})[p.playerId] ? '✓ ready' : '⏳ swapping'; tagClass = (msg.swapConfirmed || {})[p.playerId] ? 'tc-tag-out' : ''; }
+        else if (msg.phase === 'finished' && p.playerId === msg.loser) { tag = 'Palace keeper 💩'; tagClass = 'tc-tag-loser'; }
+        else if (out) { tag = '✓ out #' + (place + 1); tagClass = 'tc-tag-out'; }
+        else if (turn) tag = '▶ playing';
+        let cards = '';
+        if (!out || msg.phase === 'swap') {
+          cards += '<div><div class="tc-mini-label">Hand</div>' + tvFanHtml(p.handCount || 0, 'sm', 8) + '</div>';
+          cards += '<div><div class="tc-mini-label">Face up · down</div><div class="tc-mini-row">' +
+            (p.faceUp || []).map(c => renderTableCard(c, { size: many ? 'sm' : 'md', dataId: '' })).join('') +
+            Array.from({ length: p.faceDownCount || 0 }, () => renderTableCard(null, { size: 'sm', facedown: true, dataId: '' })).join('') +
+          '</div></div>';
         }
-      } else if (msg.phase === 'play' || msg.phase === 'finished') {
-        const pilePreview = (msg.pilePreview && msg.pilePreview.length > 0)
-          ? msg.pilePreview
-          : (msg.pileTop ? [msg.pileTop] : []);
+        return tvSeatHtml(p.playerId, names, { turn, out, tag, tagClass, cards });
+      };
 
-        // --- Table Arena: Draw Stack + Central Play Pile ---
-        html += '<div class="tv-table-arena">';
+      const top = players.slice(0, Math.ceil(players.length / 2));
+      const bottom = players.slice(Math.ceil(players.length / 2));
+      let html = '<div class="tc-tv tc-felt' + (many ? ' tc-tv-many' : '') + '">';
+      html += '<div class="tc-tv-status"><span class="tc-dot' + (msg.phase === 'play' ? ' tc-dot-live' : '') + '"></span>' + escapeHtml(status) + '</div>';
+      html += '<div class="tc-tv-seats">' + top.map(seat).join('') + '</div>';
 
-        // Draw Stack
-        if (msg.drawPileCount != null) {
-          html += '<div class="tv-stack-card" aria-label="Draw pile">' +
-            '<div class="tv-stack-label">Draw Deck</div>' +
-            renderTvStackVisual(null, msg.drawPileCount, { width: 120, height: 168, facedown: true, emptyLabel: '0' }) +
-            '<div class="tv-stack-count-badge info-item">Draw: ' + msg.drawPileCount + '</div>' +
-          '</div>';
+      if (msg.phase === 'finished') {
+        html += '<div class="tc-tv-result"><div class="tc-sheet-kicker">Final standings</div><div class="tc-standings">' +
+          finish.map((id, i) => '<div class="tc-standing"><span class="tc-place">#' + (i + 1) + '</span>' + playerAvatarHtml(id) + escapeHtml(names[id] || 'Player') + '</div>').join('') +
+          (msg.loser ? '<div class="tc-standing"><span class="tc-place">💩</span>' + playerAvatarHtml(msg.loser) + escapeHtml((names[msg.loser] || 'Player') + ' keeps the palace') + '</div>' : '') +
+        '</div></div>';
+      } else if (msg.phase === 'play') {
+        const pilePreview = msg.pileTop ? [msg.pileTop] : [];
+        let side = '<div class="tc-rule">' + escapeHtml(shitheadRuleHintText(msg.pileTopRank, msg.pileCount || 0)) + '</div>';
+        if (msg.lastPlayedBy && (msg.lastPlayedCards || []).length) {
+          const cards = msg.lastPlayedCards;
+          side += '<div class="tc-tv-banner">' + escapeHtml((names[msg.lastPlayedBy] || 'Player') + ' played ' +
+            (cards.length > 1 ? cards.length + '× ' + tcRankLabel(cards[0].rank) : tcCardShort(cards[0]))) + '</div>';
         }
-
-        // Central Play Pile
-        html += '<div class="central-pile tv-stack-card" aria-label="Central play pile">' +
-          '<div class="tv-stack-label">Play Pile</div>' +
-          renderTvStackVisual(pilePreview, msg.pileCount || (msg.pileTop ? 1 : 0), { width: 120, height: 168, facedown: false, emptyLabel: 'Empty' }) +
-          '<div class="pile-info tv-stack-count-badge accent">Pile: ' + (msg.pileCount || 0) + ' cards</div>' +
+        const pileCount = tcNum(msg.pileCount);
+        html += '<div class="tc-tv-center">' +
+          '<div class="tc-well"><span class="tc-well-label">Draw deck</span>' +
+            renderTableStack(null, msg.drawPileCount || 0, { size: pileSize, facedown: true, emptyLabel: 'Empty' }) +
+            '<span class="tc-count">' + tcNum(msg.drawPileCount) + ' left</span></div>' +
+          '<div class="tc-well"><span class="tc-well-label">Play pile</span>' +
+            renderTableStack(pilePreview, pileCount || pilePreview.length, { size: pileSize, emptyLabel: 'Empty' }) +
+            '<span class="tc-count">' + pileCount + (pileCount === 1 ? ' card' : ' cards') + '</span></div>' +
+          '<div class="tc-tv-side">' + side + '</div>' +
         '</div>';
-
-        html += '</div>';
-        html += '<div style="text-align:center;"><span class="tv-rule-pill">' + escapeHtml(shitheadRuleHintText(msg.pileTopRank, msg.pileCount || 0)) + '</span></div>';
-
-        // Last played banner
-        if (msg.lastPlayedBy && msg.lastPlayedCards && msg.lastPlayedCards.length > 0) {
-          const actorName = names[msg.lastPlayedBy] || msg.lastPlayedBy;
-          const cardSummary = typeof formatCardShort === 'function'
-            ? (msg.lastPlayedCards.length > 1
-                ? msg.lastPlayedCards.length + '× ' + formatCardShort(msg.lastPlayedCards[0])
-                : formatCardShort(msg.lastPlayedCards[0]))
-            : (msg.lastPlayedCards.length + ' card(s)');
-          html += '<div style="text-align:center;"><span class="tv-last-play-banner">' +
-            escapeHtml(actorName) + ' played ' + escapeHtml(cardSummary) +
-          '</span></div>';
-        }
-
-        if (msg.phase === 'finished') {
-          html += '<div class="game-finished">';
-          html += '<div class="game-over-title">Game Over!</div>';
-          if (msg.loser) {
-            const loserName = names[msg.loser] || 'Someone';
-            html += '<div class="loser-announce">' + escapeHtml(loserName) + ' is the Shithead! 💩</div>';
-          }
-          html += '</div>';
-        }
-
-        // --- Player cards ---
-        html += '<div class="shithead-players">';
-        if (msg.players) {
-          msg.players.forEach(p => {
-            const name = names[p.playerId] || p.playerId;
-            const isCurrent = p.playerId === msg.currentPlayer;
-            const isOut = p.isOut === true;
-            const currentTurnClass = isCurrent ? ' current-turn' : '';
-            const outClass = isOut ? ' player-out' : '';
-            const ariaCurrent = isCurrent ? ' aria-current="true"' : '';
-
-            html += '<div class="player-panel card' + currentTurnClass + outClass + '" data-player-id="' + escapeHtml(p.playerId) + '"' + ariaCurrent + '>';
-            // Name header with turn indicator
-            html += '<div class="player-header">';
-            html += '<span class="player-name">' + playerAvatarHtml(p.playerId) + escapeHtml(name) + '</span>';
-            if (isCurrent) {
-              html += '<span class="turn-indicator neon-green" aria-label="Current turn">▶</span>';
-            }
-            if (isOut) {
-              html += '<span class="out-badge" aria-label="Player is out">✓ Out</span>';
-            }
-            html += '</div>';
-
-            // Card counts
-            const handCount = p.handCount || 0;
-            const fdCount = p.faceDownCount || 0;
-            html += '<div class="player-card-counts">';
-            html += '<span class="count-item"><span class="count-label">Hand:</span> <span class="count-value">' + handCount + '</span></span>';
-            html += '<span class="count-item"><span class="count-label">Down:</span> <span class="count-value">' + fdCount + '</span></span>';
-            html += '</div>';
-
-            html += '<div class="palace-table-cards">';
-            // Visual mini face-down card slots
-            if (fdCount > 0 && !isOut) {
-              html += '<div class="mini-back-row" aria-label="' + fdCount + ' face down cards">';
-              for (let i = 0; i < Math.min(3, fdCount); i++) {
-                html += renderCardImg({ rank: 0, suit: 'x' }, { width: 58, height: 82, facedown: true });
-              }
-              html += '</div>';
-            }
-
-            // Face-up cards (visible to all) — fanned layout
-            if (p.faceUp && p.faceUp.length > 0) {
-              html += '<div class="face-up-fan" aria-label="Face up cards">';
-
-              // Group cards by rank+suit
-              const groups = {};
-              p.faceUp.forEach(c => {
-                const key = c.rank + c.suit;
-                if (!groups[key]) groups[key] = { card: c, count: 0 };
-                groups[key].count++;
-              });
-
-              Object.values(groups).sort((a, b) => a.card.rank - b.card.rank).forEach((g, idx) => {
-                const c = g.card;
-                const countBadge = g.count > 1 ? '<span class="count-badge">' + g.count + '</span>' : '';
-                html += '<div class="fan-card" style="--card-index: ' + idx + ';">' + countBadge + renderCardImg(c, {width: 58, height: 82}) + '</div>';
-              });
-              html += '</div>';
-            }
-
-            html += '</div>';
-            html += '</div>';
-          });
-        }
-        html += '</div>';
+      } else {
+        html += '<div class="tc-tv-banner">Put your strongest cards (2, 10, A) face-up, then tap Done on your phone</div>';
       }
 
+      if (bottom.length) html += '<div class="tc-tv-seats">' + bottom.map(seat).join('') + '</div>';
       html += '</div>';
       content.innerHTML = html;
     }

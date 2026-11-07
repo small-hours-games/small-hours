@@ -105,7 +105,9 @@ export async function handleStartMiniGame(ws, meta, room, msg, ctx) {
       sendToPlayer(id, { type: 'GAME_STATE', ...view, ...clock, gameType: msg.gameType, playerNames: pNames });
     }
     // Also broadcast to host displays
-    broadcastToRoom(room.code, { type: 'GAME_STATE', gameType: msg.gameType, phase: room.game.state.phase, ...clock, playerNames: pNames }, { hostsOnly: true });
+    // Host displays get the shared table straight away (same view as every later update)
+    const hostView = getHostView(room.game, room.players.keys().next().value);
+    broadcastToRoom(room.code, { type: 'GAME_STATE', ...hostView, gameType: msg.gameType, phase: room.game.state.phase, ...clock, playerNames: pNames }, { hostsOnly: true });
   } catch (err) {
     send(ws, { type: 'ERROR', message: err.message });
   }
