@@ -69,10 +69,11 @@
       };
     }
 
-    function tcLaunchArrivals(track, hand, fromEl, handEl) {
+    function tcLaunchArrivals(track, hand, fromEl, handEl, opts) {
+      const wait = (opts && opts.delay) || 0;
       track.arrived.slice(0, TC_MAX_ARRIVAL_FLIGHTS).forEach((id, i) => {
         tcFlyToHand(hand.find(c => c.id === id), fromEl, handEl, {
-          delay: i * 200,
+          delay: wait + i * 90,
           onDone: () => {
             track.t.flying.delete(id);
             const el = tcHandCard(handEl, id);

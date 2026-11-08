@@ -149,7 +149,19 @@ export function handleGameAction(ws, meta, room, msg, ctx) {
     return;
   }
 
-  applyGameAction(room, { ...msg.action, playerId: meta.playerId }, ctx);
+  // A phone resends a move after a reconnect when it never heard back. If this move already
+  // went through, don't play it twice: just send the player where the game stands now.
+  const { moveId, ...action } = msg.action;
+  const player = room.players.get(meta.playerId);
+  if (moveId && player && player.lastMoveId === String(moveId)) {
+    const view = getView(room.game, meta.playerId);
+    const clock = ctx.timing ? ctx.timing(room) : {};
+    ctx.sendToPlayer(meta.playerId, { type: 'GAME_STATE', ...view, ...clock, playerNames: ctx.getPlayerNames(room), ack: String(moveId) });
+    return;
+  }
+  if (moveId && player) player.lastMoveId = String(moveId).slice(0, 40);
+
+  applyGameAction(room, { ...action, playerId: meta.playerId, ...(moveId ? { moveId: String(moveId).slice(0, 40) } : {}) }, ctx);
 }
 
 /**
@@ -162,7 +174,8 @@ export function handleGameAction(ws, meta, room, msg, ctx) {
  */
 export function applyGameAction(room, action, ctx) {
   const { broadcastToRoom, sendToPlayer, roomGameTypes, schedulePhaseTimer, getPlayerNames } = ctx;
-  const { game: updatedGame, events } = processAction(room.game, action);
+  const { moveId: _moveId, ...engineAction } = action;   // the engine never sees transport ids
+  const { game: updatedGame, events } = processAction(room.game, engineAction);
   room.game = updatedGame;
   room.lastActivity = Date.now();
 
@@ -176,10 +189,11 @@ export function applyGameAction(room, action, ctx) {
 
   const playerNames = getPlayerNames(room);
 
-  // Send per-player views (flattened into GAME_STATE)
+  // Send per-player views (flattened into GAME_STATE). The mover's copy acknowledges the move.
   for (const [id] of room.players) {
     const view = getView(room.game, id);
-    sendToPlayer(id, { type: 'GAME_STATE', ...view, ...clock, playerNames });
+    const ack = action.moveId && id === action.playerId ? { ack: action.moveId } : {};
+    sendToPlayer(id, { type: 'GAME_STATE', ...view, ...clock, playerNames, ...ack });
   }
 
   // Broadcast shared state to host displays only (not players — they got personal views above)

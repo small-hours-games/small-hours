@@ -89,12 +89,14 @@
       const arrivals = tcTrackArrivals('gr', hand, playing ? (msg.handNumber || 1) : null);
       const fromStock = state.grPrevStock != null && stockCount < state.grPrevStock;
       state.grPrevStock = stockCount;
-      handEl.innerHTML = renderHandRack(ordered, {
-        layout: tcLayout(), width: tcHandWidth('grHand'), cardW: tcHandCardW('grHand'),
-        cardOpts: c => {
-          const arrival = tcArrivalOpts(arrivals, c);
-          return { selected: state.grSelectedCard === c.id, meld: meldOf[c.id], ...arrival, isNew: arrival.isNew || msg.lastDrawnCardId === c.id };
-        },
+      tcFlipHand(handEl, () => {
+        handEl.innerHTML = renderHandRack(ordered, {
+          layout: tcLayout(), width: tcHandWidth('grHand'), cardW: tcHandCardW('grHand'),
+          cardOpts: c => {
+            const arrival = tcArrivalOpts(arrivals, c);
+            return { selected: state.grSelectedCard === c.id, meld: meldOf[c.id], ...arrival, isNew: arrival.isNew || msg.lastDrawnCardId === c.id };
+          },
+        });
       });
       attachHandGestures(handEl, {
         peek: true,

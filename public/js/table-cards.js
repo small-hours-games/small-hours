@@ -177,6 +177,12 @@ function orderHand(hand, mode, order, melds) {
     return known.concat(fresh);
   }
   if (mode === 'suit') return cards.sort(bySuitThenRank);
+  if (mode === 'palace') {
+    // Palace: low to high (3 … A), and the cards that play on anything (2 resets, 10 burns)
+    // last, so the hand reads from "get rid of these" to "save these".
+    var power = function (c) { var r = tcNum(c.rank); return r === 2 || r === 10 ? 100 + r : (r === 1 ? 14 : r); };
+    return cards.sort(function (a, b) { return (power(a) - power(b)) || (TC_SUITS[a.suit].order - TC_SUITS[b.suit].order); });
+  }
   if (mode === 'melds' && melds && melds.length) {
     var seen = {};
     var out = [];
@@ -320,14 +326,24 @@ function tcReleaseVelocity(samples, now) {
 
 /* ---------- Card tempo ----------
    One place to tune how fast cards move. */
-var TC_FLIGHT_SLOWDOWN = 2;   // thrown cards: phone throw and the TV flight to the pile
-var TC_DRAW_MS = 1040;        // a card travelling to a hand
-var TC_SETTLE_MS = 560;       // a released card easing into its place in the hand
+// Motion research (Material, NN/g): a card that moves for more than ~0.5 s feels like it is
+// lagging, and a move must start within 0.1 s of the tap. So flights are short and decelerate
+// (ease-out), longer only for a longer trip, and the TV gets about a third more than the phone.
+var TC_FLIGHT_SLOWDOWN = 1;   // thrown cards: phone throw and the TV flight to the pile
+var TC_DRAW_MS = 420;         // a card travelling to a hand
+var TC_SETTLE_MS = 300;       // a released card easing into its place in the hand
+var TC_SLIDE_MS = 240;        // hand cards sliding aside for a new or sorted card
 var TC_SCRUB_STEP_PX = 14;    // finger travel before the lifted card may change
 
 /** Flight time to the pile for a throw speed in viewport heights per second (TV). */
 function tcFlightMs(speed) {
-  return Math.round(Math.max(350, Math.min(900, 1900 / speed))) * TC_FLIGHT_SLOWDOWN;
+  return Math.round(Math.max(300, Math.min(520, 1100 / speed))) * TC_FLIGHT_SLOWDOWN;
+}
+
+/** Phone: time for a thrown card to reach the pile, from the distance in px and the flick speed. */
+function tcPileThrowMs(distance, speed) {
+  var base = 150 + distance * 0.35;
+  return Math.round(Math.max(180, Math.min(320, base * (2.4 / Math.max(1.2, Math.min(6, speed || 2.4))) ** 0.5)));
 }
 
 /** Time for a thrown card to leave the top of the phone. */
@@ -708,6 +724,94 @@ function tcThrowOff(card, rect, flick) {
 }
 
 /**
+ * Phone: the thrown card flies into the phone's own play pile at once (before the server
+ * answers) and lands at the tilt the pile will draw it with. It stays there until the
+ * server's state has been drawn (tcReleaseThrows), so the pile never shows it twice or
+ * flickers back to the old top. A refused move simply redraws the hand and the card is back.
+ * rect: where the card was; pileEl: the pile box; flick: { vx, vy } screen heights / s.
+ */
+var tcThrowGhosts = [];
+function tcThrowToPile(card, rect, pileEl, flick, index) {
+  if (!rect || !card || !pileEl || typeof document === 'undefined') return null;
+  var top = pileEl.querySelector('.tc-pile-top, .tc-card') || pileEl;
+  var to = top.getBoundingClientRect();
+  if (!to.width) return null;
+  var w = to.width;
+  var ghost = tcGhost(card, { left: to.left, top: to.top, width: w });
+  var vx = (flick && flick.vx) || 0;
+  var speed = Math.hypot(vx, (flick && flick.vy) || 0) || 2.4;
+  var dx = rect.left + rect.width / 2 - (to.left + w / 2);
+  var dy = rect.top + rect.height / 2 - (to.top + to.height / 2);
+  var dur = tcReducedMotion() ? 120 : tcPileThrowMs(Math.hypot(dx, dy), speed);
+  var tilt = tcPileTilt(card.id);
+  var land = 'translate(' + tilt.dx.toFixed(1) + 'px, ' + tilt.dy.toFixed(1) + 'px) rotate(' + (tilt.rot * 0.4).toFixed(1) + 'deg)';
+  var spin = Math.max(-40, Math.min(40, vx * 14)) + (index || 0) * 6;
+  var anim = ghost.animate([
+    { transform: 'translate(' + dx.toFixed(0) + 'px, ' + dy.toFixed(0) + 'px) rotate(' + spin.toFixed(0) + 'deg) scale(' + (rect.width / w).toFixed(2) + ')' },
+    { transform: land + ' scale(1.04)', offset: 0.82 },
+    { transform: land + ' scale(1)' },
+  ], { duration: dur, delay: (index || 0) * 60, easing: 'cubic-bezier(0, 0, 0.2, 1)', fill: 'both' });
+  var entry = { ghost: ghost, landed: false, released: false, pileEl: pileEl };
+  tcThrowGhosts.push(entry);
+  anim.onfinish = function () { entry.landed = true; tcSettleThrow(entry); };
+  // Never left hanging: a lost answer is handled by the move timeout, the ghost goes anyway.
+  entry.timer = setTimeout(function () { entry.released = true; tcSettleThrow(entry); }, 2500);
+  return anim;
+}
+function tcSettleThrow(entry) {
+  if (!entry.landed || !entry.released || !entry.ghost) return;
+  clearTimeout(entry.timer);
+  entry.ghost.remove();
+  entry.ghost = null;
+  tcThrowGhosts.splice(tcThrowGhosts.indexOf(entry), 1);
+  var top = entry.pileEl.querySelector('.tc-pile-top');
+  if (top) { top.classList.remove('tc-await-land', 'tc-land'); top.classList.add('tc-thud'); }
+}
+/** The server's answer has been drawn: thrown cards may now give way to the real pile. */
+function tcReleaseThrows(pileEl) {
+  var flying = false;
+  tcThrowGhosts.slice().forEach(function (entry) {
+    if (pileEl) entry.pileEl = pileEl;
+    entry.released = true;
+    if (!entry.landed) flying = true;
+    tcSettleThrow(entry);
+  });
+  // While a thrown card is still in the air, the pile keeps its new top out of sight.
+  if (flying && pileEl) {
+    var top = pileEl.querySelector('.tc-pile-top');
+    if (top) top.classList.add('tc-await-land');
+  }
+}
+/** When the last thrown card lands (ms from now; 0 when none is flying). */
+function tcThrowsLandIn() {
+  return tcThrowGhosts.some(function (e) { return !e.landed; }) ? 320 : 0;
+}
+
+/**
+ * Hand: redraw it, then slide every card that moved from where it was (FLIP), so a sorted
+ * or newly inserted card makes room instead of the hand jumping. render() redraws the hand.
+ */
+function tcFlipHand(container, render) {
+  if (!container) { render(); return; }
+  var before = {};
+  Array.prototype.forEach.call(container.querySelectorAll('[data-card-id]'), function (el) {
+    before[el.getAttribute('data-card-id')] = el.getBoundingClientRect();
+  });
+  render();
+  if (tcReducedMotion() || typeof Element === 'undefined' || !Element.prototype.animate) return;
+  Array.prototype.forEach.call(container.querySelectorAll('[data-card-id]'), function (el) {
+    var b = before[el.getAttribute('data-card-id')];
+    if (!b) return;
+    var a = el.getBoundingClientRect();
+    var dx = b.left - a.left, dy = b.top - a.top;
+    if (Math.abs(dx) + Math.abs(dy) < 2) return;
+    // The individual translate property moves the card without touching its own lift or tilt.
+    el.animate([{ translate: dx.toFixed(1) + 'px ' + dy.toFixed(1) + 'px' }, { translate: '0px 0px' }],
+      { duration: TC_SLIDE_MS, easing: 'cubic-bezier(0.2, 0, 0.2, 1)' });
+  });
+}
+
+/**
  * TV: fly a card from a seat to the pile and land it at its pile tilt.
  * fromRect: the seat; pileEl: the pile box; ev: the move event (seed, flick).
  * Faster throws fly faster (tcFlightMs). opts.burn: flare and vanish on landing.
@@ -805,9 +909,8 @@ function tcFlyToHand(card, fromEl, container, opts) {
   var dx = (from.left + from.width / 2 - cx).toFixed(0);
   var dy = (from.top + from.height / 2 - cy).toFixed(0);
   var anim = ghost.animate([
-    { transform: 'translate(' + dx + 'px, ' + dy + 'px) rotate(-8deg) scale(' + (from.width / w).toFixed(2) + ')', opacity: 0, offset: 0, easing: 'cubic-bezier(.4, 0, .3, 1)' },
-    { opacity: 1, offset: 0.06 },
-    { transform: 'translate(0, 0) rotate(0deg) scale(1.28)', offset: 0.84, easing: 'ease-in-out' },
+    { transform: 'translate(' + dx + 'px, ' + dy + 'px) rotate(-8deg) scale(' + (from.width / w).toFixed(2) + ')', opacity: 0, offset: 0, easing: 'cubic-bezier(0, 0, 0.2, 1)' },
+    { opacity: 1, offset: 0.12 },
     { transform: 'translate(0, 0) rotate(0deg) scale(1)', opacity: 1, offset: 1 },
   ], { duration: TC_DRAW_MS, delay: opts.delay || 0, fill: 'both' });
   anim.onfinish = function () { ghost.remove(); done(); };

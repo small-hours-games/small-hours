@@ -10,18 +10,23 @@
     });
 
     // A move is on its way: the card has left the hand but the server has not answered.
-    // No second move until it has, and if no answer comes the card goes back.
-    const SH_MOVE_TIMEOUT_MS = 3000;
+    // No second move until it has. A slow answer usually means a phone whose connection died
+    // without noticing (screen lock, Wi-Fi to 4G): after a moment we check the line, and a
+    // reconnect resends the move (player.html). Only if nothing comes does the card go back.
+    const SH_MOVE_TIMEOUT_MS = 8000;
+    const SH_MOVE_SLOW_MS = 800;
 
     function shMovePending() { return state.shMoveTimer != null; }
 
     function shMoveAnswered() {
       clearTimeout(state.shMoveTimer);
+      clearTimeout(state.shMoveSlowTimer);
       state.shMoveTimer = null;
     }
 
     function shMoveSent() {
       shMoveAnswered();
+      state.shMoveSlowTimer = setTimeout(() => { if (typeof checkConnection === 'function') checkConnection(); }, SH_MOVE_SLOW_MS);
       state.shMoveTimer = setTimeout(() => {
         state.shMoveTimer = null;
         showToast("That move didn't go through. Try again.", 'error');
@@ -154,7 +159,7 @@
       const freshEvent = ev && ev.seq !== state.shSeenSeq;
       state.shLog = tcLogPush(state.shLog, ev, 6);
       state.shSeenSeq = ev ? ev.seq : null;
-      if (freshEvent && ev.kind === 'play') {
+      if (freshEvent && ev.kind === 'play' && ev.by !== state.playerId) {
         const top = pileStack.querySelector('.tc-pile-top');
         if (top) top.classList.add('tc-land');
       }
@@ -199,7 +204,8 @@
       if (msg.phase === 'swap' || zone === 'hand') rackCards = msg.myHand || [];
       else if (zone === 'faceUp') rackCards = faceUp;
       const sortMode = state.shSortMode || 'rank';
-      let ordered = orderHand(rackCards, sortMode, state.shOrder);
+      // "rank" in Palace: low to high, with the 2s and 10s (they play on anything) kept last.
+      let ordered = orderHand(rackCards, sortMode === 'rank' ? 'palace' : sortMode, state.shOrder);
       // A big hand (after a pickup) stacks same ranks: Palace plays them together anyway.
       const stackable = msg.phase === 'play' && zone === 'hand' && shHasStacks(rackCards);
       const stacked = stackable && !state.shSplitStacks;
@@ -221,10 +227,12 @@
         rackOpts = c => ({ facedown: true, selected: state.shSelectedCards.includes(c.id) });
       }
       const handEl = document.getElementById('shHand');
-      handEl.innerHTML = renderHandRack(ordered, {
-        layout: tcLayout(), width: tcHandWidth('shHand'), cardW: tcHandCardW('shHand'), cardOpts: rackOpts,
-        stack: stacked,
-        emptyText: msg.phase === 'finished' ? 'Game over' : 'No cards left',
+      tcFlipHand(handEl, () => {
+        handEl.innerHTML = renderHandRack(ordered, {
+          layout: tcLayout(), width: tcHandWidth('shHand'), cardW: tcHandCardW('shHand'), cardOpts: rackOpts,
+          stack: stacked,
+          emptyText: msg.phase === 'finished' ? 'Game over' : 'No cards left',
+        });
       });
       attachHandGestures(handEl, {
         peek: true,
@@ -253,7 +261,8 @@
       tcSqueeze('shitheadSection');
       shFitLog();
       const fromPile = ev && (ev.kind === 'pickup' || ev.kind === 'blind-miss');
-      tcLaunchArrivals(arrivals, myHand, fromPile ? pileStack : document.getElementById('shDrawStack'), handEl);
+      // A card drawn to replace the one I threw waits until that one has landed on the pile.
+      tcLaunchArrivals(arrivals, myHand, fromPile ? pileStack : document.getElementById('shDrawStack'), handEl, { delay: tcThrowsLandIn() });
     }
 
     /** The hand is pinned to the bottom: drop the oldest log lines until none sit under it. */
@@ -420,7 +429,7 @@
         if (!el) return;
         const rect = (i === 0 && flick && flick.rect) ? flick.rect : el.getBoundingClientRect();
         const card = known.find(c => c.id === cid) || null;
-        if (card) tcThrowOff(card, rect, flick || SH_TAP_FLICK);
+        if (card) tcThrowToPile(card, rect, document.getElementById('shPileStack'), flick || SH_TAP_FLICK, i);
         el.style.visibility = 'hidden';
       });
     }
@@ -443,7 +452,11 @@
       if (!cardId || shMovePending()) return;
       state.shSelectedCards = [];
       const el = document.querySelector('#shHand [data-card-id="' + (window.CSS && CSS.escape ? CSS.escape(cardId) : cardId) + '"]');
-      if (el) el.style.visibility = 'hidden';
+      if (el) {
+        // The blind card flies to the pile face down; the server's answer turns it over there.
+        tcThrowToPile({ id: cardId }, el.getBoundingClientRect(), document.getElementById('shPileStack'), flick || SH_TAP_FLICK, 0);
+        el.style.visibility = 'hidden';
+      }
       send({ type: 'GAME_ACTION', action: { type: 'playFaceDown', cardId: cardId, flick: shFlickPayload(flick) } });
       shMoveSent();
     }
@@ -493,7 +506,11 @@
 
     SH.registerGame('shithead', {
       section: 'shitheadSection',
-      render(msg) { shMoveAnswered(); renderShitheadState(msg); },
+      render(msg) {
+        shMoveAnswered();
+        renderShitheadState(msg);
+        tcReleaseThrows(document.getElementById('shPileStack'));
+      },
       redraw: shRedraw,
       reset: shMoveAnswered,
       lobbyOptions() {

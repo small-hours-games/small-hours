@@ -444,6 +444,10 @@ export function setupWebSocket(server, manager) {
     }
 
     switch (msg.type) {
+      case 'PING':
+        // Phones check their line with this and time the round trip; answer at once.
+        send(ws, { type: 'PONG', t: typeof msg.t === 'number' ? msg.t : null });
+        break;
       case 'JOIN_LOBBY':
         lobbyHandlers.handleJoinLobby(ws, meta, room, msg, ctx);
         break;

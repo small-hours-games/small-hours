@@ -1,8 +1,9 @@
 import rules from './rules.js';
 import { choosePalaceAction } from './bot.js';
 
-// Let a card finish its flight to the pile on the TV (tcFlightMs) before the next bot move.
-const AFTER_FLIGHT_MS = 2_000;
+// Let a card finish its flight to the pile on the TV (tcFlightMs, at most ~0.5 s) and the
+// table read it before the next bot move.
+const AFTER_FLIGHT_MS = 1_000;
 const FLIGHT_EVENTS = new Set(['play', 'burn', 'blind-miss']);
 const afterFlight = state => (FLIGHT_EVENTS.has(state.lastEvent?.kind) ? AFTER_FLIGHT_MS : undefined);
 

@@ -245,7 +245,7 @@
       myIndex: -1,
       reconnectToken: null,
       reconnectAttempts: 0,
-      maxReconnect: 10,
+      maxReconnect: 20,
       reconnectTimer: null,
       votedGame: null,
     };
@@ -308,14 +308,17 @@
 
       ws.onopen = () => {
         state.reconnectAttempts = 0;
+        state.lastHeard = Date.now();
         setConnectionStatus('connected', 'Connected');
         // Send join message
         send({ type: 'JOIN_LOBBY', username: state.name, reconnectToken: state.reconnectToken });
       };
 
       ws.onmessage = (e) => {
+        state.lastHeard = Date.now();
         try {
           const msg = JSON.parse(e.data);
+          if (msg.type === 'PONG') { notePong(msg); return; }
           handleMessage(msg);
         } catch (err) {
           console.error('Bad message:', err);
@@ -338,18 +341,105 @@
         showToast('Connection lost. Please refresh.', 'error');
         return;
       }
-      const delay = Math.min(1000 * Math.pow(2, state.reconnectAttempts), 30000);
+      // Quick first tries with jitter, capped at 5 s: in a living room the server is right there.
+      const delay = Math.round(Math.min(500 * Math.pow(2, state.reconnectAttempts), 5000) * (0.5 + Math.random() * 0.5));
       state.reconnectAttempts++;
       setConnectionStatus('reconnecting', 'Reconnecting (' + state.reconnectAttempts + ')...');
       clearTimeout(state.reconnectTimer);
       state.reconnectTimer = setTimeout(connect, delay);
     }
 
+    // --- Connection health ---
+    // A phone's socket can look open while nothing gets through (screen lock, Wi-Fi to 4G,
+    // power saving), and a move sent into it is lost without a word. So: a small ping every
+    // few seconds (it also measures the round trip), a check the moment the page is shown
+    // again, and a fresh connection as soon as the line is quiet for too long. Game moves
+    // carry an id, wait in an outbox while the line is down, and are sent again after the
+    // reconnect; the server ignores a move it already has.
+    const PING_EVERY_MS = 5000;
+    const SILENT_LIMIT_MS = 11000;
+    const PROBE_TIMEOUT_MS = 1500;
+    const OUTBOX_MAX_AGE_MS = 8000;
+    const clientTag = Math.random().toString(36).slice(2, 8);
+    let moveSeq = 0;
+    let outbox = [];
+    let probeTimer = null;
+
     function send(msg) {
+      if (msg.type === 'GAME_ACTION' && msg.action && !msg.action.moveId) {
+        msg = { ...msg, action: { ...msg.action, moveId: clientTag + '-' + (++moveSeq) } };
+      }
       if (state.ws?.readyState === WebSocket.OPEN) {
         state.ws.send(JSON.stringify(msg));
+        if (msg.type === 'GAME_ACTION') outbox.push({ msg, at: Date.now() });
+        return true;
+      }
+      if (msg.type === 'GAME_ACTION') {
+        outbox.push({ msg, at: Date.now(), unsent: true });
+        reconnectNow();
+      }
+      return false;
+    }
+
+    /** After a (re)join: send the moves that never got an answer, if they are still fresh. */
+    function flushOutbox() {
+      const now = Date.now();
+      const pending = outbox.filter(o => now - o.at < OUTBOX_MAX_AGE_MS);
+      outbox = [];
+      pending.forEach(o => send(o.msg));
+    }
+
+    /** The server answered move `ack`: it has that one and every move sent before it. */
+    function clearOutbox(ack) {
+      const i = outbox.findIndex(o => o.msg.action && o.msg.action.moveId === ack);
+      if (i >= 0) outbox = outbox.slice(i + 1);
+    }
+
+    function notePong(msg) {
+      clearTimeout(probeTimer);
+      probeTimer = null;
+      if (msg.t) {
+        state.rtt = Math.round(performance.now() - msg.t);
+        const conn = document.getElementById('connStatus');
+        if (conn) conn.title = 'Round trip ' + state.rtt + ' ms';
       }
     }
+
+    function ping() {
+      if (state.ws?.readyState === WebSocket.OPEN) state.ws.send(JSON.stringify({ type: 'PING', t: performance.now() }));
+    }
+
+    /** Is the line alive? Ping now; no answer soon means it is not, so connect again. */
+    function checkConnection() {
+      if (!state.ws || state.ws.readyState !== WebSocket.OPEN) { reconnectNow(); return; }
+      if (probeTimer) return;
+      ping();
+      probeTimer = setTimeout(() => { probeTimer = null; reconnectNow(); }, PROBE_TIMEOUT_MS);
+    }
+
+    /** Drop the old socket without waiting for it to admit it is dead, and connect at once. */
+    function reconnectNow() {
+      if (state.ws && state.ws.readyState === WebSocket.CONNECTING) return;
+      clearTimeout(state.reconnectTimer);
+      clearTimeout(probeTimer);
+      probeTimer = null;
+      const old = state.ws;
+      if (old) {
+        old.onopen = old.onmessage = old.onclose = old.onerror = null;
+        try { old.close(); } catch { /* already gone */ }
+      }
+      state.reconnectAttempts = 0;
+      connect();
+    }
+
+    setInterval(() => {
+      if (document.visibilityState !== 'visible' || !state.ws) return;
+      if (state.ws.readyState === WebSocket.OPEN && Date.now() - (state.lastHeard || 0) > SILENT_LIMIT_MS) { reconnectNow(); return; }
+      ping();
+    }, PING_EVERY_MS);
+    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && state.code && state.name) checkConnection(); });
+    window.addEventListener('online', () => { if (state.code && state.name) checkConnection(); });
+    window.addEventListener('pageshow', e => { if (e.persisted && state.code && state.name) checkConnection(); });
 
     // --- Message handling ---
     function handleMessage(msg) {
@@ -360,6 +450,7 @@
             if (state.reconnectToken) localStorage.setItem('sh_reconnect_' + state.code, state.reconnectToken);
           } catch { /* keep the token in memory when storage is unavailable */ }
           state.playerId = msg.playerId;
+          setTimeout(flushOutbox, 0);   // moves that got no answer before the line dropped
           state.myIndex = msg.index ?? 0;
           if (Array.isArray(msg.avatarPool)) AVATAR_POOL = msg.avatarPool;
           if (msg.avatar) setMyAvatar(msg.avatar);
@@ -374,7 +465,8 @@
             try { seen = !!localStorage.getItem('sh_avatar_seen'); } catch { /* ignore */ }
             if (!seen && !saved) setTimeout(openAvatarPicker, 600);
           }
-          showToast('Joined room ' + state.code, 'success');
+          if (!state.joinedOnce) showToast('Joined room ' + state.code, 'success');   // not on every reconnect
+          state.joinedOnce = true;
           break;
 
         case 'AVATAR_OK':
@@ -414,6 +506,7 @@
           break;
 
         case 'GAME_STATE':
+          if (msg.ack) clearOutbox(msg.ack);
           handleGameState(msg);
           break;
 

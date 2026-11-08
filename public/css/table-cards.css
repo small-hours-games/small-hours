@@ -478,13 +478,18 @@
 .tc-pile > .tc-card { grid-area: 1 / 1; }
 .tc-pile-card:not(.tc-pile-top) { filter: brightness(0.94); }
 .tc-pile-hot .tc-pile-top { box-shadow: 0 0 0 3px var(--tc-accent), var(--tc-elev-2); }
-.tc-pile-top.tc-land { animation: tc-land 0.84s cubic-bezier(0.33, 0, 0.2, 1) both; }
+.tc-pile-top.tc-land { animation: tc-land 0.36s cubic-bezier(0, 0, 0.2, 1) both; }
+/* My own thrown card already flew here (tcThrowToPile): it only settles. */
+.tc-pile-top.tc-thud { animation: tc-thud 0.16s ease-out both; }
+@keyframes tc-thud { from { scale: 1.03 0.96; } to { scale: 1; } }
 @keyframes tc-land {
   from { translate: 0 -34px; scale: 1.18; opacity: 0; }
   70% { scale: 1.02 0.97; opacity: 1; }
   to { translate: 0 0; scale: 1; opacity: 1; }
 }
 .tc-in-flight { visibility: hidden; }
+/* The pile's new top while the thrown card is still in the air (tcThrowToPile). */
+.tc-await-land { visibility: hidden; }
 .tc-flight { position: fixed; z-index: 9999; pointer-events: none; will-change: transform, opacity; }
 .tc-flight .tc-card { box-shadow: var(--tc-elev-4); }
 .tc-flight-burn .tc-card { box-shadow: 0 0 34px 12px rgba(251, 146, 60, 0.85); }
@@ -544,7 +549,7 @@
 .tc-tv-seat-chips { display: flex; gap: 4px; }
 
 @media (prefers-reduced-motion: reduce) {
-  .tc-pile-top.tc-land, .tc-log-new { animation: none; }
+  .tc-pile-top.tc-land, .tc-pile-top.tc-thud, .tc-log-new { animation: none; }
 }
 
 /* Phone: the log sits in the table, under the rule line */
@@ -679,11 +684,11 @@
 .tc-well.tc-well-active { border-color: #facc15; background: rgba(250, 204, 21, 0.08); }
 
 /* A calm hand: cards lift and sink at the same slow pace, without overshoot. */
-.tc-rack .tc-card { transition: transform 0.55s cubic-bezier(0.33, 0, 0.2, 1), box-shadow 0.3s ease, opacity 0.2s ease, filter 0.2s ease; }
+.tc-rack .tc-card { transition: transform 0.3s cubic-bezier(0.2, 0, 0.2, 1), box-shadow 0.3s ease, opacity 0.2s ease, filter 0.2s ease; }
 
-/* A card that just landed in the hand stands up and glows until the next card leaves it. */
-.tc-slot:has(> .tc-new) { z-index: 300 !important; }
-.tc-rack .tc-card.tc-new:not(.tc-selected):not(.tc-peek) { transform: translateY(-14px); }
+/* A card that just landed in the hand glows blue until the next card leaves it. It stays in
+   its sorted place and its own layer, under the cards to its right, like any other card:
+   lifting it over the hand hid the cards it covered. */
 .tc-rack .tc-card.tc-new { animation: tc-arrived 1.8s ease-in-out infinite; }
 @keyframes tc-arrived {
   0%, 100% { box-shadow: 0 0 0 3px var(--tc-accent), 0 0 12px 2px rgba(56, 189, 248, 0.45); }

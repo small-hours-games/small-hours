@@ -582,6 +582,8 @@
       } catch (e) { /* TTS optional */ }
     }
 
+    // The intro gives way as soon as someone makes a move: the table matters more than the story.
+    let closeStory = () => {};
     function playStory(gameType) {
       const story = (window.SMALL_HOURS_STORIES && window.SMALL_HOURS_STORIES[gameType]) || null;
       if (!story) return;
@@ -600,7 +602,9 @@
       const close = () => {
         overlay.style.display = 'none';
         if (storyAudio) storyAudio.pause();
+        closeStory = () => {};
       };
+      closeStory = close;
       skip.onclick = close;
       // Auto-dismiss after the narration window (skip if no TTS).
       setTimeout(close, 7000);
@@ -613,6 +617,7 @@
       if (!state.gameType) return;
       gameMusic.setActive(!!shGame(state.gameType).music && msg.phase !== 'lobby' && msg.phase !== 'finished');
 
+      if (msg.lastEvent || (msg.events && msg.events.some(e => e.type !== 'error'))) closeStory();
       const game = SH.game(state.gameType);
       if (game) game.render(msg);
 

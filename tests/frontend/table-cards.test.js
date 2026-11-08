@@ -223,16 +223,30 @@ describe('press-and-slide hand', () => {
 });
 
 describe('card tempo', () => {
-  it('flies thrown cards at half the original speed (0.35 to 0.9 s)', () => {
-    expect(kit.tcFlightMs(2.4)).toBe(1584);
-    expect(kit.tcFlightMs(100)).toBe(700);
-    expect(kit.tcFlightMs(0.1)).toBe(1800);
+  // Motion guidance (Material, NN/g): under ~0.5 s, longer for slower throws, never instant.
+  it('flies a card to the TV pile in 0.3 to 0.52 s, faster for a harder throw', () => {
+    expect(kit.tcFlightMs(2.4)).toBe(458);
+    expect(kit.tcFlightMs(100)).toBe(300);
+    expect(kit.tcFlightMs(0.1)).toBe(520);
   });
 
-  it('lets a thrown card leave the phone at half the original speed', () => {
-    expect(kit.tcThrowMs(2.4)).toBe(750);
-    expect(kit.tcThrowMs(6)).toBe(440);
-    expect(kit.tcThrowMs(1.2)).toBe(1040);
+  it('lands a thrown card on the phone pile in 0.18 to 0.32 s', () => {
+    expect(kit.tcPileThrowMs(300, 2.4)).toBe(255);
+    expect(kit.tcPileThrowMs(300, 6)).toBe(180);
+    expect(kit.tcPileThrowMs(900, 1.2)).toBe(320);
+    expect(kit.tcPileThrowMs(0, 2.4)).toBe(180);
+  });
+
+  it('keeps the old off-screen throw quick too', () => {
+    expect(kit.tcThrowMs(2.4)).toBe(375);
+    expect(kit.tcThrowMs(6)).toBe(220);
+  });
+});
+
+describe('Palace hand order', () => {
+  it('goes low to high and keeps the 2s and 10s (play on anything) last', () => {
+    const hand = [card(10, 'h', 'a'), card(14, 's', 'b'), card(2, 'c', 'c'), card(5, 'd', 'd'), card(13, 'c', 'e'), card(3, 's', 'f')];
+    expect(kit.orderHand(hand, 'palace').map(c => c.rank)).toEqual([3, 5, 13, 14, 2, 10]);
   });
 });
 
