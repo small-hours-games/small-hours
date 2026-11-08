@@ -16,6 +16,42 @@ function setup(fetcher = vi.fn(async () => ({ ok: true, json: async () => ({ url
   return { narrator: context.createQuizNarrator(on => speaking.push(on)), clips, fetcher, browserSpeech, speaking };
 }
 describe('TV game-show narration', () => {
+  it('plays a prepared intro at once, without waiting for the network', async () => {
+    const { narrator, clips, fetcher } = setup();
+    narrator.prepareIntro();
+    narrator.prepareIntro();
+    await settle();
+    expect(fetcher).toHaveBeenCalledTimes(1);
+    expect(clips).toHaveLength(1);
+    narrator.sync({ phase: 'countdown', timeLeft: 5, gameType: 'quiz' });
+    expect(clips[0].play).toHaveBeenCalledTimes(1); // same tick, no await
+    expect(fetcher).toHaveBeenCalledTimes(1);
+    expect(clips[0].playbackRate).toBeGreaterThan(1.15);
+  });
+
+  it('rewinds the prepared intro for the next game', async () => {
+    const { narrator, clips } = setup();
+    narrator.prepareIntro();
+    await settle();
+    narrator.sync({ phase: 'countdown', timeLeft: 5, gameType: 'quiz' });
+    clips[0].currentTime = 3;
+    narrator.stop();
+    narrator.sync({ phase: 'countdown', timeLeft: 5, gameType: 'quiz' });
+    expect(clips[0].currentTime).toBe(0);
+    expect(clips[0].play).toHaveBeenCalledTimes(2);
+  });
+
+  it('still fetches the intro when preparing it failed', async () => {
+    const fetcher = vi.fn().mockResolvedValueOnce({ ok: false }).mockResolvedValue({ ok: true, json: async () => ({ url: '/voice.wav' }) });
+    const { narrator, clips } = setup(fetcher);
+    narrator.prepareIntro();
+    await settle();
+    narrator.sync({ phase: 'countdown', timeLeft: 5, gameType: 'quiz' });
+    await settle();
+    expect(fetcher).toHaveBeenCalledTimes(2);
+    expect(clips[0].play).toHaveBeenCalled();
+  });
+
   it('says when the voice speaks and when it has finished', async () => {
     const { narrator, clips, speaking } = setup();
     narrator.sync(question);

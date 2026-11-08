@@ -11,6 +11,8 @@ function createQuizNarrator(onSpeaking = () => {}) {
   let blocked = false;
   let expiresAt = 0;
   let spokenFallback = null;
+  let introClip = null;
+  let introLoading = false;
   function browserVoice(text, requestRevision, isCountdown) {
     if (requestRevision !== revision || muted || Date.now() >= expiresAt ||
         typeof speechSynthesis === 'undefined' || typeof SpeechSynthesisUtterance === 'undefined') return;
@@ -40,6 +42,28 @@ function createQuizNarrator(onSpeaking = () => {}) {
     currentKey = null;
     silence();
   }
+  function startClip(audio, requestRevision, isCountdown) {
+    clip = audio;
+    if (isCountdown) {
+      const remainingSec = Math.max(0.5, (expiresAt - Date.now()) / 1000);
+      const targetSec = Math.max(2.0, remainingSec - 0.08);
+      clip.playbackRate = Math.min(1.6, Math.max(1.0, Number((QUIZ_INTRO_DURATION_SEC / targetSec).toFixed(2))));
+      if (typeof setTimeout !== 'undefined') {
+        endTimer = setTimeout(() => {
+          if (requestRevision === revision) silence();
+        }, Math.max(0, expiresAt - Date.now() - 20));
+      }
+    } else {
+      clip.playbackRate = 1.18;
+    }
+    clip.onended = () => { if (requestRevision === revision) onSpeaking(false); };
+    onSpeaking(true);
+    clip.play().catch(() => {
+      if (requestRevision !== revision) return;
+      blocked = true;
+      onSpeaking(false);
+    });
+  }
   async function retry() {
     if (!blocked || muted || !clip || Date.now() >= expiresAt) return;
     const requestRevision = revision;
@@ -66,6 +90,12 @@ function createQuizNarrator(onSpeaking = () => {}) {
       expiresAt = Date.now() + phaseDurationSec * 1000;
       if (muted) return;
       const requestRevision = revision;
+      if (isCountdown && introClip) {
+        // Already loaded, so the voice starts with the countdown instead of after a download.
+        introClip.currentTime = 0;
+        startClip(introClip, requestRevision, true);
+        return;
+      }
       fetch('/api/tts', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text, style: 'game-show' }),
@@ -76,27 +106,20 @@ function createQuizNarrator(onSpeaking = () => {}) {
         }
         const data = await response.json();
         if (requestRevision !== revision || muted || Date.now() >= expiresAt || !data.url) return;
-        clip = new Audio(data.url);
-        if (isCountdown) {
-          const remainingSec = Math.max(0.5, (expiresAt - Date.now()) / 1000);
-          const targetSec = Math.max(2.0, remainingSec - 0.08);
-          clip.playbackRate = Math.min(1.6, Math.max(1.0, Number((QUIZ_INTRO_DURATION_SEC / targetSec).toFixed(2))));
-          if (typeof setTimeout !== 'undefined') {
-            endTimer = setTimeout(() => {
-              if (requestRevision === revision) silence();
-            }, Math.max(0, expiresAt - Date.now() - 20));
-          }
-        } else {
-          clip.playbackRate = 1.18;
-        }
-        clip.onended = () => { if (requestRevision === revision) onSpeaking(false); };
-        onSpeaking(true);
-        clip.play().catch(() => {
-          if (requestRevision !== revision) return;
-          blocked = true;
-          onSpeaking(false);
-        });
+        startClip(new Audio(data.url), requestRevision, isCountdown);
       }).catch(() => browserVoice(text, requestRevision, isCountdown)); // Keep the game moving if the provider is unavailable.
+    },
+    prepareIntro() {
+      if (introClip || introLoading) return;
+      introLoading = true;
+      fetch('/api/tts', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: QUIZ_INTRO_TEXT, style: 'game-show' }),
+      }).then(response => (response.ok ? response.json() : null)).then(data => {
+        if (!data?.url) return;
+        introClip = new Audio(data.url);
+        introClip.preload = 'auto';
+      }).catch(() => {}).finally(() => { introLoading = false; });
     },
     setMuted(value) {
       muted = value;

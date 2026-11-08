@@ -28,6 +28,8 @@ export async function handleStartVotedGame(ws, meta, room, msg, ctx) {
     return;
   }
 
+  if (room.game || room.startingGame) return; // a repeated tap on Start
+
   const gameType = room.resolveWinningGame();
   if (!gameType) {
     send(ws, { type: 'ERROR', message: 'No playable game has been voted for yet' });
@@ -70,6 +72,10 @@ export async function handleStartMiniGame(ws, meta, room, msg, ctx) {
     return;
   }
 
+  // Preparing a quiz can take seconds. A second tap meanwhile would start a second
+  // game and restart the countdown on every screen.
+  if (room.game || room.startingGame) return;
+
   let config = msg.config || {};
 
   // Quiz: resolve winning category from votes if no explicit override (per D-12, D-16)
@@ -77,6 +83,7 @@ export async function handleStartMiniGame(ws, meta, room, msg, ctx) {
     config = { ...config, categoryId: room.resolveWinningCategory() };
   }
 
+  room.startingGame = true;
   try {
     const game = await room.startGame(msg.gameType, config);
 
@@ -111,6 +118,8 @@ export async function handleStartMiniGame(ws, meta, room, msg, ctx) {
     ctx.scheduleBotTurn?.(room);
   } catch (err) {
     send(ws, { type: 'ERROR', message: err.message });
+  } finally {
+    room.startingGame = false;
   }
 }
 

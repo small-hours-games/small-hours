@@ -122,6 +122,7 @@ export class Room {
     this.votingActive = false;
     this.stateVersion = 0;
     this.bots = [];                      // AI seats of the running game: [{ playerId, username, avatar }]
+    this.startingGame = false;           // a game is being prepared; further starts are ignored
   }
 
   /**

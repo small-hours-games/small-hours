@@ -18,6 +18,13 @@ function seededShuffle(arr, seed) {
   return shuffled;
 }
 
+const EASY_POOL_SIZE = 50;
+
+/** Easy before medium; stable, so the shuffled order holds within each difficulty. */
+function easierFirst(questions) {
+  return [...questions].sort((a, b) => (a.difficulty !== 'easy') - (b.difficulty !== 'easy'));
+}
+
 const PHASE_DURATIONS = {
   countdown: 5000,
   question: 15000,
@@ -29,7 +36,9 @@ const quiz = {
   async prepare(config, { usedQuestionIds }) {
     const amount = config.questionCount || 10;
 
-    const result = await fetchQuestions(config.categoryId, amount);
+    // Party game: easy questions first. The mixed bucket is the fallback when they run out.
+    let result = await fetchQuestions(config.categoryId, EASY_POOL_SIZE, { difficulty: 'easy' });
+    if (!result.ok) result = await fetchQuestions(config.categoryId, amount);
     if (!result.ok) {
       throw new Error(`Failed to fetch questions: ${result.error.message}`);
     }
@@ -50,7 +59,9 @@ const quiz = {
     const unused = pool.filter(q => !recency.has(q.id));
     const repeats = pool.filter(q => recency.has(q.id))
       .sort((a, b) => recency.get(a.id) - recency.get(b.id));
-    const selected = [...unused, ...repeats].slice(0, amount);
+    const selected = [...easierFirst(unused), ...easierFirst(repeats)]
+      .sort((a, b) => (a.difficulty === 'hard') - (b.difficulty === 'hard'))
+      .slice(0, amount);
     if (selected.length === 0) {
       throw new Error('No questions available for this category');
     }

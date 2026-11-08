@@ -52,6 +52,15 @@ describe('fetchQuestions', () => {
       expect(typeof q.id).toBe('string');
     });
 
+    it('asks for a difficulty only when given one', async () => {
+      mockFetchResponse({ response_code: 0, results: SAMPLE_RESULTS });
+      await fetchQuestions(9, 5, { difficulty: 'easy' });
+      expect(globalThis.fetch.mock.calls.at(-1)[0]).toContain('&difficulty=easy');
+      mockFetchResponse({ response_code: 0, results: SAMPLE_RESULTS });
+      await fetchQuestions(9, 5);
+      expect(globalThis.fetch.mock.calls.at(-1)[0]).not.toContain('difficulty');
+    });
+
     it('assigns unique string ids to each question', async () => {
       mockFetchResponse({ response_code: 0, results: SAMPLE_RESULTS });
       const result = await fetchQuestions(9, 5);

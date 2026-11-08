@@ -180,6 +180,7 @@
     // Mute toggle
     let isMuted = false;
     const quizNarrator = createQuizNarrator(speaking => gameMusic.setDucked(speaking));
+    quizNarrator.prepareIntro();
     document.addEventListener('pointerdown', () => quizNarrator.retry());
     document.addEventListener('keydown', () => quizNarrator.retry());
     const lobbyMusic = createLobbyMusic(new Audio(), playing => {

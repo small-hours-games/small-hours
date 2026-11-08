@@ -756,6 +756,13 @@
       const leader = shGame(state.leadingGame);
       if (playsVsAi(leader)) config.bots = Math.min(state.aiSeats || 2, leader.aiMax);
       send({ type: 'START_VOTED_GAME', config });
+      // Getting a quiz ready can take a few seconds: show that the tap was heard.
+      document.querySelectorAll('.start-game-cta').forEach(btn => {
+        const label = btn.innerHTML;
+        btn.disabled = true;
+        btn.textContent = 'Starting…';
+        setTimeout(() => { btn.disabled = false; btn.innerHTML = label; }, 6000);
+      });
     }
 
 

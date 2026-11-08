@@ -618,6 +618,42 @@ describe('ws-adapter - quiz phase timers', () => {
   const Q = (id) => ({ id, question: id + '?', correct_answer: 'A', incorrect_answers: ['B', 'C', 'D'], category: 'Test', difficulty: 'easy' });
   const phaseOf = (ws) => ws._sent.filter(m => m.type === 'GAME_STATE').at(-1)?.phase;
 
+  it('ignores repeated starts while a quiz is being prepared', async () => {
+    let answer;
+    fetchQuestions.mockImplementation(() => new Promise(resolve => { answer = resolve; }));
+    env = makeEnv();
+    const ws = connectPlayer(env, 'Alice');
+    const start = JSON.stringify({ type: 'START_MINI_GAME', gameType: 'quiz', config: { categoryId: 9, questionCount: 1 } });
+    ws.emit('message', start);
+    ws.emit('message', start);
+    await vi.advanceTimersByTimeAsync(2000);
+    ws.emit('message', start);
+    answer({ ok: true, questions: [Q('q1')] });
+    await vi.advanceTimersByTimeAsync(0);
+    expect(ws._sent.filter(m => m.type === 'MINI_GAME_STARTING')).toHaveLength(1);
+    expect(fetchQuestions).toHaveBeenCalledTimes(1);
+    expect(env.room.startingGame).toBe(false);
+
+    // ...and also once the game is running
+    ws.emit('message', start);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(ws._sent.filter(m => m.type === 'MINI_GAME_STARTING')).toHaveLength(1);
+  });
+
+  it('allows a new start after preparing a quiz failed', async () => {
+    fetchQuestions.mockResolvedValueOnce({ ok: false, error: { message: 'down' } }).mockResolvedValueOnce({ ok: false, error: { message: 'down' } });
+    env = makeEnv();
+    const ws = connectPlayer(env, 'Alice');
+    const start = JSON.stringify({ type: 'START_MINI_GAME', gameType: 'quiz', config: { categoryId: 9, questionCount: 1 } });
+    ws.emit('message', start);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(env.room.startingGame).toBe(false);
+    fetchQuestions.mockResolvedValue({ ok: true, questions: [Q('q1')] });
+    ws.emit('message', start);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(ws._sent.filter(m => m.type === 'MINI_GAME_STARTING')).toHaveLength(1);
+  });
+
   it('runs a quiz to the end on timers alone', async () => {
     fetchQuestions.mockResolvedValue({ ok: true, questions: [Q('q1'), Q('q2')] });
     env = makeEnv();

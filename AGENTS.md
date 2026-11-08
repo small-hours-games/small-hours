@@ -114,7 +114,7 @@ Run focused tests for the behavior changed, then `npm test` for changes spanning
 
 ## Runtime data and integrations
 
-Preserve `.env`, `data/`, question files, local music, generated APKs, and Android signing keys. `data/` holds runtime caches and is mounted into the container. Inspect fetcher code/tests before changing cache formats or fallback behavior.
+Preserve `.env`, `data/`, question files, local music, generated APKs, and Android signing keys. `data/` holds runtime caches and is mounted into the container. Inspect fetcher code/tests before changing cache formats or fallback behavior. Quiz plays from easy-only buckets (`data/questions/{category}_easy.json`, filled at startup) and uses the mixed `{category}.json` buckets when they run out.
 
 Gemini TTS uses `GEMINI_API_KEY`. Room creation can send a Discord webhook when `DISCORD_WEBHOOK_URL` is set. Tests and manual room creation should account for that external effect. Discord payloads must include both `content` and `embeds` so push notifications contain text.
 
