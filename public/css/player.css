@@ -455,3 +455,29 @@ header > .player-connection-row {
 @media (prefers-reduced-motion: reduce) {
   .avatar-sheet-panel, .avatar-sheet-backdrop, .avatar-option, .my-avatar-chip { transition: none; }
 }
+
+/* ---------- Full screen button and the install tip ---------- */
+.fullscreen-btn { background: var(--night-panel, #13234a); color: #fff; border: 1px solid var(--night-line-strong, #34467a); }
+.fullscreen-btn:focus-visible { outline: 3px solid #38bdf8; outline-offset: 2px; }
+.app-hint {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 8px 8px 12px; border-radius: 14px;
+  background: rgba(56, 189, 248, 0.12); border: 1px solid rgba(56, 189, 248, 0.45);
+  color: #e0f2fe; font-size: 0.78rem; line-height: 1.3;
+}
+.app-hint[hidden] { display: none; }
+.app-hint-icon { font-size: 1.1rem; }
+.app-hint-text { flex: 1; min-width: 0; }
+.app-hint-action {
+  flex-shrink: 0; min-height: 36px; padding: 0 12px; border-radius: 10px; border: 0;
+  background: var(--night-sun, #facc15); color: #0b1530; font-weight: 800;
+}
+.app-hint-action[hidden] { display: none; }
+.app-hint-close { flex-shrink: 0; width: 36px; height: 36px; border-radius: 10px; border: 0; background: transparent; color: #a9b6d3; font-size: 0.9rem; }
+.app-hint-close:focus-visible, .app-hint-action:focus-visible { outline: 3px solid #38bdf8; outline-offset: 2px; }
+/* With the full screen button the top bar is full on a narrow phone: the logo keeps its
+   mark and lets the player's name have the room. */
+@media (max-width: 420px) {
+  header:has(#fullscreenBtn:not([hidden])) .brand-phone-name { display: none; }
+  header:has(#fullscreenBtn:not([hidden])) #myName { max-width: 6.5rem; }
+}

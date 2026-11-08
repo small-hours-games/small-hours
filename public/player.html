@@ -5,7 +5,12 @@
   <meta name="darkreader-lock">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="theme-color" content="#f4f8ff">
+  <meta name="theme-color" content="#0b1530">
+  <!-- Add to Home Screen opens Smallhours without browser bars (iPhone has no other way). -->
+  <link rel="manifest" href="/manifest.webmanifest">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Smallhours">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
   <title>Smallhours - Player</title>
   <script src="https://cdn.tailwindcss.com/3.4.17"></script>
   <script src="/js/tailwind-config.js"></script>
@@ -36,6 +41,9 @@
           <i class="fa-solid fa-share-nodes text-sm"></i>
         </button>
         <span class="font-mono font-bold text-sky-900 tracking-widest text-xs bg-sky-100 border border-sky-200 px-2 py-0.5 rounded-md" id="roomBadge">----</span>
+        <button type="button" id="fullscreenBtn" onclick="toggleFullscreen()" aria-label="Full screen" aria-pressed="false" hidden class="fullscreen-btn w-8 h-8 rounded-full items-center justify-center">
+          <i class="fa-solid fa-expand text-sm" aria-hidden="true"></i>
+        </button>
         <button type="button" id="myAvatarBtn" onclick="openAvatarPicker()" aria-label="Change your avatar" class="my-avatar-chip flex items-center gap-1.5 bg-white border border-sky-200 rounded-full pl-1 pr-2.5 py-0.5 min-w-0">
           <span class="text-lg leading-none" id="myAvatar" aria-hidden="true">&#128056;</span>
           <span class="text-xs font-bold text-slate-700 truncate max-w-[6rem]" id="myName">Player</span>
@@ -89,6 +97,12 @@
     <!-- GAMES DASHBOARD -->
     <div class="section" id="lobbySection">
       <div class="device-screen bg-sky-100 border-4 border-white rounded-[2rem] p-3.5 flex flex-col gap-2.5">
+        <div class="app-hint" id="appHint" hidden>
+          <span class="app-hint-icon" aria-hidden="true">⛶</span>
+          <span class="app-hint-text" id="appHintText"></span>
+          <button type="button" class="app-hint-action" id="appHintAction" hidden>Install</button>
+          <button type="button" class="app-hint-close" onclick="dismissAppHint()" aria-label="Hide this tip">✕</button>
+        </div>
         <div class="flex items-center justify-between pb-2 border-b border-sky-200">
           <span class="font-display font-bold text-lg text-slate-800">Games Dashboard</span>
           <span class="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-sky-200/80 text-sky-900">Tap to Vote</span>
@@ -176,6 +190,98 @@
   <!-- game-catalog -->
   <script src="/js/games.js"></script>
   <script>
+    // --- Full screen ---
+    // Android browsers can hide their bars on request, but only right after a tap: the first
+    // tap on this page asks for it (once), and the button in the top bar switches it. iPhone
+    // browsers can't do it for a web page at all; there the way is Add to Home Screen
+    // (manifest.webmanifest), so iPhone players get a one-time tip instead.
+    function isInstalledApp() {
+      // display-mode: fullscreen also matches while the page itself asked for full screen.
+      return (matchMedia('(display-mode: fullscreen)').matches && !isFullscreen()) ||
+        matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+    }
+    function canFullscreen() {
+      const el = document.documentElement;
+      return !!(el.requestFullscreen || el.webkitRequestFullscreen) && document.fullscreenEnabled !== false && document.webkitFullscreenEnabled !== false;
+    }
+    function isFullscreen() { return !!(document.fullscreenElement || document.webkitFullscreenElement); }
+    function fullscreenPref() { try { return localStorage.getItem('sh_fullscreen'); } catch { return null; } }
+    function setFullscreenPref(value) { try { localStorage.setItem('sh_fullscreen', value); } catch { /* ignore */ } }
+
+    async function enterFullscreen() {
+      const el = document.documentElement;
+      try {
+        if (el.requestFullscreen) await el.requestFullscreen({ navigationUI: 'hide' });
+        else el.webkitRequestFullscreen();
+        // A phone held sideways would turn the card table; keep it upright while full screen.
+        try { await screen.orientation?.lock?.('portrait'); } catch { /* not allowed here */ }
+      } catch { /* the browser said no; the button stays */ }
+    }
+    function exitFullscreen() {
+      const exit = document.exitFullscreen || document.webkitExitFullscreen;
+      if (exit && isFullscreen()) exit.call(document);
+    }
+    function toggleFullscreen() {
+      if (isFullscreen()) { setFullscreenPref('off'); exitFullscreen(); }
+      else { setFullscreenPref('on'); enterFullscreen(); }
+    }
+    function syncFullscreenBtn() {
+      const btn = document.getElementById('fullscreenBtn');
+      const show = canFullscreen() && !isInstalledApp();
+      btn.hidden = !show;
+      btn.classList.toggle('flex', show);
+      const on = isFullscreen();
+      btn.setAttribute('aria-pressed', String(on));
+      btn.setAttribute('aria-label', on ? 'Leave full screen' : 'Full screen');
+      btn.querySelector('i').className = 'fa-solid ' + (on ? 'fa-compress' : 'fa-expand') + ' text-sm';
+    }
+    document.addEventListener('fullscreenchange', syncFullscreenBtn);
+    document.addEventListener('webkitfullscreenchange', syncFullscreenBtn);
+
+    let autoFullscreenTried = false;
+    document.addEventListener('pointerup', e => {
+      if (autoFullscreenTried) return;
+      autoFullscreenTried = true;
+      if (e.pointerType !== 'touch' || !canFullscreen() || isInstalledApp() || isFullscreen()) return;
+      if (fullscreenPref() === 'off' || e.target.closest('#fullscreenBtn')) return;
+      enterFullscreen();
+    }, true);
+
+    // The tip: iPhone gets "Add to Home Screen"; Android gets an Install button when the
+    // browser offers one. Shown in the lobby until it is closed.
+    let installPrompt = null;
+    function appHintDismissed() { try { return !!localStorage.getItem('sh_app_hint_closed'); } catch { return false; } }
+    function dismissAppHint() {
+      document.getElementById('appHint').hidden = true;
+      try { localStorage.setItem('sh_app_hint_closed', '1'); } catch { /* ignore */ }
+    }
+    function syncAppHint() {
+      const hint = document.getElementById('appHint');
+      const action = document.getElementById('appHintAction');
+      if (!hint || !action) return;
+      const iPhone = /iPhone|iPod/.test(navigator.userAgent) && !canFullscreen();
+      let text = '';
+      if (!isInstalledApp() && !appHintDismissed()) {
+        if (installPrompt) text = 'Install Smallhours on this phone for full screen and a home-screen icon.';
+        else if (iPhone) text = 'Full screen on iPhone: tap Share, then “Add to Home Screen”, and open Smallhours from there.';
+      }
+      document.getElementById('appHintText').textContent = text;
+      action.hidden = !installPrompt;
+      hint.hidden = !text;
+    }
+    window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); installPrompt = e; syncAppHint(); });
+    window.addEventListener('appinstalled', () => { installPrompt = null; syncAppHint(); });
+    document.getElementById('appHintAction')?.addEventListener('click', async () => {
+      if (!installPrompt) return;
+      const prompt = installPrompt;
+      installPrompt = null;
+      prompt.prompt();
+      try { await prompt.userChoice; } catch { /* ignore */ }
+      syncAppHint();
+    });
+    syncFullscreenBtn();
+    syncAppHint();
+
     // --- Avatars ---
     // The server sends its pool on join; the player picks one in the avatar sheet.
     let AVATAR_POOL = [];
