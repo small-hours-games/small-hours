@@ -12,6 +12,8 @@
 .tbs-stage {
   position: absolute; inset: 0; z-index: 0;
   pointer-events: none; overflow: hidden;
+  contain: layout paint;                 /* nothing in here can make the page re-layout */
+  will-change: transform, opacity;
   opacity: 0; transition: opacity 0.6s ease;
 }
 .tbs-stage.tbs-stage-on { opacity: 1; }

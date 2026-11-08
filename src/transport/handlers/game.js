@@ -188,6 +188,10 @@ export function applyGameAction(room, action, ctx) {
   if (events.length > 0) sharedState.events = events;
   broadcastToRoom(room.code, sharedState, { hostsOnly: true });
 
+  // A refused move: only the one who made it needs to hear why.
+  const refused = events.find(e => e.type === 'error');
+  if (refused && action.playerId) sendToPlayer(action.playerId, { type: 'ERROR', message: refused.message });
+
   // Check for game end
   const endResult = checkEnd(room.game);
   if (endResult) finishGame(room, endResult, ctx);

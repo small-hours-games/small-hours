@@ -5,7 +5,40 @@
       shSwapSelected: { hand: null, faceUp: null },
       shitheadDecks: 1,
       shWasTurn: false,
+      shMoveTimer: null,
+      shBurnTimer: null,
     });
+
+    // A move is on its way: the card has left the hand but the server has not answered.
+    // No second move until it has, and if no answer comes the card goes back.
+    const SH_MOVE_TIMEOUT_MS = 3000;
+
+    function shMovePending() { return state.shMoveTimer != null; }
+
+    function shMoveAnswered() {
+      clearTimeout(state.shMoveTimer);
+      state.shMoveTimer = null;
+    }
+
+    function shMoveSent() {
+      shMoveAnswered();
+      state.shMoveTimer = setTimeout(() => {
+        state.shMoveTimer = null;
+        showToast("That move didn't go through. Try again.", 'error');
+        shRedraw();
+      }, SH_MOVE_TIMEOUT_MS);
+    }
+
+    // A 10 or four of a kind empties the pile at once, so show why the card is gone.
+    function shShowBurn(ev) {
+      const well = document.getElementById('shPileWell');
+      well.classList.remove('sh-burned');
+      void well.offsetWidth; // restart the flare if the last one is still running
+      well.classList.add('sh-burned');
+      clearTimeout(state.shBurnTimer);
+      state.shBurnTimer = setTimeout(() => well.classList.remove('sh-burned'), 900);
+      if (ev.by === state.playerId) showToast('🔥 You burned the pile!', 'success');
+    }
 
     // --- Palace (shithead engine) ---
     function canPlayCard(rank, pileTopRank, pileCount) {
@@ -114,6 +147,7 @@
         const top = pileStack.querySelector('.tc-pile-top');
         if (top) top.classList.add('tc-land');
       }
+      if (freshEvent && ev.kind === 'burn') shShowBurn(ev);
       if (freshEvent && ev.by !== state.playerId && (ev.kind === 'burn' || ev.kind === 'pickup' || ev.kind === 'blind-miss')) {
         if (navigator.vibrate) navigator.vibrate(30);
       }
@@ -258,6 +292,7 @@
     }
 
     function shSwipePlay(id, flick) {
+      if (shMovePending()) return;
       const msg = state.shLastMsg;
       if (!msg || msg.phase !== 'play' || !msg.isMyTurn) { shTapCard(id); return; }
       if (shZone(msg) === 'faceDown') { shPlayFaceDown(id, flick); return; }
@@ -331,7 +366,9 @@
     }
 
     function confirmShSwap() {
+      if (shMovePending()) return;
       send({ type: 'GAME_ACTION', action: { type: 'confirmSwap' } });
+      shMoveSent();
     }
 
     function updateShSelectionAssistUI() {
@@ -381,24 +418,28 @@
     }
 
     function playSelectedCards(flick) {
-      if (state.shSelectedCards.length === 0) return;
+      if (state.shSelectedCards.length === 0 || shMovePending()) return;
       const ids = [...state.shSelectedCards];
       shThrowCards(ids, flick);
       send({ type: 'GAME_ACTION', action: { type: 'playCards', cardIds: ids, flick: shFlickPayload(flick) } });
+      shMoveSent();
       state.shSelectedCards = [];
     }
 
     function shPlayFaceDown(cardId, flick) {
-      if (!cardId) return;
+      if (!cardId || shMovePending()) return;
       state.shSelectedCards = [];
       const el = document.querySelector('#shHand [data-card-id="' + (window.CSS && CSS.escape ? CSS.escape(cardId) : cardId) + '"]');
       if (el) el.style.visibility = 'hidden';
       send({ type: 'GAME_ACTION', action: { type: 'playFaceDown', cardId: cardId, flick: shFlickPayload(flick) } });
+      shMoveSent();
     }
 
     function pickUpPile() {
+      if (shMovePending()) return;
       state.shSelectedCards = [];
       send({ type: 'GAME_ACTION', action: { type: 'pickUpPile' } });
+      shMoveSent();
     }
 
     function renderShOtherPlayers(msg) {
@@ -439,8 +480,9 @@
 
     SH.registerGame('shithead', {
       section: 'shitheadSection',
-      render: renderShitheadState,
+      render(msg) { shMoveAnswered(); renderShitheadState(msg); },
       redraw: shRedraw,
+      reset: shMoveAnswered,
       lobbyOptions() {
         return '<div class="grid grid-cols-3 gap-2">' + [1, 2, 4].map(n =>
           '<button onclick="setShDecks(' + n + ')" class="p-2.5 rounded-xl border-2 text-xs font-extrabold transition ' +
