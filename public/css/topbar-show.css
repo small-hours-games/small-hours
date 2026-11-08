@@ -1,0 +1,125 @@
+/* Topbar show (public/js/topbar-show.js): the TV's blue topbar comes alive for a song
+   with a beat map. Everything stays inside the bar; the bar opens up taller while she
+   performs and goes back to normal when the song ends. */
+
+.studio-header > .max-w-7xl {
+  position: relative; z-index: 1;
+  transition: height 0.55s cubic-bezier(0.2, 0.9, 0.3, 1.15);
+}
+.studio-header.tbs-on { overflow: hidden; }
+.studio-header.tbs-open > .max-w-7xl { height: 8rem; }
+
+.tbs-stage {
+  --tbs-hit: 0; --tbs-live: 0; --tbs-riser: 0; --tbs-x: 50%; --tbs-hue: 0;
+  position: absolute; inset: 0; z-index: 0;
+  pointer-events: none; overflow: hidden;
+  opacity: 0; transition: opacity 0.6s ease;
+}
+.tbs-stage.tbs-stage-on { opacity: 1; }
+
+/* Colour wash that breathes with the beat and turns with each bar of a drop. */
+.tbs-wash {
+  position: absolute; inset: 0;
+  background:
+    radial-gradient(ellipse 34% 140% at var(--tbs-x) 100%, rgba(56, 189, 248, 0.55), transparent 70%),
+    radial-gradient(ellipse 60% 120% at 20% 0%, rgba(167, 139, 250, 0.35), transparent 70%),
+    radial-gradient(ellipse 60% 120% at 80% 0%, rgba(251, 113, 133, 0.28), transparent 70%),
+    linear-gradient(90deg, #0b1530, #13234a 50%, #0b1530);
+  filter: hue-rotate(calc(var(--tbs-hue) * 1deg)) brightness(calc(1 + var(--tbs-riser) * 0.6));
+}
+
+/* Two stage lights from the top edge, aimed at her. */
+.tbs-spot {
+  position: absolute; top: -10%; left: var(--tbs-x);
+  width: 150px; height: 160%; margin-left: -75px;
+  transform-origin: 50% 0;
+  background: linear-gradient(to bottom, rgba(255, 255, 255, 0.55), rgba(186, 230, 253, 0.12) 60%, transparent);
+  clip-path: polygon(44% 0, 56% 0, 100% 100%, 0 100%);
+  mix-blend-mode: screen; opacity: 0;
+}
+
+/* A light sweep across the whole bar, once per bar in the drops. */
+.tbs-sweep {
+  position: absolute; top: 0; bottom: 0; left: -25%; width: 18%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.22), transparent);
+  transform: skewX(-18deg); opacity: 0;
+  mix-blend-mode: screen;
+}
+
+/* Equalizer along the bottom edge. */
+.tbs-eq {
+  position: absolute; left: 0; right: 0; bottom: 0; height: 30px;
+  display: flex; align-items: flex-end; gap: 3px; padding: 0 6px;
+  opacity: calc(0.35 + var(--tbs-live) * 0.45);
+}
+.tbs-eq i {
+  flex: 1; height: 100%;
+  transform-origin: 50% 100%; transform: scaleY(0.05);
+  border-radius: 3px 3px 0 0;
+  background: linear-gradient(to top, #38bdf8, #a78bfa 55%, #fb7185 85%, #facc15);
+}
+.tbs-beatline {
+  position: absolute; left: 0; right: 0; bottom: 0; height: 3px;
+  background: linear-gradient(90deg, #38bdf8, #a78bfa, #fb7185, #facc15, #38bdf8);
+  box-shadow: 0 0 14px 2px rgba(250, 204, 21, 0.7);
+  opacity: 0.25;
+}
+
+/* "Now playing" in the middle of the bar until she lands; the dots count the beats. */
+.tbs-chip {
+  position: absolute; left: 50%; top: 50%;
+  display: inline-flex; align-items: center; gap: 10px;
+  padding: 7px 16px; border-radius: 999px;
+  background: rgba(11, 21, 48, 0.85); border: 1px solid rgba(250, 204, 21, 0.55);
+  color: #fde68a; font: 800 15px/1 'Plus Jakarta Sans', system-ui, sans-serif; letter-spacing: 0.02em;
+  white-space: nowrap;
+  transform: translate(-50%, -50%) scale(0.85); opacity: 0;
+  transition: opacity 0.4s ease, transform 0.4s ease;
+}
+.tbs-chip.tbs-chip-on { opacity: 1; transform: translate(-50%, -50%) scale(calc(1 + var(--tbs-hit) * 0.08)); }
+.tbs-chip-note { color: #facc15; font-size: 18px; }
+.tbs-chip-dots { display: inline-flex; gap: 4px; }
+.tbs-chip-dots i { width: 7px; height: 7px; border-radius: 50%; background: rgba(253, 230, 138, 0.25); }
+.tbs-chip-dots i.on { background: #facc15; box-shadow: 0 0 8px #facc15; }
+
+/* The singer. Her feet stand on the equalizer; the bar clips anything above it. */
+.tbs-singer {
+  position: absolute; left: 0; bottom: 3px;
+  width: 80px; height: 102px; margin-left: -40px;
+  opacity: 0; transition: opacity 0.25s ease;
+  will-change: transform;
+  filter: drop-shadow(0 0 calc(var(--tbs-hit) * 14px) rgba(250, 204, 21, 0.75));
+}
+.tbs-singer-svg { display: block; width: 100%; height: 100%; overflow: visible; }
+.tbs-shadow { fill: rgba(0, 0, 0, 0.4); }
+
+/* Landing and drops: a white flash and a ring that runs out along the floor. */
+.tbs-flash { position: absolute; inset: 0; background: #fff; opacity: 0; mix-blend-mode: screen; }
+.tbs-flash.tbs-flash-go { animation: tbs-flash 0.5s ease-out both; }
+@keyframes tbs-flash { from { opacity: 0.85; } to { opacity: 0; } }
+.tbs-ring {
+  position: absolute; left: var(--tbs-x); bottom: 2px;
+  width: 60px; height: 14px; margin-left: -30px;
+  border: 3px solid #facc15; border-radius: 50%; opacity: 0;
+}
+.tbs-ring.tbs-ring-go { animation: tbs-ring 0.7s cubic-bezier(0.1, 0.7, 0.3, 1) both; }
+@keyframes tbs-ring { from { opacity: 1; transform: scale(0.6); } to { opacity: 0; transform: scale(9, 3); } }
+
+/* Notes from the mic in the quiet parts. */
+.tbs-note {
+  position: absolute; bottom: 52px; left: 50%;
+  font: 700 22px/1 system-ui, sans-serif; color: #facc15; opacity: 0;
+  text-shadow: 0 0 10px rgba(250, 204, 21, 0.8);
+}
+.tbs-note:nth-child(even) { color: #fb7185; text-shadow: 0 0 10px rgba(251, 113, 133, 0.8); }
+.tbs-note.tbs-note-go { animation: tbs-note 1.6s ease-out both; }
+@keyframes tbs-note {
+  from { opacity: 0; transform: translate(0, 10px) rotate(-10deg) scale(0.7); }
+  20% { opacity: 1; }
+  to { opacity: 0; transform: translate(26px, -48px) rotate(14deg) scale(1.1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .studio-header > .max-w-7xl { transition: none; }
+  .tbs-flash.tbs-flash-go, .tbs-ring.tbs-ring-go, .tbs-note.tbs-note-go { animation: none; }
+}

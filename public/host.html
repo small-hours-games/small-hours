@@ -17,6 +17,7 @@
   <link rel="stylesheet" href="/css/host.css">
   <link rel="stylesheet" href="/css/light-lobby.css">
   <link rel="stylesheet" href="/css/table-cards.css">
+  <link rel="stylesheet" href="/css/topbar-show.css">
   <!-- game-styles -->
   <link rel="icon" type="image/svg+xml" href="/images/smallhours-icon.svg">
   <link rel="icon" type="image/png" sizes="64x64" href="/images/smallhours-favicon.png">
@@ -157,6 +158,7 @@
   <script src="/js/build-info.js"></script>
   <script src="/js/lobby-music.js"></script>
   <script src="/js/mascot-duel.js"></script>
+  <script src="/js/topbar-show.js"></script>
   <script>
     // --- State ---
     const AVATARS = ['&#128056;', '&#128049;', '&#129412;', '&#128029;', '&#128025;', '&#129418;', '&#128039;', '&#129409;',
@@ -180,9 +182,22 @@
 
     // Mute toggle
     let isMuted = false;
-    const lobbyMusic = createLobbyMusic(new Audio(), playing => {
+    const lobbyAudio = new Audio();
+    const lobbyMusic = createLobbyMusic(lobbyAudio, playing => {
       document.body.classList.toggle('lobby-music-playing', playing);
     });
+    // Songs with a beat map put on a show in the topbar (public/js/topbar-show.js).
+    // If the TV's sound lags the picture, add ?showDelay=150 (ms) to the host URL once.
+    function topbarShowDelay() {
+      const fromUrl = new URLSearchParams(location.search).get('showDelay');
+      try {
+        if (fromUrl != null) localStorage.setItem('sh_show_delay_ms', String(Number(fromUrl) || 0));
+        return Number(localStorage.getItem('sh_show_delay_ms')) || 0;
+      } catch { return Number(fromUrl) || 0; }
+    }
+    const topbarShow = typeof createTopbarShow === 'function'
+      ? createTopbarShow({ header: document.querySelector('.studio-header'), audio: lobbyAudio, latencyMs: topbarShowDelay() })
+      : null;
     const mascotDuel = typeof createMascotDuel === 'function' ? createMascotDuel() : null;
     document.addEventListener('pointerdown', () => lobbyMusic.retry());
     document.addEventListener('keydown', () => lobbyMusic.retry());
@@ -196,6 +211,7 @@
       document.getElementById('muteBtn').textContent = isMuted ? '\uD83D\uDD07 Muted' : '\uD83D\uDD0A Sound';
       lobbyMusic.setMuted(isMuted);
       gameMusic.setMuted(isMuted);
+      if (topbarShow) topbarShow.setMuted(isMuted);
       SH.eachGame(game => game.onMute?.(isMuted));
       if (isMuted) {
         audio._origPlay = audio._origPlay || audio.play;
