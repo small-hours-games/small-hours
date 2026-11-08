@@ -159,6 +159,35 @@ function tbsPose(loc, reduced) {
   return pose;
 }
 
+/**
+ * How hard the lobby boxes shake at a located moment: { vx, vy } in px and kick (0-1) for a
+ * small swell and brightening. Locked to the beat: the shake starts on the beat and dies
+ * away through it. Pure; for tests.
+ */
+function tbsShake(loc, reduced) {
+  var out = { vx: 0, vy: 0, kick: 0 };
+  if (reduced || loc.stage === 'intro' || loc.stage === 'outro') return out;
+  var p = loc.phase, hit = Math.pow(1 - p, 3), x2 = loc.beatInBar + p;
+  var amp = 0, wiggles = 3;
+  if (loc.stage === 'fall') {
+    amp = 0;
+  } else if (loc.sinceDrop < loc.beatLen * 1.5) {
+    amp = 7 * (1 - loc.sinceDrop / (loc.beatLen * 1.5)); out.kick = 1; // the landing rocks everything
+  } else if (loc.riser) {
+    amp = 2.4 * (x2 / 4); wiggles = 4; out.kick = 0.3 * (x2 / 4);    // trembling on the 16ths toward the drop
+  } else if (loc.kind === 'd') {
+    amp = (2.2 + 1.6 * loc.energy) * hit; out.kick = hit;
+  } else if (loc.kind === 'g') {
+    amp = 1.4 * hit; out.kick = 0.6 * hit;
+  } else {
+    out.kick = 0.35 * Math.pow(1 - ((x2 % 2) / 2), 3);                 // breaks: a slow breath on 1 and 3
+  }
+  var a = 2 * Math.PI * wiggles * p;
+  out.vx = amp * Math.sin(a);
+  out.vy = amp * 0.6 * Math.cos(a * 1.3);
+  return out;
+}
+
 // ---- 2D affine helpers (SVG matrix order: a b c d e f) ----
 function tbsMul(m, n) {
   return [m[0] * n[0] + m[2] * n[1], m[1] * n[0] + m[3] * n[1], m[0] * n[2] + m[2] * n[3],
@@ -693,6 +722,13 @@ function createTopbarShow(opts) {
     header.style.setProperty('--tbs-logo', (hit * heat).toFixed(3));
     header.style.setProperty('--tbs-heat', heat.toFixed(3));
 
+    // The lobby boxes (vote options and panels) shake on the beat with her.
+    var shake = exiting ? { vx: 0, vy: 0, kick: 0 } : tbsShake(loc, reduced);
+    var rootStyle = document.documentElement.style;
+    rootStyle.setProperty('--tbs-vx', shake.vx.toFixed(2));
+    rootStyle.setProperty('--tbs-vy', shake.vy.toFixed(2));
+    rootStyle.setProperty('--tbs-kick', shake.kick.toFixed(3));
+
     // The flash and shockwave: the landing, and every drop after a quieter bar.
     var flashBeat = loc.stage !== 'intro' && loc.stage !== 'fall' && (loc.sectionStart || (loc.i === map.dropBeat));
     if (flashBeat && loc.i !== lastFlashBeat && !reduced) {
@@ -734,6 +770,7 @@ function createTopbarShow(opts) {
       clock = { ct: -1, at: 0, base: 0, baseAt: 0 };
       measure();
       header.classList.add('tbs-on');
+      document.body.classList.add('tbs-lobby-live');
       stage.classList.add('tbs-stage-on');
       if (!raf) raf = requestAnimationFrame(frame);
     };
@@ -758,6 +795,8 @@ function createTopbarShow(opts) {
     header.classList.remove('tbs-on', 'tbs-open');
     header.style.removeProperty('--tbs-logo');
     header.style.removeProperty('--tbs-heat');
+    document.body.classList.remove('tbs-lobby-live');
+    ['--tbs-vx', '--tbs-vy', '--tbs-kick'].forEach(function (v) { document.documentElement.style.removeProperty(v); });
     stage.classList.remove('tbs-stage-on');
     el.singer.style.opacity = '0';
     el.singer._x = null;
@@ -789,7 +828,7 @@ function createTopbarShow(opts) {
 
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
-    tbsBeatIndex: tbsBeatIndex, tbsLocate: tbsLocate, tbsPose: tbsPose, tbsRand: tbsRand, tbsKnee: tbsKnee,
+    tbsBeatIndex: tbsBeatIndex, tbsLocate: tbsLocate, tbsPose: tbsPose, tbsShake: tbsShake, tbsRand: tbsRand, tbsKnee: tbsKnee,
     tbsHair: tbsHair, tbsHairStep: tbsHairStep, createTopbarShow: createTopbarShow, TBS_SHOWS: TBS_SHOWS,
   };
 }

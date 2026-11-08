@@ -130,6 +130,22 @@
   to { opacity: 0; transform: translate(26px, -48px) rotate(14deg) scale(1.1); }
 }
 
+/* The lobby shakes along: vote options buzz (neighbours in opposite directions) and the
+   panels move with them, a little less. The QR panel only swells, so it stays scannable. */
+.tbs-lobby-live .lobby-game-option {
+  transform: translate(calc(var(--tbs-vx, 0) * 1px), calc(var(--tbs-vy, 0) * 1px)) scale(calc(1 + var(--tbs-kick, 0) * 0.025));
+  filter: brightness(calc(1 + var(--tbs-kick, 0) * 0.1));
+  will-change: transform;
+}
+.tbs-lobby-live .lobby-game-option:nth-child(even) {
+  transform: translate(calc(var(--tbs-vx, 0) * -1px), calc(var(--tbs-vy, 0) * 1px)) scale(calc(1 + var(--tbs-kick, 0) * 0.025));
+}
+.tbs-lobby-live .lobby-panel:not(.invite-panel) {
+  transform: translate(calc(var(--tbs-vx, 0) * 0.5px), calc(var(--tbs-vy, 0) * -0.5px)) scale(calc(1 + var(--tbs-kick, 0) * 0.006));
+  will-change: transform;
+}
+.tbs-lobby-live .invite-panel { transform: scale(calc(1 + var(--tbs-kick, 0) * 0.004)); }
+
 @media (prefers-reduced-motion: reduce) {
   .studio-header > .max-w-7xl { transition: none; }
   .tbs-flash.tbs-flash-go, .tbs-ring.tbs-ring-go, .tbs-note.tbs-note-go { animation: none; }
