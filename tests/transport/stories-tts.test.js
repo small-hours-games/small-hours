@@ -27,22 +27,14 @@ describe('stories + tts routes', () => {
   });
   afterAll(() => server && server.close());
 
-  it('/api/stories returns a story per game type', async () => {
+  // The card games start straight on the table: no intro story (it was Swedish-only text
+  // over the board while people were already playing). The route stays for future games.
+  it('/api/stories answers, without stories for the card games', async () => {
     const res = await fetch(base + '/api/stories');
     expect(res.status).toBe(200);
     const data = await res.json();
-    expect(data.stories.hilow).toBeTruthy();
-    expect(data.stories.hilow.intro).toContain('kort');
-    expect(Object.keys(data.stories).length).toBeGreaterThanOrEqual(3);
-  });
-
-  it('every registered game type has a story', async () => {
-    const types = ['shithead', 'gin-rummy', 'hilow'];
-    const STORIES = gameStories();
-    for (const t of types) {
-      expect(STORIES[t], `story for ${t}`).toBeTruthy();
-      expect(STORIES[t].intro.length).toBeGreaterThan(10);
-    }
+    for (const t of ['shithead', 'gin-rummy', 'hilow']) expect(data.stories[t]).toBeUndefined();
+    expect(gameStories()).toEqual(data.stories);
   });
 
   it('POST /api/tts without key returns 502 (graceful, no crash)', async () => {

@@ -14,9 +14,4 @@ export default {
   music: true,
   ai: { default: 1, max: 1, choose: chooseGinAction },
   privateKeys: ['canKnock', 'lastDrawnCardId'],
-  story: {
-    title: 'Gin Rummy',
-    theme: 'green',
-    intro: 'Två mästare, en runda. Drag, kasta, och väv ihop ditt öde. Den som knackar först skriver historien.',
-  },
 };

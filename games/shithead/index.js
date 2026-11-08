@@ -20,9 +20,4 @@ export default {
   music: true,
   ai: { default: 2, max: 4, cardsPerSeat: 9, choose: choosePalaceAction, delay: afterFlight },
   privateKeys: ['swapConfirmed'],
-  story: {
-    title: 'Palace',
-    theme: 'orange',
-    intro: 'Korten är lagda. Äran tillhör den som blir av med allt först. Den siste kvar bär skammens krona. Spela klokt, krigare.',
-  },
 };
