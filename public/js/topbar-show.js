@@ -462,29 +462,29 @@ function createTopbarShow(opts) {
   var stage = document.createElement('div');
   stage.className = 'tbs-stage';
   stage.setAttribute('aria-hidden', 'true');
-  var eqHtml = '';
-  for (var e = 0; e < TBS_EQ_BARS; e++) eqHtml += '<i></i>';
   var notesHtml = '';
   for (var m = 0; m < TBS_NOTES; m++) notesHtml += '<span class="tbs-note">' + (m % 2 ? '♫' : '♪') + '</span>';
   stage.innerHTML =
-    '<div class="tbs-wash"></div>' +
+    '<div class="tbs-wash"></div><div class="tbs-wash-spot"></div><div class="tbs-wash-bright"></div>' +
+    '<div class="tbs-logo-glow"></div>' +
     '<div class="tbs-spot tbs-spot-l"></div><div class="tbs-spot tbs-spot-r"></div>' +
     '<div class="tbs-sweep"></div>' +
     '<canvas class="tbs-fire"></canvas>' +
-    '<div class="tbs-eq">' + eqHtml + '</div>' +
+    '<canvas class="tbs-eq"></canvas>' +
     '<div class="tbs-beatline"></div>' +
     '<div class="tbs-ring"></div>' +
     notesHtml +
     '<div class="tbs-chip"><span class="tbs-chip-note">♪</span><span class="tbs-chip-title"></span>' +
       '<span class="tbs-chip-dots"><i></i><i></i><i></i><i></i></span></div>' +
-    '<div class="tbs-singer">' + TBS_SINGER_SVG + '</div>' +
+    '<div class="tbs-singer"><div class="tbs-singer-glow"></div>' + TBS_SINGER_SVG + '</div>' +
     '<div class="tbs-flash"></div>';
   header.insertBefore(stage, header.firstChild);
   var q = function (sel) { return stage.querySelector(sel); };
   var el = {
-    wash: q('.tbs-wash'), spotL: q('.tbs-spot-l'), spotR: q('.tbs-spot-r'), sweep: q('.tbs-sweep'),
+    wash: q('.tbs-wash'), washSpot: q('.tbs-wash-spot'), washBright: q('.tbs-wash-bright'), logoGlow: q('.tbs-logo-glow'),
+    singerGlow: q('.tbs-singer-glow'), spotL: q('.tbs-spot-l'), spotR: q('.tbs-spot-r'), sweep: q('.tbs-sweep'),
     fire: q('.tbs-fire'),
-    eq: Array.prototype.slice.call(stage.querySelectorAll('.tbs-eq i')), beatline: q('.tbs-beatline'),
+    eq: q('.tbs-eq'), beatline: q('.tbs-beatline'),
     ring: q('.tbs-ring'), notes: Array.prototype.slice.call(stage.querySelectorAll('.tbs-note')),
     chip: q('.tbs-chip'), chipTitle: q('.tbs-chip-title'), dots: Array.prototype.slice.call(stage.querySelectorAll('.tbs-chip-dots i')),
     singer: q('.tbs-singer'), svg: q('.tbs-singer-svg'), root: q('.tbs-root'), upper: q('.tbs-upper'), head: q('.tbs-head'),
@@ -516,6 +516,19 @@ function createTopbarShow(opts) {
     });
   }
 
+  // Only touch the DOM when a value really changes: every write costs a style pass.
+  function css(node, prop, value) {
+    if (!node) return;
+    var cache = node._tbs || (node._tbs = {});
+    if (cache[prop] === value) return;
+    cache[prop] = value;
+    node.style[prop] = value;
+  }
+  var svgScale = 0.67;
+  var eqCtx = null, eqGrad = null, eqW = 0, eqH = 30, eqDpr = 1;
+  var remeasureUntil = 0;
+  var shakeEls = { options: [], panels: [], invite: null, at: -1 };
+
   function trackName() {
     var src = audio.currentSrc || audio.getAttribute('src') || '';
     try { src = decodeURIComponent(src.split('?')[0]); } catch (_) { /* keep raw */ }
@@ -531,6 +544,14 @@ function createTopbarShow(opts) {
     var r = right ? right.getBoundingClientRect().left - hr.left - 28 : hr.width * 0.7;
     if (r - l < 140) { l = hr.width * 0.35; r = hr.width * 0.65; }
     bounds = { left: l, right: r, width: hr.width };
+    svgScale = (el.singer.offsetHeight || 102) / 152;
+    eqDpr = Math.min(2, window.devicePixelRatio || 1);
+    eqW = hr.width;
+    var ew = Math.round(eqW * eqDpr), eh = Math.round(eqH * eqDpr);
+    if (el.eq.width !== ew || el.eq.height !== eh) { el.eq.width = ew; el.eq.height = eh; }
+    eqCtx = el.eq.getContext('2d');
+    eqGrad = eqCtx.createLinearGradient(0, eqH, 0, 0);
+    [[0, '#38bdf8'], [0.55, '#a78bfa'], [0.85, '#fb7185'], [1, '#facc15']].forEach(function (c) { eqGrad.addColorStop(c[0], c[1]); });
     measureFire(hr);
   }
 
@@ -547,6 +568,10 @@ function createTopbarShow(opts) {
     var w = Math.round(box.width * dpr), h = Math.round(box.height * dpr);
     if (el.fire.width !== w || el.fire.height !== h) { el.fire.width = w; el.fire.height = h; }
     fire.box = box; fire.dpr = dpr;
+    if (el.logoGlow) {
+      el.logoGlow.style.left = (lr.left - hr.left + lr.width / 2).toFixed(0) + 'px';
+      el.logoGlow.style.top = (lr.top - hr.top + lr.height / 2).toFixed(0) + 'px';
+    }
     if (!fire.sprites) fire.sprites = tbsFireSprites();
   }
 
@@ -571,7 +596,7 @@ function createTopbarShow(opts) {
     if (!b) return;
     // Flames start on the top edge of the logo and rise to the top of the bar.
     var base = b.logoTop + b.logoH * 0.2;
-    for (var i = 0; i < n && fire.parts.length < 420; i++) {
+    for (var i = 0; i < n && fire.parts.length < 340; i++) {
       fire.parts.push({
         x: 34 + Math.random() * (b.width - 68), y: base - Math.random() * 4,
         vx: (Math.random() - 0.5) * 30 * (spread || 1), vy: -(55 + Math.random() * 90) * power,
@@ -582,7 +607,7 @@ function createTopbarShow(opts) {
   function spawnEmbers(n, power) {
     var b = fire.box;
     if (!b) return;
-    for (var i = 0; i < n && fire.embers.length < 160; i++) {
+    for (var i = 0; i < n && fire.embers.length < 120; i++) {
       fire.embers.push({
         x: 34 + Math.random() * (b.width - 68), y: b.logoTop + b.logoH * 0.15,
         vx: (Math.random() - 0.5) * 120, vy: -(90 + Math.random() * 160) * power,
@@ -710,10 +735,10 @@ function createTopbarShow(opts) {
     // Shadow on the floor: smaller and fainter the higher she is.
     var h = Math.min(1, -lift / 60);
     el.shadow.setAttribute('transform', 'translate(60 149.5) scale(' + (1 - 0.5 * h).toFixed(3) + ') translate(-60 -149.5)');
-    el.shadow.style.opacity = (1 - 0.7 * h).toFixed(2);
+    css(el.shadow, 'opacity', (1 - 0.7 * h).toFixed(2));
 
     // Hair in "world" svg units: the singer's own movement on the bar feeds the swing.
-    var s = el.svg.getBoundingClientRect().height / 152 || 0.67;
+    var s = svgScale;
     var off = [px / s, lift / s];
     var flipYaw = tbsMul(headM, tbsT(0, 0));
     var pony = tbsHairStep(hair.pony, flipYaw, off, dt);
@@ -736,9 +761,12 @@ function createTopbarShow(opts) {
     hint = loc.i;
     var exiting = exitAt > 0;
     var stageOn = loc.stage !== 'intro' || t > map.beats[Math.max(0, map.dropBeat - 4)];
-    header.classList.toggle('tbs-open', stageOn && !exiting);
-    // The bar grows while it opens; keep the fire on the logo.
-    if (frameNo % 12 === 0) measureFire();
+    var open = stageOn && !exiting;
+    if (open !== header.classList.contains('tbs-open')) {
+      header.classList.toggle('tbs-open', open);
+      remeasureUntil = now + 900;              // the bar grows for a moment; follow the logo
+    }
+    if (now < remeasureUntil && frameNo % 6 === 0) measure();
 
     // --- singer ---
     var pose = tbsPose(loc, reduced);
@@ -754,7 +782,7 @@ function createTopbarShow(opts) {
     var spot = pose.travel != null ? pose.travel : (el.singer._x != null ? el.singer._x : 0.5);
     el.singer._x = spot;
     var px = bounds.left + w * spot;
-    el.singer.style.opacity = singerVisible || (exiting && exitLift > -170) ? '1' : '0';
+    css(el.singer, 'opacity', singerVisible || (exiting && exitLift > -170) ? '1' : '0');
     if (pose.show || exiting) drawSinger(pose, px, 0, dt, exitLift);
 
     // --- the bar itself ---
@@ -763,54 +791,65 @@ function createTopbarShow(opts) {
     var kindLevel = loc.kind === 'd' ? 1 : loc.kind === 'g' ? 0.6 : 0.32;
     var live = loc.stage === 'intro' ? 0.25 + 0.35 * Math.min(1, Math.max(0, t / Math.max(1, map.dropTime))) : kindLevel;
     var riserAmt = loc.riser ? (loc.beatInBar + p) / 4 : 0;
-    stage.style.setProperty('--tbs-hit', (hit * live).toFixed(3));
-    stage.style.setProperty('--tbs-live', live.toFixed(3));
-    stage.style.setProperty('--tbs-riser', riserAmt.toFixed(3));
-    stage.style.setProperty('--tbs-x', px.toFixed(0) + 'px');
-    stage.style.setProperty('--tbs-hue', String(loc.kind === 'd' ? (loc.bar % 4) * 32 : 0));
+    // Everything below changes only transform and opacity, which the GPU composites
+    // without repainting the bar.
+    css(el.washSpot, 'transform', 'translateX(' + px.toFixed(0) + 'px)');
+    css(el.washSpot, 'opacity', (0.5 + 0.5 * live).toFixed(2));
+    css(el.wash, 'filter', loc.kind === 'd' && loc.stage === 'dance' ? 'hue-rotate(' + ((loc.bar % 4) * 32) + 'deg)' : 'none'); // once per bar
     // Strobe on the eighths while a drop builds.
-    el.wash.style.opacity = (0.35 + 0.5 * live * hit + (loc.riser && !reduced ? 0.35 * riserAmt * (Math.sin(p * Math.PI * 4) > 0 ? 1 : 0.2) : 0)).toFixed(3);
+    css(el.wash, 'opacity', (0.35 + 0.5 * live * hit + (loc.riser && !reduced ? 0.35 * riserAmt * (Math.sin(p * Math.PI * 4) > 0 ? 1 : 0.2) : 0)).toFixed(3));
+    css(el.washBright, 'opacity', (0.22 * riserAmt).toFixed(3));
     // Light sweep across the bar, once per bar, in the drops.
-    el.sweep.style.opacity = loc.kind === 'd' && loc.stage === 'dance' && !reduced ? '0.55' : '0';
-    el.sweep.style.left = (((loc.beatInBar + p) / 4) * 125 - 25).toFixed(2) + '%';
-    el.beatline.style.opacity = (0.25 + 0.75 * hit * live).toFixed(3);
-    // Equalizer along the bottom edge: each beat deals new heights.
-    for (var b = 0; b < el.eq.length; b++) {
-      var r1 = tbsRand(Math.max(0, loc.i), b);
-      var lvl = (0.18 + 0.82 * r1) * (0.25 + 0.75 * hit) * (0.35 + 0.65 * live) * (0.5 + 0.5 * (loc.energy || 0.3));
-      el.eq[b].style.transform = 'scaleY(' + Math.max(0.04, lvl).toFixed(3) + ')';
+    css(el.sweep, 'opacity', loc.kind === 'd' && loc.stage === 'dance' && !reduced ? '0.55' : '0');
+    css(el.sweep, 'transform', 'translateX(' + ((((loc.beatInBar + p) / 4) * 1.25 - 0.25) * bounds.width).toFixed(0) + 'px) skewX(-18deg)');
+    css(el.beatline, 'opacity', (0.25 + 0.75 * hit * live).toFixed(3));
+    css(el.singerGlow, 'opacity', (hit * live).toFixed(3));
+    if (el.chip.classList.contains('tbs-chip-on')) css(el.chip, 'transform', 'translate(-50%, -50%) scale(' + (1 + hit * live * 0.08).toFixed(3) + ')');
+    // Equalizer along the bottom edge, drawn on one canvas: each beat deals new heights.
+    if (eqCtx) {
+      eqCtx.setTransform(eqDpr, 0, 0, eqDpr, 0, 0);
+      eqCtx.clearRect(0, 0, eqW, eqH);
+      eqCtx.globalAlpha = 0.35 + live * 0.45;
+      eqCtx.fillStyle = eqGrad;
+      var bw = (eqW - 12) / TBS_EQ_BARS;
+      for (var b = 0; b < TBS_EQ_BARS; b++) {
+        var r1 = tbsRand(Math.max(0, loc.i), b);
+        var lvl = Math.max(0.04, (0.18 + 0.82 * r1) * (0.25 + 0.75 * hit) * (0.35 + 0.65 * live) * (0.5 + 0.5 * (loc.energy || 0.3)));
+        var bh = lvl * eqH;
+        eqCtx.fillRect(6 + b * bw + 1.5, eqH - bh, bw - 3, bh);
+      }
     }
     // Spotlights lean in toward the singer and swing with the beat.
     var lean = ((px / Math.max(1, bounds.width)) - 0.5) * 40;
     var swing = loc.stage === 'intro' ? 0 : 6 * Math.sin(Math.PI * (loc.beatInBar + p) / 2);
-    el.spotL.style.transform = 'rotate(' + (-24 + lean + swing).toFixed(1) + 'deg)';
-    el.spotR.style.transform = 'rotate(' + (24 + lean - swing).toFixed(1) + 'deg)';
-    el.spotL.style.opacity = el.spotR.style.opacity = (loc.stage === 'intro' ? 0.15 * live : 0.25 + 0.45 * live * (0.5 + 0.5 * hit)).toFixed(3);
+    css(el.spotL, 'transform', 'translateX(' + px.toFixed(0) + 'px) rotate(' + (-24 + lean + swing).toFixed(1) + 'deg)');
+    css(el.spotR, 'transform', 'translateX(' + px.toFixed(0) + 'px) rotate(' + (24 + lean - swing).toFixed(1) + 'deg)');
+    var spotO = (loc.stage === 'intro' ? 0.15 * live : 0.25 + 0.45 * live * (0.5 + 0.5 * hit)).toFixed(2);
+    css(el.spotL, 'opacity', spotO); css(el.spotR, 'opacity', spotO);
 
     // --- fire over the logo, and the logo itself pulsing on the beat ---
     var rate = drawFire(dt, loc, hit, exiting) || 0;
     var heat = exiting ? 0 : Math.min(1, rate / 200);
-    header.style.setProperty('--tbs-logo', (hit * heat).toFixed(3));
-    header.style.setProperty('--tbs-heat', heat.toFixed(3));
+    css(logo, 'transform', 'scale(' + (1 + hit * heat * 0.07).toFixed(3) + ')');
+    css(el.logoGlow, 'opacity', (heat * (0.35 + 0.65 * hit)).toFixed(2));
+    css(el.logoGlow, 'transform', 'translate(-50%, -50%) scale(' + (0.9 + 0.25 * hit * heat).toFixed(3) + ')');
 
     // The lion and the frog dance under the QR code.
     for (var dn = 0; dn < dancers.length; dn++) {
       var dp = exiting ? { y: 0, rot: 0, sx: 1, sy: 1, px: 0, py: 0 } : tbsDancerPose(loc, dn, reduced);
-      if (dancers[dn].rig) dancers[dn].rig.style.transform = 'translate3d(0,' + dp.y.toFixed(1) + 'px,0) rotateZ(' + dp.rot.toFixed(1) + 'deg) scale(' + dp.sx.toFixed(3) + ',' + dp.sy.toFixed(3) + ')';
-      if (dancers[dn].paw) dancers[dn].paw.style.transform = 'translate3d(' + (dp.px * 1.6).toFixed(1) + 'px,' + (dp.py * 1.6).toFixed(1) + 'px,26px)';
+      if (dancers[dn].rig) css(dancers[dn].rig, 'transform', 'translate3d(0,' + dp.y.toFixed(1) + 'px,0) rotateZ(' + dp.rot.toFixed(1) + 'deg) scale(' + dp.sx.toFixed(3) + ',' + dp.sy.toFixed(3) + ')');
+      if (dancers[dn].paw) css(dancers[dn].paw, 'transform', 'translate3d(' + (dp.px * 1.6).toFixed(1) + 'px,' + (dp.py * 1.6).toFixed(1) + 'px,26px)');
     }
 
     // The lobby boxes (vote options and panels) shake on the beat with her.
     var shake = exiting ? { vx: 0, vy: 0, kick: 0 } : tbsShake(loc, reduced);
-    var rootStyle = document.documentElement.style;
-    rootStyle.setProperty('--tbs-vx', shake.vx.toFixed(2));
-    rootStyle.setProperty('--tbs-vy', shake.vy.toFixed(2));
-    rootStyle.setProperty('--tbs-kick', shake.kick.toFixed(3));
+    applyShake(shake, now);
 
     // The flash and shockwave: the landing, and every drop after a quieter bar.
     var flashBeat = loc.stage !== 'intro' && loc.stage !== 'fall' && (loc.sectionStart || (loc.i === map.dropBeat));
     if (flashBeat && loc.i !== lastFlashBeat && !reduced) {
       lastFlashBeat = loc.i;
+      el.ring.style.left = px.toFixed(0) + 'px';
       restart(el.flash, 'tbs-flash-go');
       restart(el.ring, 'tbs-ring-go');
     }
@@ -828,7 +867,53 @@ function createTopbarShow(opts) {
     raf = requestAnimationFrame(frame);
   }
 
+  // Shake the lobby: transforms written straight onto the few boxes, so no style
+  // inheritance runs through the page. The vote list re-renders, so look it up again now and then.
+  function applyShake(sh, now) {
+    if (now - shakeEls.at > 1000) {
+      shakeEls.at = now;
+      shakeEls.options = Array.prototype.slice.call(document.querySelectorAll('.lobby-game-option'));
+      shakeEls.panels = Array.prototype.slice.call(document.querySelectorAll('.lobby-panel:not(.invite-panel)'));
+      shakeEls.invite = document.querySelector('.invite-panel');
+    }
+    var sc = (1 + sh.kick * 0.025).toFixed(4);
+    var shine = (sh.kick * 0.12).toFixed(3);
+    for (var i = 0; i < shakeEls.options.length; i++) {
+      var o = shakeEls.options[i], sign = i % 2 ? -1 : 1;
+      css(o, 'transform', 'translate(' + (sh.vx * sign).toFixed(1) + 'px,' + sh.vy.toFixed(1) + 'px) scale(' + sc + ')');
+      if (!o._tbsShine) { o._tbsShine = document.createElement('span'); o._tbsShine.className = 'tbs-shine'; o.appendChild(o._tbsShine); }
+      css(o._tbsShine, 'opacity', shine);
+    }
+    for (var j = 0; j < shakeEls.panels.length; j++) {
+      css(shakeEls.panels[j], 'transform', 'translate(' + (sh.vx * 0.5).toFixed(1) + 'px,' + (-sh.vy * 0.5).toFixed(1) + 'px) scale(' + (1 + sh.kick * 0.006).toFixed(4) + ')');
+    }
+    css(shakeEls.invite, 'transform', 'scale(' + (1 + sh.kick * 0.004).toFixed(4) + ')');
+  }
+  function clearShake() {
+    shakeEls.options.concat(shakeEls.panels, shakeEls.invite ? [shakeEls.invite] : []).forEach(function (n) {
+      if (!n) return;
+      n.style.transform = ''; if (n._tbs) n._tbs.transform = '';
+      if (n._tbsShine) { n._tbsShine.remove(); n._tbsShine = null; }
+    });
+    shakeEls.at = -1;
+  }
+
+  // Replay a one-shot effect. The Web Animations API restarts it without forcing a layout.
+  var TBS_ANIMS = {
+    'tbs-flash-go': { frames: [{ opacity: 0.85 }, { opacity: 0 }], opts: { duration: 500, easing: 'ease-out' } },
+    'tbs-ring-go': { frames: [{ opacity: 1, transform: 'scale(0.6)' }, { opacity: 0, transform: 'scale(9, 3)' }], opts: { duration: 700, easing: 'cubic-bezier(0.1, 0.7, 0.3, 1)' } },
+    'tbs-note-go': { frames: [
+      { opacity: 0, transform: 'translate(0, 10px) rotate(-10deg) scale(0.7)' },
+      { opacity: 1, offset: 0.2 },
+      { opacity: 0, transform: 'translate(26px, -48px) rotate(14deg) scale(1.1)' }], opts: { duration: 1600, easing: 'ease-out' } },
+  };
   function restart(node, cls) {
+    var a = TBS_ANIMS[cls];
+    if (a && typeof node.animate === 'function') {
+      if (node._tbsAnim) node._tbsAnim.cancel();
+      node._tbsAnim = node.animate(a.frames, a.opts);
+      return;
+    }
     node.classList.remove(cls);
     void node.offsetWidth;
     node.classList.add(cls);
@@ -872,10 +957,9 @@ function createTopbarShow(opts) {
     if (raf) cancelAnimationFrame(raf);
     raf = 0;
     header.classList.remove('tbs-on', 'tbs-open');
-    header.style.removeProperty('--tbs-logo');
-    header.style.removeProperty('--tbs-heat');
+    if (logo) { logo.style.transform = ''; if (logo._tbs) logo._tbs.transform = ''; }
     document.body.classList.remove('tbs-lobby-live');
-    ['--tbs-vx', '--tbs-vy', '--tbs-kick'].forEach(function (v) { document.documentElement.style.removeProperty(v); });
+    clearShake();
     stage.classList.remove('tbs-stage-on');
     el.singer.style.opacity = '0';
     el.singer._x = null;
