@@ -45,8 +45,8 @@ describe('loading game plugins', () => {
 
 describe('the games in this repo', () => {
   it('all load, with the four playable games first and in catalog order', () => {
-    expect(publicGames().map(g => g.type)).toEqual(['quiz', 'music-quiz', 'shithead', 'gin-rummy']);
-    expect(listGames().map(g => g.id)).toEqual(expect.arrayContaining(['hilow', 'sjuan', 'uno']));
+    expect(publicGames().map(g => g.type)).toEqual(['quiz', 'music-quiz', 'shithead', 'gin-rummy', 'sjuan']);
+    expect(listGames().map(g => g.id)).toEqual(expect.arrayContaining(['hilow', 'uno']));
   });
 
   it('keep a private key from a manifest away from the TV', () => {
@@ -68,7 +68,7 @@ describe('game routes', () => {
 
   it('lists only the games people can pick', async () => {
     const { games } = await (await fetch(base + '/api/games')).json();
-    expect(games.map(g => g.type)).toEqual(['quiz', 'music-quiz', 'shithead', 'gin-rummy']);
+    expect(games.map(g => g.type)).toEqual(['quiz', 'music-quiz', 'shithead', 'gin-rummy', 'sjuan']);
   });
 
   it('writes the catalog into the phone and TV pages', async () => {

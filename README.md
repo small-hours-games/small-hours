@@ -31,12 +31,13 @@ These games are available in the dashboard:
 | 🎵 **Music Quiz** | 1–20 | Hear the clip. Name the artist or song. Try not to sing the answer out loud. |
 | 👑 **Palace** | 1–6 | Empty your cards and avoid being the last player standing. Alone? Play 1–4 AI opponents. |
 | ♠️ **Gin Rummy** | 1–2 | Build your hand, watch the discards, and pick your moment. Alone? Play Robo, the AI. |
+| 7️⃣ **Sjuan** | 2–8 | Build out from the sevens and get rid of your cards first. |
 
 Waiting for friends? A player alone in the room can start Gin Rummy or Palace against AI opponents. The game runs on the TV like any other; once the others arrive, the admin returns to the lobby and starts one for everyone. AI seats are only added for a lone player and never earn session points.
 
 Music Quiz mixes genres and decades, rotates songs, and builds believable alternatives from the same playlist. Each quiz starts with a five-second countdown; music clips fade in for one second and out over the final two seconds of the question.
 
-The engine also includes Högt/Lågt, Sjuan and Uno, which do not have screens yet. A game with `hidden: true` in its manifest stays out of the lobby.
+The engine also includes Högt/Lågt and Uno, which do not have screens yet. A game with `hidden: true` in its manifest stays out of the lobby.
 
 ## Small touches, better game nights
 
