@@ -15,7 +15,8 @@ data/
 /public/download/
 
 # Local AI tooling and generated planning state
-/.claude/
+/.claude/*
+!/.claude/skills/
 /.codex/
 /.agents/
 /.hermes/
