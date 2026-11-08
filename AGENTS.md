@@ -99,6 +99,8 @@ Card games use `src/cards/deck.js` on the server and the card-table kit `public/
 
 The TV plays music from `music/`: `music/lobby/` is served by `/api/lobby-music` for the lobby and join screen, and `music/quiz-card/` by `/api/game-music` for games with `music: true` in their manifest. Both use `createLobbyMusic` (`public/js/lobby-music.js`, volume, fades, rotation); `setDucked` lowers the game music while the quiz narrator or a game story speaks.
 
+The TV topbar puts on a show for lobby songs that have a beat map: `public/js/topbar-show.js` + `public/css/topbar-show.css`, maps in `public/shows/` keyed by file name in `TBS_SHOWS`. A map lists every beat (songs drift in tempo, so there is no fixed BPM), the drop, and each bar as d/g/b (drop, groove, break). Make one with `python3 scripts/song-beatmap.py <mp3> --drop <seconds>` (needs librosa), then check it by ear. Lobby MP3s need a Xing header (`ffmpeg -i in.mp3 -c copy -write_xing 1 out.mp3`), or browsers report the wrong length and the music fades out early.
+
 Shared styling lives in `public/css/`; brand images live in `public/images/`.
 
 ## Verification
