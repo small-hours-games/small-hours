@@ -58,7 +58,7 @@ const fakeWss = {
 };
 
 vi.mock('ws', () => ({
-  WebSocketServer: vi.fn(() => fakeWss),
+  WebSocketServer: vi.fn(function () { return fakeWss; }),
 }));
 
 // Mock fetchers (quiz.js imports cached-fetcher, ws-adapter imports cached-fetcher too)

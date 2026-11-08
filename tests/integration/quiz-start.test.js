@@ -21,6 +21,8 @@ describe('Quiz start flow', () => {
   });
 
   afterEach(() => {
+    // Vitest 4: restoreAllMocks no longer resets vi.fn() mocks, so reset them too.
+    vi.resetAllMocks();
     vi.restoreAllMocks();
   });
 
