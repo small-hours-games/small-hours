@@ -121,7 +121,7 @@ Trivia comes from OpenTrivia DB and is cached on disk. Music Quiz uses Deezer pl
 
 To change the playlist:
 
-1. Add or remove audio files in [`music/`](music/). Supported extensions: `.mp3`, `.ogg`, `.m4a`, and `.wav`; playback support depends on the browser.
+1. Add or remove audio files in [`music/lobby/`](music/lobby/) for the lobby and join screen, or [`music/quiz-card/`](music/quiz-card/) for the games. Supported extensions: `.mp3`, `.ogg`, `.m4a`, and `.wav`; playback support depends on the browser.
 2. For Docker deployments, rebuild and restart—the music folder is baked into the image.
 3. Refresh the TV page to reload the playlist.
 
@@ -133,7 +133,7 @@ The server discovers the files automatically through `/api/lobby-music`. No play
 
 - `data/` contains generated trivia caches and speech audio. It is ignored by Git and mounted into Docker, so rebuilding the image preserves it.
 - Rooms, scores, and reconnect identities live in memory. A server restart ends current sessions; the TV entry page can create a new room.
-- `music/` contains the local lobby soundtrack. Android signing keys, build output, and APK copies are ignored by Git; see the [Android TV instructions](android-tv/README.md) for building and signing.
+- `music/` contains the local lobby and game soundtracks. Android signing keys, build output, and APK copies are ignored by Git; see the [Android TV instructions](android-tv/README.md) for building and signing.
 - GitHub Actions runs tests and publishes GHCR images from `main` and version tags. Pulling an image and building local source are separate deployment paths; use the commands above for the one you need.
 
 After a frontend update, refresh both TV and phone pages so they load the new JavaScript and styles.
@@ -163,7 +163,7 @@ Useful places to start:
 - [`public/`](public/) — landing page, phone controller, TV display, and shared assets.
 - [`public/css/light-lobby.css`](public/css/light-lobby.css) — shared light-lobby styling and compact TV layout.
 - [`public/js/lobby-music.js`](public/js/lobby-music.js) — TV lobby playback and mascot motion state.
-- [`music/`](music/) — local lobby tracks.
+- [`music/`](music/) — lobby and game tracks, one folder each.
 - [`games/`](games/) — one folder per game.
 - [`src/fetcher/`](src/fetcher/) — trivia, music, caching, and speech fetching.
 - [`tests/`](tests/) — engine, session, transport, integration, and frontend tests.
