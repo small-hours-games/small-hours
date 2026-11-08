@@ -772,7 +772,7 @@ describe('ws-adapter - AI opponents for a lone player', () => {
     ws.emit('message', JSON.stringify({ type: 'START_MINI_GAME', gameType: 'gin-rummy', config: { targetScore: 40 } }));
     return vi.waitFor(() => expect(env.room.game).not.toBeNull()).then(() => {
       const start = ws._sent.find(m => m.type === 'GAME_STATE');
-      expect(start.playerNames.bot_1).toBe('Robo');
+      expect(start.playerNames.bot_1).toBe('Nova-7');
       expect(env.room.game.state.players).toEqual([me, 'bot_1']);
 
       // Alice plays like the bot would; the AI seat moves on its own timer.

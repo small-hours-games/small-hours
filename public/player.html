@@ -791,11 +791,16 @@
       const vsAi = leader && playsVsAi(leader);
       if (vsAi && leader.aiMax > 1) {
         const seats = state.aiSeats || 2;
+        // Each AI seat is a character (SH_AI): the buttons show who joins, the line names them.
+        const cast = (typeof SH_AI !== 'undefined' ? SH_AI : []);
+        const faces = n => cast.length ? cast.slice(0, n).map(p => p.avatar).join('') : '\u{1F916} ' + n;
+        const who = cast.slice(0, seats).map(p => escapeHtml(p.avatar + ' ' + p.name)).join(', ');
         html += '<div class="ai-seat-picker"><span class="ai-seat-label">AI opponents</span><div class="grid grid-cols-4 gap-2">' +
           Array.from({ length: leader.aiMax }, (_, i) => i + 1).map(n =>
-          '<button onclick="setAiSeats(' + n + ')" aria-pressed="' + (seats === n) + '" class="p-2.5 rounded-xl border-2 text-sm font-extrabold transition ' +
+          '<button onclick="setAiSeats(' + n + ')" aria-pressed="' + (seats === n) + '" aria-label="' + n + ' AI opponent' + (n > 1 ? 's' : '') + '" class="ai-seat-btn p-2 rounded-xl border-2 text-sm font-extrabold transition ' +
           (seats === n ? 'bg-sky-50 border-sky-500 text-sky-900 shadow-sm' : 'bg-white/90 border-sky-200 text-slate-700') + '">' +
-          '\u{1F916} ' + n + '</button>').join('') + '</div></div>';
+          faces(n) + '</button>').join('') + '</div>' +
+          (who ? '<p class="ai-seat-cast">vs ' + who + '</p>' : '') + '</div>';
       }
       const lobbyOptions = leader && SH.game(leader.type)?.lobbyOptions;
       if (lobbyOptions) html += lobbyOptions();

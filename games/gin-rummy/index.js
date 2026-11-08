@@ -10,7 +10,7 @@ export default {
   min: 2,
   max: 2,
   blurb: '2 players • Build sets & runs, knock low!',
-  soloBlurb: 'Solo vs AI • Knock before Robo does!',
+  soloBlurb: 'Solo vs AI • Knock before Nova-7 does!',
   music: true,
   ai: { default: 1, max: 1, choose: chooseGinAction },
   privateKeys: ['canKnock', 'lastDrawnCardId'],

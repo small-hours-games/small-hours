@@ -6,6 +6,7 @@ import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { listGames, publicGames } from './registry.js';
+import { publicPersonas } from '../engine/bots/personas.js';
 
 export const GAMES_DIR = fileURLToPath(new URL('../../games/', import.meta.url));
 
@@ -20,7 +21,8 @@ function scriptsFor(id, screen) {
 /** Fill in the plugin markers of host.html ('tv') or player.html ('phone'). */
 export function renderGamePage(html, screen) {
   const games = listGames().filter(g => !g.hidden);
-  const catalog = '<script>var SH_GAMES = ' + JSON.stringify(publicGames()).replace(/</g, '\\u003c') + ';</script>';
+  const catalog = '<script>var SH_GAMES = ' + JSON.stringify(publicGames()).replace(/</g, '\\u003c') + ';' +
+    'var SH_AI = ' + JSON.stringify(publicPersonas()).replace(/</g, '\\u003c') + ';</script>';
   const styles = games.filter(g => existsSync(join(clientDir(g.id), 'style.css')))
     .map(g => `<link rel="stylesheet" href="/games/${g.id}/style.css">`).join('\n  ');
   const scripts = games.flatMap(g => scriptsFor(g.id, screen)).map(src => `<script src="${src}"></script>`).join('\n  ');

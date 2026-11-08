@@ -53,8 +53,8 @@ The TV and phones must be on the same network as the server. `localhost` on a ph
 | --- | --- | --- |
 | 🎯 **Quiz** | 1–20 | Vote for a category, race the timer, defend your trivia reputation. |
 | 🎵 **Music Quiz** | 1–20 | Hear the clip, name the artist or song, try not to sing along. |
-| 👑 **Palace** | 1–6 | Get rid of your cards, don't be the last one left. Alone? Play 1–4 AI opponents. |
-| ♠️ **Gin Rummy** | 1–2 | Build sets and runs, watch the discards, knock low. Alone? Play Robo, the AI. |
+| 👑 **Palace** | 1–6 | Get rid of your cards, don't be the last one left. Alone? Play 1–4 AI characters: Nova-7, Glitch, Prof. Byte and Turbo. |
+| ♠️ **Gin Rummy** | 1–2 | Build sets and runs, watch the discards, knock low. Alone? Play Nova-7, the AI. |
 | 7️⃣ **Sjuan** | 2–8 | Build out from the sevens and be first out. |
 
 AI seats are only added for a lone player and never earn session points.

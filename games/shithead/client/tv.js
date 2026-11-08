@@ -13,6 +13,73 @@
       return 'Play ' + rankLbl + ' or higher, or a 2 or 10';
     }
 
+    // --- The AI characters (SH_AI, src/engine/bots/personas.js) ---
+    // When a game starts they boot up on their seats, each in its own way and a little lost,
+    // and later they say something when a move goes their way (or doesn't).
+    var shAiIntroDone = false;
+    var shAiBubbles = {};
+    var shAiFinished = [];
+
+    function shAiSeatRect(id) {
+      const content = document.getElementById('gameContent');
+      const seat = content && content.querySelector('.tc-seat[data-player-id="' + (window.CSS && CSS.escape ? CSS.escape(id) : id) + '"]');
+      return seat ? seat.getBoundingClientRect() : null;
+    }
+
+    /** A speech bubble above an AI seat; a newer line replaces the last one. */
+    function shAiSay(id, text, ms) {
+      const r = shAiSeatRect(id);
+      if (!r || !text) return;
+      if (shAiBubbles[id]) shAiBubbles[id].remove();
+      const b = document.createElement('div');
+      b.className = 'ai-bubble';
+      b.textContent = text;
+      b.style.left = (r.left + r.width / 2).toFixed(0) + 'px';
+      b.style.top = (r.top + 6).toFixed(0) + 'px';
+      document.body.appendChild(b);
+      shAiBubbles[id] = b;
+      setTimeout(() => {
+        b.classList.add('ai-bubble-out');
+        setTimeout(() => b.remove(), 400);
+        if (shAiBubbles[id] === b) delete shAiBubbles[id];
+      }, ms || 2600);
+    }
+
+    /** One AI character arrives on its seat: its own entrance, then a confused look around. */
+    function shAiEntrance(id, i) {
+      const p = SH.aiPersona(id);
+      const r = shAiSeatRect(id);
+      if (!p || !r) return;
+      const el = document.createElement('div');
+      el.className = 'ai-intro ai-intro-' + (p.entrance || 'boot');
+      el.style.left = (r.left + r.width / 2).toFixed(0) + 'px';
+      el.style.top = (r.top + r.height / 2).toFixed(0) + 'px';
+      el.setAttribute('aria-hidden', 'true');
+      el.innerHTML = '<div class="ai-intro-face">' + escapeHtml(p.avatar) + '<span class="ai-intro-lost">' +
+        (p.entrance === 'dizzy' ? '💫' : '❓') + '</span></div><div class="ai-intro-name">' + escapeHtml(p.name) + '</div>';
+      document.body.appendChild(el);
+      setTimeout(() => shAiSay(id, p.hello[i % p.hello.length], 3200), 900);
+      setTimeout(() => el.remove(), 4300);
+    }
+
+    function shAiIntro(msg) {
+      const bots = (msg.players || []).map(pl => pl.playerId).filter(id => SH.aiPersona(id));
+      bots.forEach((id, i) => setTimeout(() => shAiEntrance(id, i), 300 + i * 850));
+    }
+
+    /** A line for what just happened to an AI seat (burn, pick-up, blind miss, going out). */
+    function shAiReact(ev, msg) {
+      const finish = msg.finishOrder || [];
+      const newlyOut = finish.filter(id => !shAiFinished.includes(id) && SH.aiPersona(id));
+      shAiFinished = finish.slice();
+      newlyOut.forEach(id => { const p = SH.aiPersona(id); shAiSay(id, p.quips.out[finish.length % p.quips.out.length]); });
+      if (!ev || !SH.aiPersona(ev.by) || newlyOut.includes(ev.by)) return;
+      const kind = ev.kind === 'burn' ? 'burn' : ev.kind === 'pickup' ? 'pickup' : ev.kind === 'blind-miss' ? 'blind' : null;
+      if (!kind) return;
+      const lines = SH.aiPersona(ev.by).quips[kind] || [];
+      if (lines.length) setTimeout(() => shAiSay(ev.by, lines[(ev.seq || 0) % lines.length]), kind === 'burn' ? 500 : 250);
+    }
+
     function renderShithead(msg) {
       const content = document.getElementById('gameContent');
       const names = state.playerNames || msg.playerNames || {};
@@ -82,7 +149,7 @@
         const pilePreview = (msg.pilePreview && msg.pilePreview.length) ? msg.pilePreview : (msg.pileTop ? [msg.pileTop] : []);
         const pileCount = tcNum(msg.pileCount);
         let side = '<div class="tc-rule">' + escapeHtml(shitheadRuleHintText(msg.pileTopRank, msg.pileCount || 0)) + '</div>';
-        side += renderMoveLog(shLog, { name: id => names[id] || 'Player', avatar: id => (String(id).startsWith('bot_') ? '🤖' : ((state.playerAvatars || {})[id] || '')), max: 4 });
+        side += renderMoveLog(shLog, { name: id => names[id] || 'Player', avatar: id => (String(id).startsWith('bot_') ? ((SH.aiPersona(id) || {}).avatar || '🤖') : ((state.playerAvatars || {})[id] || '')), max: 4 });
         html += '<div class="tc-tv-center">' +
           '<div class="tc-well"><span class="tc-well-label">Draw deck</span>' +
             renderTableStack(null, msg.drawPileCount || 0, { size: pileSize, facedown: true, emptyLabel: 'Empty' }) +
@@ -100,6 +167,13 @@
       html += '</div>';
       content.innerHTML = html;
       tcFitTv();
+      if (msg.phase === 'swap' && !shAiIntroDone) {
+        shAiIntroDone = true;
+        shAiFinished = [];
+        requestAnimationFrame(() => shAiIntro(msg));
+      }
+      if (msg.phase === 'finished') shAiIntroDone = false;
+      if (freshEvent || (msg.finishOrder || []).length !== shAiFinished.length) shAiReact(freshEvent ? ev : null, msg);
       if (freshEvent) tvAnimateShEvent(ev, msg);
       else if (ev && ev.seq === state.tvFlightSeq) {
         const flyingTop = content.querySelector('#tvPileWell .tc-pile-top');
@@ -147,6 +221,11 @@
     let shLastBoard = null;
     SH.registerGame('shithead', {
       render: renderShithead,
+      onLeave() {
+        document.querySelectorAll('.ai-bubble, .ai-intro').forEach(el => el.remove());
+        shAiBubbles = {};
+        shAiIntroDone = false;
+      },
       alwaysScoreboard: true,
       scoreboard(msg, { names, ids }) {
         // The end-of-game message carries only the result, not the table: keep the last

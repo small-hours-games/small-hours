@@ -628,7 +628,7 @@
     }
 
     function playerAvatarHtml(playerId) {
-      const avatar = (String(playerId).startsWith('bot_') ? '\u{1F916}' : null) || (state.playerAvatars || {})[playerId] ||
+      const avatar = (String(playerId).startsWith('bot_') ? ((SH.aiPersona(playerId) || {}).avatar || '\u{1F916}') : null) || (state.playerAvatars || {})[playerId] ||
         (state.players || []).find(p => p.playerId === playerId)?.avatar || '👤';
       return '<span class="inline-player-avatar" aria-hidden="true">' + escapeHtml(avatar) + '</span> ';
     }

@@ -481,3 +481,7 @@ header > .player-connection-row {
   header:has(#fullscreenBtn:not([hidden])) .brand-phone-name { display: none; }
   header:has(#fullscreenBtn:not([hidden])) #myName { max-width: 6.5rem; }
 }
+
+/* AI opponents: each seat is a character, so the picker shows their faces and names. */
+.ai-seat-btn { font-size: clamp(0.8rem, 3.6vw, 1rem); letter-spacing: -0.15em; white-space: nowrap; overflow: hidden; }
+.ai-seat-cast { margin-top: 6px; font-size: 0.75rem; color: var(--night-muted, #a9b6d3); text-align: center; }

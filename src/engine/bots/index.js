@@ -3,8 +3,9 @@
 // The transport layer feeds the chosen action through processAction like any player's move.
 
 import { getGame } from '../../games/registry.js';
+import { AI_PERSONAS } from './personas.js';
 
-export const BOT_NAMES = ['Robo', 'Bitsy', 'Chip', 'Pixel', 'Turbo'];
+export const BOT_NAMES = AI_PERSONAS.map(p => p.name);
 
 export function hasBot(gameType) {
   return typeof getGame(gameType)?.ai?.choose === 'function';

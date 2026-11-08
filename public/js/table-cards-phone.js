@@ -110,7 +110,7 @@
       return names[id] || 'Player';
     }
     function tcAvatar(id) {
-      if (String(id).startsWith('bot_')) return '\u{1F916} ';
+      if (String(id).startsWith('bot_')) return ((SH.aiPersona(id) || {}).avatar || '\u{1F916}') + ' ';
       const p = (state.players || []).find(x => x.playerId === id);
       return p && p.avatar ? p.avatar + ' ' : '';
     }

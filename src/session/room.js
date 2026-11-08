@@ -2,7 +2,7 @@
 // Each room represents a lobby where players gather and play mini-games.
 
 import { createGame, processAction, getView, checkEnd } from '../engine/engine.js';
-import { BOT_NAMES } from '../engine/bots/index.js';
+import { AI_PERSONAS } from '../engine/bots/personas.js';
 import { getGame, listGames } from '../games/registry.js';
 import { randomBytes } from 'node:crypto';
 
@@ -395,7 +395,8 @@ export class Room {
     for (const [id, p] of this.players) {
       if (p.connected) playerIds.push(id);
     }
-    const bots = BOT_NAMES.slice(0, botCount).map((name, i) => ({ playerId: `bot_${i + 1}`, username: name, avatar: '\u{1F916}' }));
+    // Each AI seat is a character: its own name, face and way of playing (personas.js).
+    const bots = AI_PERSONAS.slice(0, botCount).map((p, i) => ({ playerId: `bot_${i + 1}`, username: p.name, avatar: p.avatar }));
     playerIds.push(...bots.map(b => b.playerId));
 
     let gameConfig = { ...config };

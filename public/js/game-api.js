@@ -15,4 +15,10 @@ var SH = {
   eachGame: function (fn) { Object.keys(SH_PLUGINS).forEach(function (id) { fn(SH_PLUGINS[id], id); }); },
   // Set by the TV page: lower the game music while a voice speaks.
   duckMusic: function () {},
+  // The character behind an AI seat (bot_1 …) from SH_AI (src/engine/bots/personas.js), or null.
+  aiPersona: function (id) {
+    var m = /^bot_(\d+)$/.exec(String(id || ''));
+    if (!m || typeof SH_AI === 'undefined' || !SH_AI.length) return null;
+    return SH_AI[(Number(m[1]) - 1) % SH_AI.length];
+  },
 };
