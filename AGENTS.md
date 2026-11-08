@@ -41,7 +41,7 @@ Before editing, inspect `git status` and the relevant diff. Preserve existing un
 | `src/engine/engine.js` | `createGame`, `processAction`, `getView`, `checkEnd` |
 | `src/engine/games/` | Plain-object game definitions; `index.js` re-exports them |
 | `src/engine/bots/` | AI opponents: pure `(state, botId) -> action` policies for Gin Rummy and Palace |
-| `src/fetcher/` | Trivia, disk caches, Gemini TTS, question files, Deezer/music playlists |
+| `src/fetcher/` | Trivia, disk caches, Gemini TTS, Deezer/music playlists |
 | `src/session/stories.js` | Game introduction/narration text |
 | `src/notifications/discord.js` | Room-created webhook |
 | `public/host.html` | Shared display UI and game rendering |
@@ -52,7 +52,6 @@ Before editing, inspect `git status` and the relevant diff. Preserve existing un
 | `tests/` | Engine, session, transport, integration, fetcher, and frontend tests |
 | `README.md` | Project overview, game catalog, setup and development guide |
 | `public/images/` | Current brand assets |
-| `smallhours-light-lobby/` | Current lobby design reference |
 
 ## Architecture and contracts
 
@@ -71,7 +70,7 @@ export default {
 };
 ```
 
-`processAction` returns `{ game, events }`; an action handler returns `{ state, events }`. Preserve immutable state updates. Use `template.js` or `number-guess.js` as a small reference, then inspect a game with similar rules.
+`processAction` returns `{ game, events }`; an action handler returns `{ state, events }`. Preserve immutable state updates. Use `hilow.js` as a small reference, then inspect a game with similar rules.
 
 - Clients connect to `/ws/host/:code` or `/ws/player/:code`.
 - Actions use `{ type: 'GAME_ACTION', action: { type: '<action-name>', ...payload } }`.
@@ -88,19 +87,17 @@ export default {
 4. If the game needs fetched content, prepare it in the session/transport flow. If it needs phase timers, inspect `GAME_PHASE_DURATIONS` in `ws-adapter.js` and existing timer tests.
 5. Check lobby selection, start, actions, scoring, end, and return to lobby. Update affected integration tests.
 
-The `question-form` game is an optional in-app polling tool. Its definition and tests document question types and the answering/review flow; it is not required for ordinary development discussions.
-
 ## Frontend conventions
 
 Browser helpers are loaded by plain `<script>` tags and expose globals. Check script order and existing helpers before adding another module or dependency. For UI changes, verify the shared display and phone layout, including reconnect and finished-game states when affected.
 
 A lone player can play Gin Rummy and Palace against AI seats: `GAME_REGISTRY` entries with `ai` metadata, `room.bots` (`bot_N` ids, never in `room.players`, so they get no session score), and `scheduleBotTurn` in `ws-adapter.js`, which plays each AI move after a short pause through the same `applyGameAction` path as people. Keep bot moves legal: `tests/engine/bots.test.js` plays full bot games and fails on any engine error.
 
-Gin Rummy and Palace use the card-table kit `public/js/table-cards.js` + `public/css/table-cards.css` (vector cards, stacks, 2-row rack/fan, tap / swipe-up / drag gestures, hand ordering), shared by phone and TV. The phone hand lifts and enlarges the card under the thumb (press and slide, let go to pick), and a big Palace hand stacks same ranks with a ×N count. Four-colour suits (clubs blue, diamonds orange) are on by default on the TV and a toggle on the phone (`tcSetFourColour`); the A–10 art for them lives in `public/cards/faces-4c/`, made by `node scripts/four-colour-faces.js`. Other card rendering lives in `public/js/cards.js` with SVGs/audio under `public/cards/`. Engine suits are `h`, `d`, `c`, `s`; ranks are numeric. Shithead's Ace-high rank 14 maps to the same card image as rank 1. Reuse the renderer and existing audio helpers.
+Gin Rummy and Palace use the card-table kit `public/js/table-cards.js` + `public/css/table-cards.css` (vector cards, stacks, 2-row rack/fan, tap / swipe-up / drag gestures, hand ordering), shared by phone and TV. The phone hand lifts and enlarges the card under the thumb (press and slide, let go to pick), and a big Palace hand stacks same ranks with a ×N count. Four-colour suits (clubs blue, diamonds orange) are on by default on the TV and a toggle on the phone (`tcSetFourColour`); the A–10 art for them lives in `public/cards/faces-4c/`, made by `node scripts/four-colour-faces.js`. Card sounds are in `public/js/card-sounds.js`, with SVGs and audio under `public/cards/`. Engine suits are `h`, `d`, `c`, `s`; ranks are numeric. Shithead's Ace-high rank 14 maps to the same card image as rank 1. Reuse the renderer and existing audio helpers.
 
 The TV plays music from `music/`: `/api/lobby-music` serves the lobby songs, and files named `quiz-and-cards*` are served by `/api/game-music` only, for the game types in `GAME_MUSIC_TYPES` (`host.html`). Both use `createLobbyMusic` (`public/js/lobby-music.js`, volume, fades, rotation); `setDucked` lowers the game music while the quiz narrator or a game story speaks.
 
-Use `smallhours-light-lobby/` as the lobby design reference. Current shared styling lives in `public/css/`; brand images live in `public/images/`.
+Shared styling lives in `public/css/`; brand images live in `public/images/`.
 
 ## Verification
 
@@ -114,7 +111,7 @@ Run focused tests for the behavior changed, then `npm test` for changes spanning
 
 ## Runtime data and integrations
 
-Preserve `.env`, `data/`, question files, local music, generated APKs, and Android signing keys. `data/` holds runtime caches and is mounted into the container. Inspect fetcher code/tests before changing cache formats or fallback behavior. Quiz plays from easy-only buckets (`data/questions/{category}_easy.json`, filled at startup) and uses the mixed `{category}.json` buckets when they run out.
+Preserve `.env`, `data/`, local music, generated APKs, and Android signing keys. `data/` holds runtime caches and is mounted into the container. Inspect fetcher code/tests before changing cache formats or fallback behavior. Quiz plays from easy-only buckets (`data/questions/{category}_easy.json`, filled at startup) and uses the mixed `{category}.json` buckets when they run out.
 
 Gemini TTS uses `GEMINI_API_KEY`. Room creation can send a Discord webhook when `DISCORD_WEBHOOK_URL` is set. Tests and manual room creation should account for that external effect. Discord payloads must include both `content` and `embeds` so push notifications contain text.
 

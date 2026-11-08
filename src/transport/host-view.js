@@ -9,8 +9,7 @@ import { getView } from '../engine/engine.js';
 const PRIVATE_KEYS = new Set([
   'isMyTurn', 'swapConfirmed', 'canKnock', 'lastDrawnCardId', // card games
   'hasAnswered', 'selectedAnswer', 'eliminatedAnswers',      // quiz / music-quiz
-  'isSpy', 'word',                                           // spy (secret word)
-  'isSubmitted', 'isActive',                                 // question-form, hilow
+  'isActive',                                                // hilow
 ]);
 
 /**

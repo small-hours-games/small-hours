@@ -1,4 +1,3 @@
-/* Adapted from the supplied smallhours-light-lobby reference. */
 .light-lobby {
   --lobby-ink: #173b63;
   --lobby-muted: #6e85a3;
@@ -246,7 +245,6 @@
   .host-screen .lobby-game-option { min-height: 66px; }
 }
 
-
 /* Two beats per left/right sway: 60 / 136 * 2 seconds — applied to Contestant avatars next to player names. */
 .lobby-avatar-glyph {
   display: inline-block;
@@ -269,7 +267,6 @@
 .brand-logo { display: block; width: 224px; max-width: 100%; height: auto; flex-shrink: 0; }
 .brand-symbol { display: block; width: 36px; height: 36px; object-fit: contain; flex-shrink: 0; }
 .brand-phone-name { font-size: 1rem; font-weight: 800; color: #173b63; letter-spacing: -.04em; }
-.brand-hero { display: block; width: 100%; max-width: 340px; height: auto; margin: 0 auto; }
 @media (max-width: 640px) {
   .brand-logo { width: 176px; }
   .phone-screen header a { gap: 5px; }
@@ -1458,8 +1455,6 @@ body.light-lobby {
 
 /* Shared building blocks */
 .light-lobby .card { background: var(--night-panel); border-color: var(--night-line); box-shadow: none; }
-.light-lobby .btn-secondary { background: var(--night-raised); border-color: var(--night-line-strong); color: #fff; }
-.light-lobby .btn-secondary:hover { background: var(--night-line); border-color: var(--night-line-strong); }
 .light-lobby input, .light-lobby select, .light-lobby textarea { background: var(--night); border-color: var(--night-line-strong); color: #fff; }
 .light-lobby input::placeholder, .light-lobby textarea::placeholder { color: #7f8db0; }
 .light-lobby .toast { background: var(--night-panel); color: #fff; border-color: var(--night-line-strong); box-shadow: 0 10px 25px -8px rgba(0, 0, 0, 0.6); }
@@ -1467,10 +1462,7 @@ body.light-lobby {
 .light-lobby .story-overlay { background: rgba(11, 21, 48, 0.94); }
 .light-lobby .quiz-ready-number { color: var(--night-sun); }
 .light-lobby .quiz-question-text { color: #fff; text-shadow: none; }
-.light-lobby .quiz-progress-label { color: var(--night-sun); }
 .light-lobby .game-title { color: #fff; }
-.light-lobby .player-card-counts { background: rgba(255, 255, 255, 0.05); }
-.light-lobby .pile-empty { border-color: rgba(255, 255, 255, 0.18); background: rgba(255, 255, 255, 0.03); }
 .light-lobby .score-entry:first-child { background: var(--night-raised); }
 .light-lobby .phone-screen .device-screen,
 .phone-screen.light-lobby .device-screen { background: var(--night); border-color: var(--night-line); color: #fff; }
@@ -1499,30 +1491,11 @@ body.light-lobby {
 .host-screen .timer-seconds.warning { background: var(--night-sun); }
 .host-screen .timer-seconds.critical { background: var(--game-rummy); }
 .host-screen .quiz-question-image { border-color: var(--night-line-strong); background: var(--night-panel); }
-.host-screen .tv-stack-card,
-.host-screen .central-pile.tv-stack-card,
-.host-screen .gr-seat-panel { background: var(--night-panel); border-color: var(--night-line); box-shadow: none; }
-.host-screen .gr-seat-panel.current-turn { background: var(--night-raised); border-color: var(--night-sun); box-shadow: 0 0 0 3px rgba(250, 204, 21, 0.25); }
-.host-screen .tv-stack-label { color: var(--night-muted); }
-.host-screen .tv-stack-count-badge,
-.host-screen .tv-stack-count-badge.info-item,
-.host-screen .tv-stack-count-badge.pile-info { background: var(--game-quiz); color: var(--night); box-shadow: none; }
-.host-screen .tv-stack-count-badge.accent { background: var(--night-sun); color: var(--night); }
-.host-screen .tv-stack-count-badge.empty { background: var(--night-raised); color: var(--night-muted); }
-.host-screen .tv-rule-pill { background: var(--night-raised); color: #fff; border-color: var(--night-line-strong); }
-.host-screen .tv-rule-pill.special { background: var(--night-sun); color: var(--night); border-color: var(--night-sun); }
-.host-screen .tv-last-play-banner { background: var(--night-raised); color: #fff; border-color: var(--night-line-strong); }
-.host-screen .gr-seat-name { color: #fff; }
-.host-screen .gr-turn-pill { background: var(--night-sun); color: var(--night); border-color: var(--night-sun); }
-.host-screen .gr-seat-stats { border-color: var(--night-line); }
-.host-screen .mini-back-card { border-color: var(--night-line-strong); }
-.host-screen .gr-hand-fan-mini img { border-color: var(--night-line); }
 
 /* --- Phone: quiz --- */
 .phone-screen .quiz-top-meta { background: var(--night-panel); border-color: var(--night-line); box-shadow: none; }
 .phone-screen .quiz-meta-pill { background: var(--night-raised); color: #7dd3fc; }
 .phone-screen .quiz-meta-pill.score-pill { background: var(--night-sun); color: var(--night); border-color: transparent; }
-.phone-screen .quiz-section .question-text,
 .phone-screen #quizSection .question-text { background: var(--night-panel); border-color: var(--night-line); color: #fff; box-shadow: none; }
 .phone-screen .quiz-timer-display,
 .phone-screen .quiz-timer-display.quiz-ready-number { color: var(--night-sun); }
@@ -1531,30 +1504,12 @@ body.light-lobby {
 .phone-screen .answer-btn.selected,
 .phone-screen #quizAnswers .answer-btn.selected { border-color: #fff; box-shadow: 0 0 0 3px var(--night-sun); }
 .phone-screen #quizAnswers .answer-btn.selected::after { background: var(--night-sun); color: var(--night); font-weight: 800; }
-
-/* --- Phone: card games --- */
-.phone-screen .phone-stack-box { background: var(--night-panel); border-color: var(--night-line); }
-.phone-screen .phone-stack-box.tappable-stack { background: var(--night-raised); border-color: var(--game-quiz); box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.2); }
-.phone-screen .stack-title, .phone-screen .phone-stack-label { color: var(--night-muted); }
+.phone-screen .stack-title { color: var(--night-muted); }
 .phone-screen .stack-count-pill { background: var(--game-quiz); color: var(--night); }
 .phone-screen .stack-count-pill.accent { background: var(--night-sun); color: var(--night); }
 .phone-screen .stack-count-pill.empty { background: var(--night-raised); color: var(--night-muted); }
 .phone-screen .stack-empty-slot { border-color: var(--night-line-strong); color: var(--night-muted); background: rgba(255, 255, 255, 0.03); }
 .phone-screen .stack-subhint { color: #7dd3fc; }
-.phone-screen .zone-title { color: #fff; }
-.phone-screen .zone-count-badge { background: var(--night-raised); color: #7dd3fc; }
-.phone-screen .sh-rule-banner { background: var(--night-raised); border-color: var(--night-line-strong); color: #fff; }
-.phone-screen .sh-quick-chip { background: var(--night-sun); color: var(--night); }
-.phone-screen .gr-sort-bar { background: var(--night); border-color: var(--night-line-strong); }
-.phone-screen .gr-sort-btn { color: var(--night-muted); }
-.phone-screen .gr-sort-btn.active { background: var(--game-quiz); color: var(--night); }
-.phone-screen .gr-meld-box { background: rgba(52, 211, 153, 0.12); border-color: rgba(52, 211, 153, 0.55); }
-.phone-screen .gr-meld-box.deadwood-box { background: rgba(251, 113, 133, 0.12); border-color: rgba(251, 113, 133, 0.5); }
-.phone-screen .gr-meld-label { color: #6ee7b7; }
-.phone-screen .gr-meld-box.deadwood-box .gr-meld-label { color: #fda4af; }
-.phone-screen .sh-table-cards.stacked { background: var(--night-panel); border-color: var(--night-line); }
-.phone-screen .my-turn-glow { border-color: rgba(250, 204, 21, 0.6) !important; }
-.phone-screen .playing-card.facedown { border-color: var(--night-line-strong); }
 .phone-screen .lobby-chat .chat-messages { background: var(--night); }
 .phone-screen .lobby-chat .chat-msg { background: var(--night-panel); border-color: var(--night-line); color: #dce3f2; }
 .phone-screen .lobby-chat .chat-msg .author { color: var(--night-sun); }

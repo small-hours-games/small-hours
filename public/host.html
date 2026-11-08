@@ -147,7 +147,7 @@
   <!-- Toast container -->
   <div class="toast-container" id="toasts"></div>
 
-  <script src="/js/cards.js"></script>
+  <script src="/js/card-sounds.js"></script>
   <script src="/js/table-cards.js"></script>
   <script src="/js/games.js"></script>
   <script src="/js/build-info.js"></script>
@@ -486,20 +486,13 @@
       document.body.classList.add('in-game');
 
       const titles = {
-        'number-guess': 'Number Guess',
         'quiz': 'Quiz Time',
         'music-quiz': 'Music Quiz',
-        'spy': 'Spy Game',
         'shithead': 'Palace',
-        'question-form': 'Question Form',
         'gin-rummy': 'Gin Rummy',
         'hilow': 'Högt/Lågt',
-        'skogai': 'SkogAI',
         'sjuan': 'Sjuan',
-        'uno': 'Uno',
-        'yatzy': 'Yatzy',
-        'labyrint': 'Labyrint',
-        'template': 'Template'
+        'uno': 'Uno'
       };
       document.getElementById('gameTitle').textContent = titles[msg.gameType] || msg.gameType;
       document.getElementById('roundInfo').textContent = '';
@@ -562,58 +555,15 @@
       gameMusic.setActive(GAME_MUSIC_TYPES.has(state.gameType) && msg.phase !== 'lobby' && msg.phase !== 'finished');
 
       switch (state.gameType) {
-        case 'number-guess': renderNumberGuess(msg); break;
         case 'quiz': case 'music-quiz': renderQuiz(msg); break;
-        case 'spy': renderSpy(msg); break;
         case 'shithead': renderShithead(msg); break;
-        case 'question-form': renderQuestionForm(msg); break;
         case 'gin-rummy': renderGinRummy(msg); break;
-        case 'template': renderTemplate(msg); break;
       }
 
-      if (msg.scores || state.gameType === 'number-guess' || state.gameType === 'shithead') {
+      if (msg.scores || state.gameType === 'shithead') {
         renderScoreboard(msg, state.gameType);
       }
       if (msg.phase === 'lobby' || msg.phase === 'finished') returnToLobby(msg);
-    }
-
-    function renderNumberGuess(msg) {
-      const content = document.getElementById('gameContent');
-      const events = state.gameEvents || [];
-
-      // Build guess log from events
-      const guessEvents = events.filter(e => e.type === 'guess_result');
-
-      let html = '<div class="number-guess-display">';
-
-      if (msg.phase === 'finished') {
-        html += '<div class="guess-feedback" style="color:var(--neon-green);font-size:2rem;">Number found!</div>';
-        if (msg.secret) {
-          html += '<div style="font-size:1.5rem;margin:12px 0;">The number was <strong style="color:var(--neon-blue);">' + msg.secret + '</strong></div>';
-        }
-      } else {
-        html += '<div class="guess-round-label">Guessing in progress...</div>' +
-          '<div class="guess-range" style="font-size:3rem;">1 &mdash; 100</div>';
-      }
-
-      if (guessEvents.length > 0) {
-        html += '<div class="card" style="max-width:500px;margin:16px auto;text-align:left;">';
-        // Show last 10 guesses
-        guessEvents.slice(-10).forEach(g => {
-          const icon = g.result === 'correct' ? '&#9989;' : (g.result === 'too_high' ? '&#11015; Too high' : '&#11014; Too low');
-          const color = g.result === 'correct' ? 'var(--neon-green)' : 'var(--text-secondary)';
-          // Look up player name
-          const name = (state.playerNames || {})[g.playerId] || 'Player';
-          html += '<div class="clue-item"><span class="clue-author">' + escapeHtml(name) + '</span>' +
-            '<span style="color:' + color + ';">' + g.number + ' ' + icon + '</span></div>';
-        });
-        html += '</div>';
-      } else {
-        html += '<div style="color:var(--text-secondary);margin-top:24px;">Waiting for guesses...</div>';
-      }
-
-      html += '</div>';
-      content.innerHTML = html;
     }
 
     // --- Music Quiz audio (plays on the TV only) ---
@@ -833,165 +783,6 @@
         html += '</div></div>';
         content.innerHTML = html;
       }
-    }
-
-    function renderSpy(msg) {
-      const content = document.getElementById('gameContent');
-      const round = msg.round || '?';
-      const names = msg.playerNames || {};
-      // Engine sends clues as { playerId: text }; the secret word only arrives at reveal.
-      const clues = Object.entries(msg.clues || {}).map(([id, text]) => ({ name: names[id] || 'Player', text }));
-
-      let html = '<div class="spy-display">' +
-        '<div class="spy-round-title">Round ' + round + '</div>';
-
-      if (msg.phase === 'clues') {
-        html += '<p class="text-secondary">Players are giving clues...</p>';
-      } else if (msg.phase === 'guess') {
-        html += '<p class="text-secondary">The spy is guessing the word...</p>';
-      } else if (msg.phase === 'reveal' || msg.phase === 'score') {
-        html += '<p style="font-size:1.5rem;margin:16px 0;">The word was: <strong style="color:var(--neon-green);">' +
-          escapeHtml(msg.revealedWord || '???') + '</strong></p>';
-        if (msg.spy) {
-          html += '<p>The spy was: <strong style="color:var(--neon-pink);">' + escapeHtml(names[msg.spy] || 'Player') + '</strong></p>';
-        }
-      }
-
-      if (clues.length > 0) {
-        html += '<div class="clue-list">';
-        clues.forEach(c => {
-          html += '<div class="clue-item">' +
-            '<span class="clue-author">' + escapeHtml(c.name) + '</span>' +
-            '<span class="clue-text">"' + escapeHtml(c.text) + '"</span></div>';
-        });
-        html += '</div>';
-      }
-
-      html += '</div>';
-      content.innerHTML = html;
-    }
-
-    function renderTemplate(msg) {
-      const content = document.getElementById('gameContent');
-      let html = '<div style="text-align:center;">';
-      if (msg.phase === 'finished') {
-        html += '<div style="font-size:2rem;color:var(--neon-green);font-weight:700;margin-bottom:16px;">Game Over!</div>';
-      }
-      html += '<div style="font-size:1.2rem;margin-bottom:16px;">Target: ' + (msg.target || 3) + '</div>';
-      html += '</div>';
-      content.innerHTML = html;
-    }
-
-    function renderQuestionForm(msg) {
-      const content = document.getElementById('gameContent');
-      const names = state.playerNames || msg.playerNames || {};
-
-      if (msg.phase === 'answering') {
-        const total = msg.totalPlayers || '?';
-        const submitted = msg.submittedCount || 0;
-        content.innerHTML = '<div class="qf-display">' +
-          '<div class="qf-host-question">Waiting for answers...</div>' +
-          '<div class="qf-waiting">' + submitted + ' / ' + total + ' players submitted</div>' +
-          '<div style="margin-top:24px;">' +
-            '<div style="width:200px;height:8px;border-radius:4px;background:rgba(15, 23, 42, 0.12);margin:0 auto;">' +
-              '<div style="width:' + (total > 0 ? Math.round(submitted / total * 100) : 0) + '%;height:100%;border-radius:4px;background:var(--neon-purple);transition:width 0.3s;"></div>' +
-            '</div>' +
-          '</div>' +
-          '</div>';
-        return;
-      }
-
-      if (msg.phase === 'review' || msg.phase === 'finished') {
-        const rq = msg.reviewQuestion || {};
-        const questions = msg.questions || [];
-        const qi = msg.currentQuestion || 0;
-
-        let html = '<div class="qf-display">';
-
-        // Question dots
-        html += '<div class="qf-progress-dots">';
-        questions.forEach(function(q, i) {
-          html += '<div class="qf-dot' + (i === qi ? ' active' : '') + '"></div>';
-        });
-        html += '</div>';
-
-        html += '<div class="qf-host-label">Question ' + (qi + 1) + ' of ' + questions.length + '</div>';
-        html += '<div class="qf-host-question">' + escapeHtml(rq.text || '') + '</div>';
-
-        if (msg.tally) {
-          const maxCount = Math.max(...Object.values(msg.tally), 1);
-          const options = rq.type === 'yesno' ? ['yes', 'no'] : (rq.options || Object.keys(msg.tally));
-          const barClasses = rq.type === 'yesno' ? { yes: 'yes', no: 'no' } : {};
-          const defaultClasses = ['a', 'b', 'c', 'd'];
-          html += '<div class="qf-host-tally">';
-          options.forEach(function(opt, i) {
-            const count = msg.tally[opt] || 0;
-            const pct = Math.round((count / maxCount) * 100);
-            const cls = barClasses[opt] || defaultClasses[i % 4];
-            html += '<div class="qf-host-bar ' + cls + '" style="width:' + Math.max(pct, 15) + '%;">' +
-              escapeHtml(opt) + ' \u2014 ' + count + '</div>';
-          });
-          html += '</div>';
-        } else if (msg.average != null) {
-          html += '<div class="qf-host-average">' + msg.average + '</div>' +
-            '<div style="font-size:1rem;color:var(--text-secondary);">Average rating</div>';
-        } else {
-          // Text responses
-          (msg.allResponses || []).forEach(function(r) {
-            const name = names[r.playerId] || 'Player';
-            html += '<div class="qf-host-response"><strong>' + escapeHtml(name) + ':</strong> ' + escapeHtml(String(r.value)) + '</div>';
-          });
-          if (!msg.allResponses || msg.allResponses.length === 0) {
-            html += '<div class="qf-waiting">No responses</div>';
-          }
-        }
-
-        html += '</div>';
-        content.innerHTML = html;
-      }
-    }
-
-    function renderTvStackVisual(cards, totalCount, opts) {
-      opts = opts || {};
-      const w = opts.width || 120;
-      const h = opts.height || 168;
-      const count = totalCount || 0;
-      if (count <= 0) {
-        return '<div class="tv-stack-3d" style="width:' + (w + 18) + 'px;height:' + (h + 18) + 'px;">' +
-          '<div class="pile-empty" style="width:' + w + 'px;height:' + h + 'px;" aria-label="Empty pile">' + (opts.emptyLabel || 'Empty') + '</div>' +
-        '</div>';
-      }
-      const isFacedown = !!opts.facedown;
-      const layerCount = Math.min(3, Math.max(0, count - 1));
-      const preview = Array.isArray(cards) ? cards : (cards ? [cards] : []);
-      let html = '<div class="tv-stack-3d" style="width:' + (w + 18) + 'px;height:' + (h + 18) + 'px;">';
-
-      for (let i = layerCount; i >= 1; i--) {
-        const dx = -i * 2;
-        const dy = i * 2;
-        const rot = (i % 2 === 0 ? 1 : -1) * (i * 0.4);
-        const layerCard = (!isFacedown && preview.length > i) ? preview[preview.length - 1 - i] : { rank: 0, suit: 'x' };
-        html += renderCardImg(layerCard, {
-          width: w,
-          height: h,
-          facedown: isFacedown || !layerCard.suit || layerCard.suit === 'x',
-          className: 'stack-layer-card',
-          style: 'width:' + w + 'px;height:' + h + 'px;transform:translate(' + dx + 'px,' + dy + 'px) rotate(' + rot + 'deg);opacity:' + (0.88 - i * 0.12) + ';'
-        });
-      }
-
-      const topCard = preview.length > 0 ? preview[preview.length - 1] : { rank: 0, suit: 'x' };
-      html += '<div class="pile-top-card" style="position:relative;z-index:5;">' +
-        renderCardImg(topCard, {
-          width: w,
-          height: h,
-          facedown: isFacedown,
-          pileCard: !isFacedown,
-          style: 'width:' + w + 'px;height:' + h + 'px;'
-        }) +
-      '</div>';
-      html += '</div>';
-      return html;
     }
 
     function shitheadRuleHintText(pileTopRank, pileCount) {
@@ -1338,25 +1129,8 @@
           rank: i + 1,
           isOut: finishOrder.includes(id),
         }));
-      } else if (gameType === 'number-guess') {
-        // `scores` = maxRounds - guesses (guesses remaining). Higher = better.
-        const maxRounds = msg.maxRounds || 0;
-        const sorted = ids.slice().sort((a, b) => scores[b] - scores[a]);
-        entries = sorted.map((id, i) => {
-          const guessesLeft = scores[id];
-          return {
-            id,
-            name: names[id] || id,
-            valueText: guessesLeft + ' guesses left',
-            rank: i + 1,
-            isOut: false,
-          };
-        });
-        if (msg.round != null && maxRounds) {
-          roundLabel = 'Round ' + (msg.round + 1) + ' / ' + maxRounds;
-        }
       } else {
-        // quiz / spy / gin-rummy / template: scores are accumulated points, higher = better.
+        // quiz / gin-rummy: scores are accumulated points, higher = better.
         const sorted = ids.slice().sort((a, b) => scores[b] - scores[a]);
         entries = sorted.map((id, i) => ({
           id,
@@ -1367,8 +1141,6 @@
         }));
         if ((gameType === 'quiz' || gameType === 'music-quiz') && msg.totalQuestions) {
           roundLabel = 'Question ' + ((msg.currentQuestion || 0) + 1) + ' / ' + msg.totalQuestions;
-        } else if (gameType === 'spy' && msg.totalRounds) {
-          roundLabel = 'Round ' + (msg.round || 0) + ' / ' + msg.totalRounds;
         } else if (gameType === 'gin-rummy' && msg.handNumber != null) {
           roundLabel = 'Hand ' + msg.handNumber;
         }

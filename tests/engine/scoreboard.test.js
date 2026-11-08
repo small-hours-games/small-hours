@@ -1,15 +1,13 @@
 import { describe, it, expect } from 'vitest';
 import { createTestGame, viewFor } from './game-harness.js';
 import quiz from '../../src/engine/games/quiz.js';
-import spy from '../../src/engine/games/spy.js';
 import shithead from '../../src/engine/games/shithead.js';
 import ginRummy from '../../src/engine/games/gin-rummy.js';
-import numberGuess from '../../src/engine/games/number-guess.js';
 
 // Guards against regressions in the host scoreboard contract: every game's
 // view() must emit a `scores` object keyed by all player IDs, so the host
 // scoreboard renders consistently.
-const games = { quiz, spy, shithead, ginRummy, numberGuess };
+const games = { quiz, shithead, ginRummy };
 
 describe('scoreboard consistency across games', () => {
   for (const [name, def] of Object.entries(games)) {

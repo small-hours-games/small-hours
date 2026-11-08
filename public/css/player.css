@@ -5,52 +5,6 @@
       padding-bottom: env(safe-area-inset-bottom, 0);
     }
 
-    .player-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 12px 16px;
-      border-bottom: 1px solid var(--glass-border);
-      position: sticky;
-      top: 0;
-      background: rgba(255, 255, 255, 0.95);
-      backdrop-filter: blur(12px);
-      z-index: 10;
-    }
-
-    .player-identity {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-
-    .player-identity .avatar {
-      font-size: 1.5rem;
-      width: 36px;
-      height: 36px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: rgba(2, 132, 199, 0.15);
-      border-radius: 50%;
-    }
-
-    .player-identity .name {
-      font-weight: 700;
-      font-size: 1rem;
-    }
-
-    .room-badge {
-      font-family: 'Courier New', monospace;
-      font-weight: 700;
-      font-size: 0.85rem;
-      color: var(--neon-purple);
-      background: rgba(2, 132, 199, 0.1);
-      padding: 4px 10px;
-      border-radius: 8px;
-      letter-spacing: 0.15em;
-    }
-
     .player-main {
       flex: 1;
       display: flex;
@@ -70,118 +24,6 @@
     /* Sections (lobby, games) are toggled via display */
     .section { display: none; }
     .section.active { display: flex; flex-direction: column; gap: 8px; }
-
-    /* Lobby */
-    .ready-btn {
-      padding: 20px;
-      font-size: 1.2rem;
-      border-radius: 16px;
-      font-weight: 700;
-    }
-
-    .ready-btn.is-ready {
-      background: rgba(5, 150, 105, 0.15);
-      border: 2px solid var(--neon-green);
-      color: var(--neon-green);
-    }
-
-    .game-suggest-title {
-      font-size: 0.85rem;
-      text-transform: uppercase;
-      letter-spacing: 0.1em;
-      color: var(--text-secondary);
-    }
-
-    .game-suggest-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr 1fr;
-      gap: 10px;
-    }
-
-    .suggest-btn {
-      padding: 16px 8px;
-      border-radius: 12px;
-      border: 1px solid var(--glass-border);
-      background: var(--bg-card);
-      color: var(--text-primary);
-      font-size: 0.85rem;
-      font-weight: 600;
-      cursor: pointer;
-      text-align: center;
-      transition: all 0.2s;
-      min-height: 48px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 4px;
-      -webkit-tap-highlight-color: transparent;
-    }
-
-    .suggest-btn:active { transform: scale(0.95); }
-
-    .suggest-btn:hover {
-      border-color: var(--neon-purple);
-      background: rgba(2, 132, 199, 0.1);
-    }
-
-    .suggest-btn .icon { font-size: 1.4rem; }
-
-    .suggest-btn.voted {
-      border-color: var(--neon-purple);
-      background: rgba(2, 132, 199, 0.15);
-      box-shadow: 0 0 10px rgba(2, 132, 199, 0.2);
-    }
-
-    /* Number Guess */
-    .guess-section .feedback-display {
-      text-align: center;
-      font-size: 1.2rem;
-      min-height: 2em;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: var(--text-secondary);
-    }
-
-    .guess-input-row {
-      display: flex;
-      gap: 10px;
-    }
-
-    .guess-input-row input {
-      flex: 1;
-      font-size: 1.5rem;
-      text-align: center;
-      font-weight: 700;
-      padding: 16px;
-    }
-
-    .guess-input-row .btn {
-      width: auto;
-      min-width: 80px;
-      font-size: 1.1rem;
-    }
-
-    .guess-history {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      justify-content: center;
-    }
-
-    .guess-chip {
-      padding: 6px 14px;
-      border-radius: 20px;
-      font-size: 0.85rem;
-      font-weight: 600;
-      background: var(--bg-card);
-      border: 1px solid var(--glass-border);
-    }
-
-    .guess-chip.higher { color: var(--neon-blue); border-color: rgba(14, 165, 233, 0.3); }
-    .guess-chip.lower { color: var(--neon-pink); border-color: rgba(219, 39, 119, 0.3); }
-    .guess-chip.correct { color: var(--neon-green); border-color: rgba(5, 150, 105, 0.3); background: rgba(5, 150, 105, 0.1); }
 
     /* Quiz & Music Quiz Mobile Layout */
     .quiz-top-meta {
@@ -215,8 +57,6 @@
       color: #b45309;
       border: 1px solid rgba(245, 158, 11, 0.3);
     }
-
-    .quiz-section .question-text,
     #quizSection .question-text {
       font-size: 0.98rem;
       font-weight: 800;
@@ -344,56 +184,6 @@
     .powerup-btn:active:not(:disabled) { transform: scale(0.95); }
     .powerup-btn:disabled, .powerup-btn.used { opacity: 0.3; cursor: not-allowed; }
 
-    /* Spy */
-    .spy-section .word-display {
-      text-align: center;
-      padding: 20px;
-      border-radius: 12px;
-      background: rgba(5, 150, 105, 0.08);
-      border: 1px solid rgba(5, 150, 105, 0.2);
-    }
-
-    .spy-section .word-label {
-      font-size: 0.85rem;
-      color: var(--text-secondary);
-      text-transform: uppercase;
-      letter-spacing: 0.1em;
-    }
-
-    .spy-section .word-value {
-      font-size: 2rem;
-      font-weight: 900;
-      color: var(--neon-green);
-      margin-top: 4px;
-    }
-
-    .spy-section .spy-alert {
-      text-align: center;
-      padding: 20px;
-      border-radius: 12px;
-      background: rgba(220, 38, 38, 0.1);
-      border: 1px solid rgba(220, 38, 38, 0.3);
-    }
-
-    .spy-section .spy-alert-title {
-      font-size: 1.5rem;
-      font-weight: 900;
-      color: var(--neon-red);
-    }
-
-    .spy-section .spy-alert-sub {
-      color: var(--text-secondary);
-      margin-top: 4px;
-    }
-
-    .clue-input-row {
-      display: flex;
-      gap: 10px;
-    }
-
-    .clue-input-row input { flex: 1; }
-    .clue-input-row .btn { width: auto; min-width: 80px; }
-
     /* Chat (lobby) */
     .lobby-chat {
       margin-top: 8px;
@@ -422,127 +212,9 @@
       color: var(--neon-blue);
     }
 
-    .chat-input-row {
-      display: flex;
-      gap: 8px;
-    }
-
-    .chat-input-row input { flex: 1; }
-    .chat-input-row .btn { width: auto; min-width: 60px; }
-
-    /* Error screen */
-    .error-screen {
-      flex: 1;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 24px;
-    }
-
-    .error-screen .card {
-      text-align: center;
-      max-width: 350px;
-      width: 100%;
-    }
-
-    /* Score display */
-    .my-score {
-      text-align: center;
-      font-size: 0.9rem;
-      color: var(--text-secondary);
-    }
-
-    .my-score .score-val {
-      font-size: 1.5rem;
-      font-weight: 900;
-      color: var(--neon-blue);
-    }
-
     @keyframes fadeIn {
       from { opacity: 0; transform: translateY(8px); }
       to { opacity: 1; transform: translateY(0); }
-    }
-
-    /* Shithead & Gin Rummy card games */
-    .card-row {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      min-height: 60px;
-      align-items: flex-end;
-      justify-content: center;
-      padding: 6px 2px;
-    }
-
-    .playing-card {
-      border-radius: 10px;
-      cursor: pointer;
-      border: 2px solid #cbd5e1;
-      transition: transform 0.16s ease, box-shadow 0.16s ease, border-color 0.16s ease;
-      user-select: none;
-      -webkit-tap-highlight-color: transparent;
-      background: #ffffff;
-      box-shadow: 0 4px 10px rgba(15, 23, 42, 0.12);
-      height: auto;
-    }
-
-    .playing-card.selected {
-      border-color: var(--neon-green);
-      box-shadow: 0 8px 18px rgba(5, 150, 105, 0.38), 0 0 0 3px var(--neon-green);
-      transform: translateY(-10px) scale(1.03);
-      z-index: 5;
-    }
-
-    .playing-card.facedown {
-      border-color: #0284c7;
-      box-shadow: 0 4px 12px rgba(2, 132, 199, 0.25);
-    }
-
-    .playing-card.pile-card {
-      border-width: 3px;
-      border-color: #94a3b8;
-      box-shadow: 0 8px 20px rgba(15, 23, 42, 0.2);
-    }
-
-    .playing-card.playable {
-      border-color: #10b981;
-      box-shadow: 0 4px 12px rgba(5, 150, 105, 0.22);
-    }
-
-    .playing-card.unplayable {
-      opacity: 0.38;
-      filter: grayscale(0.55);
-      cursor: not-allowed;
-      transform: none !important;
-    }
-
-    /* 3D Stack & Table Bar on Phone */
-    .phone-table-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 10px;
-      align-items: stretch;
-    }
-    .phone-stack-box {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: space-between;
-      padding: 10px 8px;
-      border-radius: 16px;
-      background: rgba(240, 249, 255, 0.85);
-      border: 1.5px solid #bae6fd;
-      position: relative;
-      transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
-    }
-    .phone-stack-box.tappable-stack {
-      cursor: pointer;
-      border-color: #0284c7;
-      background: linear-gradient(180deg, #f0f9ff 0%, #e0f2fe 100%);
-      box-shadow: 0 4px 14px rgba(2, 132, 199, 0.22);
-    }
-    .phone-stack-box.tappable-stack:active {
-      transform: scale(0.97);
     }
     .stack-header-row {
       display: flex;
@@ -552,8 +224,7 @@
       gap: 6px;
       margin-bottom: 6px;
     }
-    .stack-title,
-    .phone-stack-label {
+    .stack-title {
       font-size: 0.72rem;
       font-weight: 800;
       text-transform: uppercase;
@@ -626,8 +297,7 @@
       line-height: 1.2;
     }
 
-    /* Zone headers, Meld groups & Sort controls */
-    .zone-header {
+    /* Zone headers {
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -635,295 +305,14 @@
       margin-bottom: 8px;
       flex-wrap: wrap;
     }
-    .zone-title {
-      font-size: 0.82rem;
-      font-weight: 800;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      color: #334155;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-    .zone-count-badge {
-      padding: 2px 8px;
-      border-radius: 999px;
-      background: #e0f2fe;
-      color: #0369a1;
-      font-size: 0.75rem;
-      font-weight: 800;
-    }
-    .sh-rule-banner {
-      margin-top: 8px;
-      padding: 6px 10px;
-      border-radius: 10px;
-      background: #f0f9ff;
-      border: 1px solid #bae6fd;
-      font-size: 0.8rem;
-      font-weight: 700;
-      color: #0c4a6e;
-      text-align: center;
-    }
-    .sh-quick-chip {
-      padding: 4px 10px;
-      border-radius: 999px;
-      background: #059669;
-      color: #fff;
-      font-size: 0.75rem;
-      font-weight: 800;
-      border: none;
-      cursor: pointer;
-    }
-    .card-slot-wrap {
-      position: relative;
-      display: inline-flex;
-      flex-direction: column;
-      align-items: center;
-    }
-    .card-mini-tag {
-      position: absolute;
-      top: -7px;
-      right: -4px;
-      z-index: 6;
-      padding: 1px 5px;
-      border-radius: 6px;
-      font-size: 0.62rem;
-      font-weight: 900;
-      text-transform: uppercase;
-      letter-spacing: 0.04em;
-      pointer-events: none;
-      box-shadow: 0 2px 6px rgba(15, 23, 42, 0.2);
-    }
-    .card-mini-tag.new-tag { background: #f59e0b; color: #fff; }
-    .card-mini-tag.meld-tag { background: #059669; color: #fff; }
-
-    .gr-sort-bar {
-      display: inline-flex;
-      background: #f1f5f9;
-      border-radius: 10px;
-      padding: 2px;
-      border: 1px solid #cbd5e1;
-      gap: 2px;
-    }
-    .gr-sort-btn {
-      padding: 4px 9px;
-      border-radius: 8px;
-      font-size: 0.72rem;
-      font-weight: 800;
-      border: none;
-      background: transparent;
-      color: #475569;
-      cursor: pointer;
-    }
-    .gr-sort-btn.active {
-      background: #0284c7;
-      color: #fff;
-    }
-    .gr-deadwood-pill {
-      padding: 3px 10px;
-      border-radius: 999px;
-      font-size: 0.75rem;
-      font-weight: 800;
-      background: #fef3c7;
-      color: #92400e;
-      border: 1px solid #fde68a;
-    }
-    .gr-deadwood-pill.knock-ready {
-      background: #d1fae5;
-      color: #065f46;
-      border-color: #6ee7b7;
-    }
-    .gr-meld-clusters {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      justify-content: center;
-      width: 100%;
-    }
-    .gr-meld-box {
-      padding: 8px 10px 6px;
-      border-radius: 14px;
-      background: rgba(236, 253, 245, 0.85);
-      border: 1.5px solid #6ee7b7;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 4px;
-    }
-    .gr-meld-box.deadwood-box {
-      background: rgba(254, 242, 242, 0.7);
-      border-color: #fecaca;
-    }
-    .gr-meld-label {
-      font-size: 0.68rem;
-      font-weight: 800;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      color: #047857;
-    }
-    .gr-meld-box.deadwood-box .gr-meld-label {
-      color: #b91c1c;
-    }
 
     @keyframes turnGlow {
       0%, 100% { box-shadow: inset 0 0 20px rgba(5, 150, 105, 0.15), 0 0 30px rgba(5, 150, 105, 0.1); }
       50% { box-shadow: inset 0 0 40px rgba(5, 150, 105, 0.25), 0 0 60px rgba(5, 150, 105, 0.2); }
     }
 
-    .my-turn-glow {
-      animation: turnGlow 1.5s ease-in-out infinite;
-      border: 2px solid rgba(5, 150, 105, 0.4) !important;
-    }
-
-    /* Question Form */
-    .qf-progress {
-      font-size: 0.85rem;
-      color: var(--text-secondary);
-      text-align: center;
-    }
-
-    .qf-question-card {
-      padding: 16px;
-      border-left: 3px solid var(--neon-purple);
-    }
-
-    .qf-question-card .qf-label {
-      font-size: 0.75rem;
-      color: var(--text-secondary);
-      text-transform: uppercase;
-      letter-spacing: 0.1em;
-      margin-bottom: 6px;
-    }
-
-    .qf-question-card .qf-text {
-      font-size: 1.05rem;
-      font-weight: 600;
-      margin-bottom: 12px;
-    }
-
-    .qf-input-text {
-      width: 100%;
-      background: rgba(15, 23, 42, 0.07);
-      border: 1px solid var(--glass-border);
-      border-radius: 10px;
-      color: var(--text-primary);
-      padding: 12px;
-      font-size: 0.95rem;
-      resize: vertical;
-      min-height: 60px;
-    }
-
-    .qf-choices {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-    }
-
-    .qf-choice-btn {
-      padding: 12px 16px;
-      border-radius: 10px;
-      background: rgba(15, 23, 42, 0.07);
-      border: 1px solid var(--glass-border);
-      color: var(--text-primary);
-      font-size: 0.95rem;
-      cursor: pointer;
-      text-align: left;
-      transition: all 0.15s;
-    }
-
-    .qf-choice-btn:hover { background: rgba(15, 23, 42, 0.12); }
-    .qf-choice-btn.selected {
-      border-color: var(--neon-purple);
-      background: rgba(2, 132, 199, 0.15);
-      color: var(--neon-purple);
-      font-weight: 600;
-    }
-
-    .qf-yesno-row {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 10px;
-    }
-
-    .qf-yesno-btn {
-      padding: 16px;
-      border-radius: 12px;
-      font-size: 1.1rem;
-      font-weight: 700;
-      cursor: pointer;
-      border: 2px solid var(--glass-border);
-      transition: all 0.15s;
-    }
-
-    .qf-yesno-btn.yes { background: rgba(5, 150, 105, 0.08); color: var(--neon-green); }
-    .qf-yesno-btn.no { background: rgba(220, 38, 38, 0.08); color: var(--neon-pink); }
-    .qf-yesno-btn.selected { border-width: 3px; }
-    .qf-yesno-btn.yes.selected { border-color: var(--neon-green); background: rgba(5, 150, 105, 0.2); }
-    .qf-yesno-btn.no.selected { border-color: var(--neon-pink); background: rgba(220, 38, 38, 0.2); }
-
-    .qf-rating-row {
-      display: flex;
-      gap: 6px;
-      justify-content: center;
-    }
-
-    .qf-rating-btn {
-      width: 48px;
-      height: 48px;
-      border-radius: 12px;
-      font-size: 1.1rem;
-      font-weight: 700;
-      cursor: pointer;
-      border: 2px solid var(--glass-border);
-      background: rgba(15, 23, 42, 0.07);
-      color: var(--text-primary);
-      transition: all 0.15s;
-    }
-
-    .qf-rating-btn.selected {
-      border-color: var(--neon-blue);
-      background: rgba(14, 165, 233, 0.2);
-      color: var(--neon-blue);
-    }
-
-    .qf-nav {
-      display: flex;
-      gap: 10px;
-      justify-content: space-between;
-    }
-
-    .qf-submitted-banner {
-      text-align: center;
-      padding: 20px;
-      color: var(--neon-green);
-      font-weight: 700;
-      font-size: 1.1rem;
-    }
-
-    .qf-review-answer {
-      padding: 10px 14px;
-      border-radius: 8px;
-      background: rgba(15, 23, 42, 0.05);
-      margin-bottom: 6px;
-      font-size: 0.9rem;
-    }
-
-    .qf-tally-bar {
-      height: 28px;
-      border-radius: 6px;
-      background: rgba(2, 132, 199, 0.3);
-      display: flex;
-      align-items: center;
-      padding: 0 10px;
-      margin-bottom: 4px;
-      font-size: 0.85rem;
-      font-weight: 600;
-      transition: width 0.3s;
-    }
-
     @media (max-width: 400px) {
       .answer-grid { grid-template-columns: 1fr; }
-      .game-suggest-grid { grid-template-columns: 1fr 1fr; }
     }
   
 /* Keep submitted choices readable, including during the answer reveal. */
@@ -990,8 +379,7 @@
 }
 #quizTimerText.quiz-ready-number { font-size: clamp(5rem, 24vw, 8rem); }
 
-/* Larger activity tiles, with room for full names and vote counts. */
-#voteList .activity-card {
+/* Larger activity tiles {
   min-height: 78px;
   padding: 12px;
   font-size: 0.9rem;
@@ -1001,10 +389,6 @@
   gap: 6px;
   text-align: left;
 }
-#voteList .activity-label { width: 100%; gap: 8px; }
-#voteList .activity-icon { font-size: 1.35rem; flex-shrink: 0; }
-#voteList .activity-name { white-space: normal; overflow-wrap: anywhere; line-height: 1.3; font-weight: 700; }
-#voteList .activity-card > span:last-child { font-size: 0.7rem; }
 
 /* Connection state has its own space below the top bar, never over content. */
 header > .player-connection-row {
@@ -1024,46 +408,3 @@ header > .player-connection-row {
   max-width: 100%;
 }
 #connStatus.connected { background: #ecfdf5; color: #047857; border-color: #a7f3d0; }
-
-/* Palace table cards share one footprint while both layers remain. */
-.sh-table-cards.stacked {
-  position: relative;
-  min-height: 184px;
-  margin-bottom: 8px;
-  border: 1px solid var(--glass-border);
-  border-radius: 12px;
-  background: var(--bg-card);
-}
-.sh-table-cards.stacked > .card {
-  position: absolute;
-  inset: 0;
-  margin: 0;
-  padding: 10px 12px;
-  background: transparent;
-  border: 0;
-  box-shadow: none;
-}
-.sh-table-cards.stacked .card-row {
-  position: absolute;
-  top: 42px;
-  left: 12px;
-  right: 12px;
-  flex-wrap: nowrap;
-  gap: 6px;
-}
-.sh-table-cards.stacked #shFaceDownSection { z-index: 0; }
-.sh-table-cards.stacked #shFaceUpSection { z-index: 1; }
-.sh-table-cards.stacked #shFaceDown { top: 54px; }
-.sh-table-cards.stacked #shFaceDown .playing-card { opacity: 1 !important; }
-.sh-table-cards.stacked #shFaceDownSection .zone-header {
-  position: absolute;
-  bottom: 0;
-  left: 12px;
-  right: 12px;
-}
-
-.sh-table-cards.stacked .playing-card {
-  width: 68px;
-  height: 96px;
-  flex-shrink: 0;
-}

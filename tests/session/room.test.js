@@ -277,8 +277,8 @@ describe('Room - suggestGame', () => {
     const room = new Room('ABCD');
     const { playerId } = room.addPlayer('Alice');
     room.suggestGame(playerId, 'quiz');
-    room.suggestGame(playerId, 'spy');
-    expect(room.gameSuggestions.get(playerId)).toBe('spy');
+    room.suggestGame(playerId, 'uno');
+    expect(room.gameSuggestions.get(playerId)).toBe('uno');
   });
 
   it('ignores suggestion from non-existent player', () => {
@@ -331,9 +331,9 @@ describe('Room - getState', () => {
   it('includes gameSuggestions as object', () => {
     const room = new Room('TEST');
     const { playerId } = room.addPlayer('Alice');
-    room.suggestGame(playerId, 'spy');
+    room.suggestGame(playerId, 'uno');
     const state = room.getState();
-    expect(state.gameSuggestions[playerId]).toBe('spy');
+    expect(state.gameSuggestions[playerId]).toBe('uno');
   });
 });
 
@@ -352,14 +352,14 @@ describe('Room - startGame (registry)', () => {
     const { playerId } = room.addPlayer('Alice');
     room.addPlayer('Bob');
     room.players.get(playerId).connected = false;
-    await expect(room.startGame('number-guess', {})).rejects.toThrow(/requires at least 2 players/);
+    await expect(room.startGame('hilow', {})).rejects.toThrow(/requires at least 2 players/);
   });
 
-  it('can start number-guess (sync setup, no prepare)', async () => {
+  it('can start hilow (sync setup, no prepare)', async () => {
     const room = new Room('TEST');
     room.addPlayer('Alice');
     room.addPlayer('Bob');
-    const game = await room.startGame('number-guess', {});
+    const game = await room.startGame('hilow', {});
     expect(game).toBeDefined();
     expect(room.game).toBe(game);
   });
@@ -369,7 +369,7 @@ describe('Room - startGame (registry)', () => {
     const { playerId } = room.addPlayer('Alice');
     room.addPlayer('Bob');
     room.suggestGame(playerId, 'quiz');
-    await room.startGame('number-guess', {});
+    await room.startGame('hilow', {});
     expect(room.gameSuggestions.size).toBe(0);
   });
 
@@ -426,7 +426,7 @@ describe('Room - endGame', () => {
     const room = new Room('TEST');
     room.addPlayer('Alice');
     room.addPlayer('Bob');
-    await room.startGame('number-guess', {});
+    await room.startGame('hilow', {});
     room.endGame();
     expect(room.game).toBeNull();
   });
@@ -436,7 +436,7 @@ describe('Room - endGame', () => {
     const { playerId } = room.addPlayer('Alice');
     room.addPlayer('Bob');
     room.setReady(playerId, true);
-    await room.startGame('number-guess', {});
+    await room.startGame('hilow', {});
     room.endGame();
     expect(room.players.get(playerId).ready).toBe(false);
   });
@@ -478,7 +478,7 @@ describe('Room - toJSON', () => {
     const room = new Room('JSON');
     room.addPlayer('Alice');
     room.addPlayer('Bob');
-    const game = await room.startGame('number-guess', {});
+    const game = await room.startGame('hilow', {});
     const json = room.toJSON();
     expect(json.game.id).toBe(game.id);
   });

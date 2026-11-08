@@ -122,8 +122,8 @@ describe('Room voting state', () => {
     room.availableCategories = [{ id: 9, name: 'Gen' }];
     room.categoryVotes.set(p1, 9);
 
-    // Start a simple game (number-guess doesn't require async fetching)
-    await room.startGame('number-guess', {});
+    // Start a simple game (hilow doesn't require async fetching)
+    await room.startGame('hilow', {});
 
     expect(room.votingActive).toBe(false);
     expect(room.availableCategories).toEqual([]);

@@ -31,22 +31,6 @@ function getScoreboardData(msg, gameType) {
       rank: i + 1,
       isOut: finishOrder.includes(id),
     }));
-  } else if (gameType === 'number-guess') {
-    const maxRounds = msg.maxRounds || 0;
-    const sorted = ids.slice().sort((a, b) => scores[b] - scores[a]);
-    entries = sorted.map((id, i) => {
-      const guessesLeft = scores[id];
-      return {
-        id,
-        name: names[id] || id,
-        valueText: guessesLeft + ' gissningar kvar',
-        rank: i + 1,
-        isOut: false,
-      };
-    });
-    if (msg.round != null && maxRounds) {
-      roundLabel = 'Round ' + (msg.round + 1) + ' / ' + maxRounds;
-    }
   } else {
     const sorted = ids.slice().sort((a, b) => scores[b] - scores[a]);
     entries = sorted.map((id, i) => ({
@@ -58,8 +42,6 @@ function getScoreboardData(msg, gameType) {
     }));
     if (gameType === 'quiz' && msg.totalQuestions) {
       roundLabel = 'Fråga ' + ((msg.currentQuestion || 0) + 1) + ' / ' + msg.totalQuestions;
-    } else if (gameType === 'spy' && msg.totalRounds) {
-      roundLabel = 'Round ' + (msg.round || 0) + ' / ' + msg.totalRounds;
     } else if (gameType === 'gin-rummy' && msg.handNumber != null) {
       roundLabel = 'Hand ' + msg.handNumber;
     }
@@ -122,42 +104,13 @@ describe('getScoreboardData — shithead (placement from finishOrder)', () => {
   });
 });
 
-describe('getScoreboardData — number-guess (guesses remaining)', () => {
-  const msg = {
-    phase: 'playing',
-    scores: { alice: 5, bob: 2, carol: 8 }, // maxRounds - guesses
-    maxRounds: 10,
-    round: 3,
-    playerNames,
-  };
-  const { entries, roundLabel } = getScoreboardData(msg, 'number-guess');
-
-  it('sorts by guesses remaining (higher = better)', () => {
-    expect(entries.map(e => e.id)).toEqual(['carol', 'alice', 'bob']);
-  });
-  it('labels values as guesses remaining (not raw score)', () => {
-    expect(entries[0].valueText).toBe('8 gissningar kvar');
-    expect(entries[2].valueText).toBe('2 gissningar kvar');
-  });
-  it('builds a Round label from round + maxRounds', () => {
-    expect(roundLabel).toBe('Round 4 / 10');
-  });
-});
-
-describe('getScoreboardData — gin-rummy / spy round labels', () => {
+describe('getScoreboardData — gin-rummy round label', () => {
   it('gin-rummy shows Hand label', () => {
     const { roundLabel } = getScoreboardData(
       { phase: 'drawing', scores: { alice: 0, bob: 0 }, handNumber: 2, playerNames },
       'gin-rummy'
     );
     expect(roundLabel).toBe('Hand 2');
-  });
-  it('spy shows Round X / Y label', () => {
-    const { roundLabel } = getScoreboardData(
-      { phase: 'clues', scores: { alice: 1, bob: 1 }, round: 4, totalRounds: 10, playerNames },
-      'spy'
-    );
-    expect(roundLabel).toBe('Round 4 / 10');
   });
 });
 

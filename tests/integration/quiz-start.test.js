@@ -15,7 +15,7 @@ describe('Quiz start flow', () => {
 
   beforeEach(() => {
     room = new Room('TEST');
-    // Add connected players so startGame meets minPlayers for both quiz and number-guess
+    // Add connected players so startGame meets minPlayers for both quiz and hilow
     room.addPlayer('Alice');
     room.addPlayer('Bob');
   });
@@ -98,7 +98,7 @@ describe('Quiz start flow', () => {
   });
 
   it('non-quiz games still work without fetching', async () => {
-    const game = await room.startGame('number-guess', {});
+    const game = await room.startGame('hilow', {});
 
     expect(game).not.toBeNull();
     expect(room.game).not.toBeNull();

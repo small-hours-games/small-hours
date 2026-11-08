@@ -2,21 +2,13 @@
 // Each room represents a lobby where players gather and play mini-games.
 
 import { createGame, processAction, getView, checkEnd } from '../engine/engine.js';
-import numberGuess from '../engine/games/number-guess.js';
 import shithead from '../engine/games/shithead.js';
 import quiz from '../engine/games/quiz.js';
-import spy from '../engine/games/spy.js';
-import questionForm from '../engine/games/question-form.js';
-import template from '../engine/games/template.js';
 import ginRummy from '../engine/games/gin-rummy.js';
 import hilow from '../engine/games/hilow.js';
-import skogai from '../engine/games/skogai.js';
 import sjuan from '../engine/games/sjuan.js';
 import uno from '../engine/games/uno.js';
-import yatzy from '../engine/games/yatzy.js';
-import labyrint from '../engine/games/labyrint.js';
 import musicQuiz from '../engine/games/music-quiz.js';
-import { saveAnswers } from '../fetcher/question-file.js';
 import { BOT_NAMES } from '../engine/bots/index.js';
 import { randomBytes } from 'node:crypto';
 
@@ -31,20 +23,13 @@ const AVATAR_POOL = [
 const CODE_CHARS = 'ABCDEFGHJKLMNPQRTUVWXYZ0123456789';
 
 const GAME_REGISTRY = {
-  'number-guess': { definition: numberGuess,  label: 'Number Guess', minPlayers: 2, maxPlayers: 10, complexity: 1 },
-  'skogai': 	  { definition: skogai,       label: 'SkogAI',       minPlayers: 1, maxPlayers: 10, complexity: 1 },
   'shithead':     { definition: shithead,     label: 'Palace',       minPlayers: 2, maxPlayers: 6,  complexity: 3, ai: { default: 2, max: 4, cardsPerSeat: 9 } },
   'quiz':         { definition: quiz,         label: 'Quiz',         minPlayers: 1, maxPlayers: 20, complexity: 1 },
   'music-quiz':   { definition: musicQuiz,    label: 'Music Quiz',   minPlayers: 1, maxPlayers: 20, complexity: 1 },
-  'spy':          { definition: spy,          label: 'Spy',          minPlayers: 3, maxPlayers: 10, complexity: 2 },
-  'question-form':{ definition: questionForm, label: 'Question Form',minPlayers: 2, maxPlayers: 20, complexity: 1 },
-  'template':     { definition: template,     label: 'Template',     minPlayers: 1, maxPlayers: 20, complexity: 1 },
   'gin-rummy':    { definition: ginRummy,     label: 'Gin Rummy',    minPlayers: 2, maxPlayers: 2,  complexity: 4, ai: { default: 1, max: 1 } },
   'hilow':        { definition: hilow,        label: 'Högt/Lågt',    minPlayers: 2, maxPlayers: 8,  complexity: 1 },
   'sjuan':       { definition: sjuan,       label: 'Sjuan',        minPlayers: 2, maxPlayers: 8,  complexity: 2 },
   'uno':         { definition: uno,         label: 'Uno',          minPlayers: 2, maxPlayers: 8,  complexity: 2 },
-  'yatzy':       { definition: yatzy,       label: 'Yatzy',        minPlayers: 1, maxPlayers: 8,  complexity: 2 },
-  'labyrint':    { definition: labyrint,    label: 'Labyrint',     minPlayers: 2, maxPlayers: 8,  complexity: 2 },
 };
 
 let playerCounter = 0;

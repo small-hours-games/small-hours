@@ -1,7 +1,6 @@
 // Small Hours - Game message handlers
 
 import { processAction, getView, checkEnd } from '../../engine/engine.js';
-import { saveAnswers } from '../../fetcher/question-file.js';
 import { handleStartCategoryVote } from './vote.js';
 import { getHostView } from '../host-view.js';
 
@@ -234,12 +233,6 @@ export function finishGame(room, endResult, ctx) {
     }
   } catch (err) {
     console.error('[score] failed to award session scores:', err.message);
-  }
-
-  // Save question-form answers to file
-  const gameState = room.game?.state;
-  if (gameState?.questions && gameState?.responses && gameState?._sourceFile) {
-    saveAnswers(gameState._sourceFile, gameState.responses, playerNames).catch(() => {});
   }
 
   room.endGame();

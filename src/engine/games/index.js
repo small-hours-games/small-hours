@@ -1,14 +1,7 @@
-export { default as numberGuess } from './number-guess.js';
 export { default as quiz } from './quiz.js';
 export { default as musicQuiz } from './music-quiz.js';
-export { default as spy } from './spy.js';
 export { default as shithead } from './shithead.js';
-export { default as skogai } from './skogai.js';
-export { default as questionForm } from './question-form.js';
-export { default as template } from './template.js';
 export { default as ginRummy } from './gin-rummy.js';
 export { default as hilow } from './hilow.js';
 export { default as sjuan } from './sjuan.js';
 export { default as uno } from './uno.js';
-export { default as yatzy } from './yatzy.js';
-export { default as labyrint } from './labyrint.js';

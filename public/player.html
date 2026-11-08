@@ -150,28 +150,6 @@
       </div>
     </div>
 
-    <!-- NUMBER GUESS SECTION -->
-    <div class="section" id="numberGuessSection">
-      <div class="card text-center">
-        <div style="font-size:0.85rem;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.1em;" id="ngRoundLabel">Round 1</div>
-        <div style="font-size:1.5rem;font-weight:700;color:var(--neon-blue);margin:8px 0;" id="ngRange">1 - 100</div>
-      </div>
-
-      <div class="feedback-display" id="ngFeedback"></div>
-
-      <div class="guess-input-row">
-        <input type="number" id="ngInput" placeholder="Your guess" min="1" max="100"
-          onkeydown="if(event.key==='Enter')submitGuess()">
-        <button class="btn btn-primary" onclick="submitGuess()" id="ngSubmitBtn">Guess</button>
-      </div>
-
-      <div class="guess-history" id="ngHistory"></div>
-
-      <div class="my-score" id="ngScore" style="display:none;">
-        Score: <span class="score-val" id="ngScoreVal">0</span>
-      </div>
-    </div>
-
     <!-- QUIZ SECTION -->
     <div class="section" id="quizSection">
       <div class="quiz-top-meta" id="quizTopMeta">
@@ -189,46 +167,6 @@
         <button class="powerup-btn" id="pwDouble" onclick="usePowerup('double')">&#10006;2 Double</button>
         <button class="powerup-btn" id="pwFifty" onclick="usePowerup('fifty')">50/50</button>
         <button class="powerup-btn" id="pwFreeze" onclick="usePowerup('freeze')">&#10052; Freeze</button>
-      </div>
-    </div>
-
-    <!-- SPY SECTION -->
-    <div class="section" id="spySection">
-      <!-- Role display -->
-      <div id="spyRoleDisplay"></div>
-
-      <!-- Clue input (non-spy) -->
-      <div id="spyClueInput" style="display:none;">
-        <div class="card">
-          <div style="font-size:0.85rem;color:var(--text-secondary);margin-bottom:8px;">Give a clue (without giving away the word!)</div>
-          <div class="clue-input-row">
-            <input type="text" id="clueInput" placeholder="Your clue..." maxlength="100"
-              onkeydown="if(event.key==='Enter')submitClue()">
-            <button class="btn btn-primary" onclick="submitClue()" id="clueSubmitBtn">Send</button>
-          </div>
-        </div>
-      </div>
-
-      <!-- Guess input (spy) -->
-      <div id="spyGuessInput" style="display:none;">
-        <div class="card">
-          <div style="font-size:0.85rem;color:var(--text-secondary);margin-bottom:8px;">Guess the secret word!</div>
-          <div class="clue-input-row">
-            <input type="text" id="spyGuessField" placeholder="Your guess..." maxlength="100"
-              onkeydown="if(event.key==='Enter')submitSpyGuess()">
-            <button class="btn btn-danger" onclick="submitSpyGuess()" id="spyGuessBtn">Guess</button>
-          </div>
-        </div>
-      </div>
-
-      <!-- Clue list -->
-      <div class="card" id="spyClueList" style="display:none;">
-        <div style="font-size:0.85rem;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px;">Clues</div>
-        <div id="spyClues"></div>
-      </div>
-
-      <div class="my-score" id="spyScore" style="display:none;">
-        Score: <span class="score-val" id="spyScoreVal">0</span>
       </div>
     </div>
 
@@ -276,13 +214,6 @@
       </div>
     </div>
 
-    <!-- QUESTION FORM SECTION -->
-    <div class="section" id="questionFormSection">
-      <div class="qf-progress" id="qfProgress"></div>
-      <div id="qfContent"></div>
-      <div id="qfNav" class="qf-nav"></div>
-    </div>
-
     <!-- GIN RUMMY SECTION: card-table layout, see public/js/table-cards.js -->
     <div class="section tc-screen" id="ginRummySection">
       <div class="tc-topbar">
@@ -327,24 +258,11 @@
       </div>
     </div>
 
-    <!-- TEMPLATE SECTION -->
-    <div class="section" id="templateSection">
-      <div class="card text-center">
-        <div style="font-size:0.85rem;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.1em;" id="tplStatus">Playing</div>
-        <div style="font-size:2rem;font-weight:700;color:var(--neon-blue);margin:8px 0;" id="tplScore">0 / 3</div>
-      </div>
-      <button class="btn btn-primary" onclick="sendIncrement()" id="tplBtn" style="width:100%;font-size:1.2rem;padding:16px;margin-top:16px;">
-        +1 Increment
-      </button>
-      <div id="tplScoreboard" style="margin-top:16px;"></div>
-    </div>
-
   </main>
 
   <!-- Toast container -->
   <div class="toast-container" id="toasts"></div>
 
-  <script src="/js/cards.js"></script>
   <script src="/js/table-cards.js"></script>
   <script src="/js/games.js"></script>
   <script src="/js/quiz-ready.js"></script>
@@ -362,7 +280,6 @@
       ready: false,
       players: [],
       gameType: null,
-      isSpy: false,
       myIndex: -1,
       selectedAnswer: null,
       powerupsUsed: { double: false, fifty: false, freeze: false },
@@ -556,19 +473,14 @@
         }
         // Show final state before returning to lobby
         switch (state.gameType) {
-          case 'number-guess': renderNumberGuessState(msg); break;
           case 'quiz': case 'music-quiz': renderQuizState(msg); break;
-          case 'spy': renderSpyState(msg); break;
           case 'shithead': renderShitheadState(msg); break;
-          case 'question-form': renderQuestionFormState(msg); break;
           case 'gin-rummy': renderGinRummyState(msg); break;
         }
         // Return to lobby after a delay
         setTimeout(() => {
           state.gameType = null;
           state.ready = false;
-          state.qfIndex = 0;
-          state._lastQfMsg = null;
           state.grSelectedCard = null;
           showSection('lobbySection');
         }, 3000);
@@ -585,13 +497,9 @@
       }
 
       switch (state.gameType) {
-        case 'number-guess': renderNumberGuessState(msg); break;
         case 'quiz': case 'music-quiz': renderQuizState(msg); break;
-        case 'spy': renderSpyState(msg); break;
         case 'shithead': renderShitheadState(msg); break;
-        case 'question-form': renderQuestionFormState(msg); break;
         case 'gin-rummy': renderGinRummyState(msg); break;
-        case 'template': renderTemplateState(msg); break;
       }
     }
 
@@ -608,7 +516,7 @@
     }
 
     function getGameSectionId(game) {
-      const map = { 'number-guess': 'numberGuessSection', 'quiz': 'quizSection', 'music-quiz': 'quizSection', 'spy': 'spySection', 'shithead': 'shitheadSection', 'question-form': 'questionFormSection', 'gin-rummy': 'ginRummySection', 'template': 'templateSection' };
+      const map = { 'quiz': 'quizSection', 'music-quiz': 'quizSection', 'shithead': 'shitheadSection', 'gin-rummy': 'ginRummySection' };
       return map[game] || 'lobbySection';
     }
 
@@ -869,74 +777,6 @@
       container.appendChild(el);
       container.scrollTop = container.scrollHeight;
       while (container.children.length > 50) container.removeChild(container.firstChild);
-    }
-
-    // --- Number Guess ---
-    function renderNumberGuessState(msg) {
-      // msg has: phase, round, maxRounds, myGuesses: [{number, result}], otherPlayers, winner?, secret?
-      document.getElementById('ngRoundLabel').textContent = 'Guesses: ' + (msg.myGuesses ? msg.myGuesses.length : 0) + ' / ' + (msg.maxRounds || 10);
-
-      // Show range hint based on guesses
-      let low = 1, high = 100;
-      if (msg.myGuesses) {
-        for (const g of msg.myGuesses) {
-          if (g.result === 'too_low' && g.number >= low) low = g.number + 1;
-          if (g.result === 'too_high' && g.number <= high) high = g.number - 1;
-        }
-      }
-      document.getElementById('ngRange').textContent = low + ' - ' + high;
-
-      // Show feedback from last guess
-      const fb = document.getElementById('ngFeedback');
-      if (msg.myGuesses && msg.myGuesses.length > 0) {
-        const last = msg.myGuesses[msg.myGuesses.length - 1];
-        if (last.result === 'correct') {
-          fb.innerHTML = '<span style="color:var(--neon-green);font-size:1.3rem;font-weight:700;">Correct! The number was ' + last.number + '!</span>';
-        } else if (last.result === 'too_high') {
-          fb.innerHTML = '<span style="color:var(--neon-pink);">Too high!</span>';
-        } else if (last.result === 'too_low') {
-          fb.innerHTML = '<span style="color:var(--neon-blue);">Too low!</span>';
-        }
-      }
-
-      // Show secret on game end
-      if (msg.phase === 'finished' && msg.secret) {
-        fb.innerHTML = '<span style="color:var(--neon-green);font-size:1.3rem;font-weight:700;">The number was ' + msg.secret + '!</span>';
-      }
-
-      // Render guess history
-      const container = document.getElementById('ngHistory');
-      if (msg.myGuesses) {
-        container.innerHTML = msg.myGuesses.map(g => {
-          const icon = g.result === 'correct' ? ' &#9989;' : (g.result === 'too_high' ? ' &#11015;' : ' &#11014;');
-          const cls = g.result === 'correct' ? 'correct' : (g.result === 'too_high' ? 'high' : 'low');
-          return '<span class="guess-chip ' + cls + '">' + g.number + icon + '</span>';
-        }).join('');
-      }
-
-      // Disable input when game over
-      const isOver = msg.phase === 'finished';
-      document.getElementById('ngSubmitBtn').disabled = isOver;
-      document.getElementById('ngInput').disabled = isOver;
-
-      // Show score on finish
-      if (isOver && msg.scores) {
-        document.getElementById('ngScore').style.display = 'block';
-        // Find our score - scores is keyed by playerId, but we don't know our playerId on the client
-        // Just show the winner info
-      }
-    }
-
-    function submitGuess() {
-      const input = document.getElementById('ngInput');
-      const val = parseInt(input.value, 10);
-      if (isNaN(val) || val < 1 || val > 100) {
-        showToast('Enter a number between 1 and 100', 'error');
-        return;
-      }
-      send({ type: 'GAME_ACTION', action: { type: 'guess', number: val } });
-      input.value = '';
-      input.focus();
     }
 
     // --- Quiz ---
@@ -1275,95 +1115,6 @@
           btn.classList.remove('selected');
         }
       }
-    }
-
-    // --- Spy ---
-    function renderSpyState(msg) {
-      state.isSpy = !!msg.isSpy;
-
-      // Role display
-      const roleDisplay = document.getElementById('spyRoleDisplay');
-      if (msg.isSpy) {
-        roleDisplay.innerHTML = '<div class="spy-alert">' +
-          '<div class="spy-alert-title">You are the Spy!</div>' +
-          '<div class="spy-alert-sub">Figure out the secret word from the clues</div></div>';
-      } else if (msg.word) {
-        roleDisplay.innerHTML = '<div class="word-display">' +
-          '<div class="word-label">The secret word is</div>' +
-          '<div class="word-value">' + escapeHtml(msg.word) + '</div></div>';
-      }
-
-      // Show appropriate input
-      const clueInput = document.getElementById('spyClueInput');
-      const guessInput = document.getElementById('spyGuessInput');
-
-      if (msg.phase === 'clue') {
-        clueInput.style.display = msg.isSpy ? 'none' : 'block';
-        guessInput.style.display = 'none';
-      } else if (msg.phase === 'guess') {
-        clueInput.style.display = 'none';
-        guessInput.style.display = msg.isSpy ? 'block' : 'none';
-      } else {
-        clueInput.style.display = 'none';
-        guessInput.style.display = 'none';
-      }
-
-      // Clue list
-      const clues = msg.clues || [];
-      const clueListEl = document.getElementById('spyClueList');
-      const cluesEl = document.getElementById('spyClues');
-      if (clues.length > 0) {
-        clueListEl.style.display = 'block';
-        cluesEl.innerHTML = clues.map(c =>
-          '<div class="clue-item" style="margin-bottom:6px;">' +
-            '<span class="clue-author">' + escapeHtml(c.name) + '</span>' +
-            '<span class="clue-text">"' + escapeHtml(c.text) + '"</span></div>'
-        ).join('');
-      } else {
-        clueListEl.style.display = 'none';
-      }
-
-      // Reveal phase
-      if (msg.phase === 'reveal') {
-        if (msg.word) {
-          roleDisplay.innerHTML = '<div class="word-display">' +
-            '<div class="word-label">The word was</div>' +
-            '<div class="word-value">' + escapeHtml(msg.word) + '</div></div>';
-        }
-        if (msg.spyName) {
-          roleDisplay.innerHTML += '<div class="card mt-2 text-center">' +
-            '<div style="color:var(--neon-pink);font-weight:700;">The spy was: ' + escapeHtml(msg.spyName) + '</div>' +
-            '<div style="color:var(--text-secondary);margin-top:4px;">' +
-              (msg.spyCaught ? 'The spy was caught!' : 'The spy guessed correctly!') +
-            '</div></div>';
-        }
-      }
-
-      if (msg.score != null) {
-        document.getElementById('spyScore').style.display = 'block';
-        document.getElementById('spyScoreVal').textContent = msg.score;
-      }
-    }
-
-    function submitClue() {
-      const input = document.getElementById('clueInput');
-      const text = input.value.trim();
-      if (!text) return;
-      send({ type: 'GAME_ACTION', action: { type: 'sendClue', text } });
-      input.value = '';
-      input.disabled = true;
-      document.getElementById('clueSubmitBtn').disabled = true;
-      showToast('Clue submitted!', 'success');
-    }
-
-    function submitSpyGuess() {
-      const input = document.getElementById('spyGuessField');
-      const text = input.value.trim();
-      if (!text) return;
-      send({ type: 'GAME_ACTION', action: { type: 'sendGuess', text } });
-      input.value = '';
-      input.disabled = true;
-      document.getElementById('spyGuessBtn').disabled = true;
     }
 
     // ===== Card table: Palace + Gin Rummy (rendering kit in /js/table-cards.js) =====
@@ -2173,193 +1924,6 @@
         '<span>' + escapeHtml(id === me ? 'You' : tcName(id, msg)) + ' <b>' + tcNum(totals[id]) + '</b></span>').join('') + '</div>';
       document.getElementById('grSheet').innerHTML = html;
     }
-
-    // --- Template Game ---
-    function sendIncrement() {
-      send({ type: 'GAME_ACTION', action: { type: 'increment' } });
-    }
-
-    function renderTemplateState(msg) {
-      document.getElementById('tplStatus').textContent = msg.phase === 'finished' ? 'Finished!' : 'Playing';
-      document.getElementById('tplScore').textContent = (msg.myScore || 0) + ' / ' + (msg.target || 3);
-      document.getElementById('tplBtn').disabled = msg.phase === 'finished';
-
-      let sb = '';
-      if (msg.scores) {
-        const entries = Object.entries(msg.scores).sort((a, b) => b[1] - a[1]);
-        sb = '<div class="card" style="text-align:center;">';
-        for (const [id, score] of entries) {
-          const name = (state.playerNames && state.playerNames[id]) || id;
-          const isWinner = msg.winner === id ? ' style="color:var(--neon-green);font-weight:700;"' : '';
-          sb += '<div' + isWinner + '>' + escapeHtml(name) + ': ' + score + '</div>';
-        }
-        sb += '</div>';
-      }
-      document.getElementById('tplScoreboard').innerHTML = sb;
-    }
-
-    // --- Question Form ---
-    function renderQuestionFormState(msg) {
-      const content = document.getElementById('qfContent');
-      const nav = document.getElementById('qfNav');
-      const progress = document.getElementById('qfProgress');
-
-      if (msg.phase === 'answering') {
-        if (msg.isSubmitted) {
-          progress.textContent = msg.submittedCount + ' / ' + msg.totalPlayers + ' submitted';
-          content.innerHTML = '<div class="qf-submitted-banner">Answers submitted! Waiting for others...</div>';
-          nav.innerHTML = '';
-          return;
-        }
-
-        // Store questions in state for navigation
-        if (!state.qfIndex && state.qfIndex !== 0) state.qfIndex = 0;
-        const questions = msg.questions || [];
-        const myResponses = msg.myResponses || {};
-        const q = questions[state.qfIndex];
-
-        progress.textContent = 'Question ' + (state.qfIndex + 1) + ' of ' + questions.length +
-          ' \u00B7 ' + msg.submittedCount + '/' + msg.totalPlayers + ' submitted';
-
-        if (!q) {
-          content.innerHTML = '<div class="card text-center">No questions</div>';
-          nav.innerHTML = '';
-          return;
-        }
-
-        let html = '<div class="qf-question-card card">' +
-          '<div class="qf-label">' + escapeHtml(q.label || ('Question ' + (state.qfIndex + 1))) + '</div>' +
-          '<div class="qf-text">' + escapeHtml(q.text) + '</div>';
-
-        const currentVal = myResponses[state.qfIndex];
-        const type = q.type || 'text';
-
-        if (type === 'text') {
-          html += '<textarea class="qf-input-text" id="qfTextInput" placeholder="Type your answer..." ' +
-            'oninput="qfSaveText()">' + escapeHtml(currentVal || '') + '</textarea>';
-        } else if (type === 'choice') {
-          html += '<div class="qf-choices">';
-          (q.options || []).forEach(function(opt) {
-            const sel = currentVal === opt ? ' selected' : '';
-            html += '<button class="qf-choice-btn' + sel + '" onclick="qfSelectChoice(' + state.qfIndex + ', \'' + escapeHtml(opt).replace(/'/g, "\\'") + '\')">' +
-              escapeHtml(opt) + '</button>';
-          });
-          html += '</div>';
-        } else if (type === 'yesno') {
-          html += '<div class="qf-yesno-row">' +
-            '<button class="qf-yesno-btn yes' + (currentVal === 'yes' ? ' selected' : '') + '" onclick="qfSelectYesNo(' + state.qfIndex + ', \'yes\')">Yes</button>' +
-            '<button class="qf-yesno-btn no' + (currentVal === 'no' ? ' selected' : '') + '" onclick="qfSelectYesNo(' + state.qfIndex + ', \'no\')">No</button>' +
-            '</div>';
-        } else if (type === 'rating') {
-          const min = q.min || 1;
-          const max = q.max || 5;
-          html += '<div class="qf-rating-row">';
-          for (let i = min; i <= max; i++) {
-            const sel = currentVal === i ? ' selected' : '';
-            html += '<button class="qf-rating-btn' + sel + '" onclick="qfSelectRating(' + state.qfIndex + ', ' + i + ')">' + i + '</button>';
-          }
-          html += '</div>';
-        }
-
-        html += '</div>';
-        content.innerHTML = html;
-
-        // Navigation
-        let navHtml = '';
-        if (state.qfIndex > 0) {
-          navHtml += '<button class="btn btn-secondary" onclick="qfPrev()" style="flex:1;">Previous</button>';
-        } else {
-          navHtml += '<div style="flex:1;"></div>';
-        }
-        if (state.qfIndex < questions.length - 1) {
-          navHtml += '<button class="btn btn-primary" onclick="qfNext()" style="flex:1;">Next</button>';
-        } else {
-          navHtml += '<button class="btn btn-primary" onclick="qfSubmit()" style="flex:1;background:var(--neon-green);color:#000;">Submit All</button>';
-        }
-        nav.innerHTML = navHtml;
-
-      } else if (msg.phase === 'review' || msg.phase === 'finished') {
-        const rq = msg.reviewQuestion || {};
-        const questions = msg.questions || [];
-        progress.textContent = 'Reviewing: ' + (msg.currentQuestion + 1) + ' / ' + questions.length;
-
-        let html = '<div class="qf-question-card card">' +
-          '<div class="qf-label">Results</div>' +
-          '<div class="qf-text">' + escapeHtml(rq.text || '') + '</div>';
-
-        if (msg.tally) {
-          const maxCount = Math.max(...Object.values(msg.tally), 1);
-          const options = rq.type === 'yesno' ? ['yes', 'no'] : (rq.options || Object.keys(msg.tally));
-          html += '<div style="margin-top:12px;">';
-          options.forEach(function(opt) {
-            const count = msg.tally[opt] || 0;
-            const pct = Math.round((count / maxCount) * 100);
-            html += '<div class="qf-tally-bar" style="width:' + Math.max(pct, 20) + '%;">' +
-              escapeHtml(opt) + ' (' + count + ')</div>';
-          });
-          html += '</div>';
-        } else if (msg.average != null) {
-          html += '<div style="text-align:center;margin-top:12px;">' +
-            '<div style="font-size:2.5rem;font-weight:900;color:var(--neon-blue);">' + msg.average + '</div>' +
-            '<div style="font-size:0.8rem;color:var(--text-secondary);">Average rating</div></div>';
-        } else {
-          // Text responses
-          (msg.allResponses || []).forEach(function(r) {
-            const name = (state.playerNames || {})[r.playerId] || 'Player';
-            html += '<div class="qf-review-answer"><strong>' + escapeHtml(name) + ':</strong> ' + escapeHtml(String(r.value)) + '</div>';
-          });
-        }
-
-        html += '</div>';
-        content.innerHTML = html;
-        nav.innerHTML = '';
-      }
-    }
-
-    function qfSaveText() {
-      const input = document.getElementById('qfTextInput');
-      if (input) {
-        send({ type: 'GAME_ACTION', action: { type: 'answer', questionIndex: state.qfIndex, value: input.value } });
-      }
-    }
-
-    function qfSelectChoice(qi, val) {
-      send({ type: 'GAME_ACTION', action: { type: 'answer', questionIndex: qi, value: val } });
-    }
-
-    function qfSelectYesNo(qi, val) {
-      send({ type: 'GAME_ACTION', action: { type: 'answer', questionIndex: qi, value: val } });
-    }
-
-    function qfSelectRating(qi, val) {
-      send({ type: 'GAME_ACTION', action: { type: 'answer', questionIndex: qi, value: val } });
-    }
-
-    function qfPrev() {
-      if (state.qfIndex > 0) {
-        state.qfIndex--;
-        // Re-request current state to re-render
-        renderQuestionFormState(state._lastQfMsg || { phase: 'answering', questions: [], myResponses: {}, submittedCount: 0, totalPlayers: 0 });
-      }
-    }
-
-    function qfNext() {
-      state.qfIndex++;
-      renderQuestionFormState(state._lastQfMsg || { phase: 'answering', questions: [], myResponses: {}, submittedCount: 0, totalPlayers: 0 });
-    }
-
-    function qfSubmit() {
-      // Save any pending text answer first
-      qfSaveText();
-      send({ type: 'GAME_ACTION', action: { type: 'submit' } });
-    }
-
-    // Wrap the render to cache last msg
-    const _origRenderQF = renderQuestionFormState;
-    renderQuestionFormState = function(msg) {
-      state._lastQfMsg = msg;
-      _origRenderQF(msg);
-    };
 
     function showToast(message, type) {
       const container = document.getElementById('toasts');

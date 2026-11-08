@@ -38,7 +38,7 @@ describe('Actual quiz page renderers', () => {
       playerAvatarHtml: () => '<span class="inline-player-avatar">🐸</span> ',
       syncMusic() {}, stopHostCountdown() {}, musicPanel: () => '', hostCountdown: {},
     };
-    const render = loadRenderer('host.html', 'renderQuiz', 'renderSpy', context);
+    const render = loadRenderer('host.html', 'renderQuiz', 'shitheadRuleHintText', context);
     elements.storyOverlay = { style: { display: 'flex' } };
     render({ phase: 'countdown', timeLeft: 5 });
     expect(elements.storyOverlay.style.display).toBe('none');
@@ -62,7 +62,7 @@ describe('Actual quiz page renderers', () => {
       state: { playerNames: {} }, escapeHtml, playerAvatarHtml: () => '',
       syncMusic() {}, stopHostCountdown() {}, musicPanel: () => '', hostCountdown: {},
     };
-    const renderHost = loadRenderer('host.html', 'renderQuiz', 'renderSpy', hostCtx);
+    const renderHost = loadRenderer('host.html', 'renderQuiz', 'shitheadRuleHintText', hostCtx);
     hostEls.storyOverlay = { style: { display: 'none' } };
 
     const qWithImg = { ...question, image: 'https://upload.wikimedia.org/pic.jpg' };

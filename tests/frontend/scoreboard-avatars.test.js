@@ -12,7 +12,7 @@ describe('Player avatars in live scores', () => {
       escapeHtml: text => String(text),
     };
     runInNewContext(source.slice(source.indexOf('    function playerAvatarHtml('), source.indexOf('    function returnToLobby(')), context);
-    for (const game of ['quiz', 'music-quiz', 'gin-rummy', 'number-guess', 'shithead']) {
+    for (const game of ['quiz', 'music-quiz', 'gin-rummy', 'shithead']) {
       context.renderScoreboard({ scores: { alice: 10, bob: 20 }, playerNames: { alice: 'Alice', bob: 'Bob' } }, game);
       expect(list.innerHTML).toContain('🐸</span> Alice');
       expect(list.innerHTML).toContain('🦊</span> Bob');
