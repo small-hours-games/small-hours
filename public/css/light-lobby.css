@@ -1526,3 +1526,16 @@ body.light-lobby {
 }
 .host-corner-status .connection-status { position: static; padding: 4px 12px; z-index: auto; }
 
+/* Lobby scale on the TV (set from host.html, default 0.9): the lobby is drawn one notch
+   smaller so everything fits above the bottom edge. The topbar is not scaled. Heights that
+   follow the screen are divided by the scale, so the lobby still fills it. */
+.host-screen:not(.in-game) .host-main { zoom: var(--host-scale, 1); }
+@media (min-width: 1000px) {
+  .host-screen #lobbyView {
+    height: calc((100dvh - 118px) / var(--host-scale, 1));
+    transition: height 0.55s cubic-bezier(0.2, 0.9, 0.3, 1.15);
+  }
+  /* While the topbar show opens the bar 4rem taller, the lobby gives that room back. */
+  body.tbs-bar-open.host-screen #lobbyView { height: calc((100dvh - 118px - 4rem) / var(--host-scale, 1)); }
+}
+

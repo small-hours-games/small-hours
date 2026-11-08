@@ -834,6 +834,7 @@ function createTopbarShow(opts) {
     var open = stageOn && !exiting;
     if (open !== header.classList.contains('tbs-open')) {
       header.classList.toggle('tbs-open', open);
+      document.body.classList.toggle('tbs-bar-open', open);   // the lobby makes room for the taller bar
       remeasureUntil = now + 900;              // the bar grows for a moment; follow the logo
     }
     if (now < remeasureUntil && frameNo % 6 === 0) measure();
@@ -1027,6 +1028,7 @@ function createTopbarShow(opts) {
     if (raf) cancelAnimationFrame(raf);
     raf = 0;
     header.classList.remove('tbs-on', 'tbs-open');
+    document.body.classList.remove('tbs-bar-open');
     if (logo) { logo.style.transform = ''; if (logo._tbs) logo._tbs.transform = ''; }
     document.body.classList.remove('tbs-lobby-live');
     clearShake();

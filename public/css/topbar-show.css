@@ -181,6 +181,14 @@
 .tbs-dancers .fighter-3d-rig { animation: none; transform-origin: 50% 100%; will-change: transform; }
 .tbs-dancers .fighter-arm-deck, .tbs-dancers .fighter-callout { display: none; }
 .tbs-dancers .fighter-arm-throw { will-change: transform; }
+/* Short TV screens (720p, or the bar opened taller): smaller dancers so the panel's
+   bottom line stays visible. */
+@media (max-height: 900px) {
+  .tbs-lobby-live .tbs-dancers { height: 128px; padding-top: 6px; }
+  .tbs-dancer-slot { width: 108px; height: 124px; }
+  .tbs-dancers .duel-fighter-lion { transform: rotateY(16deg) scale(0.66); }
+  .tbs-dancers .duel-fighter-frog { transform: rotateY(-16deg) scale(0.66); }
+}
 /* No card duel while they are dancing. */
 .tbs-lobby-live .mascot-duel-stage { display: none !important; }
 

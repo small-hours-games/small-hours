@@ -6,6 +6,21 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#f4f8ff">
   <title>Smallhours - TV Screen</title>
+  <script>
+    // Lobby scale on the TV: one notch smaller than 1:1 by default, so the whole lobby fits.
+    // Change it per TV with ?scale=0.8 (0.6 to 1.2) on the host address; it is remembered.
+    (function () {
+      var scale = 0.9;
+      try {
+        var fromUrl = new URLSearchParams(location.search).get('scale');
+        if (fromUrl != null && isFinite(Number(fromUrl)) && Number(fromUrl) > 0) localStorage.setItem('sh_tv_scale', String(Number(fromUrl)));
+        var saved = Number(localStorage.getItem('sh_tv_scale'));
+        if (saved > 0) scale = saved;
+      } catch (e) { /* storage blocked: keep the default */ }
+      scale = Math.max(0.6, Math.min(1.2, scale));
+      document.documentElement.style.setProperty('--host-scale', String(scale));
+    })();
+  </script>
   <script src="https://cdn.tailwindcss.com/3.4.17"></script>
   <script src="/js/tailwind-config.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
