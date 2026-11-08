@@ -98,6 +98,8 @@ A lone player can play Gin Rummy and Palace against AI seats: `GAME_REGISTRY` en
 
 Gin Rummy and Palace use the card-table kit `public/js/table-cards.js` + `public/css/table-cards.css` (vector cards, stacks, 2-row rack/fan, tap / swipe-up / drag gestures, hand ordering), shared by phone and TV. The phone hand lifts and enlarges the card under the thumb (press and slide, let go to pick), and a big Palace hand stacks same ranks with a ×N count. Four-colour suits (clubs blue, diamonds orange) are on by default on the TV and a toggle on the phone (`tcSetFourColour`); the A–10 art for them lives in `public/cards/faces-4c/`, made by `node scripts/four-colour-faces.js`. Other card rendering lives in `public/js/cards.js` with SVGs/audio under `public/cards/`. Engine suits are `h`, `d`, `c`, `s`; ranks are numeric. Shithead's Ace-high rank 14 maps to the same card image as rank 1. Reuse the renderer and existing audio helpers.
 
+The TV plays music from `music/`: `/api/lobby-music` serves the lobby songs, and files named `quiz-and-cards*` are served by `/api/game-music` only, for the game types in `GAME_MUSIC_TYPES` (`host.html`). Both use `createLobbyMusic` (`public/js/lobby-music.js`, volume, fades, rotation); `setDucked` lowers the game music while the quiz narrator or a game story speaks.
+
 Use `smallhours-light-lobby/` as the lobby design reference. Current shared styling lives in `public/css/`; brand images live in `public/images/`.
 
 ## Verification

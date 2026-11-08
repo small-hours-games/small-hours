@@ -179,7 +179,7 @@
 
     // Mute toggle
     let isMuted = false;
-    const quizNarrator = createQuizNarrator();
+    const quizNarrator = createQuizNarrator(speaking => gameMusic.setDucked(speaking));
     document.addEventListener('pointerdown', () => quizNarrator.retry());
     document.addEventListener('keydown', () => quizNarrator.retry());
     const lobbyMusic = createLobbyMusic(new Audio(), playing => {
@@ -188,11 +188,17 @@
     const mascotDuel = typeof createMascotDuel === 'function' ? createMascotDuel() : null;
     document.addEventListener('pointerdown', () => lobbyMusic.retry());
     document.addEventListener('keydown', () => lobbyMusic.retry());
+    // Card games and Quiz have their own two songs; Music Quiz plays only its question clips.
+    const GAME_MUSIC_TYPES = new Set(['quiz', 'shithead', 'gin-rummy']);
+    const gameMusic = createLobbyMusic(new Audio(), undefined, { playlistUrl: '/api/game-music' });
+    document.addEventListener('pointerdown', () => gameMusic.retry());
+    document.addEventListener('keydown', () => gameMusic.retry());
     function toggleMute() {
       isMuted = !isMuted;
       document.getElementById('muteBtn').textContent = isMuted ? '\uD83D\uDD07 Muted' : '\uD83D\uDD0A Sound';
       if (musicAudio) musicAudio.muted = isMuted;
       lobbyMusic.setMuted(isMuted);
+      gameMusic.setMuted(isMuted);
       quizNarrator.setMuted(isMuted);
       if (isMuted) {
         audio._origPlay = audio._origPlay || audio.play;
@@ -314,6 +320,7 @@
         case 'LOBBY_UPDATE':
           state.lobby = msg.state || msg;
           lobbyMusic.setActive(!state.lobby.game && !state.gameType);
+          if (!state.lobby.game) gameMusic.setActive(false);
           state.players = state.lobby.players || [];
           state.playerAvatars = state.playerAvatars || {};
           state.players.forEach(p => { state.playerAvatars[p.playerId] = p.avatar; });
@@ -466,6 +473,7 @@
       if (mascotDuel) mascotDuel.setLobbyActive(false);
       placePartyChat(true);
       lobbyMusic.setActive(false);
+      gameMusic.setActive(GAME_MUSIC_TYPES.has(state.gameType));
       state.gameEvents = [];
       document.getElementById('lobbyView').style.display = 'none';
       document.getElementById('gameView').style.display = 'flex';
@@ -513,6 +521,9 @@
         if (data.url) {
           if (storyAudio) storyAudio.pause();
           storyAudio = new Audio(data.url);
+          storyAudio.addEventListener('playing', () => gameMusic.setDucked(true));
+          storyAudio.addEventListener('pause', () => gameMusic.setDucked(false));
+          storyAudio.addEventListener('ended', () => gameMusic.setDucked(false));
           storyAudio.play().catch(() => {});
         }
       } catch (e) { /* TTS optional */ }
@@ -547,6 +558,7 @@
     function renderGameState(msg) {
       if (msg.phase !== 'lobby' && msg.phase !== 'finished') lobbyMusic.setActive(false);
       if (!state.gameType) return;
+      gameMusic.setActive(GAME_MUSIC_TYPES.has(state.gameType) && msg.phase !== 'lobby' && msg.phase !== 'finished');
 
       switch (state.gameType) {
         case 'number-guess': renderNumberGuess(msg); break;
@@ -1390,6 +1402,7 @@
 
     function returnToLobby(msg) {
       quizNarrator.stop();
+      gameMusic.setActive(false);
       if (msg.phase === 'finished') {
         if (msg.winner) {
           const name = (state.playerNames || {})[msg.winner] || 'Someone';

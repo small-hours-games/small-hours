@@ -13,6 +13,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const PUBLIC_DIR = path.resolve(__dirname, '../../public');
 const MUSIC_DIR = path.resolve(__dirname, '../../music');
+const GAME_TRACK = /^quiz-and-cards/i; // played during card games and Quiz, never in the lobby
 const AUDIO_DIR = path.resolve(__dirname, '../../data/audio');
 
 // Room-flood protection
@@ -27,17 +28,19 @@ let lastRoomCreateAt = 0;
  * @param {import('../session/manager.js').RoomManager} manager
  */
 export function setupRoutes(app, manager) {
-  app.get('/api/lobby-music', async (_req, res) => {
+  const playlist = keep => async (_req, res) => {
     try {
       const entries = await fs.promises.readdir(MUSIC_DIR, { withFileTypes: true });
-      const tracks = entries.filter(entry => entry.isFile() && /\.(mp3|ogg|m4a|wav)$/i.test(entry.name))
+      const tracks = entries.filter(entry => entry.isFile() && /\.(mp3|ogg|m4a|wav)$/i.test(entry.name) && keep(entry.name))
         .map(entry => '/music/' + encodeURIComponent(entry.name)).sort();
       res.json({ tracks });
     } catch (err) {
       if (err.code === 'ENOENT') return res.json({ tracks: [] });
-      res.status(500).json({ error: 'Could not load lobby music' });
+      res.status(500).json({ error: 'Could not load music' });
     }
-  });
+  };
+  app.get('/api/lobby-music', playlist(name => !GAME_TRACK.test(name)));
+  app.get('/api/game-music', playlist(name => GAME_TRACK.test(name)));
   app.use('/music', express.static(MUSIC_DIR, { index: false, dotfiles: 'deny' }));
 
   // Health check

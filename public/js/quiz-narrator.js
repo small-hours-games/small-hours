@@ -2,7 +2,7 @@
 const QUIZ_INTRO_TEXT = 'Welcome to Smallhours Quiz Challenge, Here We go 3...2...1';
 const QUIZ_INTRO_DURATION_SEC = 6.0;
 
-function createQuizNarrator() {
+function createQuizNarrator(onSpeaking = () => {}) {
   let currentKey = null;
   let revision = 0;
   let clip = null;
@@ -21,6 +21,8 @@ function createQuizNarrator() {
     utterance.lang = utterance.voice?.lang || 'en-GB';
     utterance.rate = isCountdown ? 1.35 : 1.18;
     utterance.pitch = 0.88;
+    utterance.onstart = () => { if (requestRevision === revision) onSpeaking(true); };
+    utterance.onend = utterance.onerror = () => { if (requestRevision === revision) onSpeaking(false); };
     spokenFallback = utterance;
     speechSynthesis.speak(utterance);
   }
@@ -31,6 +33,7 @@ function createQuizNarrator() {
     spokenFallback = null;
     clip = null;
     blocked = false;
+    onSpeaking(false);
   }
   function stop() {
     revision++;
@@ -39,7 +42,12 @@ function createQuizNarrator() {
   }
   async function retry() {
     if (!blocked || muted || !clip || Date.now() >= expiresAt) return;
-    try { await clip.play(); blocked = false; } catch { /* next gesture */ }
+    const requestRevision = revision;
+    try {
+      await clip.play();
+      blocked = false;
+      if (requestRevision === revision) onSpeaking(true);
+    } catch { /* next gesture */ }
   }
   return {
     sync(msg) {
@@ -81,7 +89,13 @@ function createQuizNarrator() {
         } else {
           clip.playbackRate = 1.18;
         }
-        clip.play().catch(() => { if (requestRevision === revision) blocked = true; });
+        clip.onended = () => { if (requestRevision === revision) onSpeaking(false); };
+        onSpeaking(true);
+        clip.play().catch(() => {
+          if (requestRevision !== revision) return;
+          blocked = true;
+          onSpeaking(false);
+        });
       }).catch(() => browserVoice(text, requestRevision, isCountdown)); // Keep the game moving if the provider is unavailable.
     },
     setMuted(value) {
