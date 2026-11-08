@@ -117,7 +117,7 @@ describe('the lobby shakes on the beat', () => {
   });
 
   it('kicks on each beat of a drop and settles before the next one', () => {
-    const i = map.beats.findIndex(t => t > 40);
+    const i = map.beats.findIndex((t, k) => t > 40 && Number(map.kick[k]) >= 8 && map.bars[Math.floor((k - map.firstBar) / 4)] === 'd');
     expect(shake(map.beats[i] + 0.005).kick).toBeGreaterThan(0.9);
     expect(shake(map.beats[i + 1] - 0.03).kick).toBeLessThan(0.05);
   });
@@ -157,5 +157,34 @@ describe('the fire pool', () => {
     expect(pool.n).toBe(2);
     expect(pool.items.slice(0, 2).map(x => x.id)).toEqual(['c', 'b']);
     expect(kit.tbsPoolTake(pool)).toBe(a);             // the dead one is reused, not reallocated
+  });
+});
+
+describe('the fire and the moves follow how hard the music hits', () => {
+  const at = t => kit.tbsLocate(map, t);
+  it('keeps the logo fire dark until the big drop at 0:34, then lights it', () => {
+    expect(map.igniteTime).toBeGreaterThan(33.9);
+    expect(map.igniteTime).toBeLessThan(34.4);
+    expect(at(20.5).ignited).toBe(false);
+    expect(at(33.9).ignited).toBe(false);
+    expect(at(map.igniteTime + 0.01).ignited).toBe(true);
+  });
+  it('measures kick, snare and off-beat for every beat', () => {
+    for (const key of ['kick', 'snare', 'offbeat']) {
+      expect(map[key]).toMatch(/^[0-9]+$/);
+      expect(map[key].length).toBe(map.beats.length);
+    }
+  });
+  it('hops higher on a hard kick than on a soft one', () => {
+    const drops = map.beats.map((t, k) => k).filter(k => k > map.igniteBeat && map.bars[Math.floor((k - map.firstBar) / 4)] === 'd' && k + 1 < map.beats.length);
+    const hard = drops.find(k => Number(map.kick[k]) >= 8);
+    const soft = drops.find(k => Number(map.kick[k]) <= 3);
+    const mid = k => (map.beats[k] + map.beats[k + 1]) / 2;
+    expect(kit.tbsPose(at(mid(hard)), false).y).toBeLessThan(kit.tbsPose(at(mid(soft)), false).y);
+  });
+  it('crouches just before the next beat and is down on it', () => {
+    const k = map.beats.findIndex((t, j) => t > 40 && Number(map.kick[j + 1]) >= 6);
+    const before = map.beats[k + 1] - 0.02;
+    expect(kit.tbsPose(at(before), false).y).toBeGreaterThan(0);
   });
 });

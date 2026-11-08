@@ -27,6 +27,7 @@ def main():
     ap.add_argument('--drop', type=float, required=True, help='a downbeat, in seconds')
     ap.add_argument('--bpm', type=float, default=120, help='rough tempo to start from')
     ap.add_argument('--title', default='')
+    ap.add_argument('--ignite', type=float, help='where the fire over the logo lights (seconds); default: the drop')
     args = ap.parse_args()
 
     sr, hop = 22050, 256
@@ -86,6 +87,30 @@ def main():
     # The drop itself is the one moment that must land exactly: take its own kick.
     m = (t_f > beats[drop_beat] - 0.08) & (t_f < beats[drop_beat] + 0.08)
     drop_time = float(t_f[m][np.argmax(flux_f[m])]) if m.any() else float(beats[drop_beat])
+    ignite_beat = int(np.argmin(np.abs(beats - args.ignite))) if args.ignite is not None else drop_beat
+    m = (t_f > beats[ignite_beat] - 0.08) & (t_f < beats[ignite_beat] + 0.08)
+    ignite_time = float(t_f[m][np.argmax(flux_f[m])]) if m.any() else float(beats[ignite_beat])
+
+    # How hard each beat hits, so moves can be as big as the music: the kick on the beat,
+    # the snare/clap on the beat (1-5 kHz noise), and the off-beat hi-hat halfway to the next.
+    mid_f = np.log1p(spec_f[(freqs_f > 1000) & (freqs_f < 5000)] * 10)
+    snare_f = np.r_[0, np.maximum(0, np.diff(mid_f, axis=1)).sum(0)]
+    hat_f = np.log1p(spec_f[freqs_f > 7000] * 10)
+    hat_f = np.r_[0, np.maximum(0, np.diff(hat_f, axis=1)).sum(0)]
+
+    def peak(env, t, w=0.06):
+        mm = (t_f > t - w) & (t_f < t + w)
+        return float(env[mm].max()) if mm.any() else 0.0
+
+    def digits(vals):
+        vals = np.array(vals)
+        lo, hi = np.percentile(vals, 10), np.percentile(vals, 95)
+        return ''.join(str(int(np.clip((v - lo) / (hi - lo + 1e-9), 0, 0.999) * 10)) for v in vals)
+
+    kick_s = digits([peak(flux_f, t) for t in beats])
+    snare_s = digits([peak(snare_f, t) for t in beats])
+    halves = [(beats[k] + beats[k + 1]) / 2 if k + 1 < n else beats[k] + 0.25 for k in range(n)]
+    hat_s = digits([peak(hat_f, t, 0.04) for t in halves])
 
     # Describe each bar: sub-bass decides the kind, loudness the energy.
     hop2 = 512
@@ -113,9 +138,14 @@ def main():
         'bpm': round(60 / np.median(np.diff(beats)), 2),
         'dropBeat': drop_beat,
         'dropTime': round(drop_time, 3),
+        'igniteBeat': ignite_beat,
+        'igniteTime': round(ignite_time, 3),
         'firstBar': first_bar,
         'bars': kinds,
         'energy': energy,
+        'kick': kick_s,
+        'snare': snare_s,
+        'offbeat': hat_s,
         'beats': [round(float(t), 3) for t in beats],
     }, sys.stdout, separators=(',', ':'))
     sys.stdout.write('\n')

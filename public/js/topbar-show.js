@@ -48,6 +48,10 @@ function tbsLocate(map, t, hint) {
   var nextKind = map.bars.charAt(bar + 1) || '';
   var energy = (Number(map.energy.charAt(bar)) || 0) / 9;
   var fallStart = beats[Math.max(0, map.dropBeat - 1)];
+  // How hard this beat hits (0-1), measured from the song: kick and snare on the beat,
+  // hi-hat on the off-beat. Maps without them count every beat as a full hit.
+  var dig = function (str, k, dflt) { var c = str ? str.charAt(k) : ''; return c ? Number(c) / 9 : dflt; };
+  var igniteTime = map.igniteTime != null ? map.igniteTime : map.dropTime;
   var lastBeat = beats[n - 1];
   var stage = t < fallStart ? 'intro' : t < map.dropTime ? 'fall' : t < lastBeat ? 'dance' : 'outro';
   return {
@@ -59,6 +63,10 @@ function tbsLocate(map, t, hint) {
     sectionStart: kind === 'd' && bar > 0 && map.bars.charAt(bar - 1) !== 'd' && beatInBar === 0 &&
       bar !== Math.floor((map.dropBeat - (map.firstBar || 0)) / 4),
     sinceDrop: t - map.dropTime,
+    kick: dig(map.kick, i, 1), snare: dig(map.snare, i, 0.5), offbeat: dig(map.offbeat, i, 0.5),
+    nextKick: dig(map.kick, i + 1, 1),
+    // The fire over the logo stays dark until the big drop.
+    ignited: t >= igniteTime, sinceIgnite: t - igniteTime,
     fallProgress: stage === 'fall' ? (t - fallStart) / Math.max(0.05, map.dropTime - fallStart) : stage === 'intro' ? 0 : 1,
   };
 }
@@ -114,15 +122,20 @@ function tbsPose(loc, reduced) {
     pose.armFree = -40 + 30 * r; pose.elbow = 60 * r; pose.armMic = -10 * r; pose.head = -6 * r;
     pose.mouth = 0.2 + 0.6 * r; pose.eyes = 1 - 0.85 * r; pose.yaw = 0.15 * Math.sin(p * Math.PI * 8);
   } else if (loc.kind === 'd') {
-    var h = 7 + 6 * loc.energy;
-    pose.y = -h * Math.sin(Math.PI * p);     // hop: airborne mid-beat, lands on the beat
-    pose.sy = 1 - 0.13 * hit; pose.sx = 1 + 0.09 * hit;
-    pose.rot = (loc.beatInBar % 2 ? -1 : 1) * 7 * Math.sin(Math.PI * p);
-    pose.armFree = loc.beatInBar % 2 === 0 ? -165 + 30 * p : -60 - 40 * hit; // punch up on 1 and 3
+    // Hop as high as the kick hits: off the floor through the beat, a quick crouch just
+    // before the next one (more for a harder next kick), and down exactly on it.
+    var h = (6 + 7 * loc.energy) * (0.45 + 0.55 * loc.kick);
+    var air = p < 0.85 ? Math.sin(Math.PI * p / 0.85) : 0;
+    var load = p >= 0.85 ? (p - 0.85) / 0.15 : 0;
+    pose.y = -h * air + 3 * loc.nextKick * load;
+    pose.sy = 1 - 0.13 * hit * (0.5 + 0.5 * loc.kick) - 0.05 * load; pose.sx = 1 + 0.09 * hit * (0.5 + 0.5 * loc.kick);
+    pose.rot = (loc.beatInBar % 2 ? -1 : 1) * 7 * air;
+    // The snare drives the arm and the head: a punch up on 1 and 3, a hit down on 2 and 4.
+    pose.armFree = loc.beatInBar % 2 === 0 ? -165 + 30 * p : -60 - (25 + 30 * loc.snare) * hit;
     pose.elbow = loc.beatInBar % 2 === 0 ? 8 : 70 * (1 - hit);
-    pose.head = 8 * hit * (loc.beatInBar % 2 ? -1 : 1);
+    pose.head = (5 + 9 * loc.snare) * hit * (loc.beatInBar % 2 ? -1 : 1);
     pose.mouth = 0.45 + 0.55 * hit;
-    pose.skirt = Math.sin(Math.PI * p);       // flares while she is in the air
+    pose.skirt = air;                         // flares while she is in the air
     if (loc.sectionStart) pose.flip = Math.cos(2 * Math.PI * p); // a quick spin into the drop
     // Travel to a new spot every two bars, stepping on the beats, turned toward where she goes.
     var leg = Math.floor(loc.bar / 2);
@@ -133,10 +146,12 @@ function tbsPose(loc, reduced) {
     pose.travel = from + (to - from) * Math.min(1, step);
     pose.yaw = k < 4 ? 0.35 * Math.sin(Math.PI * x2) : (to > from ? 0.7 : -0.7);
   } else if (loc.kind === 'g') {
-    pose.y = 4 * hit;                          // knees: lowest on the beat
+    // Knees: lowest on the beat (as deep as the kick), with a small pump on the hi-hat between.
+    var pump = Math.max(0, 1 - Math.abs(p - 0.5) * 6);
+    pose.y = (2 + 3 * loc.kick) * hit + 1.8 * loc.offbeat * pump;
     pose.sy = 1 - 0.03 * hit;
     pose.rot = 6 * Math.sin(Math.PI * x2);     // sway over two beats
-    pose.head = 7 * hit;
+    pose.head = (4 + 6 * loc.snare) * hit;
     pose.armFree = -30 + 28 * Math.sin(Math.PI * x2);
     pose.elbow = 30 + 25 * Math.sin(Math.PI * x2);
     pose.mouth = 0.3 + 0.6 * hit;
@@ -176,7 +191,7 @@ function tbsShake(loc, reduced) {
   } else if (loc.riser) {
     amp = 2.4 * (x2 / 4); wiggles = 4; out.kick = 0.3 * (x2 / 4);    // trembling on the 16ths toward the drop
   } else if (loc.kind === 'd') {
-    amp = (2.2 + 1.6 * loc.energy) * hit; out.kick = hit;
+    amp = (2.2 + 1.6 * loc.energy) * hit * (0.4 + 0.6 * loc.kick); out.kick = hit * (0.5 + 0.5 * loc.kick);
   } else if (loc.kind === 'g') {
     amp = 1.4 * hit; out.kick = 0.6 * hit;
   } else {
@@ -220,7 +235,7 @@ function tbsDancerPose(loc, side, reduced) {
   } else if (loc.kind === 'd') {
     var mine = (loc.beatInBar % 2) === side;
     if (mine) {
-      out.y = -(12 + 6 * loc.energy) * Math.sin(Math.PI * p);
+      out.y = -(12 + 6 * loc.energy) * (0.5 + 0.5 * loc.kick) * Math.sin(Math.PI * p);
       out.rot = 9 * dir * Math.sin(Math.PI * p);
       out.px = 10 * dir; out.py = -44 + 10 * p;
     } else {
@@ -673,32 +688,31 @@ function createTopbarShow(opts) {
     var t = loc.t;
     // How hard the fire burns: from a pilot light in the build-up to a blaze in the drops.
     var rate = 0, power = 1;
-    if (!exiting) {
-      if (loc.stage === 'intro') {
-        var dropBar = map.beats[Math.max(0, map.dropBeat - 4)];
-        if (t > dropBar) { var r0 = (t - dropBar) / Math.max(0.5, map.dropTime - dropBar); rate = 30 + 160 * r0; power = 0.5 + 0.5 * r0; }
-      } else if (loc.stage === 'fall') { rate = 220; power = 1.1; }
-      else if (loc.stage === 'outro') { rate = 40; power = 0.6; }
+    var lit = loc.ignited && !exiting;           // dark until the big drop, then it burns
+    if (lit) {
+      if (loc.stage === 'outro') { rate = 40; power = 0.6; }
       else if (loc.riser) { rate = 40 + 180 * ((loc.beatInBar + loc.phase) / 4); power = 0.7 + 0.4 * ((loc.beatInBar + loc.phase) / 4); }
       else if (loc.kind === 'd') { rate = 150 + 110 * loc.energy; power = 1 + 0.35 * loc.energy; }
       else if (loc.kind === 'g') { rate = 90; power = 0.85; }
       else { rate = 28; power = 0.55; }
     }
     if (reduced) rate *= 0.35;
-    spawnFlame(Math.round(rate * dt + Math.random() * 0.5), power, 1);
+    if (rate > 0) spawnFlame(Math.round(rate * dt + Math.random() * 0.5), power, 1);
     // Bursts on the beat: every beat in the drops and grooves, 1 and 3 in the breaks,
     // eighths while a drop builds. The big one is the landing.
-    if (!exiting && !reduced && loc.stage !== 'intro' && loc.i !== fire.lastBeat) {
+    if (lit && !reduced && loc.i !== fire.lastBeat) {
       fire.lastBeat = loc.i;
-      if (loc.i === map.dropBeat) { spawnFlame(110, 1.9, 2.2); spawnEmbers(70, 1.4); }
+      var igniteBeat = map.igniteBeat != null ? map.igniteBeat : map.dropBeat;
+      if (loc.i === igniteBeat) { spawnFlame(130, 2, 2.4); spawnEmbers(90, 1.5); }     // it lights with a blast
       else if (loc.stage === 'dance') {
-        if (loc.kind === 'd') { spawnFlame(Math.round(24 + 20 * loc.energy), 1.55 + 0.4 * loc.energy, 1.4); spawnEmbers(loc.beatInBar === 0 ? 30 : 12, 1.1); }
+        var kk = 0.4 + 0.6 * loc.kick;           // bursts as big as the kick
+        if (loc.kind === 'd') { spawnFlame(Math.round((24 + 20 * loc.energy) * kk), (1.55 + 0.4 * loc.energy) * (0.8 + 0.2 * kk), 1.4); spawnEmbers(Math.round((loc.beatInBar === 0 ? 30 : 12) * kk), 1.1); }
         else if (loc.kind === 'g') { spawnFlame(16, 1.3, 1.2); spawnEmbers(6, 0.9); }
         else if (loc.beatInBar % 2 === 0) { spawnFlame(8, 1, 1); spawnEmbers(4, 0.7); }
       }
     }
     var half = loc.i * 2 + (loc.phase >= 0.5 ? 1 : 0);
-    if (!exiting && !reduced && loc.riser && half !== fire.lastHalf) { fire.lastHalf = half; spawnFlame(10 + Math.round(20 * (loc.beatInBar + loc.phase) / 4), 1.3, 1); }
+    if (lit && !reduced && loc.riser && half !== fire.lastHalf) { fire.lastHalf = half; spawnFlame(10 + Math.round(20 * (loc.beatInBar + loc.phase) / 4), 1.3, 1); }
 
     var dpr = fire.dpr, sp = fire.sprites;
     ctx.setTransform(1, 0, 0, 1, 0, 0);
