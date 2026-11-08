@@ -40,6 +40,7 @@ Before editing, inspect `git status` and the relevant diff. Preserve existing un
 | `src/session/room.js` | Players, reconnect identity, admin, lobby, scores, game registry and startup |
 | `src/engine/engine.js` | `createGame`, `processAction`, `getView`, `checkEnd` |
 | `src/engine/games/` | Plain-object game definitions; `index.js` re-exports them |
+| `src/engine/bots/` | AI opponents: pure `(state, botId) -> action` policies for Gin Rummy and Palace |
 | `src/fetcher/` | Trivia, disk caches, Gemini TTS, question files, Deezer/music playlists |
 | `src/session/stories.js` | Game introduction/narration text |
 | `src/notifications/discord.js` | Room-created webhook |
@@ -92,6 +93,8 @@ The `question-form` game is an optional in-app polling tool. Its definition and 
 ## Frontend conventions
 
 Browser helpers are loaded by plain `<script>` tags and expose globals. Check script order and existing helpers before adding another module or dependency. For UI changes, verify the shared display and phone layout, including reconnect and finished-game states when affected.
+
+A lone player can play Gin Rummy and Palace against AI seats: `GAME_REGISTRY` entries with `ai` metadata, `room.bots` (`bot_N` ids, never in `room.players`, so they get no session score), and `scheduleBotTurn` in `ws-adapter.js`, which plays each AI move after a short pause through the same `applyGameAction` path as people. Keep bot moves legal: `tests/engine/bots.test.js` plays full bot games and fails on any engine error.
 
 Gin Rummy and Palace use the card-table kit `public/js/table-cards.js` + `public/css/table-cards.css` (vector cards, stacks, 2-row rack/fan, tap / swipe-up / drag gestures, hand ordering), shared by phone and TV. Other card rendering lives in `public/js/cards.js` with SVGs/audio under `public/cards/`. Engine suits are `h`, `d`, `c`, `s`; ranks are numeric. Shithead's Ace-high rank 14 maps to the same card image as rank 1. Reuse the renderer and existing audio helpers.
 

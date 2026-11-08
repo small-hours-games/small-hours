@@ -722,3 +722,71 @@ describe('ws-adapter - countdown timing', () => {
     expect(lastState(ws)).toMatchObject({ phase: 'question', timeLeft: 15, timeTotal: 15 });
   });
 });
+
+// -----------------------------------------------------------------------
+// AI seats (solo card games)
+// -----------------------------------------------------------------------
+import { nextBotAction } from '../../src/engine/bots/index.js';
+
+describe('ws-adapter - AI opponents for a lone player', () => {
+  let env;
+  afterEach(() => { vi.useRealTimers(); env.manager.destroy(); });
+
+  it('plays Gin Rummy against one AI seat to the end and scores only the person', () => {
+    vi.useFakeTimers();
+    env = makeEnv();
+    const ws = connectPlayer(env, 'Alice');
+    const me = getPlayerId(ws);
+    ws.emit('message', JSON.stringify({ type: 'START_MINI_GAME', gameType: 'gin-rummy', config: { targetScore: 40 } }));
+    return vi.waitFor(() => expect(env.room.game).not.toBeNull()).then(() => {
+      const start = ws._sent.find(m => m.type === 'GAME_STATE');
+      expect(start.playerNames.bot_1).toBe('Robo');
+      expect(env.room.game.state.players).toEqual([me, 'bot_1']);
+
+      // Alice plays like the bot would; the AI seat moves on its own timer.
+      for (let step = 0; step < 5000 && env.room.game; step++) {
+        const s = env.room.game.state;
+        const mine = nextBotAction('gin-rummy', s, [me]);
+        if (mine) {
+          const { playerId, ...action } = mine;
+          ws.emit('message', JSON.stringify({ type: 'GAME_ACTION', action }));
+        } else if (s.phase === 'scoring') {
+          ws.emit('message', JSON.stringify({ type: 'GAME_ACTION', action: { type: 'nextHand' } }));
+        } else {
+          vi.advanceTimersByTime(1200);
+        }
+      }
+      expect(env.room.game).toBeNull();
+      expect(env.room.bots).toEqual([]);
+      const lobby = ws._sent.filter(m => m.type === 'LOBBY_UPDATE').at(-1).state;
+      expect(lobby.players.map(p => p.playerId)).toEqual([me]);
+      expect(lobby.players[0].sessionScore).toBeGreaterThanOrEqual(0);
+    });
+  });
+
+  it('offers Palace with 1-4 AI seats to one player and stops the AI on return to lobby', async () => {
+    vi.useFakeTimers();
+    env = makeEnv();
+    const ws = connectPlayer(env, 'Alice');
+    expect(env.room.availableGames().find(g => g.type === 'shithead')?.vsAi).toBe(true);
+    ws.emit('message', JSON.stringify({ type: 'START_MINI_GAME', gameType: 'shithead', config: { bots: 9 } }));
+    await vi.waitFor(() => expect(env.room.game).not.toBeNull());
+    expect(env.room.bots.map(b => b.playerId)).toEqual(['bot_1', 'bot_2', 'bot_3', 'bot_4']);
+
+    ws.emit('message', JSON.stringify({ type: 'RETURN_TO_LOBBY' }));
+    expect(env.room.game).toBeNull();
+    const count = ws._sent.length;
+    vi.advanceTimersByTime(5000);
+    expect(ws._sent.length).toBe(count);
+  });
+
+  it('adds no AI seats once a second person is in the room', async () => {
+    env = makeEnv();
+    const a = connectPlayer(env, 'Alice');
+    connectPlayer(env, 'Bob');
+    a.emit('message', JSON.stringify({ type: 'START_MINI_GAME', gameType: 'shithead', config: { bots: 2 } }));
+    await vi.waitFor(() => expect(env.room.game).not.toBeNull());
+    expect(env.room.bots).toEqual([]);
+    expect(env.room.game.state.players).toHaveLength(2);
+  });
+});

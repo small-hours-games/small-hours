@@ -988,6 +988,41 @@
       return 'Beat or match ' + rankLbl + '+ (2 resets, 7 lowers, 10 burns)';
     }
 
+    // Scale the card table so all of it fits the screen: smaller on a 720p TV,
+    // bigger on 1080p. CSS zoom changes layout size (unlike transform), so the
+    // page never scrolls under it.
+    function tcFitTv() {
+      const content = document.getElementById('gameContent');
+      const table = content && content.querySelector('.tc-tv');
+      if (!table) return;
+      const availW = content.clientWidth;
+      const availH = window.innerHeight - content.getBoundingClientRect().top - 12;
+      if (availW < 200 || availH < 200) return;
+      // Measure the natural size once, unzoomed. The seat row is centered, so when
+      // it is too wide it spills past both edges: measure its children, not scrollWidth.
+      table.classList.add('tc-tv-fit');
+      table.style.zoom = 1;
+      table.style.width = availW + 'px';
+      table.style.minHeight = '0px';
+      const pad = parseFloat(getComputedStyle(table).paddingLeft) * 2 || 0;
+      let left = Infinity;
+      let right = -Infinity;
+      for (const part of table.children) {
+        for (const el of part.classList.contains('tc-tv-row') ? part.children : [part]) {
+          const r = el.getBoundingClientRect();
+          left = Math.min(left, r.left);
+          right = Math.max(right, r.right);
+        }
+      }
+      const natW = Math.max(right - left + pad, 320);
+      const natH = table.scrollHeight;
+      const zoom = Math.max(0.5, Math.min(1.6, availW / natW, availH / natH));
+      table.style.zoom = zoom.toFixed(3);
+      table.style.width = (availW / zoom) + 'px';
+      table.style.minHeight = Math.floor(availH / zoom) + 'px';
+    }
+    window.addEventListener('resize', tcFitTv);
+
     // ===== Card table on the TV: Gin Rummy + Palace (kit in /js/table-cards.js) =====
     // Only shared fields are used here; per-player data never reaches host sockets.
     function tvFanHtml(count, size, max) {
@@ -1064,9 +1099,8 @@
       let html = '<div class="tc-tv tc-felt">';
       html += '<div class="tc-tv-status"><span class="tc-dot' + (playing ? ' tc-dot-live' : '') + '"></span>' +
         (msg.handNumber ? '<span class="tc-mono">Hand ' + tcNum(msg.handNumber) + '</span> · ' : '') + escapeHtml(status) + '</div>';
-      if (pids[1]) html += '<div class="tc-tv-seats">' + seat(pids[1]) + '</div>';
-
       if (playing) {
+        html += '<div class="tc-tv-row"><div class="tc-tv-col">' + (pids[1] ? seat(pids[1]) : '') + '</div><div class="tc-tv-mid">';
         const discardCount = tcNum(msg.discardCount != null ? msg.discardCount : (msg.discardTop ? 1 : 0));
         const preview = (msg.discardPreview && msg.discardPreview.length) ? msg.discardPreview : (msg.discardTop ? [msg.discardTop] : []);
         html += '<div class="tc-tv-center">' +
@@ -1085,6 +1119,7 @@
             : who + ' discarded' + (msg.discardTop && msg.discardTop.id === last.cardId ? ' ' + tcCardShort(msg.discardTop) : '');
           html += '<div class="tc-tv-banner">' + escapeHtml(text) + '</div>';
         }
+        html += '</div><div class="tc-tv-col">' + (pids[0] ? seat(pids[0]) : '') + '</div></div>';
       } else {
         const hr = msg.handResult || {};
         const labels = { knock: 'Knock', undercut: 'Undercut!', gin: 'Gin!', bigGin: 'Big Gin!', cancelled: 'Stock ran out' };
@@ -1103,11 +1138,12 @@
           html += tvRevealHtml(names[oppId] || 'Player', msg.opponentMelds, msg.opponentDeadwood, msg.opponentLayoffs);
         }
         html += '</div>';
+        html += '<div class="tc-tv-seats">' + pids.map(seat).join('') + '</div>';
       }
 
-      if (pids[0]) html += '<div class="tc-tv-seats">' + seat(pids[0]) + '</div>';
       html += '</div>';
       content.innerHTML = html;
+      tcFitTv();
     }
 
     function renderShithead(msg) {
@@ -1153,11 +1189,11 @@
         return tvSeatHtml(p.playerId, names, { turn, out, tag, tagClass, cards });
       };
 
-      const top = players.slice(0, Math.ceil(players.length / 2));
-      const bottom = players.slice(Math.ceil(players.length / 2));
+      const left = players.slice(0, Math.ceil(players.length / 2));
+      const right = players.slice(Math.ceil(players.length / 2));
       let html = '<div class="tc-tv tc-felt' + (many ? ' tc-tv-many' : '') + '">';
       html += '<div class="tc-tv-status"><span class="tc-dot' + (msg.phase === 'play' ? ' tc-dot-live' : '') + '"></span>' + escapeHtml(status) + '</div>';
-      html += '<div class="tc-tv-seats">' + top.map(seat).join('') + '</div>';
+      html += '<div class="tc-tv-row"><div class="tc-tv-col">' + left.map(seat).join('') + '</div><div class="tc-tv-mid">';
 
       if (msg.phase === 'finished') {
         html += '<div class="tc-tv-result"><div class="tc-sheet-kicker">Final standings</div><div class="tc-standings">' +
@@ -1180,22 +1216,25 @@
           '<div class="tc-well"><span class="tc-well-label">Play pile</span>' +
             renderTableStack(pilePreview, pileCount || pilePreview.length, { size: pileSize, emptyLabel: 'Empty' }) +
             '<span class="tc-count">' + pileCount + (pileCount === 1 ? ' card' : ' cards') + '</span></div>' +
-          '<div class="tc-tv-side">' + side + '</div>' +
-        '</div>';
+        '</div>' +
+        '<div class="tc-tv-side">' + side + '</div>';
       } else {
         html += '<div class="tc-tv-banner">Put your strongest cards (2, 10, A) face-up, then tap Done on your phone</div>';
       }
 
-      if (bottom.length) html += '<div class="tc-tv-seats">' + bottom.map(seat).join('') + '</div>';
+      html += '</div><div class="tc-tv-col">' + right.map(seat).join('') + '</div></div>';
       html += '</div>';
       content.innerHTML = html;
+      tcFitTv();
     }
 
+
     function playerAvatarHtml(playerId) {
-      const avatar = (state.playerAvatars || {})[playerId] ||
+      const avatar = (String(playerId).startsWith('bot_') ? '\u{1F916}' : null) || (state.playerAvatars || {})[playerId] ||
         (state.players || []).find(p => p.playerId === playerId)?.avatar || '👤';
       return '<span class="inline-player-avatar" aria-hidden="true">' + escapeHtml(avatar) + '</span> ';
     }
+
 
     // Normalize each game's score shape into one unified scoreboard model.
     // Returns { roundLabel, status, entries:[{id,name,valueText,rank,isOut}] }.

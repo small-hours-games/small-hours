@@ -382,6 +382,40 @@ describe('Room - startGame (registry)', () => {
     expect(room.availableGames().map(g => g.type)).not.toContain('gin-rummy');
     await expect(room.startGame('gin-rummy', {})).rejects.toThrow(/supports at most 2 players/);
   });
+
+  it('offers Gin Rummy and Palace vs AI to a lone player, with AI seats only then', async () => {
+    const room = new Room('TEST');
+    room.addPlayer('Alice');
+    const solo = Object.fromEntries(room.availableGames().map(g => [g.type, g]));
+    expect(solo['gin-rummy'].vsAi).toBe(true);
+    expect(solo.shithead.vsAi).toBe(true);
+    expect(solo.quiz.vsAi).toBeUndefined();
+    expect(solo.spy).toBeUndefined();
+
+    await room.startGame('gin-rummy', { bots: 3 });
+    expect(room.bots.map(b => b.playerId)).toEqual(['bot_1']);
+    room.endGame();
+    expect(room.bots).toEqual([]);
+
+    await room.startGame('shithead', {});
+    expect(room.bots).toHaveLength(2); // default
+    room.endGame();
+    await room.startGame('shithead', { bots: 0 });
+    expect(room.bots).toHaveLength(1); // Palace needs a second seat
+    room.endGame();
+
+    room.addPlayer('Bob');
+    expect(room.availableGames().find(g => g.type === 'shithead').vsAi).toBeUndefined();
+    await room.startGame('shithead', { bots: 3 });
+    expect(room.bots).toEqual([]);
+  });
+
+  it('caps Palace AI seats so every seat gets its 9 cards', () => {
+    const room = new Room('TEST');
+    const entry = { ai: { default: 2, max: 9, cardsPerSeat: 9 }, minPlayers: 2, maxPlayers: 10 };
+    expect(room.aiSeatCount(entry, 1, { bots: 9 })).toBe(4);            // 52 / 9 = 5 seats
+    expect(room.aiSeatCount(entry, 1, { bots: 9, decks: 2 })).toBe(9);  // 11 seats, AI max 9
+  });
 });
 
 // -----------------------------------------------------------------------

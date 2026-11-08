@@ -177,12 +177,15 @@ function tcMeldMap(melds) {
  * Lay out a hand as a 2-row rack (rows of up to ~7) or a single curved fan.
  * Each card sits in a .tc-slot positioned by inline styles so the card itself
  * stays free to lift when selected.
- * opts: layout ('rack'|'fan'), width (px available), size, cardOpts(card) -> renderTableCard opts
+ * opts: layout ('rack'|'fan'), width (px available), size, cardW (px, overrides the
+ * size's width so phones can fit cards to the screen), cardOpts(card) -> renderTableCard opts
  */
 function renderHandRack(cards, opts) {
   opts = opts || {};
   var size = opts.size || 'hand';
-  var cardW = { sm: 44, md: 68, hand: 74, lg: 88, xl: 120 }[size] || 74;
+  var cardW = opts.cardW || { sm: 44, md: 68, hand: 74, lg: 88, xl: 120 }[size] || 74;
+  var cardH = cardW * 1.42;
+  var sized = opts.cardW ? '--tc-w:' + Math.round(cardW) + 'px' : '';
   var width = Math.max(cardW, opts.width || 340);
   var n = cards.length;
   if (!n) return '<div class="tc-rack tc-rack-empty">' + tcEscape(opts.emptyText || 'No cards') + '</div>';
@@ -195,14 +198,19 @@ function renderHandRack(cards, opts) {
     var count = row.length;
     var step = count > 1 ? Math.min(cardW * 0.78, (width - cardW) / (count - 1)) : 0;
     var spread = step * (count - 1) + cardW;
-    html += '<div class="tc-rack-row" style="width:' + Math.round(spread) + 'px">';
+    var rowStyle = 'width:' + Math.round(spread) + 'px';
+    if (opts.cardW) {
+      rowStyle += ';height:' + Math.round(cardH + (opts.layout === 'fan' ? 16 : 0)) + 'px';
+      if (r > 0 && opts.layout !== 'fan') rowStyle += ';margin-top:' + Math.round(-cardH * 0.56) + 'px';
+    }
+    html += '<div class="tc-rack-row" style="' + rowStyle + '">';
     row.forEach(function (card, i) {
       var norm = count > 1 ? i / (count - 1) - 0.5 : 0;
       var rot = opts.layout === 'fan' ? norm * Math.min(18, count * 2) : norm * 4;
       var drop = opts.layout === 'fan' ? Math.pow(norm * 2, 2) * 14 : Math.pow(norm * 2, 2) * 3;
       var slotStyle = 'left:' + Math.round(i * step) + 'px;transform:translateY(' + drop.toFixed(1) +
         'px) rotate(' + rot.toFixed(2) + 'deg);z-index:' + (10 + i);
-      var cardOpts = Object.assign({ size: size }, opts.cardOpts ? opts.cardOpts(card) : {});
+      var cardOpts = Object.assign({ size: size }, sized ? { style: sized } : {}, opts.cardOpts ? opts.cardOpts(card) : {});
       html += '<div class="tc-slot" style="' + slotStyle + '">' + renderTableCard(card, cardOpts) + '</div>';
     });
     html += '</div>';

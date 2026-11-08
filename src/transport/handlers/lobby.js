@@ -135,6 +135,7 @@ export function handleReturnToLobby(ws, meta, room, msg, ctx) {
   }
 
   cancelPhaseTimer(room.code);
+  ctx.cancelBotTurn?.(room.code);
   roomGameTypes.delete(room.code);
   room.endGame();
   broadcastToRoom(room.code, { type: 'LOBBY_UPDATE', state: room.getState() });

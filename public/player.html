@@ -622,10 +622,19 @@
       return n + ' vote' + (n === 1 ? '' : 's');
     }
 
+    // Alone in the room: card games can be played against AI opponents.
+    function playsVsAi(g) {
+      return !!g.aiMax && connectedCount() === 1;
+    }
+
+    function gameBlurb(g) {
+      return playsVsAi(g) ? g.soloBlurb : g.blurb;
+    }
+
     function gameBlocker(g) {
       if (!g.hasUi) return 'Soon';
       const n = connectedCount();
-      if (n < g.min) return g.min + '+ players';
+      if (n < g.min && !playsVsAi(g)) return g.min + '+ players';
       if (n > g.max) return 'Max ' + g.max;
       return null;
     }
@@ -657,7 +666,7 @@
           '" aria-pressed="' + isMine + '" ' + (blocker ? 'disabled' : 'onclick="suggestGame(this.dataset.game)"') + '>' +
           '<span class="lobby-game-icon" aria-hidden="true">' + g.icon + '</span>' +
           '<span class="lobby-game-info"><span class="lobby-game-name">' + escapeHtml(g.label) + '</span>' +
-          '<span class="lobby-game-description">' + escapeHtml(blocker || g.blurb) + '</span></span>' +
+          '<span class="lobby-game-description">' + escapeHtml(blocker || gameBlurb(g)) + '</span></span>' +
           '<span class="lobby-vote-side"><span class="lobby-vote-count">' + count + '</span>' +
           (badgeText ? '<span class="lobby-leading-label">' + badgeText + '</span>' : '') + '</span></button>';
       }).join('') + '</div>';
@@ -684,6 +693,15 @@
       }
 
       let html = '';
+      const vsAi = leader && playsVsAi(leader);
+      if (vsAi && leader.aiMax > 1) {
+        const seats = state.aiSeats || 2;
+        html += '<div class="ai-seat-picker"><span class="ai-seat-label">AI opponents</span><div class="grid grid-cols-4 gap-2">' +
+          Array.from({ length: leader.aiMax }, (_, i) => i + 1).map(n =>
+          '<button onclick="setAiSeats(' + n + ')" aria-pressed="' + (seats === n) + '" class="p-2.5 rounded-xl border-2 text-sm font-extrabold transition ' +
+          (seats === n ? 'bg-sky-50 border-sky-500 text-sky-900 shadow-sm' : 'bg-white/90 border-sky-200 text-slate-700') + '">' +
+          '\u{1F916} ' + n + '</button>').join('') + '</div></div>';
+      }
       if (leader && leader.type === 'shithead') {
         html += '<div class="grid grid-cols-3 gap-2">' + [1, 2, 4].map(n =>
           '<button onclick="setShDecks(' + n + ')" class="p-2.5 rounded-xl border-2 text-xs font-extrabold transition ' +
@@ -694,6 +712,7 @@
       if (leader) {
         const label = leader.type === 'quiz' && !state.votingActive
           ? 'Start Quiz &rarr; Pick Topic'
+          : vsAi ? 'Play ' + escapeHtml(leader.label) + ' vs AI'
           : 'Start ' + escapeHtml(leader.label) + ' Now';
         html += '<button onclick="startGame()" id="startGameBtn" class="start-game-cta">' +
           '<i class="fa-solid fa-play text-base"></i> <span>' + leader.icon + ' ' + label + '</span></button>';
@@ -702,6 +721,11 @@
           '<i class="fa-solid fa-hand-pointer"></i> <span>Tap a game below to enable Start</span></button>';
       }
       controls.innerHTML = html;
+    }
+
+    function setAiSeats(n) {
+      state.aiSeats = n;
+      renderAdminControls();
     }
 
     function setShDecks(n) {
@@ -713,6 +737,8 @@
     function startGame() {
       const config = {};
       if (state.leadingGame === 'shithead') config.decks = state.shitheadDecks || 1;
+      const leader = shGame(state.leadingGame);
+      if (playsVsAi(leader)) config.bots = Math.min(state.aiSeats || 2, leader.aiMax);
       send({ type: 'START_VOTED_GAME', config });
     }
 
@@ -1318,6 +1344,24 @@
     }
 
     // ===== Card table: Palace + Gin Rummy (rendering kit in /js/table-cards.js) =====
+    // Card sizes depend on the screen, so redraw the open card table on rotate/resize.
+    let tcResizeTimer = null;
+    window.addEventListener('resize', () => {
+      clearTimeout(tcResizeTimer);
+      tcResizeTimer = setTimeout(() => {
+        if (isSectionActive('ginRummySection') && state.grLastMsg) renderGinRummyState(state.grLastMsg);
+        if (isSectionActive('shitheadSection') && state.shLastMsg) renderShitheadState(state.shLastMsg);
+      }, 150);
+    });
+
+    // The card screen fills the rest of the viewport so the hand zone ends at the bottom.
+    function tcFitScreen(sectionId) {
+      const el = document.getElementById(sectionId);
+      if (!el || !el.classList.contains('active')) return;
+      const pad = parseFloat(getComputedStyle(el.parentElement).paddingBottom) || 0;
+      document.documentElement.style.setProperty('--tc-screen-top', Math.round(el.getBoundingClientRect().top + window.scrollY + pad) + 'px');
+    }
+
     function tcLayout() {
       if (!state.tcLayout) {
         try { state.tcLayout = localStorage.getItem('sh_card_layout') || 'rack'; } catch { state.tcLayout = 'rack'; }
@@ -1333,11 +1377,19 @@
       const w = el && el.clientWidth ? el.clientWidth : window.innerWidth - 24;
       return Math.max(240, Math.min(w, 560) - 6);
     }
+    // Hand cards grow with the phone: taller screens get bigger cards, and a row
+    // always shows at least ~4 cards side by side.
+    function tcHandCardW(id) {
+      const byHeight = Math.round(window.innerHeight * 0.1);
+      const byWidth = Math.floor(tcHandWidth(id) / 4.2);
+      return Math.max(62, Math.min(92, byHeight, byWidth));
+    }
     function tcName(id, msg) {
       const names = (msg && msg.playerNames) || state.playerNames || {};
       return names[id] || 'Player';
     }
     function tcAvatar(id) {
+      if (String(id).startsWith('bot_')) return '\u{1F916} ';
       const p = (state.players || []).find(x => x.playerId === id);
       return p && p.avatar ? p.avatar + ' ' : '';
     }
@@ -1420,6 +1472,7 @@
 
     function renderShitheadState(msg) {
       state.shLastMsg = msg;
+      tcFitScreen('shitheadSection');
       const zone = shZone(msg);
       const pileCount = msg.pileCount || 0;
       const myTurn = msg.phase === 'play' && !!msg.isMyTurn;
@@ -1509,7 +1562,7 @@
       }
       const handEl = document.getElementById('shHand');
       handEl.innerHTML = renderHandRack(ordered, {
-        layout: tcLayout(), width: tcHandWidth('shHand'), cardOpts: rackOpts,
+        layout: tcLayout(), width: tcHandWidth('shHand'), cardW: tcHandCardW('shHand'), cardOpts: rackOpts,
         emptyText: msg.phase === 'finished' ? 'Game over' : 'No cards left',
       });
       attachHandGestures(handEl, {
@@ -1723,6 +1776,7 @@
 
     function renderGinRummyState(msg) {
       state.grLastMsg = msg;
+      tcFitScreen('ginRummySection');
       const me = state.playerId;
       const oppId = grOpponentId(msg);
       const playing = msg.phase !== 'scoring' && msg.phase !== 'finished';
@@ -1773,7 +1827,7 @@
       const handEl = document.getElementById('grHand');
       handEl.hidden = !playing;
       handEl.innerHTML = renderHandRack(ordered, {
-        layout: tcLayout(), width: tcHandWidth('grHand'),
+        layout: tcLayout(), width: tcHandWidth('grHand'), cardW: tcHandCardW('grHand'),
         cardOpts: c => ({ selected: state.grSelectedCard === c.id, meld: meldOf[c.id], isNew: msg.lastDrawnCardId === c.id }),
       });
       attachHandGestures(handEl, {
