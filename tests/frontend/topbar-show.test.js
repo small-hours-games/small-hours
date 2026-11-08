@@ -103,3 +103,46 @@ describe('the show follows the song', () => {
     expect(at(map.beats[map.beats.length - 1] + 0.1).stage).toBe('outro');
   });
 });
+
+describe('the lobby shakes on the beat', () => {
+  const at = t => kit.tbsLocate(map, t);
+  const shake = t => kit.tbsShake(at(t), false);
+  const size = s => Math.hypot(s.vx, s.vy);
+
+  it('stays still in the intro and rocks hardest on the landing', () => {
+    expect(size(shake(10))).toBe(0);
+    let landing = 0;
+    for (let t = map.dropTime + 0.02; t < map.dropTime + 0.4; t += 0.02) landing = Math.max(landing, size(shake(t)));
+    expect(landing).toBeGreaterThan(4);
+  });
+
+  it('kicks on each beat of a drop and settles before the next one', () => {
+    const i = map.beats.findIndex(t => t > 40);
+    expect(shake(map.beats[i] + 0.005).kick).toBeGreaterThan(0.9);
+    expect(shake(map.beats[i + 1] - 0.03).kick).toBeLessThan(0.05);
+  });
+
+  it('only breathes in a break, and does nothing with reduced motion', () => {
+    const i = map.beats.findIndex(t => t > 72);
+    expect(size(shake(map.beats[i] + 0.05))).toBe(0);
+    expect(kit.tbsShake(at(40.2), true)).toEqual({ vx: 0, vy: 0, kick: 0 });
+  });
+});
+
+describe('the lion and the frog dance under the QR code', () => {
+  const at = t => kit.tbsLocate(map, t);
+  it('answer each other in a drop: the lion hops on 1 and 3, the frog on 2 and 4', () => {
+    const i = map.beats.findIndex((t, k) => t > 40 && (k - map.firstBar) % 4 === 0);
+    const mid = k => (map.beats[k] + map.beats[k + 1]) / 2;
+    expect(kit.tbsDancerPose(at(mid(i)), 0, false).y).toBeLessThan(-8);
+    expect(kit.tbsDancerPose(at(mid(i)), 1, false).y).toBeGreaterThan(-1);
+    expect(kit.tbsDancerPose(at(mid(i + 1)), 1, false).y).toBeLessThan(-8);
+    expect(kit.tbsDancerPose(at(mid(i + 1)), 0, false).y).toBeGreaterThan(-1);
+  });
+  it('both jump when she lands, and stand still with reduced motion', () => {
+    const t = map.dropTime + 0.25;
+    expect(kit.tbsDancerPose(at(t), 0, false).y).toBeLessThan(-15);
+    expect(kit.tbsDancerPose(at(t), 1, false).y).toBeLessThan(-15);
+    expect(kit.tbsDancerPose(at(t), 0, true).y).toBe(0);
+  });
+});

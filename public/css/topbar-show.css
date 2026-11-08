@@ -46,6 +46,17 @@
   mix-blend-mode: screen;
 }
 
+/* Fire from behind the Smallhours logo up to the top of the bar (drawn on a canvas). */
+.tbs-fire { position: absolute; top: 0; left: 0; width: 0; height: 100%; pointer-events: none; }
+
+/* The logo pulses with the beat while the fire burns. */
+.studio-header .brand-logo { transform-origin: 50% 70%; }
+.studio-header.tbs-on .brand-logo {
+  transform: scale(calc(1 + var(--tbs-logo, 0) * 0.07));
+  filter: drop-shadow(0 2px 2px rgba(11, 21, 48, 0.9))
+    drop-shadow(0 0 calc(var(--tbs-heat, 0) * 5px + var(--tbs-logo, 0) * 12px) rgba(255, 130, 20, 0.85));
+}
+
 /* Equalizer along the bottom edge. */
 .tbs-eq {
   position: absolute; left: 0; right: 0; bottom: 0; height: 30px;
@@ -118,6 +129,45 @@
   20% { opacity: 1; }
   to { opacity: 0; transform: translate(26px, -48px) rotate(14deg) scale(1.1); }
 }
+
+/* The lobby shakes along: vote options buzz (neighbours in opposite directions) and the
+   panels move with them, a little less. The QR panel only swells, so it stays scannable. */
+.tbs-lobby-live .lobby-game-option {
+  transform: translate(calc(var(--tbs-vx, 0) * 1px), calc(var(--tbs-vy, 0) * 1px)) scale(calc(1 + var(--tbs-kick, 0) * 0.025));
+  filter: brightness(calc(1 + var(--tbs-kick, 0) * 0.1));
+  will-change: transform;
+}
+.tbs-lobby-live .lobby-game-option:nth-child(even) {
+  transform: translate(calc(var(--tbs-vx, 0) * -1px), calc(var(--tbs-vy, 0) * 1px)) scale(calc(1 + var(--tbs-kick, 0) * 0.025));
+}
+.tbs-lobby-live .lobby-panel:not(.invite-panel) {
+  transform: translate(calc(var(--tbs-vx, 0) * 0.5px), calc(var(--tbs-vy, 0) * -0.5px)) scale(calc(1 + var(--tbs-kick, 0) * 0.006));
+  will-change: transform;
+}
+.tbs-lobby-live .invite-panel { transform: scale(calc(1 + var(--tbs-kick, 0) * 0.004)); }
+
+/* The lion and the frog leave their duel and dance under the QR code while the song plays. */
+.tbs-dancers { display: none; }
+.tbs-lobby-live .tbs-dancers {
+  display: flex; justify-content: center; align-items: flex-end; gap: 4px;
+  width: 100%; height: 180px; margin-top: auto; padding-top: 12px;
+  perspective: 900px; pointer-events: none;
+  animation: tbs-dancers-in 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+@keyframes tbs-dancers-in { from { opacity: 0; transform: translateY(24px) scale(0.8); } }
+.tbs-dancer-slot { position: relative; width: 150px; height: 176px; }
+.tbs-dancers .duel-fighter {
+  position: absolute; left: 50%; right: auto; bottom: 0;
+  margin-left: -77.5px;
+  transition: none; transform-origin: 50% 100%;
+}
+.tbs-dancers .duel-fighter-lion { transform: rotateY(16deg) scale(0.95); }
+.tbs-dancers .duel-fighter-frog { transform: rotateY(-16deg) scale(0.95); }
+.tbs-dancers .fighter-3d-rig { animation: none; transform-origin: 50% 100%; will-change: transform; }
+.tbs-dancers .fighter-arm-deck, .tbs-dancers .fighter-callout { display: none; }
+.tbs-dancers .fighter-arm-throw { transition: transform 0.08s linear; }
+/* No card duel while they are dancing. */
+.tbs-lobby-live .mascot-duel-stage { display: none !important; }
 
 @media (prefers-reduced-motion: reduce) {
   .studio-header > .max-w-7xl { transition: none; }
