@@ -8,10 +8,11 @@ const GEMINI_TTS_MODELS = [
   { name: 'gemini-3.8-flash-lite-tts', supportsStylePrompt: false },
 ];
 
-export const GAME_SHOW_STYLE = 'Perform as a confident television quiz-show host with a deeper, lower-pitched male voice. Use a brisk, energetic, fast-paced delivery so questions are read quickly and clearly without dragging. Read only the supplied transcript exactly as written, in its original language. Do not add commentary, clues, extra words, music, or sound effects.';
+export const GAME_SHOW_STYLE = 'Perform as a confident television quiz-show host with a deeper, lower-pitched male voice. Speak with energy but at a clear, natural pace, pausing briefly at commas and question marks. Read only the supplied transcript exactly as written, in its original language. Do not add commentary, clues, extra words, music, or sound effects.';
 
 const DEFAULT_VOICE = 'Enceladus';
 const GAME_SHOW_VOICE = 'Charon';
+const C2PA_TAIL_BYTES = 16 * 1024;
 
 /**
  * Extract pure 16-bit PCM audio bytes from a Gemini inlineData buffer.
@@ -53,8 +54,11 @@ export function extractCleanPcm(rawBuffer) {
     }
   }
 
-  // Safety net: strip any trailing C2PA / JUMBF watermark manifest bytes
-  const c2paIdx = pcm.indexOf('c2pa');
+  // Safety net: strip a trailing C2PA / JUMBF watermark manifest. Only look in
+  // the tail so audio samples that happen to spell "c2pa" never cut the clip.
+  const tailStart = Math.max(0, pcm.length - C2PA_TAIL_BYTES);
+  const tailIdx = pcm.subarray(tailStart).indexOf('c2pa');
+  const c2paIdx = tailIdx === -1 ? -1 : tailStart + tailIdx;
   if (c2paIdx !== -1) {
     // The JUMBF box header starts up to 64 bytes before the "c2pa" label
     const cut = Math.max(0, (c2paIdx - 64) & ~1);
@@ -151,7 +155,9 @@ export async function synthesizeSpeech(text, options = {}) {
       const part = candidate?.content?.parts?.[0];
 
       if (!part?.inlineData?.data) {
-        return { ok: false, error: { code: 'NO_AUDIO', message: 'Response did not contain audio data' } };
+        // Preview TTS models sometimes answer without audio; try the next model.
+        lastError = { code: 'NO_AUDIO', message: 'Response did not contain audio data' };
+        continue;
       }
 
       const raw = Buffer.from(part.inlineData.data, 'base64');

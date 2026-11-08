@@ -14,7 +14,6 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const PUBLIC_DIR = path.resolve(__dirname, '../../public');
 const MUSIC_DIR = path.resolve(__dirname, '../../music');
-const GAME_TRACK = /^quiz-and-cards/i; // played during card games and Quiz, never in the lobby
 const AUDIO_DIR = path.resolve(__dirname, '../../data/audio');
 
 // Room-flood protection
@@ -38,19 +37,20 @@ async function servePage(res, file) {
 }
 
 export function setupRoutes(app, manager) {
-  const playlist = keep => async (_req, res) => {
+  // Each folder in music/ is one playlist.
+  const playlist = folder => async (_req, res) => {
     try {
-      const entries = await fs.promises.readdir(MUSIC_DIR, { withFileTypes: true });
-      const tracks = entries.filter(entry => entry.isFile() && /\.(mp3|ogg|m4a|wav)$/i.test(entry.name) && keep(entry.name))
-        .map(entry => '/music/' + encodeURIComponent(entry.name)).sort();
+      const entries = await fs.promises.readdir(path.join(MUSIC_DIR, folder), { withFileTypes: true });
+      const tracks = entries.filter(entry => entry.isFile() && /\.(mp3|ogg|m4a|wav)$/i.test(entry.name))
+        .map(entry => `/music/${folder}/${encodeURIComponent(entry.name)}`).sort();
       res.json({ tracks });
     } catch (err) {
       if (err.code === 'ENOENT') return res.json({ tracks: [] });
       res.status(500).json({ error: 'Could not load music' });
     }
   };
-  app.get('/api/lobby-music', playlist(name => !GAME_TRACK.test(name)));
-  app.get('/api/game-music', playlist(name => GAME_TRACK.test(name)));
+  app.get('/api/lobby-music', playlist('lobby'));
+  app.get('/api/game-music', playlist('quiz-card'));
   app.use('/music', express.static(MUSIC_DIR, { index: false, dotfiles: 'deny' }));
 
   // Health check
@@ -136,7 +136,7 @@ export function setupRoutes(app, manager) {
     res.json({ url: `/api/audio/tts/${result.id}`, cached: result.cached });
   });
 
-  // Serve generated or cached TTS audio (tts_<id>.wav, tts_<id>.mp3, or <otdb_id>.wav)
+  // Serve generated TTS audio (tts_<id>.wav, or tts_<id>.mp3 from the fallback voice)
   app.get('/api/audio/tts/:id', (req, res) => {
     const { id } = req.params;
     // Guard against path traversal: id must be a plain base64url/hex slug.
@@ -147,7 +147,6 @@ export function setupRoutes(app, manager) {
     const candidates = [
       { file: path.join(AUDIO_DIR, `tts_${id}.wav`), type: 'audio/wav' },
       { file: path.join(AUDIO_DIR, `tts_${id}.mp3`), type: 'audio/mpeg' },
-      { file: path.join(AUDIO_DIR, `${id}.wav`), type: 'audio/wav' },
     ];
     for (const candidate of candidates) {
       if (fs.existsSync(candidate.file)) {
@@ -157,34 +156,6 @@ export function setupRoutes(app, manager) {
       }
     }
     res.status(404).json({ error: 'Audio not found' });
-  });
-
-  // Serve cached TTS audio files
-  app.get('/api/audio/:questionId/:type', (req, res) => {
-    const { questionId, type } = req.params;
-    if (type !== 'q' && type !== 'a') {
-      res.status(400).json({ error: 'Type must be "q" or "a"' });
-      return;
-    }
-    // Prevent path traversal: questionId must be a plain slug, no separators or ".."
-    if (!/^[a-zA-Z0-9_-]+$/.test(questionId)) {
-      res.status(400).json({ error: 'Invalid question id' });
-      return;
-    }
-    const basePath = path.join(AUDIO_DIR, `${questionId}_${type}`);
-    // Try common audio extensions
-    const extensions = ['wav', 'mp3', 'pcm'];
-    const tryNext = (i) => {
-      if (i >= extensions.length) {
-        res.status(404).json({ error: 'Audio not found' });
-        return;
-      }
-      const filePath = `${basePath}.${extensions[i]}`;
-      res.sendFile(filePath, (err) => {
-        if (err) tryNext(i + 1);
-      });
-    };
-    tryNext(0);
   });
 
   // Static files from public/

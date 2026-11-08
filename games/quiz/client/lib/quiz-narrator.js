@@ -1,12 +1,13 @@
 // One TV host voice per countdown/question/reveal. Stale requests never play over a new phase.
 const QUIZ_INTRO_TEXT = 'Welcome to Smallhours Quiz Challenge, Here We go 3...2...1';
-const QUIZ_INTRO_DURATION_SEC = 6.0;
+// How long a slow clip may take before the browser voice reads instead.
+const QUIZ_VOICE_WAIT_MS = { countdown: 2000, question: 3000, reveal: 1500 };
 
 function createQuizNarrator(onSpeaking = () => {}) {
   let currentKey = null;
   let revision = 0;
   let clip = null;
-  let endTimer = null;
+  let waitTimer = null;
   let muted = false;
   let blocked = false;
   let expiresAt = 0;
@@ -21,15 +22,23 @@ function createQuizNarrator(onSpeaking = () => {}) {
     const english = voices.filter(voice => /^en[-_]/i.test(voice.lang));
     utterance.voice = english.find(voice => /Daniel|Ryan|Google UK English Male|Alex/i.test(voice.name)) || english[0] || null;
     utterance.lang = utterance.voice?.lang || 'en-GB';
-    utterance.rate = isCountdown ? 1.35 : 1.18;
+    utterance.rate = isCountdown ? 1.15 : 1.0;
     utterance.pitch = 0.88;
     utterance.onstart = () => { if (requestRevision === revision) onSpeaking(true); };
     utterance.onend = utterance.onerror = () => { if (requestRevision === revision) onSpeaking(false); };
     spokenFallback = utterance;
     speechSynthesis.speak(utterance);
   }
+  function clearWait() {
+    if (waitTimer) { clearTimeout(waitTimer); waitTimer = null; }
+  }
+  // Without voices (some TV WebViews) a late clip beats no voice at all, so nothing replaces it.
+  function canUseBrowserVoice() {
+    return typeof setTimeout !== 'undefined' && typeof speechSynthesis !== 'undefined' &&
+      typeof SpeechSynthesisUtterance !== 'undefined' && speechSynthesis.getVoices().length > 0;
+  }
   function silence() {
-    if (endTimer) { clearTimeout(endTimer); endTimer = null; }
+    clearWait();
     if (clip) clip.pause();
     if (spokenFallback && typeof speechSynthesis !== 'undefined') speechSynthesis.cancel();
     spokenFallback = null;
@@ -44,17 +53,17 @@ function createQuizNarrator(onSpeaking = () => {}) {
   }
   function startClip(audio, requestRevision, isCountdown) {
     clip = audio;
+    clip.playbackRate = 1;
     if (isCountdown) {
-      const remainingSec = Math.max(0.5, (expiresAt - Date.now()) / 1000);
-      const targetSec = Math.max(2.0, remainingSec - 0.08);
-      clip.playbackRate = Math.min(1.6, Math.max(1.0, Number((QUIZ_INTRO_DURATION_SEC / targetSec).toFixed(2))));
-      if (typeof setTimeout !== 'undefined') {
-        endTimer = setTimeout(() => {
-          if (requestRevision === revision) silence();
-        }, Math.max(0, expiresAt - Date.now() - 20));
-      }
-    } else {
-      clip.playbackRate = 1.18;
+      // Fit the clip's real length to the countdown; the phase change stops it at the end.
+      const fitIntro = () => {
+        if (requestRevision !== revision || !(clip.duration > 0)) return;
+        // A little early, so the last word is not caught by the phase change.
+        const remainingSec = Math.max(0.5, (expiresAt - Date.now()) / 1000 - 0.25);
+        clip.playbackRate = Math.min(1.6, Math.max(1, Number((clip.duration / remainingSec).toFixed(2))));
+      };
+      if (clip.duration > 0) fitIntro();
+      else clip.onloadedmetadata = fitIntro;
     }
     clip.onended = () => { if (requestRevision === revision) onSpeaking(false); };
     onSpeaking(true);
@@ -96,18 +105,29 @@ function createQuizNarrator(onSpeaking = () => {}) {
         startClip(introClip, requestRevision, true);
         return;
       }
+      let replaced = false;
+      if (canUseBrowserVoice()) {
+        waitTimer = setTimeout(() => {
+          waitTimer = null;
+          replaced = true;
+          browserVoice(text, requestRevision, isCountdown);
+        }, QUIZ_VOICE_WAIT_MS[msg.phase] || QUIZ_VOICE_WAIT_MS.question);
+      }
+      const useBrowserVoice = () => {
+        if (replaced || requestRevision !== revision) return;
+        clearWait();
+        browserVoice(text, requestRevision, isCountdown);
+      };
       fetch('/api/tts', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text, style: 'game-show' }),
       }).then(async response => {
-        if (!response.ok) {
-          browserVoice(text, requestRevision, isCountdown);
-          return;
-        }
+        if (!response.ok) { useBrowserVoice(); return; }
         const data = await response.json();
-        if (requestRevision !== revision || muted || Date.now() >= expiresAt || !data.url) return;
+        if (replaced || requestRevision !== revision || muted || Date.now() >= expiresAt || !data.url) return;
+        clearWait();
         startClip(new Audio(data.url), requestRevision, isCountdown);
-      }).catch(() => browserVoice(text, requestRevision, isCountdown)); // Keep the game moving if the provider is unavailable.
+      }).catch(useBrowserVoice); // Keep the game moving if the provider is unavailable.
     },
     prepareIntro() {
       if (introClip || introLoading) return;

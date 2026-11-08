@@ -1,49 +1,17 @@
 // Cache narration by transcript and delivery profile; share concurrent requests.
 import { createHash } from 'node:crypto';
-import fs from 'node:fs';
 import { access, mkdir, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { synthesizeSpeech } from './gemini-tts.js';
 
 const AUDIO_DIR = fileURLToPath(new URL('../../data/audio/', import.meta.url));
-const QUESTIONS_DIR = fileURLToPath(new URL('../../data/questions/', import.meta.url));
 const pending = new Map();
 
-let otdbTextMap = null;
-function getOtdbTextMap() {
-  if (otdbTextMap) return otdbTextMap;
-  otdbTextMap = new Map();
-  try {
-    const files = fs.readdirSync(QUESTIONS_DIR).filter(f => f.endsWith('.json'));
-    for (const file of files) {
-      const items = JSON.parse(fs.readFileSync(QUESTIONS_DIR + file, 'utf8'));
-      if (!Array.isArray(items)) continue;
-      for (const q of items) {
-        if (!q || !q.id) continue;
-        if (q.question) otdbTextMap.set(q.question.trim(), `${q.id}_q`);
-        if (q.correct_answer != null) {
-          otdbTextMap.set(`The answer is: ${q.correct_answer}`.trim(), `${q.id}_a`);
-        }
-      }
-    }
-  } catch {
-    // Optional lookup table; ignore if questions dir is missing in tests
-  }
-  return otdbTextMap;
-}
-
-function findPreCachedOtdbId(text) {
-  try {
-    const map = getOtdbTextMap();
-    const candidateId = map.get(String(text || '').trim());
-    if (candidateId && fs.existsSync(`${AUDIO_DIR}${candidateId}.wav`)) {
-      return candidateId;
-    }
-  } catch {
-    // ignore
-  }
-  return null;
-}
+const isQuotaError = error => /\b(429|503)\b/.test(error?.message || '');
+// Worth another try: the provider was busy, or a preview model answered without audio.
+const isTemporaryError = error => isQuotaError(error) || error?.code === 'NO_AUDIO';
+// No use asking again for any other text: the key or the request itself is wrong.
+const isPermanentError = error => error?.code === 'NO_API_KEY' || /\bHTTP 40[013]\b/.test(error?.message || '');
 
 /**
  * Split text into <=180-character chunks on sentence/word boundaries for fallback TTS.
@@ -110,23 +78,12 @@ export async function synthesizeFallbackSpeech(text) {
 
 export async function getNarration(text, options = {}) {
   const id = createHash('sha256')
-    .update(JSON.stringify(['narration-v2', options.voice || '', options.style || '', text]))
+    .update(JSON.stringify(['narration-v3', options.voice || '', options.style || '', text]))
     .digest('hex');
   const wavPath = `${AUDIO_DIR}tts_${id}.wav`;
   const mp3Path = `${AUDIO_DIR}tts_${id}.mp3`;
 
-  // 1. Primary narration-v2 WAV cache
-  try { await access(wavPath); return { ok: true, id, cached: true }; } catch { /* check next */ }
-  // 2. Fallback MP3 cache
-  try { await access(mp3Path); return { ok: true, id, cached: true }; } catch { /* check next */ }
-  // 3. Legacy narration-v1 WAV cache
-  const v1Id = createHash('sha256')
-    .update(JSON.stringify(['narration-v1', options.voice || '', options.style || '', text]))
-    .digest('hex');
-  try { await access(`${AUDIO_DIR}tts_${v1Id}.wav`); return { ok: true, id: v1Id, cached: true }; } catch { /* check next */ }
-  // 4. Pre-cached OpenTrivia question/answer WAV (otdb_<id>_q.wav / otdb_<id>_a.wav)
-  const otdbId = findPreCachedOtdbId(text);
-  if (otdbId) return { ok: true, id: otdbId, cached: true };
+  try { await access(wavPath); return { ok: true, id, cached: true }; } catch { /* generate it */ }
 
   if (pending.has(id)) return pending.get(id);
   const generation = (async () => {
@@ -137,9 +94,10 @@ export async function getNarration(text, options = {}) {
       return { ok: true, id, cached: false };
     }
 
-    // If Gemini TTS hit a 429/503 quota limit, fall back to server-side TTS and cache it
-    const errMsg = result.error?.message || '';
-    if (errMsg.includes('429') || errMsg.includes('503')) {
+    // Out of Gemini quota: use the robotic fallback for now. It is only used after Gemini
+    // has said no, so the real voice takes over as soon as the quota is back.
+    if (isQuotaError(result.error)) {
+      try { await access(mp3Path); return { ok: true, id, cached: true, fallback: true }; } catch { /* make one */ }
       const fallback = await synthesizeFallbackSpeech(text);
       if (fallback.ok) {
         await mkdir(AUDIO_DIR, { recursive: true });
@@ -183,9 +141,8 @@ export async function warmQuizNarration(questions, options = {}) {
       while (attempt <= maxRetries) {
         const result = await getNarration(text, { style: 'game-show' });
         if (result.ok) break;
-        const msg = result.error?.message || '';
-        const isRateLimit = msg.includes('429') || msg.includes('503');
-        if (!isRateLimit) return; // Permanent provider/auth error — stop warming.
+        if (isPermanentError(result.error)) return;
+        if (!isTemporaryError(result.error)) break; // Skip this text, keep preparing the rest.
         attempt++;
         if (attempt <= maxRetries) {
           await sleep(retryDelayMs);

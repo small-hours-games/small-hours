@@ -1,23 +1,24 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { runInNewContext } from 'node:vm';
 const source = readFileSync(new URL('../../games/quiz/client/lib/quiz-narrator.js', import.meta.url), 'utf8');
 const settle = () => new Promise(resolve => setTimeout(resolve, 0));
 const question = { phase: 'question', timeLeft: 15, question: { id: 'q1', text: 'Question?' } };
-function setup(fetcher = vi.fn(async () => ({ ok: true, json: async () => ({ url: '/voice.wav' }) })), playClip = () => Promise.resolve()) {
+function setup(fetcher = vi.fn(async () => ({ ok: true, json: async () => ({ url: '/voice.wav' }) })), playClip = () => Promise.resolve(), clipDuration, extra = {}) {
   const clips = [];
   const browserSpeech = { speak: vi.fn(), cancel: vi.fn(), getVoices: () => [{ name: 'Daniel', lang: 'en-GB' }] };
   const context = { speechSynthesis: browserSpeech, SpeechSynthesisUtterance: function(text) { this.text = text; }, Date, fetch: fetcher, Audio: function(url) {
-    const clip = { url, play: vi.fn(playClip), pause: vi.fn() };
+    const clip = { url, play: vi.fn(playClip), pause: vi.fn(), duration: clipDuration };
     clips.push(clip); return clip;
   } };
+  Object.assign(context, extra);
   runInNewContext(source, context);
   const speaking = [];
   return { narrator: context.createQuizNarrator(on => speaking.push(on)), clips, fetcher, browserSpeech, speaking };
 }
 describe('TV game-show narration', () => {
   it('plays a prepared intro at once, without waiting for the network', async () => {
-    const { narrator, clips, fetcher } = setup();
+    const { narrator, clips, fetcher } = setup(undefined, undefined, 6.5);
     narrator.prepareIntro();
     narrator.prepareIntro();
     await settle();
@@ -50,6 +51,90 @@ describe('TV game-show narration', () => {
     await settle();
     expect(fetcher).toHaveBeenCalledTimes(2);
     expect(clips[0].play).toHaveBeenCalled();
+  });
+
+  describe('fitting the intro and covering for slow audio', () => {
+    afterEach(() => vi.useRealTimers());
+    const intro = { phase: 'countdown', timeLeft: 5, gameType: 'quiz' };
+    const never = () => new Promise(() => {});
+
+    it('fits the intro to its real length, once that is known', async () => {
+      const { narrator, clips } = setup();
+      narrator.sync(intro);
+      await settle();
+      expect(clips[0].playbackRate).toBe(1);
+      clips[0].duration = 7;
+      clips[0].onloadedmetadata();
+      expect(clips[0].playbackRate).toBeCloseTo(7 / 4.75, 1);
+    });
+
+    it('never slows a short intro or speeds a long one past 1.6', async () => {
+      const short = setup(undefined, undefined, 2);
+      short.narrator.sync(intro);
+      await settle();
+      expect(short.clips[0].playbackRate).toBe(1);
+      const long = setup(undefined, undefined, 30);
+      long.narrator.sync(intro);
+      await settle();
+      expect(long.clips[0].playbackRate).toBe(1.6);
+    });
+
+    it('lets the intro play to the end of the countdown without a cut-off timer', async () => {
+      vi.useFakeTimers();
+      const { narrator, clips } = setup(undefined, undefined, 5, { setTimeout, clearTimeout });
+      narrator.sync(intro);
+      await vi.advanceTimersByTimeAsync(0);
+      await vi.advanceTimersByTimeAsync(6000);
+      expect(clips[0].pause).not.toHaveBeenCalled();
+    });
+
+    it('reads with the browser voice when a clip is too slow, and ignores the late clip', async () => {
+      vi.useFakeTimers();
+      let answer;
+      const fetcher = vi.fn(() => new Promise(resolve => { answer = resolve; }));
+      const { narrator, clips, browserSpeech } = setup(fetcher, undefined, undefined, { setTimeout, clearTimeout });
+      narrator.sync(question);
+      await vi.advanceTimersByTimeAsync(2999);
+      expect(browserSpeech.speak).not.toHaveBeenCalled();
+      await vi.advanceTimersByTimeAsync(1);
+      expect(browserSpeech.speak).toHaveBeenCalledTimes(1);
+      answer({ ok: true, json: async () => ({ url: '/voice.wav' }) });
+      await vi.advanceTimersByTimeAsync(0);
+      expect(clips).toHaveLength(0);
+    });
+
+    it('does not start the browser voice when the clip arrives in time', async () => {
+      vi.useFakeTimers();
+      const { narrator, clips, browserSpeech } = setup(undefined, undefined, undefined, { setTimeout, clearTimeout });
+      narrator.sync(question);
+      await vi.advanceTimersByTimeAsync(0);
+      await vi.advanceTimersByTimeAsync(5000);
+      expect(clips).toHaveLength(1);
+      expect(browserSpeech.speak).not.toHaveBeenCalled();
+    });
+
+    it('waits for the clip when the device has no browser voices', async () => {
+      vi.useFakeTimers();
+      let answer;
+      const fetcher = vi.fn(() => new Promise(resolve => { answer = resolve; }));
+      const { narrator, clips, browserSpeech } = setup(fetcher, undefined, undefined, { setTimeout, clearTimeout });
+      browserSpeech.getVoices = () => [];
+      narrator.sync(question);
+      await vi.advanceTimersByTimeAsync(5000);
+      answer({ ok: true, json: async () => ({ url: '/voice.wav' }) });
+      await vi.advanceTimersByTimeAsync(0);
+      expect(clips).toHaveLength(1);
+      expect(browserSpeech.speak).not.toHaveBeenCalled();
+    });
+
+    it('does not read over a new phase after waiting', async () => {
+      vi.useFakeTimers();
+      const { narrator, browserSpeech } = setup(never, undefined, undefined, { setTimeout, clearTimeout });
+      narrator.sync(question);
+      narrator.sync({ phase: 'lobby' });
+      await vi.advanceTimersByTimeAsync(5000);
+      expect(browserSpeech.speak).not.toHaveBeenCalled();
+    });
   });
 
   it('says when the voice speaks and when it has finished', async () => {
@@ -91,7 +176,7 @@ describe('TV game-show narration', () => {
   });
 
   it('narrates countdown introduction and scales playbackRate to finish right as Question 1 starts', async () => {
-    const { narrator, clips, fetcher } = setup();
+    const { narrator, clips, fetcher } = setup(undefined, undefined, 7.5);
     narrator.sync({ phase: 'countdown', timeLeft: 5, gameType: 'quiz' });
     await settle();
     expect(fetcher).toHaveBeenCalledTimes(1);
@@ -113,7 +198,7 @@ describe('TV game-show narration', () => {
     await settle();
     expect(fetcher).toHaveBeenCalledTimes(1);
     expect(JSON.parse(fetcher.mock.calls[0][1].body)).toEqual({ text: 'Question?', style: 'game-show' });
-    expect(clips[0].playbackRate).toBe(1.18);
+    expect(clips[0].playbackRate).toBe(1);
     narrator.sync({ ...question, phase: 'reveal', correctAnswer: 'Paris' });
     expect(clips[0].pause).toHaveBeenCalled();
     await settle();
@@ -152,7 +237,7 @@ it('uses the browser host voice when Gemini is unavailable, retries /api/tts on 
   await settle();
   expect(browserSpeech.speak).toHaveBeenCalledTimes(1);
   expect(browserSpeech.speak.mock.calls[0][0].text).toBe('Question?');
-  expect(browserSpeech.speak.mock.calls[0][0].rate).toBe(1.18);
+  expect(browserSpeech.speak.mock.calls[0][0].rate).toBe(1);
   expect(browserSpeech.speak.mock.calls[0][0].pitch).toBe(0.88);
   narrator.sync({ ...question, phase: 'reveal', correctAnswer: 'Mars' });
   expect(browserSpeech.cancel).toHaveBeenCalled();

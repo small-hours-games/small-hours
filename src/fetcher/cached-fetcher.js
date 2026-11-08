@@ -9,7 +9,6 @@ import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { dirname, join, resolve } from 'node:path';
 import { fetchQuestions as fetchFromApi, fetchCategories as fetchCategoriesFromApi } from './opentrivia.js';
-import { generateAudioForQuestions } from './cached-tts.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const CACHE_DIR = resolve(__dirname, '../../data/questions');
@@ -95,14 +94,6 @@ export async function fetchQuestions(categoryId, amount = 10, { difficulty } = {
   } catch (err) {
     // Write failure is non-fatal — degrade to fetch-through
     console.warn('[cache] write error:', err.message);
-  }
-
-  // Fire-and-forget: generate TTS audio in background. Not for the difficulty buckets:
-  // every game already narrates the questions it uses, and this would drain the Gemini quota.
-  if (!difficulty) {
-    generateAudioForQuestions(normalized).catch(err =>
-      console.warn('[tts] batch generation error:', err.message)
-    );
   }
 
   return { ok: true, questions: normalized };

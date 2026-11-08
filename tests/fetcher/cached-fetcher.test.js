@@ -13,14 +13,10 @@ vi.mock('../../src/fetcher/opentrivia.js', () => ({
   fetchQuestions: vi.fn(),
 }));
 
-vi.mock('../../src/fetcher/cached-tts.js', () => ({
-  generateAudioForQuestions: vi.fn(async () => {}),
-}));
 
 import { readFile, writeFile, mkdir, rm, unlink } from 'node:fs/promises';
 import { fetchQuestions as fetchFromApi } from '../../src/fetcher/opentrivia.js';
 import { fetchQuestions, clearCache } from '../../src/fetcher/cached-fetcher.js';
-import { generateAudioForQuestions } from '../../src/fetcher/cached-tts.js';
 
 const SAMPLE_QUESTIONS = [
   {
@@ -98,7 +94,6 @@ describe('cached-fetcher', () => {
 
   describe('difficulty buckets', () => {
     beforeEach(() => {
-      generateAudioForQuestions.mockClear();
       writeFile.mockClear();
       readFile.mockRejectedValue(Object.assign(new Error('ENOENT'), { code: 'ENOENT' }));
       fetchFromApi.mockResolvedValue({ ok: true, questions: SAMPLE_QUESTIONS });
@@ -108,13 +103,6 @@ describe('cached-fetcher', () => {
       await fetchQuestions(9, 50, { difficulty: 'easy' });
       expect(fetchFromApi).toHaveBeenLastCalledWith(9, 50, { difficulty: 'easy' });
       expect(writeFile.mock.calls[0][0]).toMatch(/data[/\\]questions[/\\]9_easy\.json/);
-    });
-
-    it('does not bulk-generate audio for an easy bucket, but still does for a mixed one', async () => {
-      await fetchQuestions(9, 50, { difficulty: 'easy' });
-      expect(generateAudioForQuestions).not.toHaveBeenCalled();
-      await fetchQuestions(9, 50);
-      expect(generateAudioForQuestions).toHaveBeenCalledTimes(1);
     });
   });
 

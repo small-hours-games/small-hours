@@ -86,13 +86,15 @@ describe('synthesizeSpeech', () => {
       expect(body.generationConfig.speechConfig.voiceConfig.prebuiltVoiceConfig.voiceName).toBe('Enceladus');
     });
 
-    it('uses a deeper host voice and brisk delivery instructions for game-show narration', async () => {
+    it('uses a deeper host voice at a natural pace for game-show narration', async () => {
       mockApiResponse(SUCCESS_RESPONSE);
       await synthesizeSpeech('What is the capital of France?', { style: 'game-show' });
       const body = JSON.parse(fetch.mock.calls[0][1].body);
       expect(body.generationConfig.speechConfig.voiceConfig.prebuiltVoiceConfig.voiceName).toBe('Charon');
       expect(body.contents[0].parts[0].text).toContain('television quiz-show host');
       expect(body.contents[0].parts[0].text).toContain('deeper, lower-pitched male voice');
+      expect(body.contents[0].parts[0].text).toContain('natural pace');
+      expect(body.contents[0].parts[0].text).not.toMatch(/brisk|quickly/);
       expect(body.contents[0].parts[0].text).toContain('Do not add commentary, clues');
       expect(body.contents[0].parts[0].text).toContain('Transcript:\nWhat is the capital of France?');
     });
@@ -130,6 +132,12 @@ describe('synthesizeSpeech', () => {
       expect(cleaned.includes(Buffer.from('c2pa'))).toBe(false);
     });
 
+    it('keeps audio that happens to contain the bytes c2pa', () => {
+      const start = Buffer.alloc(4800, 0x12);
+      const samples = Buffer.concat([start, Buffer.from('c2pa', 'latin1'), Buffer.alloc(32 * 1024, 0x34)]);
+      expect(extractCleanPcm(wrapPcmAsWav(samples, 24000, 1, 16)).length).toBe(samples.length & ~1);
+    });
+
     it('uses custom voice when provided', async () => {
       mockApiResponse(SUCCESS_RESPONSE);
 
@@ -157,6 +165,15 @@ describe('synthesizeSpeech', () => {
       expect(result.ok).toBe(false);
       expect(result.error.code).toBe('API_ERROR');
       expect(result.error.message).toContain('400');
+    });
+
+    it('tries the next model when a reply has no audio', async () => {
+      fetch
+        .mockResolvedValueOnce({ ok: true, json: async () => ({ candidates: [{ content: { parts: [{ text: 'no audio' }] } }] }) })
+        .mockResolvedValueOnce({ ok: true, json: async () => SUCCESS_RESPONSE });
+      const result = await synthesizeSpeech('Test');
+      expect(result.ok).toBe(true);
+      expect(fetch).toHaveBeenCalledTimes(2);
     });
 
     it('returns NO_AUDIO when response has no inlineData', async () => {

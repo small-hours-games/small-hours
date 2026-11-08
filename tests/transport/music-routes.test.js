@@ -19,19 +19,18 @@ describe('music playlists', () => {
   afterEach(() => vi.restoreAllMocks());
 
   const tracks = async path => (await (await fetch(base + path)).json()).tracks;
-  const withFiles = () => vi.spyOn(fs.promises, 'readdir').mockResolvedValue([
-    file('quiz-and-cards.mp3'), file('quiz-and-cards-two.mp3'), file('The Final Stretch.mp3'), file('notes.txt'),
-    { name: 'quiz-and-cards-dir.mp3', isFile: () => false },
-  ]);
+  const withFiles = () => vi.spyOn(fs.promises, 'readdir').mockImplementation(async dir => (String(dir).endsWith('lobby')
+    ? [file('The Final Stretch.mp3'), file('notes.txt'), { name: 'old.mp3', isFile: () => false }]
+    : [file('quiz-and-cards.mp3'), file('quiz-and-cards-two.mp3')]));
 
-  it('keeps the game songs out of the lobby', async () => {
+  it('plays the lobby folder in the lobby', async () => {
     withFiles();
-    expect(await tracks('/api/lobby-music')).toEqual(['/music/The%20Final%20Stretch.mp3']);
+    expect(await tracks('/api/lobby-music')).toEqual(['/music/lobby/The%20Final%20Stretch.mp3']);
   });
 
-  it('serves only the two game songs for games', async () => {
+  it('plays the quiz-card folder in games', async () => {
     withFiles();
-    expect(await tracks('/api/game-music')).toEqual(['/music/quiz-and-cards-two.mp3', '/music/quiz-and-cards.mp3']);
+    expect(await tracks('/api/game-music')).toEqual(['/music/quiz-card/quiz-and-cards-two.mp3', '/music/quiz-card/quiz-and-cards.mp3']);
   });
 
   it('returns an empty list when the music folder is missing', async () => {
