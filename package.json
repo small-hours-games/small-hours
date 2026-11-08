@@ -1,6 +1,6 @@
 {
   "name": "small-hours",
-  "version": "2.17.3",
+  "version": "2.18.0",
   "description": "Real-time party games for one TV and a few phones.",
   "type": "module",
   "main": "src/server.js",

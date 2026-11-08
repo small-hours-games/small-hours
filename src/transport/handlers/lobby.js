@@ -1,6 +1,7 @@
 // Small Hours - Lobby message handlers
 
 import { getView } from '../../engine/engine.js';
+import { AVATAR_POOL } from '../../session/room.js';
 
 /**
  * Handle JOIN_LOBBY message — join as a new player or reconnect as existing player.
@@ -55,7 +56,7 @@ export function handleJoinLobby(ws, meta, room, msg, ctx) {
     graceTimers.delete(playerId);
   }
 
-  send(ws, { type: 'JOIN_OK', playerId, avatar, reconnectToken });
+  send(ws, { type: 'JOIN_OK', playerId, avatar, reconnectToken, avatarPool: AVATAR_POOL });
   broadcastToRoom(room.code, { type: 'LOBBY_UPDATE', state: room.getState() });
 
   // If a game is running, send current game state to the reconnecting player
@@ -138,5 +139,29 @@ export function handleReturnToLobby(ws, meta, room, msg, ctx) {
   ctx.cancelBotTurn?.(room.code);
   roomGameTypes.delete(room.code);
   room.endGame();
+  broadcastToRoom(room.code, { type: 'LOBBY_UPDATE', state: room.getState() });
+}
+
+/**
+ * Handle SET_AVATAR message — a player picks an avatar from the pool.
+ *
+ * @param {import('ws')} ws
+ * @param {object} meta
+ * @param {object} room
+ * @param {object} msg
+ * @param {object} ctx
+ */
+export function handleSetAvatar(ws, meta, room, msg, ctx) {
+  const { send, broadcastToRoom } = ctx;
+  if (!meta.playerId) {
+    send(ws, { type: 'ERROR', message: 'Not joined yet' });
+    return;
+  }
+  const result = room.setAvatar(meta.playerId, String(msg.avatar || ''));
+  if (!result.ok) {
+    send(ws, { type: 'ERROR', message: result.error });
+    return;
+  }
+  send(ws, { type: 'AVATAR_OK', avatar: result.avatar });
   broadcastToRoom(room.code, { type: 'LOBBY_UPDATE', state: room.getState() });
 }

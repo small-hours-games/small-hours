@@ -430,6 +430,7 @@ export function setupWebSocket(server, manager) {
     'START_MINI_GAME',
     'START_VOTED_GAME',
     'SUGGEST_GAME',
+    'SET_AVATAR',
     'RETURN_TO_LOBBY',
     'START_CATEGORY_VOTE',
     'CATEGORY_VOTE',
@@ -454,6 +455,9 @@ export function setupWebSocket(server, manager) {
         break;
       case 'SUGGEST_GAME':
         lobbyHandlers.handleSuggestGame(ws, meta, room, msg, ctx);
+        break;
+      case 'SET_AVATAR':
+        lobbyHandlers.handleSetAvatar(ws, meta, room, msg, ctx);
         break;
       case 'START_MINI_GAME':
         gameHandlers.handleStartMiniGame(ws, meta, room, msg, ctx).catch(err => {

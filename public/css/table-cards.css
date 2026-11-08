@@ -425,6 +425,36 @@
   .tc-screen .tc-last { margin-top: 3px; }
 }
 
+/* Layout rules above set display on these boxes, which would beat the hidden attribute:
+   a hidden hand, HUD or action bar must really go (Gin's result sheet sits in their place). */
+.tc-screen [hidden] { display: none !important; }
+
+/* Squeeze levels, set by tcSqueeze() when the pinned hand zone would cover the piles.
+   1: my face-up/face-down row and the gaps get smaller. */
+.tc-screen.tc-sq1 .tc-table-cards { gap: 8px; margin: 0; }
+.tc-screen.tc-sq1 .tc-table-cards .tc-md { --tc-w: min(46px, calc((100vw - 64px) / 6.4)); }
+.tc-screen.tc-sq1 .tc-table-cards .tc-sm { --tc-w: min(32px, calc((100vw - 64px) / 9)); }
+.tc-screen.tc-sq1 .tc-table-group { gap: 2px; }
+.tc-screen.tc-sq1 .tc-hand-area { padding-top: 10px; min-height: 0; }
+.tc-screen.tc-sq1 .tc-hud-row { min-height: 0; margin-bottom: 2px; }
+.tc-screen.tc-sq1 .tc-hud-row:empty, .tc-screen.tc-sq1 .tc-hud-row:has(> :only-child:empty) { display: none; }
+/* 2: opponents in one row you can swipe, smaller piles. */
+.tc-screen.tc-sq2 .tc-opps.tc-opps-seats {
+  display: flex; overflow-x: auto; scroll-snap-type: x proximity; margin-bottom: 6px;
+}
+.tc-screen.tc-sq2 .tc-opps-seats .tc-opp { flex: 0 0 auto; min-width: 128px; scroll-snap-align: start; padding: 4px 8px 5px; }
+.tc-screen.tc-sq2 .tc-wells .tc-card { --tc-w: clamp(38px, 5.8vh, 56px); }
+.tc-screen.tc-sq2 .tc-well { padding: 4px 8px 6px; gap: 3px; }
+.tc-screen.tc-sq2 .tc-well-hint { display: none; }
+.tc-screen.tc-sq2 .tc-table { padding: 6px 8px 6px; }
+.tc-screen.tc-sq2 .tc-rule { margin-top: 4px; padding: 3px 10px; font-size: 11px; }
+/* 3: the last few pixels: labels and the bars around the hand. */
+.tc-screen.tc-sq3 .tc-table-cards .tc-group-label, .tc-screen.tc-sq3 .tc-chips { display: none; }
+.tc-screen.tc-sq3 .tc-topbar { margin-bottom: 6px; padding: 5px 12px; }
+.tc-screen.tc-sq3 .tc-wells .tc-card { --tc-w: clamp(34px, 5vh, 48px); }
+.tc-screen.tc-sq3 .tc-actionbar { margin-top: 3px; padding: 4px; }
+.tc-screen.tc-sq3 .tc-cta.tc-cta-big { min-height: 48px; margin-top: 6px; padding: 8px 16px; }
+
 /* ---------- TV: seats left and right of the piles ----------
    A 16:9 screen has width to spare, so seats sit beside the table instead of
    stacked above and below it; tcFitTv() then zooms the whole table to fit. */

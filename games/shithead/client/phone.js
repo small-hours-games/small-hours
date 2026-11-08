@@ -61,6 +61,17 @@
       return 'Play ' + lbl + ' or higher, or a 2 or 10';
     }
 
+    /** Final order in one line: who went out first, and who keeps the palace. Pure, for tests. */
+    function shStandingsText(msg) {
+      const order = msg.finishOrder || [];
+      const name = id => (id === state.playerId ? 'You' : tcName(id, msg));
+      const medals = ['🥇', '🥈', '🥉'];
+      const out = order.map((id, i) => (medals[i] || '#' + (i + 1)) + ' ' + name(id));
+      const loser = (msg.players || []).map(p => p.playerId).find(id => !order.includes(id));
+      if (loser) out.push('💩 ' + name(loser));
+      return out.length ? out.join('  ·  ') : 'Game over';
+    }
+
     /** Which of my zones is in play: hand, then face-up, then face-down. */
     function shZone(msg) {
       if ((msg.myHand || []).length) return 'hand';
@@ -117,7 +128,7 @@
       if (msg.phase === 'swap') status = 'Swap: put your strongest cards face-up';
       else if (msg.phase === 'finished') {
         const place = (msg.finishOrder || []).indexOf(state.playerId);
-        status = place >= 0 ? 'You finished #' + (place + 1) : 'Game over';
+        status = place === 0 ? '🏆 You won! First out' : place > 0 ? 'You finished #' + (place + 1) : '💩 You keep the palace';
       } else if (myTurn) {
         status = zone === 'faceUp' ? 'Your turn: play from your face-up cards'
           : zone === 'faceDown' ? 'Your turn: flip a blind card!' : 'Your turn';
@@ -158,6 +169,7 @@
       document.getElementById('shPileWell').classList.toggle('tc-well-active', myTurn && state.shSelectedCards.length > 0);
       document.getElementById('shRule').textContent = msg.phase === 'swap'
         ? 'Tap a hand card, then a face-up card, to swap them. 2, 10 and A are strong face-up.'
+        : msg.phase === 'finished' ? shStandingsText(msg)
         : shRuleBannerText(msg.pileTopRank, pileCount);
 
       // My table cards (face-up / face-down) above the hand
@@ -238,6 +250,7 @@
       pickUp.disabled = !myTurn || pileCount === 0;
       pickUp.textContent = 'Pick up' + (pileCount ? ' (' + pileCount + ')' : '');
       updateShSelectionAssistUI();
+      tcSqueeze('shitheadSection');
       shFitLog();
       const fromPile = ev && (ev.kind === 'pickup' || ev.kind === 'blind-miss');
       tcLaunchArrivals(arrivals, myHand, fromPile ? pileStack : document.getElementById('shDrawStack'), handEl);

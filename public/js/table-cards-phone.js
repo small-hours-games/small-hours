@@ -17,6 +17,32 @@
       document.documentElement.style.setProperty('--tc-screen-top', Math.round(el.getBoundingClientRect().top + window.scrollY + pad) + 'px');
     }
 
+    // The hand zone is pinned to the bottom of the screen. On a short phone (or with many
+    // opponents) it would slide over the piles, so tighten the layout one step at a time
+    // until the table ends above it. Call after the screen has been drawn.
+    const TC_SQUEEZE_LEVELS = 3;
+    function tcSqueezeLevel(tableBottom, zoneHeight, viewportHeight) {
+      return tableBottom + zoneHeight <= viewportHeight + 1;
+    }
+    function tcSqueeze(sectionId) {
+      const el = document.getElementById(sectionId);
+      if (!el || !el.classList.contains('active')) return 0;
+      const table = el.querySelector('.tc-table:not([hidden])');
+      const zone = el.querySelector('.tc-hand-zone');
+      let level = 0;
+      for (; level <= TC_SQUEEZE_LEVELS; level++) {
+        for (let i = 1; i <= TC_SQUEEZE_LEVELS; i++) el.classList.toggle('tc-sq' + i, i <= level);
+        if (!table || !zone) break;
+        // The move log trims itself to the room that is left, so only its newest line counts.
+        const log = table.querySelector('.tc-log-phone');
+        const first = log && log.querySelector('.tc-log-item');
+        const spare = log ? Math.max(0, log.offsetHeight - (first ? first.offsetHeight + 8 : 0)) : 0;
+        const bottom = table.getBoundingClientRect().bottom + window.scrollY - spare;
+        if (tcSqueezeLevel(bottom, zone.offsetHeight, window.innerHeight)) break;
+      }
+      return Math.min(level, TC_SQUEEZE_LEVELS);
+    }
+
     // Cards that reach the hand fly in from the table and glow until a card leaves the hand.
     const tcArrivals = {};
     const TC_MAX_ARRIVAL_FLIGHTS = 4;

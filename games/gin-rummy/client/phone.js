@@ -133,6 +133,7 @@
       const sheet = document.getElementById('grSheet');
       sheet.hidden = playing;
       if (!playing) renderGrScoring(msg);
+      tcSqueeze('ginRummySection');
       tcLaunchArrivals(arrivals, hand, document.getElementById(fromStock ? 'grStockStack' : 'grDiscardStack'), handEl);
     }
 

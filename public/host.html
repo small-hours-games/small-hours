@@ -7,18 +7,28 @@
   <meta name="theme-color" content="#f4f8ff">
   <title>Smallhours - TV Screen</title>
   <script>
-    // Lobby scale on the TV: one notch smaller than 1:1 by default, so the whole lobby fits.
-    // Change it per TV with ?scale=0.8 (0.6 to 1.2) on the host address; it is remembered.
+    // Lobby scale on the TV. The lobby is laid out for a 1440×810 screen and grows with
+    // bigger ones, so a 1080p TV is read from the sofa and a 4K screen is filled instead
+    // of showing a small island in the middle. 720p and smaller stay one notch below 1:1.
+    // ?scale=0.8 (0.6 to 1.2, default 0.9) on the host address makes one TV a notch
+    // smaller or bigger than that; it is remembered.
     (function () {
-      var scale = 0.9;
+      var factor = 1;
       try {
         var fromUrl = new URLSearchParams(location.search).get('scale');
         if (fromUrl != null && isFinite(Number(fromUrl)) && Number(fromUrl) > 0) localStorage.setItem('sh_tv_scale', String(Number(fromUrl)));
         var saved = Number(localStorage.getItem('sh_tv_scale'));
-        if (saved > 0) scale = saved;
+        if (saved > 0) factor = Math.max(0.6, Math.min(1.2, saved)) / 0.9;
       } catch (e) { /* storage blocked: keep the default */ }
-      scale = Math.max(0.6, Math.min(1.2, scale));
-      document.documentElement.style.setProperty('--host-scale', String(scale));
+      function apply() {
+        var fit = Math.min(window.innerWidth / 1440, window.innerHeight / 810);
+        var scale = Math.max(0.9, 0.9 * fit) * factor;
+        scale = Math.max(0.6, Math.min(3, Math.round(scale * 100) / 100));
+        document.documentElement.style.setProperty('--host-scale', String(scale));
+      }
+      apply();
+      var timer = 0;
+      window.addEventListener('resize', function () { clearTimeout(timer); timer = setTimeout(apply, 120); });
     })();
   </script>
   <script src="https://cdn.tailwindcss.com/3.4.17"></script>
@@ -215,9 +225,19 @@
         return Number(localStorage.getItem('sh_show_delay_ms')) || 0;
       } catch { return Number(fromUrl) || 0; }
     }
+    // The show lowers its own detail on a slow TV. ?showQuality=full or lite (once) fixes it
+    // for this TV; ?showQuality=auto goes back to measuring.
+    function topbarShowQuality() {
+      const fromUrl = new URLSearchParams(location.search).get('showQuality');
+      try {
+        if (fromUrl != null) localStorage.setItem('sh_show_quality', fromUrl);
+        return localStorage.getItem('sh_show_quality') || 'auto';
+      } catch { return fromUrl || 'auto'; }
+    }
     const topbarShow = typeof createTopbarShow === 'function'
       ? createTopbarShow({
         header: document.querySelector('.studio-header'), audio: lobbyAudio, latencyMs: topbarShowDelay(),
+        quality: topbarShowQuality(),
         dancers: document.getElementById('tbsDancers'),
       })
       : null;
@@ -407,23 +427,39 @@
       }
     }
 
+
+    // Write a list only when it changed, and keep the avatars' sway in step across
+    // re-renders: a fresh element would restart its animation and the faces would jump.
+    const AVATAR_SWAY_S = 60 / 136 * 2;
+    function setSwayHtml(el, html) {
+      if (el._swayHtml === html) return;
+      el._swayHtml = html;
+      el.innerHTML = html;
+      el.style.setProperty('--sway-delay', (-(performance.now() / 1000) % AVATAR_SWAY_S).toFixed(3) + 's');
+    }
+
     // --- Render: Lobby ---
     function renderPlayers() {
       const grid = document.getElementById('playerGrid');
       const online = state.players.filter(p => p.connected !== false).length;
       document.getElementById('playerCount').textContent = online + ' in lobby';
+      // A full room goes to two columns, so every face fits on the TV without scrolling.
+      grid.classList.toggle('is-crowded', state.players.length > 6);
+      grid.classList.toggle('is-packed', state.players.length > 12);
 
       if (state.players.length === 0) {
-        grid.innerHTML = '<div class="studio-empty-players text-sm text-slate-500">Waiting for players to join... Scan the QR code on your phone!</div>';
+        setSwayHtml(grid, '<div class="studio-empty-players text-sm text-slate-500">Waiting for players to join... Scan the QR code on your phone!</div>');
         return;
       }
 
       const suggestions = (state.lobby && state.lobby.gameSuggestions) || {};
       const ranked = [...state.players].sort((a, b) => (b.sessionScore || 0) - (a.sessionScore || 0));
-      grid.innerHTML = ranked.map((p, i) => {
+      // Before anyone has scored, "0 pts" on every row is noise: names get the room.
+      const anyScore = state.players.some(p => (p.sessionScore || 0) > 0);
+      setSwayHtml(grid, ranked.map((p, i) => {
         const voted = suggestions[p.playerId];
         const isLeader = i === 0 && (p.sessionScore || 0) > 0;
-        const crown = p.isAdmin ? '<span class="contestant-host-pill" title="Room Host">👑 HOST</span>' : '';
+        const crown = p.isAdmin ? '<span class="contestant-host-pill" title="Room Host">' + (state.players.length > 6 ? '👑' : '👑 HOST') + '</span>' : '';
         const votedBadge = voted
           ? '<span class="contestant-vote-pill" title="Voted ' + escapeHtml(shGame(voted).label) + '">' + shGame(voted).icon + '</span>'
           : '';
@@ -439,9 +475,9 @@
             crown +
             votedBadge +
           '</span>' +
-          '<span class="contestant-score-pill font-bold text-sky-700 shrink-0">' + (p.sessionScore || 0) + ' pts</span>' +
+          (anyScore ? '<span class="contestant-score-pill font-bold text-sky-700 shrink-0">' + (p.sessionScore || 0) + ' pts</span>' : '') +
         '</div>';
-      }).join('');
+      }).join(''));
     }
 
     // Live tallies: game wishes, or the quiz category vote once it opens.

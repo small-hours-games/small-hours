@@ -144,12 +144,18 @@
       });
     }
 
+    let shLastBoard = null;
     SH.registerGame('shithead', {
       render: renderShithead,
       alwaysScoreboard: true,
       scoreboard(msg, { names, ids }) {
+        // The end-of-game message carries only the result, not the table: keep the last
+        // table we saw so the final board still shows places instead of "Playing".
+        if (msg.players || msg.finishOrder) shLastBoard = { players: msg.players, finishOrder: msg.finishOrder };
+        else if (shLastBoard) msg = Object.assign({}, shLastBoard, msg);
         // `scores` here is players.length - placement; derive true placement from finishOrder.
         const finishOrder = msg.finishOrder || [];
+        const over = msg.phase === 'finished';
         // Best-first: those who went out first rank above those still in.
         const rankedIds = [
           ...finishOrder,
@@ -164,9 +170,9 @@
         return { entries: rankedIds.map((id, i) => ({
           id,
           name: names[id] || id,
-          valueText: finishOrder.includes(id) ? 'Place ' + (i + 1) : cardsLeft(id),
+          valueText: finishOrder.includes(id) ? 'Place ' + (i + 1) : over ? '💩 Palace' : cardsLeft(id),
           rank: i + 1,
-          isOut: finishOrder.includes(id),
+          isOut: finishOrder.includes(id) && !over,   // at the end the places say it all
         })) };
       },
     });

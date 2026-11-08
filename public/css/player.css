@@ -408,3 +408,50 @@ header > .player-connection-row {
   max-width: 100%;
 }
 #connStatus.connected { background: #ecfdf5; color: #047857; border-color: #a7f3d0; }
+
+/* ---------- Avatar picker (bottom sheet) ----------
+   Opened from the avatar chip in the top bar, and once on a phone's first join. */
+.my-avatar-chip { cursor: pointer; transition: transform 0.15s ease; }
+.my-avatar-chip:active { transform: scale(0.95); }
+.my-avatar-chip:focus-visible { outline: 3px solid #38bdf8; outline-offset: 2px; }
+.avatar-sheet { position: fixed; inset: 0; z-index: 200; display: flex; align-items: flex-end; justify-content: center; }
+.avatar-sheet[hidden] { display: none; }
+.avatar-sheet-backdrop { position: absolute; inset: 0; background: rgba(4, 9, 22, 0.6); opacity: 0; transition: opacity 0.2s ease; }
+.avatar-sheet-panel {
+  position: relative; width: 100%; max-width: 500px;
+  padding: 18px 16px calc(16px + env(safe-area-inset-bottom));
+  border-radius: 26px 26px 0 0;
+  background: var(--night-panel, #13234a); border: 1px solid var(--night-line-strong, #34467a); border-bottom: 0;
+  color: #fff; box-shadow: 0 -20px 50px -20px rgba(0, 0, 0, 0.8);
+  transform: translateY(100%); transition: transform 0.25s cubic-bezier(0.2, 0.9, 0.3, 1);
+}
+.avatar-sheet.is-open .avatar-sheet-backdrop { opacity: 1; }
+.avatar-sheet.is-open .avatar-sheet-panel { transform: none; }
+.avatar-sheet-head h2 { font-size: 1.35rem; font-weight: 700; }
+.avatar-sheet-head p { margin-top: 2px; font-size: 0.8rem; color: var(--night-muted, #a9b6d3); }
+.avatar-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; margin: 14px 0; }
+.avatar-option {
+  position: relative; aspect-ratio: 1; min-height: 52px;
+  display: grid; place-items: center;
+  font-size: 1.9rem; line-height: 1;
+  border-radius: 16px; border: 2px solid var(--night-line, #22335f);
+  background: var(--night, #0b1530);
+  transition: transform 0.12s ease, border-color 0.12s ease;
+}
+.avatar-option:active:not(:disabled) { transform: scale(0.92); }
+.avatar-option:focus-visible { outline: 3px solid #38bdf8; outline-offset: 2px; }
+.avatar-option.is-mine { border-color: var(--night-sun, #facc15); background: rgba(250, 204, 21, 0.14); box-shadow: 0 0 0 3px rgba(250, 204, 21, 0.25); }
+.avatar-option:disabled { opacity: 0.35; filter: grayscale(0.7); }
+.avatar-owner {
+  position: absolute; left: 2px; right: 2px; bottom: 2px;
+  font: 700 9px/1.2 'Plus Jakarta Sans', system-ui, sans-serif; color: #dce3f2;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.avatar-sheet-done {
+  width: 100%; min-height: 52px; border-radius: 16px; border: 0;
+  background: var(--night-sun, #facc15); color: #0b1530;
+  font: 800 1rem/1 'Fredoka', 'Plus Jakarta Sans', sans-serif;
+}
+@media (prefers-reduced-motion: reduce) {
+  .avatar-sheet-panel, .avatar-sheet-backdrop, .avatar-option, .my-avatar-chip { transition: none; }
+}

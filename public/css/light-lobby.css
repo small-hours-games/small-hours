@@ -250,6 +250,7 @@
   display: inline-block;
   transform-origin: 50% 85%;
   animation: lobbyMascotWobble 0.882352941s ease-in-out infinite;
+  animation-delay: var(--sway-delay, 0s);   /* set by setSwayHtml so a re-render keeps the beat */
 }
 .studio-contestant-card:nth-child(even) .lobby-avatar-glyph {
   animation-direction: reverse;
@@ -1532,10 +1533,28 @@ body.light-lobby {
 .host-screen:not(.in-game) .host-main { zoom: var(--host-scale, 1); }
 @media (min-width: 1000px) {
   .host-screen #lobbyView {
-    height: calc((100dvh - 118px) / var(--host-scale, 1));
+    /* The 65px topbar is not scaled; the page padding and footer (58px) are. */
+    height: calc((100dvh - 65px) / var(--host-scale, 1) - 58px);
     transition: height 0.55s cubic-bezier(0.2, 0.9, 0.3, 1.15);
   }
   /* While the topbar show opens the bar 4rem taller, the lobby gives that room back. */
-  body.tbs-bar-open.host-screen #lobbyView { height: calc((100dvh - 118px - 4rem) / var(--host-scale, 1)); }
+  body.tbs-bar-open.host-screen #lobbyView { height: calc((100dvh - 65px - 4rem) / var(--host-scale, 1) - 58px); }
 }
 
+
+/* A full room (7+ players): contestants in two columns and the panel takes more of the
+   column from the chat, so the TV shows everyone who joined without scrolling. */
+.host-screen #playerGrid.is-crowded { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+.host-screen #playerGrid.is-crowded .studio-contestant-card { padding: 5px 8px; gap: 4px; }
+.host-screen #playerGrid.is-crowded .lobby-player-avatar { width: 28px; height: 28px; font-size: 1.05rem; }
+.host-screen #playerGrid.is-crowded .contestant-host-pill { padding: 1px 4px; }
+.host-screen #playerGrid.is-crowded .contestant-vote-pill { display: none; }
+.host-screen #playerGrid.is-crowded .contestant-score-pill { font-size: 0.7rem; padding: 2px 6px; }
+@media (min-width: 1000px) {
+  .host-screen .players-panel:has(#playerGrid.is-crowded) { flex-basis: 62%; }
+}
+/* 13+ players: slimmer rows. */
+.host-screen #playerGrid.is-packed { gap: 4px; }
+.host-screen #playerGrid.is-packed .studio-contestant-card { padding: 2px 6px; min-height: 0; }
+.host-screen #playerGrid.is-packed .lobby-player-avatar { width: 24px; height: 24px; font-size: 0.95rem; }
+.host-screen #playerGrid.is-packed .studio-contestant-card .truncate { font-size: 0.85rem; }

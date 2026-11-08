@@ -36,10 +36,10 @@
           <i class="fa-solid fa-share-nodes text-sm"></i>
         </button>
         <span class="font-mono font-bold text-sky-900 tracking-widest text-xs bg-sky-100 border border-sky-200 px-2 py-0.5 rounded-md" id="roomBadge">----</span>
-        <div class="flex items-center gap-1.5 bg-white border border-sky-200 rounded-full pl-1 pr-2.5 py-0.5 min-w-0">
-          <span class="text-lg leading-none" id="myAvatar">&#128056;</span>
+        <button type="button" id="myAvatarBtn" onclick="openAvatarPicker()" aria-label="Change your avatar" class="my-avatar-chip flex items-center gap-1.5 bg-white border border-sky-200 rounded-full pl-1 pr-2.5 py-0.5 min-w-0">
+          <span class="text-lg leading-none" id="myAvatar" aria-hidden="true">&#128056;</span>
           <span class="text-xs font-bold text-slate-700 truncate max-w-[6rem]" id="myName">Player</span>
-        </div>
+        </button>
       </div>
     </div>
     <div class="player-connection-row">
@@ -154,6 +154,19 @@
     <!-- game-sections -->
   </main>
 
+  <!-- Avatar picker: the face the TV shows next to your name -->
+  <div class="avatar-sheet" id="avatarSheet" hidden>
+    <div class="avatar-sheet-backdrop" onclick="closeAvatarPicker()"></div>
+    <div class="avatar-sheet-panel" role="dialog" aria-modal="true" aria-labelledby="avatarSheetTitle">
+      <div class="avatar-sheet-head">
+        <h2 id="avatarSheetTitle" class="font-display">Pick your avatar</h2>
+        <p>This is you on the TV. Faces someone else has are greyed out.</p>
+      </div>
+      <div class="avatar-grid" id="avatarGrid"></div>
+      <button type="button" class="avatar-sheet-done" onclick="closeAvatarPicker()">Looks good</button>
+    </div>
+  </div>
+
   <!-- Toast container -->
   <div class="toast-container" id="toasts"></div>
 
@@ -164,8 +177,62 @@
   <script src="/js/games.js"></script>
   <script>
     // --- Avatars ---
-    const AVATARS = ['\u{1F438}', '\u{1F431}', '\u{1F984}', '\u{1F41D}', '\u{1F419}', '\u{1F99A}', '\u{1F427}', '\u{1F981}',
-                     '\u{1F40B}', '\u{1F424}', '\u{1F423}', '\u{1F994}', '\u{1F418}', '\u{1F410}', '\u{1F999}', '\u{1F417}'];
+    // The server sends its pool on join; the player picks one in the avatar sheet.
+    let AVATAR_POOL = [];
+    let myAvatar = null;
+
+    function storedAvatar() { try { return localStorage.getItem('sh_avatar'); } catch { return null; } }
+
+    function setMyAvatar(avatar) {
+      myAvatar = avatar;
+      document.getElementById('myAvatar').textContent = avatar;
+      if (!document.getElementById('avatarSheet').hidden) renderAvatarGrid();
+    }
+
+    function renderAvatarGrid() {
+      const owners = {};
+      (state.players || []).forEach(p => { if (p.playerId !== state.playerId) owners[p.avatar] = p.username || p.name; });
+      document.getElementById('avatarGrid').innerHTML = AVATAR_POOL.map(a => {
+        const owner = owners[a];
+        const mine = a === myAvatar;
+        return '<button type="button" class="avatar-option' + (mine ? ' is-mine' : '') + '" data-avatar="' + a + '"' +
+          ' aria-pressed="' + mine + '"' + (owner ? ' disabled aria-label="' + escapeHtml(a + ' taken by ' + owner) + '"' : ' aria-label="' + a + '"') +
+          ' onclick="pickAvatar(this.dataset.avatar)">' + a + (owner ? '<span class="avatar-owner">' + escapeHtml(owner.slice(0, 8)) + '</span>' : '') + '</button>';
+      }).join('');
+    }
+
+    function openAvatarPicker() {
+      if (!AVATAR_POOL.length) return;
+      renderAvatarGrid();
+      const sheet = document.getElementById('avatarSheet');
+      sheet.hidden = false;
+      requestAnimationFrame(() => sheet.classList.add('is-open'));
+      // Keyboard and TV-remote users start on their own face; touch users see no ring.
+      if (!matchMedia('(pointer: coarse)').matches) {
+        (sheet.querySelector('.avatar-option.is-mine') || sheet.querySelector('.avatar-option:not([disabled])'))?.focus({ preventScroll: true });
+      }
+    }
+
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape' && !document.getElementById('avatarSheet').hidden) closeAvatarPicker();
+    });
+
+    function closeAvatarPicker() {
+      const sheet = document.getElementById('avatarSheet');
+      sheet.classList.remove('is-open');
+      sheet.hidden = true;
+      try { localStorage.setItem('sh_avatar_seen', '1'); } catch { /* ignore */ }
+    }
+
+    function pickAvatar(avatar) {
+      if (!avatar || avatar === myAvatar) return;
+      // Show it at once; the server confirms (AVATAR_OK) or says it was just taken (ERROR).
+      setMyAvatar(avatar);
+      state.avatarPending = true;
+      try { localStorage.setItem('sh_avatar', avatar); } catch { /* ignore */ }
+      send({ type: 'SET_AVATAR', avatar });
+      if (navigator.vibrate) navigator.vibrate(15);
+    }
 
     // --- State ---
     const state = {
@@ -294,8 +361,26 @@
           } catch { /* keep the token in memory when storage is unavailable */ }
           state.playerId = msg.playerId;
           state.myIndex = msg.index ?? 0;
-          if (msg.avatar) document.getElementById('myAvatar').textContent = msg.avatar;
+          if (Array.isArray(msg.avatarPool)) AVATAR_POOL = msg.avatarPool;
+          if (msg.avatar) setMyAvatar(msg.avatar);
+          {
+            // Bring back the face this phone picked last time, if it is free here.
+            const saved = storedAvatar();
+            if (saved && saved !== msg.avatar && AVATAR_POOL.includes(saved)) {
+              state.avatarRestore = true;
+              send({ type: 'SET_AVATAR', avatar: saved });
+            }
+            let seen = false;
+            try { seen = !!localStorage.getItem('sh_avatar_seen'); } catch { /* ignore */ }
+            if (!seen && !saved) setTimeout(openAvatarPicker, 600);
+          }
           showToast('Joined room ' + state.code, 'success');
+          break;
+
+        case 'AVATAR_OK':
+          state.avatarRestore = false;
+          state.avatarPending = false;
+          setMyAvatar(msg.avatar);
           break;
 
         case 'LOBBY_UPDATE': {
@@ -308,6 +393,11 @@
           state.votingActive = !!lobbyState.votingActive;
           state.availableCategories = lobbyState.availableCategories || [];
           state.voteTallies = lobbyState.voteTallies || {};
+          {
+            const me = state.players.find(p => p.playerId === state.playerId);
+            if (me && me.avatar && me.avatar !== myAvatar && !state.avatarRestore && !state.avatarPending) setMyAvatar(me.avatar);
+            else if (!document.getElementById('avatarSheet').hidden) renderAvatarGrid();
+          }
           if (!state.votingActive) state.myCategory = null;
           renderLobby();
           // Category vote opened/closed: move between dashboard and category picker
@@ -328,6 +418,18 @@
           break;
 
         case 'ERROR':
+          if (state.avatarRestore && /avatar/i.test(msg.message || '')) {
+            // Last time's face is taken here: keep the one the server gave, quietly.
+            state.avatarRestore = false;
+            const me = (state.players || []).find(p => p.playerId === state.playerId);
+            if (me) setMyAvatar(me.avatar);
+            break;
+          }
+          if (/avatar/i.test(msg.message || '')) {
+            state.avatarPending = false;
+            const me = (state.players || []).find(p => p.playerId === state.playerId);
+            if (me) setMyAvatar(me.avatar);
+          }
           showToast(msg.message || 'An error occurred', 'error');
           SH.game(state.gameType)?.redraw?.();
           break;
@@ -533,6 +635,17 @@
     }
 
 
+
+    // Write a list only when it changed, and keep the avatars' sway in step across
+    // re-renders: a fresh element would restart its animation and the faces would jump.
+    const AVATAR_SWAY_S = 60 / 136 * 2;
+    function setSwayHtml(el, html) {
+      if (el._swayHtml === html) return;
+      el._swayHtml = html;
+      el.innerHTML = html;
+      el.style.setProperty('--sway-delay', (-(performance.now() / 1000) % AVATAR_SWAY_S).toFixed(3) + 's');
+    }
+
     // --- Players & current score ---
     function sortedPlayers() {
       return [...state.players].sort((a, b) => (b.sessionScore || 0) - (a.sessionScore || 0));
@@ -553,12 +666,12 @@
         '</div>';
       }).join('');
 
-      container.innerHTML =
+      setSwayHtml(container,
         '<div class="flex items-center justify-between mb-2">' +
           '<span class="text-xs font-bold text-slate-700 uppercase">Players &middot; Score</span>' +
           '<span class="text-[10px] text-slate-500 font-medium">' + connectedCount() + ' in lobby</span>' +
         '</div>' +
-        '<div class="space-y-1.5 text-xs">' + (rows || '<div class="text-slate-500">Waiting for players...</div>') + '</div>';
+        '<div class="space-y-1.5 text-xs">' + (rows || '<div class="text-slate-500">Waiting for players...</div>') + '</div>');
     }
 
     // --- Quiz category vote ---

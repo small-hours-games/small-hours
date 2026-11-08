@@ -189,6 +189,9 @@
   .tbs-dancers .duel-fighter-lion { transform: rotateY(16deg) scale(0.66); }
   .tbs-dancers .duel-fighter-frog { transform: rotateY(-16deg) scale(0.66); }
 }
+/* A weak TV (the show's quality governor, or ?showQuality=lite) sends the dancers home:
+   they are dozens of 3D layers, the costliest part of the lobby to composite. */
+.tbs-lite .tbs-dancers { display: none !important; }
 /* No card duel while they are dancing. */
 .tbs-lobby-live .mascot-duel-stage { display: none !important; }
 

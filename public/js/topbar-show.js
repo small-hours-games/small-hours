@@ -493,6 +493,31 @@ function tbsPoolKill(pool, i) {
  *       latencyMs (TV audio delay to wait for), fetch (for tests)
  * Returns { setMuted(bool), stop(), state() }.
  */
+/**
+ * Quality governor: a weak TV (Android TV boxes, old smart-TV browsers) can't draw the
+ * whole show at 60 fps, and a show that stutters looks worse than a simpler one that
+ * flows. Feed it the time between frames; it steps down a tier after 1.5 s of slow
+ * frames (under ~42 fps) and back up after 8 s of fast ones, at most once, so it never
+ * flaps. Tier 0 is the full show, 1 drops the panel shake and halves the fire,
+ * 2 also sends the dancers home and draws the equalizer at half rate. Pure; for tests.
+ */
+function tbsGovernor(mode) {
+  var fixed = mode === 'full' ? 0 : mode === 'lite' ? 2 : -1;
+  return { tier: fixed < 0 ? 0 : fixed, fixed: fixed, ema: 16.7, slow: 0, fast: 0, warm: 0, ups: 0 };
+}
+function tbsGovern(g, frameMs) {
+  if (g.fixed >= 0) return g.tier;
+  if (!(frameMs > 0) || frameMs > 250) return g.tier;   // a hidden tab or a hiccup, not a slow TV
+  g.warm += frameMs;
+  g.ema = g.ema * 0.9 + frameMs * 0.1;
+  if (g.warm < 1000) return g.tier;                      // the first second loads and measures
+  g.slow = g.ema > 24 ? g.slow + frameMs : 0;
+  g.fast = g.ema < 18 ? g.fast + frameMs : 0;
+  if (g.slow > 1500 && g.tier < 2) { g.tier++; g.slow = 0; g.fast = 0; }
+  else if (g.fast > 8000 && g.tier > 0 && g.ups < 1) { g.tier--; g.ups++; g.fast = 0; }
+  return g.tier;
+}
+
 function createTopbarShow(opts) {
   var header = opts.header;
   var audio = opts.audio;
@@ -515,6 +540,8 @@ function createTopbarShow(opts) {
   var exitAt = 0;
   var lastNow = 0;
   var frameNo = 0;
+  var gov = tbsGovernor(opts.quality);
+  var tier = gov.tier;
   var bounds = { left: 0, right: 0, width: 0 };
   var fire = { parts: tbsPool(TBS_MAX_FLAMES), embers: tbsPool(TBS_MAX_EMBERS), ctx: null, lastBeat: -1, lastHalf: -1, box: null, sprites: null, w: 0, h: 0, dpr: 1, burst: false };
   var hair = {
@@ -661,6 +688,7 @@ function createTopbarShow(opts) {
   function spawnFlame(n, power, spread) {
     var b = fire.box;
     if (!b) return;
+    if (tier) n = Math.round(n * (tier >= 2 ? 0.35 : 0.6));
     // Flames start on the top edge of the logo and rise to the top of the bar.
     var base = b.logoTop + b.logoH * 0.2;
     for (var i = 0; i < n; i++) {
@@ -674,6 +702,7 @@ function createTopbarShow(opts) {
   function spawnEmbers(n, power) {
     var b = fire.box;
     if (!b) return;
+    if (tier) n = Math.round(n * (tier >= 2 ? 0.35 : 0.6));
     for (var i = 0; i < n; i++) {
       var e = tbsPoolTake(fire.embers);
       if (!e) return;
@@ -823,6 +852,10 @@ function createTopbarShow(opts) {
   function frame(now) {
     raf = 0;
     if (!running || !map) return;
+    if (lastNow) {
+      var nextTier = tbsGovern(gov, now - lastNow);
+      if (nextTier !== tier) setTier(nextTier);
+    }
     var dt = lastNow ? Math.min(1 / 20, Math.max(0.001, (now - lastNow) / 1000)) : 1 / 60;
     lastNow = now;
     frameNo++;
@@ -877,7 +910,7 @@ function createTopbarShow(opts) {
     css(el.singerGlow, 'opacity', (hit * live).toFixed(3));
     if (el.chip.classList.contains('tbs-chip-on')) css(el.chip, 'transform', 'translate(-50%, -50%) scale(' + (1 + hit * live * 0.08).toFixed(3) + ')');
     // Equalizer along the bottom edge, drawn on one canvas: each beat deals new heights.
-    if (eqCtx) {
+    if (eqCtx && (tier < 2 || frameNo % 2 === 0)) {
       eqCtx.setTransform(eqDpr, 0, 0, eqDpr, 0, 0);
       eqCtx.clearRect(0, 0, eqW, eqH);
       eqCtx.globalAlpha = 0.35 + live * 0.45;
@@ -906,14 +939,14 @@ function createTopbarShow(opts) {
     css(el.logoGlow, 'transform', 'translate(-50%, -50%) scale(' + (0.9 + 0.25 * hit * heat).toFixed(3) + ')');
 
     // The lion and the frog dance under the QR code.
-    for (var dn = 0; dn < dancers.length; dn++) {
+    for (var dn = 0; tier < 2 && dn < dancers.length; dn++) {
       var dp = exiting ? { y: 0, rot: 0, sx: 1, sy: 1, px: 0, py: 0 } : tbsDancerPose(loc, dn, reduced);
       if (dancers[dn].rig) css(dancers[dn].rig, 'transform', 'translate3d(0,' + dp.y.toFixed(1) + 'px,0) rotateZ(' + dp.rot.toFixed(1) + 'deg) scale(' + dp.sx.toFixed(3) + ',' + dp.sy.toFixed(3) + ')');
       if (dancers[dn].paw) css(dancers[dn].paw, 'transform', 'translate3d(' + (dp.px * 1.6).toFixed(1) + 'px,' + (dp.py * 1.6).toFixed(1) + 'px,26px)');
     }
 
     // The lobby boxes (vote options and panels) shake on the beat with her.
-    var shake = exiting ? { vx: 0, vy: 0, kick: 0 } : tbsShake(loc, reduced);
+    var shake = exiting || tier >= 2 ? { vx: 0, vy: 0, kick: 0 } : tbsShake(loc, reduced);
     applyShake(shake, now);
 
     // The flash and shockwave: the landing, and every drop after a quieter bar.
@@ -938,6 +971,16 @@ function createTopbarShow(opts) {
     raf = requestAnimationFrame(frame);
   }
 
+  // A lower tier undoes what it no longer draws, so nothing is left frozen mid-move.
+  function setTier(next) {
+    tier = next;
+    if (tier >= 1) {
+      shakeEls.panels.concat(shakeEls.invite ? [shakeEls.invite] : []).forEach(function (n) { css(n, 'transform', ''); });
+      shakeEls.options.forEach(function (o) { if (o._tbsShine) css(o._tbsShine, 'opacity', '0'); });
+    }
+    document.body.classList.toggle('tbs-lite', tier >= 2);
+  }
+
   // Shake the lobby: transforms written straight onto the few boxes, so no style
   // inheritance runs through the page. The vote list re-renders, so look it up again now and then.
   function applyShake(sh, now) {
@@ -952,9 +995,11 @@ function createTopbarShow(opts) {
     for (var i = 0; i < shakeEls.options.length; i++) {
       var o = shakeEls.options[i], sign = i % 2 ? -1 : 1;
       css(o, 'transform', 'translate(' + (sh.vx * sign).toFixed(1) + 'px,' + sh.vy.toFixed(1) + 'px) scale(' + sc + ')');
+      if (tier) continue;
       if (!o._tbsShine) { o._tbsShine = document.createElement('span'); o._tbsShine.className = 'tbs-shine'; o.appendChild(o._tbsShine); }
       css(o._tbsShine, 'opacity', shine);
     }
+    if (tier) return;
     for (var j = 0; j < shakeEls.panels.length; j++) {
       css(shakeEls.panels[j], 'transform', 'translate(' + (sh.vx * 0.5).toFixed(1) + 'px,' + (-sh.vy * 0.5).toFixed(1) + 'px) scale(' + (1 + sh.kick * 0.006).toFixed(4) + ')');
     }
@@ -1006,6 +1051,7 @@ function createTopbarShow(opts) {
       measure();
       header.classList.add('tbs-on');
       document.body.classList.add('tbs-lobby-live');
+      if (tier) setTier(tier);
       stage.classList.add('tbs-stage-on');
       if (!raf) raf = requestAnimationFrame(frame);
     };
@@ -1030,7 +1076,7 @@ function createTopbarShow(opts) {
     header.classList.remove('tbs-on', 'tbs-open');
     document.body.classList.remove('tbs-bar-open');
     if (logo) { logo.style.transform = ''; if (logo._tbs) logo._tbs.transform = ''; }
-    document.body.classList.remove('tbs-lobby-live');
+    document.body.classList.remove('tbs-lobby-live', 'tbs-lite');
     clearShake();
     stage.classList.remove('tbs-stage-on');
     el.singer.style.opacity = '0';
@@ -1056,13 +1102,13 @@ function createTopbarShow(opts) {
   return {
     setMuted: function (value) { muted = !!value; check(); },
     stop: stop,
-    state: function () { return { running: running, track: trackName(), exiting: exitAt > 0 }; },
+    state: function () { return { running: running, track: trackName(), exiting: exitAt > 0, tier: tier }; },
   };
 }
 
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     tbsBeatIndex: tbsBeatIndex, tbsLocate: tbsLocate, tbsPose: tbsPose, tbsShake: tbsShake, tbsDancerPose: tbsDancerPose, tbsRand: tbsRand, tbsKnee: tbsKnee,
-    tbsHair: tbsHair, tbsHairStep: tbsHairStep, tbsPool: tbsPool, tbsPoolTake: tbsPoolTake, tbsPoolKill: tbsPoolKill, createTopbarShow: createTopbarShow, TBS_SHOWS: TBS_SHOWS,
+    tbsGovernor: tbsGovernor, tbsGovern: tbsGovern, tbsHair: tbsHair, tbsHairStep: tbsHairStep, tbsPool: tbsPool, tbsPoolTake: tbsPoolTake, tbsPoolKill: tbsPoolKill, createTopbarShow: createTopbarShow, TBS_SHOWS: TBS_SHOWS,
   };
 }

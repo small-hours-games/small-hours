@@ -1,0 +1,6 @@
+{
+  "enabledMcpjsonServers": [
+    "trail"
+  ],
+  "enableAllProjectMcpServers": true
+}

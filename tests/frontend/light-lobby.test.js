@@ -135,9 +135,10 @@ describe('Light lobby uses the multiplayer state', () => {
 
     const elements = {};
     const document = {
-      getElementById: id => (elements[id] ||= { style: {}, innerHTML: '', textContent: '' }),
+      getElementById: id => (elements[id] ||= { style: { setProperty() {} }, classList: { toggle() {} }, innerHTML: '', textContent: '' }),
     };
     const context = {
+      performance: { now: () => 1234 },
       state: {
         players: [{ playerId: 'p1', name: 'Alice', avatar: '🦁', connected: true, isAdmin: true, sessionScore: 10 }],
         lobby: { gameSuggestions: { p1: 'quiz' } },
@@ -147,7 +148,7 @@ describe('Light lobby uses the multiplayer state', () => {
     };
     loadCatalog(context);
     runInNewContext(
-      hostSource.slice(hostSource.indexOf('    function renderPlayers('), hostSource.indexOf('    // Live tallies:')),
+      hostSource.slice(hostSource.indexOf('    // Write a list only when it changed'), hostSource.indexOf('    // Live tallies:')),
       context
     );
     context.renderPlayers();

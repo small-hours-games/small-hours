@@ -188,3 +188,37 @@ describe('the fire and the moves follow how hard the music hits', () => {
     expect(kit.tbsPose(at(before), false).y).toBeGreaterThan(0);
   });
 });
+
+describe('the show lowers its detail on a slow TV', () => {
+  const run = (g, ms, frames) => { let t = g.tier; for (let i = 0; i < frames; i++) t = kit.tbsGovern(g, ms); return t; };
+
+  it('stays at full detail at 60 fps', () => {
+    const g = kit.tbsGovernor('auto');
+    expect(run(g, 16.7, 600)).toBe(0);
+  });
+
+  it('steps down one tier after a second and a half of slow frames, then another', () => {
+    const g = kit.tbsGovernor('auto');
+    run(g, 16.7, 60);                       // warm-up second
+    expect(run(g, 33, 30)).toBe(0);         // one slow second is not enough
+    expect(run(g, 33, 40)).toBe(1);
+    expect(run(g, 33, 60)).toBe(2);
+    expect(run(g, 33, 200)).toBe(2);        // never below the lowest tier
+  });
+
+  it('ignores hidden-tab gaps and steps back up only once', () => {
+    const g = kit.tbsGovernor('auto');
+    run(g, 16.7, 60);
+    expect(run(g, 1000, 20)).toBe(0);       // a background tab, not a slow TV
+    run(g, 33, 80);
+    expect(g.tier).toBe(1);
+    expect(run(g, 16.7, 600)).toBe(0);      // fast again for 8 s: back to full
+    run(g, 33, 80);
+    expect(run(g, 16.7, 1200)).toBe(1);     // it does not flap a second time
+  });
+
+  it('can be fixed per TV', () => {
+    expect(run(kit.tbsGovernor('full'), 50, 300)).toBe(0);
+    expect(run(kit.tbsGovernor('lite'), 16.7, 300)).toBe(2);
+  });
+});

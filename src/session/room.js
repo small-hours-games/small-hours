@@ -107,7 +107,7 @@ export class Room {
     this.lastActivity = Date.now();
     const clean = sanitizeUsername(username);
     const playerId = generatePlayerId();
-    const avatar = avatarFromUsername(clean);
+    const avatar = this.freeAvatar(avatarFromUsername(clean));
     const isAdmin = this.players.size === 0;
     const reconnectToken = generateReconnectToken();
 
@@ -124,6 +124,44 @@ export class Room {
     });
 
     return { playerId, avatar, reconnectToken };
+  }
+
+  /** Avatars other players in the room already have. */
+  takenAvatars(exceptId) {
+    const taken = new Set();
+    for (const [id, p] of this.players) if (id !== exceptId) taken.add(p.avatar);
+    return taken;
+  }
+
+  /**
+   * The preferred avatar if nobody has it yet, otherwise the next free one in the pool,
+   * so faces on the TV tell players apart. With more players than avatars, repeats are allowed.
+   */
+  freeAvatar(preferred, exceptId) {
+    const taken = this.takenAvatars(exceptId);
+    if (!taken.has(preferred)) return preferred;
+    const start = Math.max(0, AVATAR_POOL.indexOf(preferred));
+    for (let i = 1; i <= AVATAR_POOL.length; i++) {
+      const candidate = AVATAR_POOL[(start + i) % AVATAR_POOL.length];
+      if (!taken.has(candidate)) return candidate;
+    }
+    return preferred;
+  }
+
+  /**
+   * A player picks their own avatar from the pool.
+   * Returns { ok: true, avatar } or { ok: false, error }.
+   */
+  setAvatar(playerId, avatar) {
+    const player = this.players.get(playerId);
+    if (!player) return { ok: false, error: 'Not in this room' };
+    if (!AVATAR_POOL.includes(avatar)) return { ok: false, error: 'Unknown avatar' };
+    if (player.avatar === avatar) return { ok: true, avatar };
+    if (this.takenAvatars(playerId).has(avatar)) return { ok: false, error: 'Someone already has that avatar' };
+    player.avatar = avatar;
+    this.stateVersion += 1;
+    this.lastActivity = Date.now();
+    return { ok: true, avatar };
   }
 
   /**

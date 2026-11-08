@@ -282,6 +282,9 @@
 
     function triggerDuel() {
       if (!isLobbyVisible() || isRunning) return false;
+      // The lion and the frog are dancing in the topbar show: the duel stage is hidden then,
+      // so don't spend frames flying cards nobody sees.
+      if (document.body.classList.contains('tbs-lobby-live')) return false;
       ensureStage();
       if (!stageEl) return false;
 
