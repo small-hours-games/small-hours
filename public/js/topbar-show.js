@@ -1009,7 +1009,9 @@ function createTopbarShow(opts) {
 
     // The AI characters dance along the edges of the bar, each its own way.
     for (var bi = 0; bi < bots.length; bi++) {
-      var bp = tier >= 2 || exiting ? { show: false, op: 0 } : tbsBotPose(loc, bi, bots[bi].kind, reduced);
+      // Four small transforms are cheap, so they stay on a slow TV too (only less often there).
+      if (tier >= 2 && frameNo % 2) continue;
+      var bp = exiting ? { show: false, op: 0 } : tbsBotPose(loc, bi, bots[bi].kind, reduced);
       css(bots[bi].el, 'opacity', bp.show ? bp.op.toFixed(2) : '0');
       if (!bp.show) continue;
       var bx = bounds.left + w * TBS_BOT_SPOTS[bi] + bp.x;

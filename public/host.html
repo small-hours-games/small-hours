@@ -303,6 +303,20 @@
     })();
 
     // --- WebSocket ---
+    // A deploy restarts the server; the TV reconnects on its own, but it would keep running the
+    // page it loaded before (old scripts and styles) while the badge shows the new version.
+    // So when the build changes, reload, at once in the lobby or as soon as the game ends.
+    let pageBuild = null;
+    let reloadForBuild = false;
+    function noteBuild(info) {
+      const id = info.commit || info.version;
+      if (!pageBuild) { pageBuild = id; return; }
+      if (id !== pageBuild) { reloadForBuild = true; reloadIfIdle(); }
+    }
+    function reloadIfIdle() {
+      if (reloadForBuild && !state.gameType) location.reload();
+    }
+
     function connect() {
       const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
       const url = protocol + '//' + location.host + '/ws/host/' + state.code;
@@ -315,7 +329,10 @@
       ws.onopen = () => {
         state.reconnectAttempts = 0;
         setConnectionStatus('connected', 'Connected');
-        shLoadBuildInfo(info => shFillBuildBadge(document.getElementById('buildBadge'), info));
+        shLoadBuildInfo(info => {
+          shFillBuildBadge(document.getElementById('buildBadge'), info);
+          noteBuild(info);
+        });
       };
 
       ws.onmessage = (e) => {
@@ -699,10 +716,12 @@
           placePartyChat(false);
           lobbyMusic.setActive(true);
           if (mascotDuel) mascotDuel.setLobbyActive(true);
+          reloadIfIdle();
         }, 4000);
       } else if (msg.phase === 'lobby') {
         state.gameType = null;
         state.gameEvents = [];
+        setTimeout(reloadIfIdle, 0);
         document.getElementById('lobbyView').style.display = '';
         document.getElementById('gameView').style.display = 'none';
         document.getElementById('scorePanel').style.display = 'none';
