@@ -188,6 +188,57 @@ function tbsShake(loc, reduced) {
   return out;
 }
 
+/**
+ * The lion (side 0) and the frog (side 1) dancing under the QR code: { y, rot, sx, sy } for
+ * the body and { px, py } for the free paw. In the drops they answer each other, the lion
+ * hopping on 1 and 3 and the frog on 2 and 4; in the grooves they bob and sway apart; in
+ * the breaks they wave their paws in the air together. Pure; for tests.
+ */
+function tbsDancerPose(loc, side, reduced) {
+  var out = { y: 0, rot: 0, sx: 1, sy: 1, px: 0, py: 0 };
+  var p = loc.phase, hit = Math.pow(1 - p, 3), x2 = loc.beatInBar + p;
+  var dir = side ? -1 : 1;                    // the frog mirrors the lion
+  if (reduced) { out.rot = 2 * dir * Math.sin(Math.PI * x2 / 2); return out; }
+  if (loc.stage === 'intro') {
+    out.y = 3 * hit; out.sy = 1 - 0.03 * hit;   // nodding along from the first beat
+    return out;
+  }
+  if (loc.stage === 'fall') { out.y = 5; out.sy = 0.94; out.px = 4 * dir; out.py = -30; return out; }
+  if (loc.stage === 'outro') {
+    out.px = (8 + 6 * Math.sin(loc.t * 9)) * dir; out.py = -42; out.rot = 4 * dir; return out;
+  }
+  if (loc.sinceDrop < loc.beatLen) {
+    // Her landing: both jump with her.
+    var j = loc.sinceDrop / loc.beatLen;
+    out.y = -22 * Math.sin(Math.PI * j); out.px = 6 * dir; out.py = -46; out.sy = 1.06; out.sx = 0.96;
+    return out;
+  }
+  if (loc.riser) {
+    var r = x2 / 4;
+    out.y = 6 * r + 1.5 * Math.sin(p * Math.PI * 8); out.sy = 1 - 0.08 * r; out.sx = 1 + 0.05 * r;
+    out.py = -10 * r;
+  } else if (loc.kind === 'd') {
+    var mine = (loc.beatInBar % 2) === side;
+    if (mine) {
+      out.y = -(12 + 6 * loc.energy) * Math.sin(Math.PI * p);
+      out.rot = 9 * dir * Math.sin(Math.PI * p);
+      out.px = 10 * dir; out.py = -44 + 10 * p;
+    } else {
+      out.y = 3 * hit; out.px = 4 * dir; out.py = -12;
+    }
+    out.sy = 1 - 0.12 * hit; out.sx = 1 + 0.08 * hit;
+  } else if (loc.kind === 'g') {
+    out.y = 4 * hit; out.sy = 1 - 0.06 * hit;
+    out.rot = 7 * dir * Math.sin(Math.PI * x2);
+    out.px = 10 * dir * Math.sin(Math.PI * x2); out.py = -18 - 8 * hit;
+  } else {
+    out.rot = 8 * Math.sin(Math.PI * x2 / 2);   // swaying together, paws up like lighters
+    out.px = 10 * Math.sin(Math.PI * x2 / 2); out.py = -48;
+    out.y = 2 * Math.pow(1 - ((x2 % 2) / 2), 3);
+  }
+  return out;
+}
+
 // ---- 2D affine helpers (SVG matrix order: a b c d e f) ----
 function tbsMul(m, n) {
   return [m[0] * n[0] + m[2] * n[1], m[1] * n[0] + m[3] * n[1], m[0] * n[2] + m[2] * n[3],
@@ -444,6 +495,26 @@ function createTopbarShow(opts) {
     eyes: q('.tbs-eyes'), mouth: q('.tbs-mouth'), shadow: q('.tbs-shadow'), flash: q('.tbs-flash'),
   };
   var logo = header.querySelector('.brand-logo');
+
+  // The lion and the frog from the mascot duel, dancing under the QR code.
+  var dancers = [];
+  function buildDancers() {
+    var box = opts.dancers;
+    if (!box || dancers.length || typeof buildMascotStageHtml !== 'function') return;
+    var tmp = document.createElement('div');
+    tmp.innerHTML = buildMascotStageHtml();
+    ['lion', 'frog'].forEach(function (side) {
+      var fighter = tmp.querySelector('[data-role="' + side + '"]');
+      if (!fighter) return;
+      Array.prototype.forEach.call(fighter.querySelectorAll('[data-role]'), function (n) { n.removeAttribute('data-role'); });
+      fighter.removeAttribute('data-role');
+      var slot = document.createElement('div');
+      slot.className = 'tbs-dancer-slot';
+      slot.appendChild(fighter);
+      box.appendChild(slot);
+      dancers.push({ rig: fighter.querySelector('.fighter-3d-rig'), paw: fighter.querySelector('.fighter-arm-throw') });
+    });
+  }
 
   function trackName() {
     var src = audio.currentSrc || audio.getAttribute('src') || '';
@@ -722,6 +793,13 @@ function createTopbarShow(opts) {
     header.style.setProperty('--tbs-logo', (hit * heat).toFixed(3));
     header.style.setProperty('--tbs-heat', heat.toFixed(3));
 
+    // The lion and the frog dance under the QR code.
+    for (var dn = 0; dn < dancers.length; dn++) {
+      var dp = exiting ? { y: 0, rot: 0, sx: 1, sy: 1, px: 0, py: 0 } : tbsDancerPose(loc, dn, reduced);
+      if (dancers[dn].rig) dancers[dn].rig.style.transform = 'translate3d(0,' + dp.y.toFixed(1) + 'px,0) rotateZ(' + dp.rot.toFixed(1) + 'deg) scale(' + dp.sx.toFixed(3) + ',' + dp.sy.toFixed(3) + ')';
+      if (dancers[dn].paw) dancers[dn].paw.style.transform = 'translate3d(' + (dp.px * 1.6).toFixed(1) + 'px,' + (dp.py * 1.6).toFixed(1) + 'px,26px)';
+    }
+
     // The lobby boxes (vote options and panels) shake on the beat with her.
     var shake = exiting ? { vx: 0, vy: 0, kick: 0 } : tbsShake(loc, reduced);
     var rootStyle = document.documentElement.style;
@@ -768,6 +846,7 @@ function createTopbarShow(opts) {
       hint = -1;
       lastNow = 0;
       clock = { ct: -1, at: 0, base: 0, baseAt: 0 };
+      buildDancers();
       measure();
       header.classList.add('tbs-on');
       document.body.classList.add('tbs-lobby-live');
@@ -828,7 +907,7 @@ function createTopbarShow(opts) {
 
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
-    tbsBeatIndex: tbsBeatIndex, tbsLocate: tbsLocate, tbsPose: tbsPose, tbsShake: tbsShake, tbsRand: tbsRand, tbsKnee: tbsKnee,
+    tbsBeatIndex: tbsBeatIndex, tbsLocate: tbsLocate, tbsPose: tbsPose, tbsShake: tbsShake, tbsDancerPose: tbsDancerPose, tbsRand: tbsRand, tbsKnee: tbsKnee,
     tbsHair: tbsHair, tbsHairStep: tbsHairStep, createTopbarShow: createTopbarShow, TBS_SHOWS: TBS_SHOWS,
   };
 }

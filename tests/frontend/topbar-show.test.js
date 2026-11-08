@@ -128,3 +128,21 @@ describe('the lobby shakes on the beat', () => {
     expect(kit.tbsShake(at(40.2), true)).toEqual({ vx: 0, vy: 0, kick: 0 });
   });
 });
+
+describe('the lion and the frog dance under the QR code', () => {
+  const at = t => kit.tbsLocate(map, t);
+  it('answer each other in a drop: the lion hops on 1 and 3, the frog on 2 and 4', () => {
+    const i = map.beats.findIndex((t, k) => t > 40 && (k - map.firstBar) % 4 === 0);
+    const mid = k => (map.beats[k] + map.beats[k + 1]) / 2;
+    expect(kit.tbsDancerPose(at(mid(i)), 0, false).y).toBeLessThan(-8);
+    expect(kit.tbsDancerPose(at(mid(i)), 1, false).y).toBeGreaterThan(-1);
+    expect(kit.tbsDancerPose(at(mid(i + 1)), 1, false).y).toBeLessThan(-8);
+    expect(kit.tbsDancerPose(at(mid(i + 1)), 0, false).y).toBeGreaterThan(-1);
+  });
+  it('both jump when she lands, and stand still with reduced motion', () => {
+    const t = map.dropTime + 0.25;
+    expect(kit.tbsDancerPose(at(t), 0, false).y).toBeLessThan(-15);
+    expect(kit.tbsDancerPose(at(t), 1, false).y).toBeLessThan(-15);
+    expect(kit.tbsDancerPose(at(t), 0, true).y).toBe(0);
+  });
+});

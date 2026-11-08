@@ -74,6 +74,8 @@
           <span class="join-step-pill"><b>2</b> Pick Avatar</span>
           <span class="join-step-pill"><b>3</b> Vote!</span>
         </div>
+        <!-- The lion and the frog dance here while a song with a topbar show plays. -->
+        <div class="tbs-dancers" id="tbsDancers" aria-hidden="true"></div>
         <div class="invite-foot"><p>Good games.<br>Better together.</p></div>
       </section>
 
@@ -199,7 +201,10 @@
       } catch { return Number(fromUrl) || 0; }
     }
     const topbarShow = typeof createTopbarShow === 'function'
-      ? createTopbarShow({ header: document.querySelector('.studio-header'), audio: lobbyAudio, latencyMs: topbarShowDelay() })
+      ? createTopbarShow({
+        header: document.querySelector('.studio-header'), audio: lobbyAudio, latencyMs: topbarShowDelay(),
+        dancers: document.getElementById('tbsDancers'),
+      })
       : null;
     const mascotDuel = typeof createMascotDuel === 'function' ? createMascotDuel() : null;
     document.addEventListener('pointerdown', () => lobbyMusic.retry());

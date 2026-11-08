@@ -437,5 +437,7 @@
   }
 
   root.createMascotDuel = createMascotDuel;
+  // The topbar show borrows the lion and the frog to dance under the QR code.
+  root.buildMascotStageHtml = buildMascotStageHtml;
   if (typeof window !== 'undefined') window.createMascotDuel = createMascotDuel;
 })(globalThis);
