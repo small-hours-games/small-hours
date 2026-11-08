@@ -22,3 +22,4 @@ data/
 /.hermes/
 /.planning/
 .build-time
+**/.claude/settings.local.json
