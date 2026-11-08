@@ -5,6 +5,8 @@
 //
 // Engine pattern: { setup, actions, view, endIf }.
 
+import { shuffle, deal } from '../../src/cards/deck.js';
+
 const COLORS = ['r', 'y', 'g', 'b'];
 const COLOR_NAME = { r: 'Röd', y: 'Gul', g: 'Grön', b: 'Blå' };
 const COLOR_HEX = { r: '#e63946', y: '#ffd166', g: '#2a9d8f', b: '#457b9d' };
@@ -30,15 +32,6 @@ function makeDeck() {
   return deck;
 }
 
-function shuffle(arr) {
-  const a = [...arr];
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [a[i], a[j]] = [a[j], a[i]];
-  }
-  return a;
-}
-
 function cardView(card) {
   if (!card) return null;
   return { id: card.id, color: card.color, kind: card.kind, value: card.value || null, symbol: card.color ? SYMBOL[card.color] : '🌈' };
@@ -47,19 +40,8 @@ function cardView(card) {
 const uno = {
   setup({ players, config }) {
     const handSize = (config && config.handSize) || 7;
-    const deck = shuffle(makeDeck());
-    const hands = {};
+    const { hands, rest: deck } = deal(shuffle(makeDeck()), players, handSize);
     const order = [...players];
-    for (const id of players) hands[id] = [];
-
-    let dealt = 0;
-    while (dealt < handSize * players.length && deck.length > 0) {
-      for (const id of players) {
-        if (deck.length === 0) break;
-        hands[id].push(deck.pop());
-        dealt++;
-      }
-    }
     // First discard: a number card.
     let first = deck.pop();
     while (first && first.kind !== 'number') { deck.unshift(first); first = deck.pop(); }

@@ -1,5 +1,5 @@
 // public/js/table-cards.js
-// Card-table kit for the card games (Gin Rummy, Palace) on phone and TV:
+// Card-table kit for the card games on phone and TV:
 // vector playing cards, card stacks, hand racks/fans, hand ordering and the
 // tap / swipe-up / drag gesture handling. Plain browser script exposing globals.
 // Engine cards are { id, suit: 'h'|'d'|'c'|'s', rank }.

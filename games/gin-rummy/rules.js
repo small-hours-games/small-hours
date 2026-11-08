@@ -1,28 +1,12 @@
 // Gin Rummy card game for Small Hours game engine
 // ESM, pure functions, immutable state
 
+import { createDeck, shuffle as shuffleArray } from '../../src/cards/deck.js';
+
 // --- Helper Functions ---
 
-function shuffleArray(arr) {
-  const a = [...arr];
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [a[i], a[j]] = [a[j], a[i]];
-  }
-  return a;
-}
-
-// Create a standard 52-card gin rummy deck (Ace=1, King=13)
-function createGinDeck() {
-  const suits = ['h', 'd', 'c', 's'];
-  const cards = [];
-  for (const suit of suits) {
-    for (let rank = 1; rank <= 13; rank++) {
-      cards.push({ id: `${rank}${suit}_0`, suit, rank });
-    }
-  }
-  return shuffleArray(cards);
-}
+// A standard 52-card deck (Ace=1, King=13)
+const createGinDeck = () => createDeck({ idSuffix: '_0' });
 
 // Wrap raw state-returning functions into {state, events} format expected by engine
 function wrapAction(fn) {

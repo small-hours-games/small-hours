@@ -6,32 +6,13 @@
 //
 // Follows the engine pattern: { setup, actions, view, endIf }.
 
-const SUITS = ['h', 'd', 'c', 's'];
+import { createDeck } from '../../src/cards/deck.js';
 const SUIT_SYMBOL = { h: '♥', d: '♦', c: '♣', s: '♠' };
 // rank 2..14 (J=11, Q=12, K=13, A=14)
 const RANK_LABEL = { 11: 'J', 12: 'Q', 13: 'K', 14: 'A' };
 
 function rankLabel(rank) {
   return RANK_LABEL[rank] || String(rank);
-}
-
-function makeDeck() {
-  const deck = [];
-  for (const suit of SUITS) {
-    for (let rank = 2; rank <= 14; rank++) {
-      deck.push({ id: `${rank}${suit}`, suit, rank });
-    }
-  }
-  return deck;
-}
-
-function shuffle(arr) {
-  const a = [...arr];
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [a[i], a[j]] = [a[j], a[i]];
-  }
-  return a;
 }
 
 function cardView(card) {
@@ -45,7 +26,7 @@ const hilow = {
     const scores = {};
     for (const id of players) scores[id] = 0;
 
-    const deck = shuffle(makeDeck());
+    const deck = createDeck({ aceHigh: true });
     // Draw the first "current" card so players have something to guess against.
     const current = deck.pop();
 

@@ -5,31 +5,13 @@
 //
 // Engine pattern: { setup, actions, view, endIf }.
 
-const SUITS = ['h', 'd', 'c', 's'];
+import { SUITS, createDeck, deal } from '../../src/cards/deck.js';
+
 const SUIT_SYMBOL = { h: '♥', d: '♦', c: '♣', s: '♠' };
 const SUIT_NAME = { h: 'Hjärter', d: 'Ruter', c: 'Klöver', s: 'Spader' };
 const RANK_LABEL = { 1: 'A', 11: 'J', 12: 'Q', 13: 'K' };
 
 function rankLabel(rank) { return RANK_LABEL[rank] || String(rank); }
-
-function makeDeck() {
-  const deck = [];
-  for (const suit of SUITS) {
-    for (let rank = 1; rank <= 13; rank++) {
-      deck.push({ id: `${rank}${suit}`, suit, rank });
-    }
-  }
-  return deck;
-}
-
-function shuffle(arr) {
-  const a = [...arr];
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [a[i], a[j]] = [a[j], a[i]];
-  }
-  return a;
-}
 
 function cardView(card) {
   if (!card) return null;
@@ -64,22 +46,8 @@ function maybeFinishStuck(state) {
 const sjuan = {
   setup({ players, config }) {
     const handSize = (config && config.handSize) || 7;
-    const deck = shuffle(makeDeck());
-    const hands = {};
-    const order = [];
-    for (const id of players) {
-      hands[id] = [];
-      order.push(id);
-    }
-    // Deal handSize to each (cap at available cards).
-    let dealt = 0;
-    while (dealt < handSize * players.length && deck.length > 0) {
-      for (const id of players) {
-        if (deck.length === 0) break;
-        hands[id].push(deck.pop());
-        dealt++;
-      }
-    }
+    const { hands, rest: deck } = deal(createDeck(), players, handSize);
+    const order = [...players];
     return {
       phase: 'play',
       players: [...players],

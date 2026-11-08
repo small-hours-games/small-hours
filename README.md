@@ -178,7 +178,7 @@ npm run test:watch        # rerun tests while working
 npx vitest run tests/engine/quiz.test.js
 ```
 
-To add a game, start from a small one such as `games/hilow/`. Define `setup`, `actions`, `view`, and `endIf` and export the manifest from `games/<id>/index.js`; the server finds it by itself. Add phone and TV screens and tests.
+To add a game, copy `games/_template/`; see [`games/README.md`](games/README.md). Define `setup`, `actions`, `view`, and `endIf` and export the manifest from `games/<id>/index.js`; the server finds it by itself. Add phone and TV screens and tests.
 
 Keep rules in the engine, secrets out of player views, and the next round easy to start.
 

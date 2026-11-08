@@ -70,7 +70,7 @@ export default {
 };
 ```
 
-`processAction` returns `{ game, events }`; an action handler returns `{ state, events }`. Preserve immutable state updates. Use `games/hilow/` as a small reference, then inspect a game with similar rules.
+`processAction` returns `{ game, events }`; an action handler returns `{ state, events }`. Preserve immutable state updates. Use `games/_template/` as a small reference, then inspect a game with similar rules.
 
 - Clients connect to `/ws/host/:code` or `/ws/player/:code`.
 - Actions use `{ type: 'GAME_ACTION', action: { type: '<action-name>', ...payload } }`.
@@ -80,6 +80,8 @@ export default {
 - Preserve reconnect, disconnect grace, admin reclaim, and timer cancellation behavior when changing lifecycle code.
 
 ## Adding or changing a game
+
+See `games/README.md`.
 
 1. Make a folder `games/<id>/`, implement the rules there, and cover legal moves, invalid moves, private views, and end conditions as appropriate.
 2. Export the manifest from `games/<id>/index.js` (see the other games). The server finds it by itself; `hidden: true` keeps a game without screens out of the lobby.
@@ -93,7 +95,7 @@ Browser helpers are loaded by plain `<script>` tags and expose globals. Check sc
 
 A lone player can play Gin Rummy and Palace against AI seats: games with `ai` in their manifest, `room.bots` (`bot_N` ids, never in `room.players`, so they get no session score), and `scheduleBotTurn` in `ws-adapter.js`, which plays each AI move after a short pause through the same `applyGameAction` path as people. Keep bot moves legal: `tests/engine/bots.test.js` plays full bot games and fails on any engine error.
 
-Gin Rummy and Palace use the card-table kit `public/js/table-cards.js` + `public/css/table-cards.css` (vector cards, stacks, 2-row rack/fan, tap / swipe-up / drag gestures, hand ordering), shared by phone and TV. The phone hand lifts and enlarges the card under the thumb (press and slide, let go to pick), and a big Palace hand stacks same ranks with a ×N count. Four-colour suits (clubs blue, diamonds orange) are on by default on the TV and a toggle on the phone (`tcSetFourColour`); the A–10 art for them lives in `public/cards/faces-4c/`, made by `node scripts/four-colour-faces.js`. Card sounds are in `public/js/card-sounds.js`, with SVGs and audio under `public/cards/`. Engine suits are `h`, `d`, `c`, `s`; ranks are numeric. Shithead's Ace-high rank 14 maps to the same card image as rank 1. Reuse the renderer and existing audio helpers.
+Card games use `src/cards/deck.js` on the server and the card-table kit `public/js/table-cards.js` (with `table-cards-phone.js` and `table-cards-tv.js`) + `public/css/table-cards.css` (vector cards, stacks, 2-row rack/fan, tap / swipe-up / drag gestures, hand ordering), shared by phone and TV. The phone hand lifts and enlarges the card under the thumb (press and slide, let go to pick), and a big Palace hand stacks same ranks with a ×N count. Four-colour suits (clubs blue, diamonds orange) are on by default on the TV and a toggle on the phone (`tcSetFourColour`); the A–10 art for them lives in `public/cards/faces-4c/`, made by `node scripts/four-colour-faces.js`. Card sounds are in `public/js/card-sounds.js`, with SVGs and audio under `public/cards/`. Engine suits are `h`, `d`, `c`, `s`; ranks are numeric. Shithead's Ace-high rank 14 maps to the same card image as rank 1. Reuse the renderer and existing audio helpers.
 
 The TV plays music from `music/`: `/api/lobby-music` serves the lobby songs, and files named `quiz-and-cards*` are served by `/api/game-music` only, for the game types in `GAME_MUSIC_TYPES` (`host.html`). Both use `createLobbyMusic` (`public/js/lobby-music.js`, volume, fades, rotation); `setDucked` lowers the game music while the quiz narrator or a game story speaks.
 

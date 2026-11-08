@@ -1,31 +1,9 @@
 // Shithead (Vandtia) card game for Small Hours game engine
 // ESM, pure functions, immutable state
 
+import { createDeck } from '../../src/cards/deck.js';
+
 // --- Helper Functions ---
-
-function shuffleArray(arr) {
-  const a = [...arr];
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [a[i], a[j]] = [a[j], a[i]];
-  }
-  return a;
-}
-
-function createDeck(deckCount = 1) {
-  const suits = ['h', 'd', 'c', 's'];
-  const cards = [];
-  for (let d = 0; d < deckCount; d++) {
-    for (const suit of suits) {
-      for (let rank = 2; rank <= 14; rank++) {
-        cards.push({ suit, rank });
-      }
-    }
-  }
-  // Opaque ids, numbered AFTER the shuffle: an id says nothing about the card,
-  // so a face-down card's id (sent to its owner's phone) cannot reveal it.
-  return shuffleArray(cards).map((c, i) => ({ id: 'c' + i, ...c }));
-}
 
 /** Random 32-bit seed for presentation only (pile tilt on every screen). */
 function fxSeed() {
@@ -210,7 +188,8 @@ function setup({ players, config }) {
   }
 
   const deckCount = (config && config.decks) || 1;
-  const deck = createDeck(deckCount);
+  // Opaque ids: a face-down card's id reaches its owner's phone.
+  const deck = createDeck({ aceHigh: true, decks: deckCount, opaqueIds: true });
   let deckIndex = 0;
 
   const hands = {};
