@@ -98,13 +98,6 @@
   border: 1px solid rgba(255, 255, 255, 0.25);
   display: flex; align-items: center; justify-content: center;
 }
-.tc-back-gem {
-  width: 30%; aspect-ratio: 1;
-  transform: rotate(45deg);
-  border: 1px solid rgba(255, 255, 255, 0.35);
-  display: flex; align-items: center; justify-content: center;
-}
-.tc-back-gem i { display: block; width: 45%; aspect-ratio: 1; background: rgba(255, 255, 255, 0.35); }
 .tc-empty {
   box-shadow: none;
   border: 2px dashed rgba(169, 182, 211, 0.4);
@@ -455,7 +448,7 @@
 .tc-pile > .tc-card { grid-area: 1 / 1; }
 .tc-pile-card:not(.tc-pile-top) { filter: brightness(0.94); }
 .tc-pile-hot .tc-pile-top { box-shadow: 0 0 0 3px var(--tc-accent), var(--tc-elev-2); }
-.tc-pile-top.tc-land { animation: tc-land 0.42s cubic-bezier(0.16, 1, 0.3, 1) both; }
+.tc-pile-top.tc-land { animation: tc-land 0.84s cubic-bezier(0.33, 0, 0.2, 1) both; }
 @keyframes tc-land {
   from { translate: 0 -34px; scale: 1.18; opacity: 0; }
   70% { scale: 1.02 0.97; opacity: 1; }
@@ -553,3 +546,121 @@
 .tc-cidx-ten .tc-rank { letter-spacing: -0.12em; transform: scaleX(0.82); margin-left: -0.06em; }
 .tc-face { background: #fff; }
 .tc-red .tc-cidx { color: #c8102e; fill: #c8102e; }
+
+/* ---------- Bold faces (design: "Smallhours card faces and phone hand") ----------
+   The corner index is the hero: condensed, extra bold, rank about 30% of the
+   card width, suit right under it. */
+:root {
+  --tc-four-c: #1f4fd6; /* clubs: keep in step with scripts/four-colour-faces.js */
+  --tc-four-d: #d35a0c; /* diamonds */
+}
+.tc-cidx {
+  min-width: calc(var(--tc-w) * 0.36);
+  padding: calc(var(--tc-w) * 0.045) calc(var(--tc-w) * 0.02) calc(var(--tc-w) * 0.008) calc(var(--tc-w) * 0.035);
+  font: 800 calc(var(--tc-w) * 0.38) / 0.84 'Barlow Condensed', 'Arial Narrow', 'Roboto Condensed', system-ui, sans-serif;
+  letter-spacing: -0.02em;
+  border-radius: 0 0 calc(var(--tc-w) * 0.06) 0;
+}
+.tc-cidx .tc-idx-suit { width: 0.48em; height: 0.48em; margin-top: 0.08em; }
+.tc-cidx-ten .tc-rank { letter-spacing: -0.06em; transform: scaleX(0.86); margin-left: -0.05em; }
+/* The bottom corner only hides the deck's thin index; the top one is enough to read. */
+.tc-cidx-br {
+  min-width: calc(var(--tc-w) * 0.15);
+  padding: calc(var(--tc-w) * 0.035) calc(var(--tc-w) * 0.012) calc(var(--tc-w) * 0.015);
+  font-size: calc(var(--tc-w) * 0.2);
+  border-radius: 0 0 calc(var(--tc-w) * 0.04) 0;
+}
+.tc-cidx-br > * { visibility: hidden; }
+
+/* Four colours: clubs blue, diamonds orange. They differ in lightness as well as hue. */
+.tc-four-colour .tc-suit-c .tc-cidx, .tc-four-colour .tc-chip-c { color: var(--tc-four-c); fill: var(--tc-four-c); }
+.tc-four-colour .tc-suit-d .tc-cidx, .tc-four-colour .tc-chip-d { color: var(--tc-four-d); fill: var(--tc-four-d); }
+
+/* Phone hand: a finger down lifts and enlarges the card above the thumb. */
+.tc-rack .tc-card.tc-peek {
+  transform: translateY(-62%) scale(1.55);
+  transform-origin: 50% 100%;
+  box-shadow: 0 0 0 calc(3px / 1.55) #facc15, 0 0 22px 2px rgba(250, 204, 21, 0.45), var(--tc-elev-4) !important;
+  transition: transform 0.55s cubic-bezier(0.33, 0, 0.2, 1), box-shadow 0.3s ease;
+}
+.tc-rack .tc-card.tc-peek .tc-face { filter: none; }
+
+/* Same ranks stacked in a big hand: cards behind peek out, the count sits on the corner. */
+.tc-slot > .tc-stack-under {
+  position: absolute; top: 0; left: 0;
+  transform: translate(calc(var(--tc-under) * -4px), calc(var(--tc-under) * -6px));
+  box-shadow: var(--tc-elev-1);
+  pointer-events: none;
+}
+.tc-stack-count {
+  position: absolute; z-index: 3;
+  top: calc(var(--tc-w) * -0.1); right: calc(var(--tc-w) * -0.08);
+  min-width: 1.9em; height: 1.9em; padding: 0 0.35em; box-sizing: border-box;
+  display: inline-flex; align-items: center; justify-content: center;
+  border-radius: 999px; background: #facc15; color: #111827;
+  border: 2px solid #0b1530;
+  font: 800 calc(max(12px, var(--tc-w) * 0.15)) / 1 'Plus Jakarta Sans', system-ui, sans-serif;
+  pointer-events: none;
+}
+
+/* The next move: a big thumb button at the bottom, showing the cards it plays. */
+.tc-cta.tc-cta-big {
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  width: 100%; max-width: none; margin: 8px 0 0; min-height: 54px;
+  padding: 10px 16px; border-radius: 18px;
+  background: #facc15; color: #111827;
+  font: 700 20px/1.1 'Fredoka', 'Plus Jakarta Sans', system-ui, sans-serif;
+  box-shadow: 0 5px 0 #b48a06, 0 14px 26px -10px rgba(250, 204, 21, 0.6);
+}
+.tc-cta.tc-cta-big:active { transform: translateY(3px); box-shadow: 0 2px 0 #b48a06; }
+.tc-cta.tc-cta-big:disabled {
+  opacity: 1; background: rgba(19, 35, 74, 0.96); color: var(--night-muted, #a9b6d3);
+  box-shadow: inset 0 0 0 1px var(--night-line, #22335f);
+  font-size: 15px; min-height: 46px;
+}
+.tc-cta.tc-cta-big.tc-cta-gin { background: var(--tc-set); color: #fff; box-shadow: 0 5px 0 #047857; }
+.tc-cta-big .tc-chip { height: 32px; min-width: 40px; font-size: 20px; padding: 0 7px; border-radius: 8px; border: 0; }
+.tc-cta-big .tc-chip-suit { width: 16px; height: 16px; }
+.tc-cta-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tc-btn.tc-btn-colours { letter-spacing: 0.02em; }
+.tc-btn-colours .tc-dot-c { color: var(--tc-four-c); }
+.tc-btn-colours .tc-dot-d { color: var(--tc-four-d); }
+/* A lifted card is always shown at full strength, even when it cannot be played. */
+.tc-rack .tc-card.tc-peek.tc-dim { opacity: 1; filter: none; }
+
+/* Card back: the Smallhours mark (the fanned hand with the moon) on the deck's blue, as big
+   as the card allows (the mark's own artboard has a margin, so the box runs past the frame). */
+.tc-back { overflow: hidden; }
+.tc-back-inner { overflow: visible; }
+.tc-back-logo {
+  flex: 0 0 auto;
+  width: calc(var(--tc-w) * 0.88); aspect-ratio: 1;
+  background: url(/images/smallhours-mark.svg) center / contain no-repeat;
+  filter: drop-shadow(0 calc(var(--tc-w) * 0.015) calc(var(--tc-w) * 0.03) rgba(0, 0, 0, 0.35));
+}
+.tc-cidx-tl.tc-cidx-tall { padding-bottom: calc(var(--tc-w) * 0.1); }
+.tc-cidx-br .tc-idx-suit { width: 0.72em; height: 0.72em; margin-top: 0.06em; }
+
+/* Picked cards glow yellow, like the big Play button; blue stays for turns and NEW. */
+.tc-selected {
+  box-shadow: 0 0 0 3px #facc15, 0 0 22px 2px rgba(250, 204, 21, 0.4), 0 16px 28px -4px rgba(0, 0, 0, 0.5) !important;
+}
+.tc-pile-hot .tc-pile-top, .tc-stack-hot .tc-top { box-shadow: 0 0 0 3px #facc15, var(--tc-elev-2); }
+.tc-well.tc-well-active { border-color: #facc15; background: rgba(250, 204, 21, 0.08); }
+
+/* A calm hand: cards lift and sink at the same slow pace, without overshoot. */
+.tc-rack .tc-card { transition: transform 0.55s cubic-bezier(0.33, 0, 0.2, 1), box-shadow 0.3s ease, opacity 0.2s ease, filter 0.2s ease; }
+
+/* A card that just landed in the hand stands up and glows until the next card leaves it. */
+.tc-slot:has(> .tc-new) { z-index: 300 !important; }
+.tc-rack .tc-card.tc-new:not(.tc-selected):not(.tc-peek) { transform: translateY(-14px); }
+.tc-rack .tc-card.tc-new { animation: tc-arrived 1.8s ease-in-out infinite; }
+@keyframes tc-arrived {
+  0%, 100% { box-shadow: 0 0 0 3px var(--tc-accent), 0 0 12px 2px rgba(56, 189, 248, 0.45); }
+  50% { box-shadow: 0 0 0 4px #e0f2fe, 0 0 30px 10px rgba(56, 189, 248, 0.85); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tc-rack .tc-card { transition: none; }
+  .tc-rack .tc-card.tc-new { animation: none; box-shadow: 0 0 0 4px var(--tc-accent), 0 0 24px 6px rgba(56, 189, 248, 0.7); }
+}

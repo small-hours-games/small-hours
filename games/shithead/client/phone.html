@@ -1,0 +1,43 @@
+    <!-- SHITHEAD (PALACE) SECTION: card-table layout, see public/js/table-cards.js -->
+    <div class="section tc-screen" id="shitheadSection">
+      <div class="tc-topbar">
+        <div class="tc-status" id="shStatus"><span class="tc-dot" id="shStatusDot"></span><span id="shStatusText">Palace</span></div>
+        <span class="tc-pill tc-mono" id="shMeta">Palace</span>
+      </div>
+      <div class="tc-opps" id="shOpps"></div>
+      <div class="tc-table tc-felt">
+        <div class="tc-wells">
+          <div class="tc-well" id="shDrawWell">
+            <span class="tc-well-label">Draw deck</span>
+            <div id="shDrawStack"></div>
+            <span class="tc-count" id="shDrawCount">0</span>
+          </div>
+          <div class="tc-well" id="shPileWell" onclick="shTapPile()">
+            <span class="tc-well-label">Play pile</span>
+            <div id="shPileStack"></div>
+            <span class="tc-count" id="shPileCount">0</span>
+          </div>
+        </div>
+        <div class="tc-rule" id="shRule"></div>
+        <div id="shLog" class="tc-log-phone"></div>
+      </div>
+      <div class="tc-hand-zone">
+        <div class="tc-table-cards" id="shTableCards"></div>
+        <div class="tc-hud-row">
+          <span id="shAssist"></span>
+        </div>
+        <div class="tc-hand-area" id="shHand"></div>
+        <div class="tc-actionbar">
+          <div>
+            <button type="button" class="tc-btn" id="shSortBtn" onclick="shCycleSort()">Sort: rank</button>
+            <button type="button" class="tc-btn" id="shLayoutBtn" onclick="shToggleLayout()">2-Row</button>
+            <button type="button" class="tc-btn" id="shStackBtn" onclick="shToggleStacks()" hidden>Split stacks</button>
+            <button type="button" class="tc-btn tc-btn-colours" id="shColoursBtn" onclick="tcToggleFourColour()" aria-pressed="false" title="Four-colour suits"><span class="tc-dot-c">♣</span><span class="tc-dot-d">♦</span></button>
+          </div>
+          <div>
+            <button type="button" class="tc-btn tc-btn-warn" id="shPickUpBtn" onclick="pickUpPile()">Pick up pile</button>
+          </div>
+        </div>
+        <button type="button" class="tc-cta tc-cta-big" id="shCta" onclick="shCtaAction()">Palace</button>
+      </div>
+    </div>

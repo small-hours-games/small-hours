@@ -6,13 +6,15 @@ import path from 'path';
 import fs from 'fs';
 import express from 'express';
 import { notifyRoomCreated } from '../notifications/discord.js';
-import { STORIES } from '../session/stories.js';
+import { gameStories, listGames, publicGames } from '../games/registry.js';
+import { GAMES_DIR, renderGamePage } from '../games/client.js';
 import { BUILD_INFO } from '../version.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const PUBLIC_DIR = path.resolve(__dirname, '../../public');
 const MUSIC_DIR = path.resolve(__dirname, '../../music');
+const GAME_TRACK = /^quiz-and-cards/i; // played during card games and Quiz, never in the lobby
 const AUDIO_DIR = path.resolve(__dirname, '../../data/audio');
 
 // Room-flood protection
@@ -26,18 +28,29 @@ let lastRoomCreateAt = 0;
  * @param {import('express').Application} app
  * @param {import('../session/manager.js').RoomManager} manager
  */
+async function servePage(res, file) {
+  try {
+    const html = await fs.promises.readFile(path.join(PUBLIC_DIR, file), 'utf8');
+    res.type('html').send(renderGamePage(html, file === 'host.html' ? 'tv' : 'phone'));
+  } catch {
+    res.status(404).json({ error: 'Not found' });
+  }
+}
+
 export function setupRoutes(app, manager) {
-  app.get('/api/lobby-music', async (_req, res) => {
+  const playlist = keep => async (_req, res) => {
     try {
       const entries = await fs.promises.readdir(MUSIC_DIR, { withFileTypes: true });
-      const tracks = entries.filter(entry => entry.isFile() && /\.(mp3|ogg|m4a|wav)$/i.test(entry.name))
+      const tracks = entries.filter(entry => entry.isFile() && /\.(mp3|ogg|m4a|wav)$/i.test(entry.name) && keep(entry.name))
         .map(entry => '/music/' + encodeURIComponent(entry.name)).sort();
       res.json({ tracks });
     } catch (err) {
       if (err.code === 'ENOENT') return res.json({ tracks: [] });
-      res.status(500).json({ error: 'Could not load lobby music' });
+      res.status(500).json({ error: 'Could not load music' });
     }
-  });
+  };
+  app.get('/api/lobby-music', playlist(name => !GAME_TRACK.test(name)));
+  app.get('/api/game-music', playlist(name => GAME_TRACK.test(name)));
   app.use('/music', express.static(MUSIC_DIR, { index: false, dotfiles: 'deny' }));
 
   // Health check
@@ -90,9 +103,18 @@ export function setupRoutes(app, manager) {
     }
   });
 
+  // Only client/ is public: a game's rules stay on the server.
+  for (const game of listGames()) {
+    app.use('/games/' + game.id, express.static(path.join(GAMES_DIR, game.id, 'client'), { index: false }));
+  }
+
+  app.get('/api/games', (_req, res) => {
+    res.json({ games: publicGames() });
+  });
+
   // Game narration stories (for host story overlay + TTS)
   app.get('/api/stories', (_req, res) => {
-    res.json({ stories: STORIES });
+    res.json({ stories: gameStories() });
   });
 
   // Generic TTS endpoint: text -> audio URL (uses Gemini if GEMINI_API_KEY set)
@@ -179,6 +201,11 @@ export function setupRoutes(app, manager) {
     if (req.path.startsWith('/host/')) file = 'host.html';
     else if (req.path.startsWith('/player/')) file = 'player.html';
     else if (req.path === '/tv' || req.path === '/tv/') file = 'tv.html'; // Android TV app entry
+
+    if (file === 'host.html' || file === 'player.html') {
+      servePage(res, file);
+      return;
+    }
 
     res.sendFile(path.join(PUBLIC_DIR, file), (err) => {
       if (err) {

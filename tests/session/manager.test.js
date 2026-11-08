@@ -242,7 +242,7 @@ describe('RoomManager - stats', () => {
     const room = manager.createRoom();
     room.addPlayer('Alice');
     room.addPlayer('Bob');
-    await room.startGame('number-guess', {});
+    await room.startGame('hilow', {});
     expect(manager.stats().gameCount).toBe(1);
   });
 
@@ -251,7 +251,7 @@ describe('RoomManager - stats', () => {
     const room = manager.createRoom();
     room.addPlayer('Alice');
     room.addPlayer('Bob');
-    await room.startGame('number-guess', {});
+    await room.startGame('hilow', {});
     room.endGame();
     expect(manager.stats().gameCount).toBe(0);
   });

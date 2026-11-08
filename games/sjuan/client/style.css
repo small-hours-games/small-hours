@@ -1,0 +1,6 @@
+/* Sjuan: the four suits, side by side. */
+.sj-board { display: flex; justify-content: center; gap: 8px; }
+.sj-board .tc-card { --tc-w: min(68px, calc((100vw - 64px) / 4)); }
+.sj-deck { position: absolute; width: 0; height: 0; left: 50%; top: 0; overflow: visible; visibility: hidden; }
+.tc-tv .sj-board { gap: 20px; }
+.tc-tv .sj-board .tc-card { --tc-w: 128px; }

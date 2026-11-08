@@ -1,7 +1,6 @@
 // Small Hours - Game message handlers
 
 import { processAction, getView, checkEnd } from '../../engine/engine.js';
-import { saveAnswers } from '../../fetcher/question-file.js';
 import { handleStartCategoryVote } from './vote.js';
 import { getHostView } from '../host-view.js';
 
@@ -27,6 +26,8 @@ export async function handleStartVotedGame(ws, meta, room, msg, ctx) {
     send(ws, { type: 'ERROR', message: 'Only admin can start a game' });
     return;
   }
+
+  if (room.game || room.startingGame) return; // a repeated tap on Start
 
   const gameType = room.resolveWinningGame();
   if (!gameType) {
@@ -70,6 +71,10 @@ export async function handleStartMiniGame(ws, meta, room, msg, ctx) {
     return;
   }
 
+  // Preparing a quiz can take seconds. A second tap meanwhile would start a second
+  // game and restart the countdown on every screen.
+  if (room.game || room.startingGame) return;
+
   let config = msg.config || {};
 
   // Quiz: resolve winning category from votes if no explicit override (per D-12, D-16)
@@ -77,6 +82,7 @@ export async function handleStartMiniGame(ws, meta, room, msg, ctx) {
     config = { ...config, categoryId: room.resolveWinningCategory() };
   }
 
+  room.startingGame = true;
   try {
     const game = await room.startGame(msg.gameType, config);
 
@@ -111,6 +117,8 @@ export async function handleStartMiniGame(ws, meta, room, msg, ctx) {
     ctx.scheduleBotTurn?.(room);
   } catch (err) {
     send(ws, { type: 'ERROR', message: err.message });
+  } finally {
+    room.startingGame = false;
   }
 }
 
@@ -225,12 +233,6 @@ export function finishGame(room, endResult, ctx) {
     }
   } catch (err) {
     console.error('[score] failed to award session scores:', err.message);
-  }
-
-  // Save question-form answers to file
-  const gameState = room.game?.state;
-  if (gameState?.questions && gameState?.responses && gameState?._sourceFile) {
-    saveAnswers(gameState._sourceFile, gameState.responses, playerNames).catch(() => {});
   }
 
   room.endGame();

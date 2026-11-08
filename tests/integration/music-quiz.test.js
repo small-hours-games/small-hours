@@ -15,7 +15,7 @@ vi.mock('../../src/fetcher/cached-fetcher.js', async (importOriginal) => ({
 
 import { fetchPlaylistTracks, musicPlaylists } from '../../src/fetcher/deezer.js';
 import { fetchQuestions, fetchCategories, MAIN_CATEGORY_IDS } from '../../src/fetcher/cached-fetcher.js';
-import { buildMixedQuestions } from '../../src/engine/games/music-quiz.js';
+import { buildMixedQuestions } from '../../games/music-quiz/rules.js';
 import { Room } from '../../src/session/room.js';
 import { processAction, getView } from '../../src/engine/engine.js';
 import { handleStartCategoryVote } from '../../src/transport/handlers/vote.js';

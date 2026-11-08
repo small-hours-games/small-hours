@@ -1,8 +1,14 @@
 // TV speakers provide the lobby soundtrack; phones stay quiet.
-function createLobbyMusic(audio, onPlaybackChange = () => {}) {
+function createLobbyMusic(audio, onPlaybackChange = () => {}, { playlistUrl = '/api/lobby-music' } = {}) {
   const volume = 0.12;
   const fadeInMs = 1500;
   const fadeOutMs = 1200;
+  const duckGainLevel = 0.35;
+  const duckDownMs = 300;
+  const duckUpMs = 500;
+  let base = 0; // the fade envelope, before ducking
+  let ducked = false;
+  let duck = { from: 1, to: 1, started: 0, duration: 1 };
   let active = false;
   let tracks = [];
   let index = 0;
@@ -18,6 +24,10 @@ function createLobbyMusic(audio, onPlaybackChange = () => {}) {
     if (playing !== motion) { motion = playing; onPlaybackChange(playing); }
   }
   function stopTimer() { clearInterval(timer); timer = null; }
+  function duckGain() {
+    const progress = Math.min(1, Math.max(0, (Date.now() - duck.started) / duck.duration));
+    return duck.from + (duck.to - duck.from) * progress;
+  }
   function tick() {
     if (!fade) return;
     const progress = Math.min(1, Math.max(0, (Date.now() - fade.started) / fade.duration));
@@ -25,7 +35,8 @@ function createLobbyMusic(audio, onPlaybackChange = () => {}) {
     // Fade the actual track tail, even when duration becomes available late.
     const remaining = Number.isFinite(audio.duration) ? audio.duration - audio.currentTime : Infinity;
     const tail = Math.max(0, Math.min(1, remaining / 2));
-    audio.volume = Math.max(0, Math.min(volume, level, volume * tail));
+    base = Math.max(0, Math.min(volume, level, volume * tail));
+    audio.volume = base * duckGain();
     if (!active && progress === 1) {
       audio.pause();
       stopTimer();
@@ -34,7 +45,7 @@ function createLobbyMusic(audio, onPlaybackChange = () => {}) {
     updateMotion();
   }
   function fadeTo(target, duration) {
-    fade = { from: audio.volume, to: target, started: Date.now(), duration };
+    fade = { from: base, to: target, started: Date.now(), duration };
     if (!timer) timer = setInterval(tick, 50);
     tick();
   }
@@ -54,6 +65,7 @@ function createLobbyMusic(audio, onPlaybackChange = () => {}) {
   audio.addEventListener('ended', () => {
     stopTimer();
     audio.volume = 0;
+    base = 0;
     fade = null;
     updateMotion();
     if (!active || !tracks.length) return;
@@ -67,7 +79,7 @@ function createLobbyMusic(audio, onPlaybackChange = () => {}) {
       if (value === active) return;
       active = value;
       if (!active) {
-        if (!audio.paused && audio.volume > 0) fadeTo(0, fadeOutMs);
+        if (!audio.paused && base > 0) fadeTo(0, fadeOutMs);
         else { stopTimer(); audio.pause(); }
         updateMotion();
         return;
@@ -75,7 +87,7 @@ function createLobbyMusic(audio, onPlaybackChange = () => {}) {
       if (!audio.paused) { fadeTo(volume, fadeInMs); return; }
       if (loaded) { retry(); return; }
       if (!loading) {
-        loading = fetch('/api/lobby-music').then(response => {
+        loading = fetch(playlistUrl).then(response => {
           if (!response.ok) throw new Error('Music unavailable');
           return response.json();
         }).then(data => {
@@ -86,6 +98,13 @@ function createLobbyMusic(audio, onPlaybackChange = () => {}) {
       }
     },
     setMuted(value) { audio.muted = value; updateMotion(); },
+    // Make room for a voice. Repeated calls keep the ramp already running.
+    setDucked(value) {
+      if (value === ducked) return;
+      ducked = value;
+      duck = { from: duckGain(), to: value ? duckGainLevel : 1, started: Date.now(), duration: value ? duckDownMs : duckUpMs };
+      tick();
+    },
     retry,
   };
 }

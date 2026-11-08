@@ -1,8 +1,8 @@
 // public/js/table-cards.js
-// Card-table kit for the card games (Gin Rummy, Palace) on phone and TV:
+// Card-table kit for the card games on phone and TV:
 // vector playing cards, card stacks, hand racks/fans, hand ordering and the
-// tap / swipe-up / drag gesture handling. Plain browser script exposing globals,
-// loaded after cards.js. Engine cards are { id, suit: 'h'|'d'|'c'|'s', rank }.
+// tap / swipe-up / drag gesture handling. Plain browser script exposing globals.
+// Engine cards are { id, suit: 'h'|'d'|'c'|'s', rank }.
 
 var TC_SUITS = {
   h: { symbol: '♥', red: true, order: 1, name: 'hearts' },
@@ -20,6 +20,17 @@ var TC_SUIT_PATHS = {
   d: 'M16 2.5L27.5 16 16 29.5 4.5 16 16 2.5z',
   c: 'M16 4.5a5.5 5.5 0 00-4.4 8.8A5.8 5.8 0 009.5 24c2.1 0 4-1.1 5-2.7-.2 2.9-1.2 5.4-3.1 7.2h9.2c-1.9-1.8-2.9-4.3-3.1-7.2 1 1.6 2.9 2.7 5 2.7a5.8 5.8 0 00-2.1-10.7A5.5 5.5 0 0016 4.5z',
 };
+
+// Four-colour suits (clubs blue, diamonds orange): on by default on the TV, an
+// option on the phone. Pages call tcSetFourColour(); cards rendered after that
+// use it (the art for A to 10 comes from /cards/faces-4c).
+var tcFourColourOn = false;
+function tcSetFourColour(on) {
+  tcFourColourOn = !!on;
+  if (typeof document !== 'undefined' && document.documentElement) {
+    document.documentElement.classList.toggle('tc-four-colour', tcFourColourOn);
+  }
+}
 
 function tcEscape(text) {
   return String(text == null ? '' : text)
@@ -72,21 +83,26 @@ function renderTableCard(card, opts) {
   if (opts.facedown || !card || !TC_SUITS[card.suit]) {
     classes.push('tc-back');
     return '<div class="' + classes.join(' ') + '"' + attrs + ' aria-label="Face-down card">' +
-      '<div class="tc-back-inner"><div class="tc-back-gem"><i></i></div></div></div>';
+      '<div class="tc-back-inner"><div class="tc-back-logo"></div></div></div>';
   }
 
   var suit = TC_SUITS[card.suit];
   if (suit.red) classes.push('tc-red');
+  classes.push('tc-suit-' + card.suit);
   var label = tcRankLabel(card.rank);
   // The face is the classic deck in /cards/faces (pip layouts, drawn court figures);
   // a bold corner index sits on top so the rank reads at any size, even fanned.
   var index = '<span class="tc-rank">' + tcEscape(label) + '</span>' + tcSuitSvg(card.suit, 'tc-idx-suit');
   var ten = label === '10' ? ' tc-cidx-ten' : '';
+  // On the 9 and 10 the deck's top-left pip reaches just below the index; a taller patch hides it.
+  if (label === '9' || label === '10') ten += ' tc-cidx-tall';
   var badge = '';
   if (opts.isNew) badge = '<span class="tc-badge tc-badge-new">NEW</span>';
   else if (opts.badge) badge = '<span class="tc-badge">' + tcEscape(opts.badge) + '</span>';
   else if (opts.meld === 'set') badge = '<span class="tc-badge tc-badge-set">SET</span>';
   else if (opts.meld === 'run') badge = '<span class="tc-badge tc-badge-run">RUN</span>';
+  // A stack of same-rank cards in the hand: the count sits on the corner, outside the face.
+  var stackCount = opts.count > 1 ? '<span class="tc-stack-count">×' + tcNum(opts.count) + '</span>' : '';
 
   return '<div class="' + classes.join(' ') + '"' + attrs + ' aria-label="' + tcEscape(label + ' of ' + suit.name) + '">' +
     '<div class="tc-face">' +
@@ -94,7 +110,7 @@ function renderTableCard(card, opts) {
       '<div class="tc-cidx tc-cidx-tl' + ten + '">' + index + '</div>' +
       badge +
       '<div class="tc-cidx tc-cidx-br' + ten + '">' + index + '</div>' +
-    '</div></div>';
+    '</div>' + stackCount + '</div>';
 }
 
 var TC_FACE_SUITS = { h: 'HEART', d: 'DIAMOND', c: 'CLUB', s: 'SPADE' };
@@ -105,7 +121,8 @@ function tcFaceUrl(card) {
   // Built only from a known suit and a whole number, so nothing from the message reaches the URL.
   var rank = Math.round(tcNum(card.rank));
   if (rank === 14) rank = 1;
-  return '/cards/faces/' + TC_FACE_SUITS[card.suit] + '-' + (TC_FACE_COURTS[rank] || rank) + '.svg';
+  var four = tcFourColourOn && (card.suit === 'c' || card.suit === 'd') && rank <= 10;
+  return '/cards/' + (four ? 'faces-4c/' : 'faces/') + TC_FACE_SUITS[card.suit] + '-' + (TC_FACE_COURTS[rank] || rank) + '.svg';
 }
 
 /**
@@ -184,11 +201,27 @@ function tcMeldMap(melds) {
 }
 
 /**
+ * Group an ordered hand into stacks of the same rank, in order of first appearance.
+ * Returns [{ card, cards }] where card is the one shown on top.
+ */
+function tcStackHand(cards) {
+  var groups = [];
+  var byRank = {};
+  (cards || []).forEach(function (c) {
+    var g = byRank[c.rank];
+    if (!g) { g = byRank[c.rank] = { card: c, cards: [] }; groups.push(g); }
+    g.cards.push(c);
+  });
+  return groups;
+}
+
+/**
  * Lay out a hand as a 2-row rack (rows of up to ~7) or a single curved fan.
  * Each card sits in a .tc-slot positioned by inline styles so the card itself
  * stays free to lift when selected.
  * opts: layout ('rack'|'fan'), width (px available), size, cardW (px, overrides the
- * size's width so phones can fit cards to the screen), cardOpts(card) -> renderTableCard opts
+ * size's width so phones can fit cards to the screen), cardOpts(card) -> renderTableCard opts,
+ * stack (true: same ranks share one slot with a ×N count; cardOpts gets the group as 2nd arg)
  */
 function renderHandRack(cards, opts) {
   opts = opts || {};
@@ -197,13 +230,14 @@ function renderHandRack(cards, opts) {
   var cardH = cardW * 1.42;
   var sized = opts.cardW ? '--tc-w:' + Math.round(cardW) + 'px' : '';
   var width = Math.max(cardW, opts.width || 340);
-  var n = cards.length;
+  var slots = opts.stack ? tcStackHand(cards) : (cards || []).map(function (c) { return { card: c, cards: [c] }; });
+  var n = slots.length;
   if (!n) return '<div class="tc-rack tc-rack-empty">' + tcEscape(opts.emptyText || 'No cards') + '</div>';
   var rowsCount = opts.layout === 'fan' ? 1 : (n <= 6 ? 1 : (n <= 20 ? 2 : 3));
   var perRow = Math.ceil(n / rowsCount);
-  var html = '<div class="tc-rack tc-rack-' + (opts.layout === 'fan' ? 'fan' : 'rows') + '">';
+  var html = '<div class="tc-rack tc-rack-' + (opts.layout === 'fan' ? 'fan' : 'rows') + (opts.stack ? ' tc-rack-stacked' : '') + '">';
   for (var r = 0; r < rowsCount; r++) {
-    var row = cards.slice(r * perRow, (r + 1) * perRow);
+    var row = slots.slice(r * perRow, (r + 1) * perRow);
     if (!row.length) continue;
     var count = row.length;
     var step = count > 1 ? Math.min(cardW * 0.78, (width - cardW) / (count - 1)) : 0;
@@ -214,14 +248,27 @@ function renderHandRack(cards, opts) {
       if (r > 0 && opts.layout !== 'fan') rowStyle += ';margin-top:' + Math.round(-cardH * 0.56) + 'px';
     }
     html += '<div class="tc-rack-row" style="' + rowStyle + '">';
-    row.forEach(function (card, i) {
+    row.forEach(function (slot, i) {
+      var card = slot.card;
       var norm = count > 1 ? i / (count - 1) - 0.5 : 0;
       var rot = opts.layout === 'fan' ? norm * Math.min(18, count * 2) : norm * 4;
       var drop = opts.layout === 'fan' ? Math.pow(norm * 2, 2) * 14 : Math.pow(norm * 2, 2) * 3;
       var slotStyle = 'left:' + Math.round(i * step) + 'px;transform:translateY(' + drop.toFixed(1) +
         'px) rotate(' + rot.toFixed(2) + 'deg);z-index:' + (10 + i);
-      var cardOpts = Object.assign({ size: size }, sized ? { style: sized } : {}, opts.cardOpts ? opts.cardOpts(card) : {});
-      html += '<div class="tc-slot" style="' + slotStyle + '">' + renderTableCard(card, cardOpts) + '</div>';
+      var cardOpts = Object.assign({ size: size }, sized ? { style: sized } : {}, opts.cardOpts ? opts.cardOpts(card, slot.cards) : {});
+      var under = '';
+      if (slot.cards.length > 1) {
+        cardOpts.count = slot.cards.length;
+        // Up to two cards peek out behind the top one, up and to the left.
+        var behind = slot.cards.slice(1, 3);
+        for (var k = behind.length; k >= 1; k--) {
+          under += renderTableCard(behind[k - 1], {
+            size: size, dataId: '', className: 'tc-stack-under',
+            style: (sized ? sized + ';' : '') + '--tc-under:' + k,
+          });
+        }
+      }
+      html += '<div class="tc-slot" style="' + slotStyle + '">' + under + renderTableCard(card, cardOpts) + '</div>';
     });
     html += '</div>';
   }
@@ -271,26 +318,142 @@ function tcReleaseVelocity(samples, now) {
   return { vx: stx / stt, vy: sty / stt };
 }
 
+/* ---------- Card tempo ----------
+   One place to tune how fast cards move. */
+var TC_FLIGHT_SLOWDOWN = 2;   // thrown cards: phone throw and the TV flight to the pile
+var TC_DRAW_MS = 1040;        // a card travelling to a hand
+var TC_SETTLE_MS = 560;       // a released card easing into its place in the hand
+var TC_SCRUB_STEP_PX = 14;    // finger travel before the lifted card may change
+
+/** Flight time to the pile for a throw speed in viewport heights per second (TV). */
+function tcFlightMs(speed) {
+  return Math.round(Math.max(350, Math.min(900, 1900 / speed))) * TC_FLIGHT_SLOWDOWN;
+}
+
+/** Time for a thrown card to leave the top of the phone. */
+function tcThrowMs(speed) {
+  return Math.round(Math.max(220, Math.min(520, 900 / speed))) * TC_FLIGHT_SLOWDOWN;
+}
+
+function tcHandCard(container, id) {
+  if (!container) return null;
+  return container.querySelector('[data-card-id="' + (window.CSS && CSS.escape ? CSS.escape(id) : id) + '"]');
+}
+
+function tcHandSnapshot(container) {
+  return Array.prototype.map.call(container.querySelectorAll('[data-card-id]'), function (c) {
+    return { el: c, id: c.dataset.cardId, rect: c.getBoundingClientRect() };
+  }).filter(function (c) { return c.id; });
+}
+
+/** The ids in hand that were not in prevIds; nothing when there is no earlier hand to compare. */
+function tcNewCardIds(prevIds, hand) {
+  if (!prevIds) return [];
+  return (hand || []).map(function (c) { return c.id; }).filter(function (id) { return prevIds.indexOf(id) === -1; });
+}
+
+function tcPose(el) {
+  var cs = getComputedStyle(el);
+  return { transform: cs.transform, transformOrigin: cs.transformOrigin };
+}
+
+/** The hand was just redrawn: glide the released card from where it was into its new place. */
+function tcSettle(container, id, from) {
+  if (!from || tcReducedMotion()) return;
+  var el = tcHandCard(container, id);
+  if (!el || el.style.visibility === 'hidden' || !el.animate) return;
+  var to = tcPose(el);
+  if (to.transform === from.transform) return;
+  var slot = el.parentElement;
+  var z = slot ? slot.style.zIndex : '';
+  if (slot) slot.style.zIndex = 400;
+  var anim = el.animate([from, to], { duration: TC_SETTLE_MS, easing: 'cubic-bezier(.33, 0, .2, 1)' });
+  anim.onfinish = anim.oncancel = function () { if (slot) slot.style.zIndex = z; };
+}
+
+/**
+ * Which hand card is under a point, from rects measured before anything lifted.
+ * Later entries are drawn on top (DOM order), so the last hit wins. A finger
+ * that slides a little above or below the row still counts as on it.
+ */
+function tcCardAt(snapshot, x, y) {
+  var hit = null;
+  for (var i = 0; i < snapshot.length; i++) {
+    var r = snapshot[i].rect;
+    if (x >= r.left && x <= r.right && y >= r.top - 24 && y <= r.bottom + 48) hit = snapshot[i];
+  }
+  return hit;
+}
+
 /**
  * Pointer handling for a hand container that holds [data-card-id] cards.
- * handlers: onTap(id), onPlay(id) on swipe-up, onReorder(id, targetId) on drag-drop.
+ * handlers: onTap(id), onPlay(id) on swipe-up, onReorder(id, targetId) on drag-drop,
+ *   peek (true: on touch screens a finger down lifts and enlarges the card above the
+ *   thumb, sliding sideways moves it to the next card, and letting go picks it as a tap;
+ *   pushing up from there throws the lifted card).
  * The dragged card follows the finger, lifted above the thumb on touch screens.
  * Safe to call on every render: listeners are attached to the container once.
  */
 function attachHandGestures(container, handlers) {
   if (!container) return;
   container._tcHandlers = handlers;
-  if (container._tcBound) return;
+  if (container._tcBound) {
+    if (container._tcRedrawn) container._tcRedrawn();
+    return;
+  }
   container._tcBound = true;
   var drag = null;
+
+  // Any server update redraws the hand: a card under the finger stays where it is.
+  container._tcRedrawn = function () {
+    if (!drag || drag.el.isConnected) return;
+    var fresh = tcHandCard(container, drag.id);
+    if (!fresh) { drag = null; return; }
+    if (drag.mode === 'throw') {
+      fresh.classList.add('tc-dragging');
+      fresh.style.transform = drag.el.style.transform;
+      drag.el = fresh;
+      return;
+    }
+    if (!drag.snapshot) { drag.el = fresh; return; }
+    drag.snapshot = tcHandSnapshot(container);
+    drag.peek = null;
+    // Measuring has already styled the new card at rest, so without this it would sink and lift again.
+    fresh.style.transition = 'none';
+    setPeek(drag, drag.snapshot.find(function (c) { return c.el === fresh; }) || null, true);
+    void fresh.offsetWidth;
+    fresh.style.transition = '';
+  };
+
+  function setPeek(d, item, quiet) {
+    if (d.peek === item) return;
+    if (d.peek) {
+      d.peek.el.classList.remove('tc-peek');
+      if (d.peek.el.parentElement) d.peek.el.parentElement.style.zIndex = d.peek.z;
+    }
+    d.peek = item;
+    if (!item) return;
+    var slot = item.el.parentElement;
+    item.z = slot ? slot.style.zIndex : '';
+    if (slot) slot.style.zIndex = 400;
+    item.el.classList.add('tc-peek');
+    d.el = item.el;
+    d.id = item.id;
+    if (navigator.vibrate && d.moved && !quiet) navigator.vibrate(8);
+  }
 
   container.addEventListener('pointerdown', function (e) {
     if (e.button) return;
     var el = e.target.closest('[data-card-id]');
     if (!el || !container.contains(el) || !el.dataset.cardId) return;
+    var h = container._tcHandlers || {};
     drag = { el: el, id: el.dataset.cardId, x: e.clientX, y: e.clientY, touch: e.pointerType === 'touch', moved: false, pointerId: e.pointerId,
-      samples: [{ x: e.clientX, y: e.clientY, t: e.timeStamp || Date.now() }] };
-    try { el.setPointerCapture(e.pointerId); } catch (_) { /* ignore */ }
+      samples: [{ x: e.clientX, y: e.clientY, t: e.timeStamp || Date.now() }], mode: null, peek: null };
+    if (drag.touch && h.peek) {
+      drag.snapshot = tcHandSnapshot(container);
+      setPeek(drag, drag.snapshot.find(function (c) { return c.el === el; }) || null);
+    }
+    try { container.setPointerCapture(e.pointerId); } catch (_) { /* ignore */ }
   });
 
   container.addEventListener('pointermove', function (e) {
@@ -299,14 +462,35 @@ function attachHandGestures(container, handlers) {
     if (drag.samples.length > 24) drag.samples.shift();
     var dx = e.clientX - drag.x;
     var dy = e.clientY - drag.y;
-    if (!drag.moved && Math.hypot(dx, dy) > 8) {
-      drag.moved = true;
+    if (!drag.moved && Math.hypot(dx, dy) > 8) drag.moved = true;
+    if (!drag.moved) return;
+    if (drag.snapshot && drag.mode !== 'throw') {
+      // Peeking: a clear push upward throws the lifted card, anything else scrubs along the hand.
+      if (dy < -28 && Math.abs(dy) > Math.abs(e.clientX - (drag.scrubX != null ? drag.scrubX : drag.x)) * 1.2) {
+        drag.mode = 'throw';
+        drag.throwX = e.clientX;
+        drag.peek && drag.peek.el.classList.remove('tc-peek');
+        drag.el.classList.add('tc-dragging');
+      } else {
+        drag.mode = 'scrub';
+        drag.scrubX = e.clientX;
+        // The finger has to really move on: a trembling thumb on the edge of two cards changes nothing.
+        if (drag.peekX == null) drag.peekX = drag.x;
+        var hit = tcCardAt(drag.snapshot, e.clientX, e.clientY);
+        if (hit && hit !== drag.peek && Math.abs(e.clientX - drag.peekX) >= TC_SCRUB_STEP_PX) {
+          drag.peekX = e.clientX;
+          setPeek(drag, hit);
+        }
+        return;
+      }
+    }
+    if (!drag.mode) {
+      drag.mode = 'throw';
       drag.el.classList.add('tc-dragging');
     }
-    if (drag.moved) {
-      var lift = drag.touch ? -28 : 0;
-      drag.el.style.transform = 'translate(' + dx + 'px,' + (dy + lift) + 'px) scale(1.1) rotate(' + Math.max(-12, Math.min(12, dx * 0.05)) + 'deg)';
-    }
+    var tx = e.clientX - (drag.throwX != null ? drag.throwX : drag.x);
+    var lift = drag.touch ? -28 : 0;
+    drag.el.style.transform = 'translate(' + tx + 'px,' + (dy + lift) + 'px) scale(1.1) rotate(' + Math.max(-12, Math.min(12, tx * 0.05)) + 'deg)';
   });
 
   function finish(e, cancelled) {
@@ -314,14 +498,27 @@ function attachHandGestures(container, handlers) {
     var d = drag;
     drag = null;
     d.rect = d.el.getBoundingClientRect(); // where the card was let go, for the throw animation
+    var pose = d.mode === 'throw' ? null : tcPose(d.el);
     d.el.classList.remove('tc-dragging');
     d.el.style.transform = '';
+    setPeek(d, null);
     if (cancelled) return;
     var h = container._tcHandlers || {};
+    if (d.snapshot && d.mode !== 'throw') {
+      // Letting go after a peek picks the lifted card, like a tap on it.
+      if (h.onTap) h.onTap(d.id);
+      tcSettle(container, d.id, pose);
+      return;
+    }
     var v = tcReleaseVelocity(d.samples, e.timeStamp || Date.now());
     var vh = window.innerHeight || 800;
-    var kind = classifyHandGesture({ dx: e.clientX - d.x, dy: e.clientY - d.y, vx: v.vx, vy: v.vy, releaseRatio: e.clientY / vh });
-    if (kind === 'tap') { if (h.onTap) h.onTap(d.id); return; }
+    var startX = d.throwX != null ? d.throwX : d.x;
+    var kind = classifyHandGesture({ dx: e.clientX - startX, dy: e.clientY - d.y, vx: v.vx, vy: v.vy, releaseRatio: e.clientY / vh });
+    if (kind === 'tap') {
+      if (h.onTap) h.onTap(d.id);
+      tcSettle(container, d.id, pose);
+      return;
+    }
     if (kind === 'swipe-up') {
       // Velocity in viewport heights per second, so every screen size sends the same scale.
       if (h.onPlay) h.onPlay(d.id, { vx: v.vx * 1000 / vh, vy: v.vy * 1000 / vh, el: d.el, rect: d.rect });
@@ -356,8 +553,7 @@ function tcMoveId(ids, id, targetId) {
 
 /** Short shake on a card that cannot be played. */
 function tcShake(container, id) {
-  if (!container) return;
-  var el = container.querySelector('[data-card-id="' + (window.CSS && CSS.escape ? CSS.escape(id) : id) + '"]');
+  var el = tcHandCard(container, id);
   if (!el) return;
   el.classList.remove('tc-shake');
   void el.offsetWidth;
@@ -438,7 +634,7 @@ function tcLogPush(log, ev, max) {
 function renderCardChip(card) {
   if (!card || !TC_SUITS[card.suit]) return '<span class="tc-chip tc-chip-back" aria-label="Face-down card"></span>';
   var suit = TC_SUITS[card.suit];
-  return '<span class="tc-chip' + (suit.red ? ' tc-chip-red' : '') + '" aria-label="' + tcEscape(tcRankLabel(card.rank) + ' of ' + suit.name) + '">' +
+  return '<span class="tc-chip tc-chip-' + card.suit + (suit.red ? ' tc-chip-red' : '') + '" aria-label="' + tcEscape(tcRankLabel(card.rank) + ' of ' + suit.name) + '">' +
     tcEscape(tcRankLabel(card.rank)) + tcSuitSvg(card.suit, 'tc-chip-suit') + '</span>';
 }
 
@@ -502,20 +698,22 @@ function tcThrowOff(card, rect, flick) {
   var ghost = tcGhost(card, rect);
   var vx = (flick && flick.vx) || 0;
   var speed = Math.max(1.2, Math.min(6, -((flick && flick.vy) || -2.5)));
-  var dur = tcReducedMotion() ? 160 : Math.round(Math.max(220, Math.min(520, 900 / speed)));
+  var dur = tcReducedMotion() ? 160 : tcThrowMs(speed);
   var drift = Math.max(-160, Math.min(160, vx * 60));
   var anim = ghost.animate([
     { transform: 'translate(0, 0) rotate(0deg)', opacity: 1 },
     { transform: 'translate(' + drift.toFixed(0) + 'px, ' + (-(rect.bottom + 60)).toFixed(0) + 'px) rotate(' + (drift / 6).toFixed(1) + 'deg) scale(0.92)', opacity: 0.85 },
-  ], { duration: dur, easing: 'cubic-bezier(.3, .6, .4, 1)', fill: 'forwards' });
+  ], { duration: dur, easing: 'cubic-bezier(.3, .1, .4, 1)', fill: 'forwards' });
   anim.onfinish = function () { ghost.remove(); };
 }
 
 /**
  * TV: fly a card from a seat to the pile and land it at its pile tilt.
  * fromRect: the seat; pileEl: the pile box; ev: the move event (seed, flick).
- * Faster throws fly faster (0.35 to 0.9 s). opts.burn: flare and vanish on landing.
+ * Faster throws fly faster (tcFlightMs). opts.burn: flare and vanish on landing.
+ * A new flight hurries the ones still in the air, so the table never falls behind.
  */
+var tcActiveFlights = [];
 function tcFlyIn(card, fromRect, pileEl, ev, opts) {
   opts = opts || {};
   if (!card || !fromRect || !pileEl || typeof document === 'undefined') return null;
@@ -528,7 +726,7 @@ function tcFlyIn(card, fromRect, pileEl, ev, opts) {
   var rnd = tcRandom((ev && ev.seed) || 7);
   var flick = (ev && ev.flick) || {};
   var speed = Math.hypot(flick.vx || 0, flick.vy || 0) || 2.4;
-  var dur = tcReducedMotion() ? 200 : Math.round(Math.max(350, Math.min(900, 1900 / speed)));
+  var dur = tcReducedMotion() ? 200 : tcFlightMs(speed);
   var side = Math.max(-80, Math.min(80, (flick.vx || 0) * 30));
   var sx = fromRect.left + fromRect.width / 2 + side;
   var sy = fromRect.top + fromRect.height / 2;
@@ -539,15 +737,20 @@ function tcFlyIn(card, fromRect, pileEl, ev, opts) {
   var dx = (sx - cx).toFixed(0);
   var dy = (sy - cy).toFixed(0);
   var land = 'translate(' + tilt.dx.toFixed(1) + 'px, ' + tilt.dy.toFixed(1) + 'px) rotate(' + end.toFixed(1) + 'deg)';
+  // The even easing and the fixed-length squash keep a slow flight readable from start to end.
+  var squash = Math.min(0.4, 320 / dur);
   var frames = [
-    { transform: 'translate(' + dx + 'px, ' + dy + 'px) rotate(' + spin.toFixed(0) + 'deg) scale(1.4)', opacity: 0, offset: 0, easing: 'cubic-bezier(.16, 1, .3, 1)' },
-    { opacity: 1, offset: 0.1 },
-    { transform: land + ' scale(1)', offset: 0.86 },
-    { transform: land + ' scale(1.05, 0.95)', offset: 0.93 },
+    { transform: 'translate(' + dx + 'px, ' + dy + 'px) rotate(' + spin.toFixed(0) + 'deg) scale(1.4)', opacity: 0, offset: 0, easing: 'cubic-bezier(.4, 0, .3, 1)' },
+    { opacity: 1, offset: Math.min(0.1, 120 / dur) },
+    { transform: land + ' scale(1)', offset: 1 - squash },
+    { transform: land + ' scale(1.05, 0.95)', offset: 1 - squash / 2 },
     { transform: land + ' scale(1)', opacity: 1, offset: 1 },
   ];
+  tcActiveFlights.forEach(function (a) { a.playbackRate = 8; });
   var anim = ghost.animate(frames, { duration: dur, fill: 'forwards' });
+  tcActiveFlights.push(anim);
   anim.onfinish = function () {
+    tcActiveFlights.splice(tcActiveFlights.indexOf(anim), 1);
     if (opts.burn && !tcReducedMotion()) {
       ghost.classList.add('tc-flight-burn');
       var burn = ghost.animate([
@@ -576,7 +779,37 @@ function tcSweepTo(fromEl, toRect, count) {
     var a = ghost.animate([
       { transform: 'translate(0, 0) rotate(' + (i * 7 - 10) + 'deg)', opacity: 1 },
       { transform: 'translate(' + dx.toFixed(0) + 'px, ' + dy.toFixed(0) + 'px) rotate(' + (i * 4) + 'deg) scale(0.6)', opacity: 0 },
-    ], { duration: 520, delay: i * 70, easing: 'cubic-bezier(.5, 0, .2, 1)', fill: 'forwards' });
+    ], { duration: TC_DRAW_MS, delay: i * 140, easing: 'cubic-bezier(.5, 0, .2, 1)', fill: 'both' });
     a.onfinish = (function (g) { return function () { g.remove(); }; })(ghost);
   }
+}
+
+/**
+ * Phone: a card travels from the deck (or pile) into its place in the hand, grows a little
+ * as it arrives and settles. opts.onDone always runs, also when nothing could fly.
+ */
+function tcFlyToHand(card, fromEl, container, opts) {
+  opts = opts || {};
+  var done = opts.onDone || function () {};
+  if (!card || !fromEl || !container || typeof document === 'undefined' || tcReducedMotion()) { done(); return null; }
+  var target = tcHandCard(container, card.id);
+  var source = fromEl.querySelector('.tc-top, .tc-pile-top, .tc-card') || fromEl;
+  if (!target) { done(); return null; }
+  var to = target.getBoundingClientRect();
+  var from = source.getBoundingClientRect();
+  if (!to.width || !from.width) { done(); return null; }
+  var w = target.offsetWidth;
+  var cx = to.left + to.width / 2;
+  var cy = to.top + to.height / 2;
+  var ghost = tcGhost(card, { left: cx - w / 2, top: cy - w * 0.71, width: w });
+  var dx = (from.left + from.width / 2 - cx).toFixed(0);
+  var dy = (from.top + from.height / 2 - cy).toFixed(0);
+  var anim = ghost.animate([
+    { transform: 'translate(' + dx + 'px, ' + dy + 'px) rotate(-8deg) scale(' + (from.width / w).toFixed(2) + ')', opacity: 0, offset: 0, easing: 'cubic-bezier(.4, 0, .3, 1)' },
+    { opacity: 1, offset: 0.06 },
+    { transform: 'translate(0, 0) rotate(0deg) scale(1.28)', offset: 0.84, easing: 'ease-in-out' },
+    { transform: 'translate(0, 0) rotate(0deg) scale(1)', opacity: 1, offset: 1 },
+  ], { duration: TC_DRAW_MS, delay: opts.delay || 0, fill: 'both' });
+  anim.onfinish = function () { ghost.remove(); done(); };
+  return anim;
 }

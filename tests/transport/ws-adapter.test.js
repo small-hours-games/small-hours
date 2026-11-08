@@ -81,10 +81,6 @@ vi.mock('../../src/fetcher/deezer.js', async (importOriginal) => ({
   })),
 }));
 
-vi.mock('../../src/fetcher/question-file.js', () => ({
-  saveAnswers: vi.fn().mockResolvedValue(undefined),
-}));
-
 // -----------------------------------------------------------------------
 // Now import the module under test
 // -----------------------------------------------------------------------
@@ -316,8 +312,8 @@ describe('ws-adapter - SUGGEST_GAME', () => {
     env = makeEnv();
     const ws = connectPlayer(env, 'Alice');
     const playerId = getPlayerId(ws);
-    ws.emit('message', JSON.stringify({ type: 'SUGGEST_GAME', gameType: 'spy' }));
-    expect(env.room.gameSuggestions.get(playerId)).toBe('spy');
+    ws.emit('message', JSON.stringify({ type: 'SUGGEST_GAME', gameType: 'uno' }));
+    expect(env.room.gameSuggestions.get(playerId)).toBe('uno');
   });
 
   it('returns ERROR if gameType missing', () => {
@@ -381,7 +377,7 @@ describe('ws-adapter - rate limiting', () => {
     let errors = 0;
     // Send 35 messages — first 30 should pass, rest should be rate-limited
     for (let i = 0; i < 35; i++) {
-      ws.emit('message', JSON.stringify({ type: 'SUGGEST_GAME', gameType: 'spy' }));
+      ws.emit('message', JSON.stringify({ type: 'SUGGEST_GAME', gameType: 'uno' }));
     }
     errors = ws._sent.filter(m => m.type === 'ERROR' && /rate limit/i.test(m.message)).length;
     expect(errors).toBeGreaterThan(0);
@@ -394,7 +390,7 @@ describe('ws-adapter - rate limiting', () => {
 
     // Saturate the rate limit
     for (let i = 0; i < 31; i++) {
-      ws.emit('message', JSON.stringify({ type: 'SUGGEST_GAME', gameType: 'spy' }));
+      ws.emit('message', JSON.stringify({ type: 'SUGGEST_GAME', gameType: 'uno' }));
     }
     const errsBefore = ws._sent.filter(m => m.type === 'ERROR' && /rate limit/i.test(m.message)).length;
     expect(errsBefore).toBeGreaterThan(0);
@@ -403,7 +399,7 @@ describe('ws-adapter - rate limiting', () => {
     vi.advanceTimersByTime(1100);
 
     // Should now accept messages again — send one more
-    ws.emit('message', JSON.stringify({ type: 'SUGGEST_GAME', gameType: 'spy' }));
+    ws.emit('message', JSON.stringify({ type: 'SUGGEST_GAME', gameType: 'uno' }));
     const errsAfter = ws._sent.filter(m => m.type === 'ERROR' && /rate limit/i.test(m.message)).length;
     // No new rate-limit errors were added after the window reset
     expect(errsAfter).toBe(errsBefore);
@@ -549,13 +545,13 @@ describe('ws-adapter - GAME_ACTION', () => {
     const ws = connectPlayer(env, 'Alice');
     connectPlayer(env, 'Bob');
 
-    // Start number-guess directly on the room
-    await env.room.startGame('number-guess', {});
+    // Start hilow directly on the room
+    await env.room.startGame('hilow', {});
 
-    // Send a guess action
+    // Send a move (whoever may guess, the update still reaches the sender)
     ws.emit('message', JSON.stringify({
       type: 'GAME_ACTION',
-      action: { type: 'guess', number: 50 },
+      action: { type: 'guess', direction: 'higher' },
     }));
 
     const gameStates = ws._sent.filter(m => m.type === 'GAME_STATE');
@@ -592,7 +588,7 @@ describe('ws-adapter - RETURN_TO_LOBBY', () => {
     env = makeEnv();
     const ws = connectPlayer(env, 'Admin');
     connectPlayer(env, 'Bob');
-    await env.room.startGame('number-guess', {});
+    await env.room.startGame('hilow', {});
     expect(env.room.game).not.toBeNull();
 
     ws.emit('message', JSON.stringify({ type: 'RETURN_TO_LOBBY' }));
@@ -617,6 +613,42 @@ describe('ws-adapter - quiz phase timers', () => {
 
   const Q = (id) => ({ id, question: id + '?', correct_answer: 'A', incorrect_answers: ['B', 'C', 'D'], category: 'Test', difficulty: 'easy' });
   const phaseOf = (ws) => ws._sent.filter(m => m.type === 'GAME_STATE').at(-1)?.phase;
+
+  it('ignores repeated starts while a quiz is being prepared', async () => {
+    let answer;
+    fetchQuestions.mockImplementation(() => new Promise(resolve => { answer = resolve; }));
+    env = makeEnv();
+    const ws = connectPlayer(env, 'Alice');
+    const start = JSON.stringify({ type: 'START_MINI_GAME', gameType: 'quiz', config: { categoryId: 9, questionCount: 1 } });
+    ws.emit('message', start);
+    ws.emit('message', start);
+    await vi.advanceTimersByTimeAsync(2000);
+    ws.emit('message', start);
+    answer({ ok: true, questions: [Q('q1')] });
+    await vi.advanceTimersByTimeAsync(0);
+    expect(ws._sent.filter(m => m.type === 'MINI_GAME_STARTING')).toHaveLength(1);
+    expect(fetchQuestions).toHaveBeenCalledTimes(1);
+    expect(env.room.startingGame).toBe(false);
+
+    // ...and also once the game is running
+    ws.emit('message', start);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(ws._sent.filter(m => m.type === 'MINI_GAME_STARTING')).toHaveLength(1);
+  });
+
+  it('allows a new start after preparing a quiz failed', async () => {
+    fetchQuestions.mockResolvedValueOnce({ ok: false, error: { message: 'down' } }).mockResolvedValueOnce({ ok: false, error: { message: 'down' } });
+    env = makeEnv();
+    const ws = connectPlayer(env, 'Alice');
+    const start = JSON.stringify({ type: 'START_MINI_GAME', gameType: 'quiz', config: { categoryId: 9, questionCount: 1 } });
+    ws.emit('message', start);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(env.room.startingGame).toBe(false);
+    fetchQuestions.mockResolvedValue({ ok: true, questions: [Q('q1')] });
+    ws.emit('message', start);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(ws._sent.filter(m => m.type === 'MINI_GAME_STARTING')).toHaveLength(1);
+  });
 
   it('runs a quiz to the end on timers alone', async () => {
     fetchQuestions.mockResolvedValue({ ok: true, questions: [Q('q1'), Q('q2')] });

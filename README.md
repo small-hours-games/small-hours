@@ -31,12 +31,13 @@ These games are available in the dashboard:
 | 🎵 **Music Quiz** | 1–20 | Hear the clip. Name the artist or song. Try not to sing the answer out loud. |
 | 👑 **Palace** | 1–6 | Empty your cards and avoid being the last player standing. Alone? Play 1–4 AI opponents. |
 | ♠️ **Gin Rummy** | 1–2 | Build your hand, watch the discards, and pick your moment. Alone? Play Robo, the AI. |
+| 7️⃣ **Sjuan** | 2–8 | Build out from the sevens and get rid of your cards first. |
 
 Waiting for friends? A player alone in the room can start Gin Rummy or Palace against AI opponents. The game runs on the TV like any other; once the others arrive, the admin returns to the lobby and starts one for everyone. AI seats are only added for a lone player and never earn session points.
 
 Music Quiz mixes genres and decades, rotates songs, and builds believable alternatives from the same playlist. Each quiz starts with a five-second countdown; music clips fade in for one second and out over the final two seconds of the question.
 
-The engine also includes Number Guess, Spy, Högt/Lågt, Sjuan, Uno, Yatzy, Labyrint, SkogAI, a question-form tool, and a starter template. Dashboard availability is controlled separately in [`public/js/games.js`](public/js/games.js).
+The engine also includes Högt/Lågt and Uno, which do not have screens yet. A game with `hidden: true` in its manifest stays out of the lobby.
 
 ## Small touches, better game nights
 
@@ -133,7 +134,6 @@ The server discovers the files automatically through `/api/lobby-music`. No play
 - `data/` contains generated trivia caches and speech audio. It is ignored by Git and mounted into Docker, so rebuilding the image preserves it.
 - Rooms, scores, and reconnect identities live in memory. A server restart ends current sessions; the TV entry page can create a new room.
 - `music/` contains the local lobby soundtrack. Android signing keys, build output, and APK copies are ignored by Git; see the [Android TV instructions](android-tv/README.md) for building and signing.
-- The original light-lobby mockup lives in [`smallhours-light-lobby/`](smallhours-light-lobby/). Its demo interactions are local only; the application uses the existing WebSocket backend.
 - GitHub Actions runs tests and publishes GHCR images from `main` and version tags. Pulling an image and building local source are separate deployment paths; use the commands above for the one you need.
 
 After a frontend update, refresh both TV and phone pages so they load the new JavaScript and styles.
@@ -164,7 +164,7 @@ Useful places to start:
 - [`public/css/light-lobby.css`](public/css/light-lobby.css) — shared light-lobby styling and compact TV layout.
 - [`public/js/lobby-music.js`](public/js/lobby-music.js) — TV lobby playback and mascot motion state.
 - [`music/`](music/) — local lobby tracks.
-- [`src/engine/games/`](src/engine/games/) — game definitions, including the minimal [`template.js`](src/engine/games/template.js).
+- [`games/`](games/) — one folder per game.
 - [`src/fetcher/`](src/fetcher/) — trivia, music, caching, and speech fetching.
 - [`tests/`](tests/) — engine, session, transport, integration, and frontend tests.
 - [`android-tv/`](android-tv/) — Android TV app source and build instructions.
@@ -179,7 +179,7 @@ npm run test:watch        # rerun tests while working
 npx vitest run tests/engine/quiz.test.js
 ```
 
-To add a game, start with `src/engine/games/template.js`. Define `setup`, `actions`, `view`, and `endIf`, register it in `src/session/room.js`, and export it from `src/engine/games/index.js`. Add phone and TV renderers, tests, and a dashboard entry when it's ready to play.
+To add a game, copy `games/_template/`; see [`games/README.md`](games/README.md). Define `setup`, `actions`, `view`, and `endIf` and export the manifest from `games/<id>/index.js`; the server finds it by itself. Add phone and TV screens and tests.
 
 Keep rules in the engine, secrets out of player views, and the next round easy to start.
 

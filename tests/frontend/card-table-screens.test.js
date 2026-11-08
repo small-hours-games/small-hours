@@ -5,13 +5,15 @@ import { readFileSync } from 'node:fs';
 import { runInNewContext } from 'node:vm';
 import { createTestGame, act, viewFor } from '../engine/game-harness.js';
 import { getHostView } from '../../src/transport/host-view.js';
-import ginRummy from '../../src/engine/games/gin-rummy.js';
-import shithead from '../../src/engine/games/shithead.js';
+import ginRummy from '../../games/gin-rummy/rules.js';
+import shithead from '../../games/shithead/rules.js';
 
 const read = file => readFileSync(new URL('../../public/' + file, import.meta.url), 'utf8');
 const KIT = read('js/table-cards.js');
-const PLAYER = read('player.html');
-const HOST = read('host.html');
+const game = file => readFileSync(new URL('../../games/' + file, import.meta.url), 'utf8');
+const PLAYER = read('js/table-cards-phone.js') + game('shithead/client/phone.js') + game('gin-rummy/client/phone.js');
+const TV_KIT = read('js/table-cards-tv.js');
+const TV_GAMES = game('shithead/client/tv.js') + '\n' + game('gin-rummy/client/tv.js');
 
 function fn(source, name) {
   const start = source.indexOf('    function ' + name + '(');
@@ -23,7 +25,7 @@ function fn(source, name) {
 function phoneContext(playerId) {
   const context = { state: { playerId, playerNames: { p1: 'Anna', p2: 'Bo', p3: 'Cy' } } };
   runInNewContext(KIT, context);
-  const names = ['tcName', 'canPlayCard', 'shZone', 'shActiveZoneCards', 'shCtaState', 'grOpponentId', 'grCtaState', 'grStatusText'];
+  const names = ['tcName', 'canPlayCard', 'shHasStacks', 'shZone', 'shActiveZoneCards', 'shCtaState', 'grOpponentId', 'grCtaState', 'grStatusText'];
   runInNewContext(names.map(n => fn(PLAYER, n)).join('\n'), context);
   return context;
 }
@@ -39,10 +41,11 @@ function tvRender(fnName, view) {
     escapeHtml: t => String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'),
     playerAvatarHtml: () => '',
     tcFitTv: () => {},
+    SH: { registerGame() {} },
   };
   runInNewContext(KIT, context);
-  const block = HOST.slice(HOST.indexOf('    // ===== Card table on the TV'), HOST.indexOf('    function playerAvatarHtml(playerId) {'));
-  runInNewContext(block + '\n' + fn(HOST, 'shitheadRuleHintText'), context);
+  const block = TV_KIT.slice(TV_KIT.indexOf('    // ===== Card table on the TV'));
+  runInNewContext(block + '\n' + TV_GAMES, context);
   context[fnName]({ ...view, playerNames: context.state.playerNames });
   return content.innerHTML;
 }
@@ -50,6 +53,91 @@ function tvRender(fnName, view) {
 const SUIT_NAMES = { h: 'hearts', d: 'diamonds', c: 'clubs', s: 'spades' };
 const LABELS = { 1: 'A', 11: 'J', 12: 'Q', 13: 'K', 14: 'A' };
 const ariaOf = c => 'aria-label="' + (LABELS[c.rank] || c.rank) + ' of ' + SUIT_NAMES[c.suit] + '"';
+
+describe('a double tap never sends a card away', () => {
+  const sent = [];
+  function tapContext(extra) {
+    const context = {
+      renderGinRummyState() {}, renderShitheadState() {}, tcShake() {}, showToast() {},
+      grDiscard: () => sent.push('discard'), playSelectedCards: () => sent.push('play'), shPlayFaceDown: () => sent.push('flip'),
+      document: { getElementById: () => ({}) },
+      ...extra,
+    };
+    runInNewContext(KIT, context);
+    runInNewContext(['canPlayCard', 'shZone', 'shActiveZoneCards', 'shSwapSelect', 'shTapCard', 'grSelectCard'].map(n => fn(PLAYER, n)).join('\n'), context);
+    return context;
+  }
+
+  it('Gin Rummy: the second tap deselects', () => {
+    sent.length = 0;
+    const ctx = tapContext({ state: { grSelectedCard: null, grLastMsg: { isMyTurn: true, phase: 'drawing', turnPhase: 'discard' } } });
+    ctx.grSelectCard('c1');
+    expect(ctx.state.grSelectedCard).toBe('c1');
+    ctx.grSelectCard('c1');
+    expect(ctx.state.grSelectedCard).toBe(null);
+    expect(sent).toEqual([]);
+  });
+
+  const hand = [{ id: 'a', rank: 9, suit: 'h' }, { id: 'b', rank: 9, suit: 's' }];
+  const palace = (msg, shStacked) => tapContext({ state: { shSelectedCards: [], shStacked, shLastMsg: { phase: 'play', isMyTurn: true, pileCount: 0, myHand: hand, myFaceUp: [], myFaceDownIds: [], ...msg } } });
+
+  it('Palace: the second tap deselects a card and a stack', () => {
+    sent.length = 0;
+    for (const stacked of [false, true]) {
+      const ctx = palace({}, stacked);
+      ctx.shTapCard('a');
+      expect(ctx.state.shSelectedCards.length).toBeGreaterThan(0);
+      ctx.shTapCard('a');
+      expect(ctx.state.shSelectedCards).toEqual([]);
+    }
+    expect(sent).toEqual([]);
+  });
+
+  it('Palace: the second tap does not flip a blind card', () => {
+    sent.length = 0;
+    const ctx = palace({ myHand: [], myFaceDownIds: ['x'] }, false);
+    ctx.shTapCard('x');
+    expect(ctx.state.shSelectedCards).toEqual(['x']);
+    ctx.shTapCard('x');
+    expect(ctx.state.shSelectedCards).toEqual([]);
+    expect(sent).toEqual([]);
+  });
+});
+
+describe('cards landing in the hand', () => {
+  function tracker() {
+    const context = { tcArrivals: {}, TC_MAX_ARRIVAL_FLIGHTS: 4 };
+    runInNewContext(KIT, context);
+    runInNewContext(fn(PLAYER, 'tcTrackArrivals'), context);
+    return (hand, round) => context.tcTrackArrivals('gr', hand.map(id => ({ id })), round);
+  }
+
+  it('marks a drawn card, and only that card, until a card leaves the hand', () => {
+    const track = tracker();
+    track(['a', 'b'], 1);
+    const drew = track(['a', 'b', 'c'], 1);
+    expect([...drew.arrived]).toEqual(['c']);
+    expect([...drew.t.fresh]).toEqual(['c']);
+    expect([...drew.t.flying]).toEqual(['c']);
+    expect([...track(['a', 'b', 'c'], 1).t.fresh]).toEqual(['c']);
+    expect([...track(['a', 'c'], 1).t.fresh]).toEqual([]);
+  });
+
+  it('swaps the mark to the new card when a play and a draw arrive together', () => {
+    const track = tracker();
+    track(['a', 'b'], 'play');
+    track(['a', 'b', 'c'], 'play');
+    expect([...track(['a', 'c', 'd'], 'play').t.fresh]).toEqual(['d']);
+  });
+
+  it('treats a new deal as no arrival', () => {
+    const track = tracker();
+    track(['a', 'b'], 1);
+    const dealt = track(['x', 'y'], 2);
+    expect([...dealt.arrived]).toEqual([]);
+    expect([...dealt.t.fresh]).toEqual([]);
+  });
+});
 
 describe('Gin Rummy phone: next-move button follows the engine phases', () => {
   it('walks upcard → draw → discard', () => {
@@ -94,6 +182,22 @@ describe('Palace phone: next-move button', () => {
     const card = view.myHand[0];
     expect(pctx.shCtaState(view, [card.id]).label).toMatch(/^Play /);
     expect(pctx.shCtaState(view, [])).toMatchObject({ disabled: true, label: 'Tap cards to play' });
+  });
+
+  it('shows the played card on the button: verb, count and card', () => {
+    const ctx = phoneContext('p1');
+    const hand = [{ id: 'a', rank: 6, suit: 'c' }, { id: 'b', rank: 6, suit: 'h' }, { id: 'c', rank: 6, suit: 'd' }];
+    const view = { phase: 'play', isMyTurn: true, myHand: hand, pileTopRank: 5, pileCount: 2 };
+    expect(ctx.shCtaState(view, ['a', 'b', 'c'])).toMatchObject({ verb: 'Play', count: 3, label: 'Play 3× 6', action: 'playCards' });
+    expect(ctx.shCtaState(view, ['a']).card).toMatchObject({ id: 'a' });
+  });
+
+  it('stacks same ranks only once a hand no longer fits two rows of six', () => {
+    const ctx = phoneContext('p1');
+    const hand = n => Array.from({ length: n }, (_, i) => ({ id: 'x' + i, rank: 2 + (i % 11), suit: 'h' }));
+    expect(ctx.shHasStacks(hand(12))).toBe(false);
+    expect(ctx.shHasStacks(hand(13))).toBe(true);
+    expect(ctx.shHasStacks(hand(11))).toBe(false);
   });
 
   it('asks to pick up the pile when nothing can be played', () => {

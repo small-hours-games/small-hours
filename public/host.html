@@ -12,11 +12,12 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Fredoka:wght@500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Fredoka:wght@500;600;700&family=Barlow+Condensed:wght@700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/smallhours.css">
   <link rel="stylesheet" href="/css/host.css">
   <link rel="stylesheet" href="/css/light-lobby.css">
   <link rel="stylesheet" href="/css/table-cards.css">
+  <!-- game-styles -->
   <link rel="icon" type="image/svg+xml" href="/images/smallhours-icon.svg">
   <link rel="icon" type="image/png" sizes="64x64" href="/images/smallhours-favicon.png">
   <link rel="apple-touch-icon" href="/images/smallhours-icon.png">
@@ -147,14 +148,14 @@
   <!-- Toast container -->
   <div class="toast-container" id="toasts"></div>
 
-  <script src="/js/cards.js"></script>
+  <script src="/js/card-sounds.js"></script>
   <script src="/js/table-cards.js"></script>
+  <script src="/js/table-cards-tv.js"></script>
+  <script src="/js/game-api.js"></script>
+  <!-- game-catalog -->
   <script src="/js/games.js"></script>
   <script src="/js/build-info.js"></script>
-  <script src="/js/quiz-ready.js"></script>
-  <script src="/js/music-fade.js"></script>
   <script src="/js/lobby-music.js"></script>
-  <script src="/js/quiz-narrator.js"></script>
   <script src="/js/mascot-duel.js"></script>
   <script>
     // --- State ---
@@ -179,21 +180,23 @@
 
     // Mute toggle
     let isMuted = false;
-    const quizNarrator = createQuizNarrator();
-    document.addEventListener('pointerdown', () => quizNarrator.retry());
-    document.addEventListener('keydown', () => quizNarrator.retry());
     const lobbyMusic = createLobbyMusic(new Audio(), playing => {
       document.body.classList.toggle('lobby-music-playing', playing);
     });
     const mascotDuel = typeof createMascotDuel === 'function' ? createMascotDuel() : null;
     document.addEventListener('pointerdown', () => lobbyMusic.retry());
     document.addEventListener('keydown', () => lobbyMusic.retry());
+    // Games with music: true in their manifest share these songs.
+    const gameMusic = createLobbyMusic(new Audio(), undefined, { playlistUrl: '/api/game-music' });
+    document.addEventListener('pointerdown', () => gameMusic.retry());
+    document.addEventListener('keydown', () => gameMusic.retry());
+    SH.duckMusic = speaking => gameMusic.setDucked(speaking);
     function toggleMute() {
       isMuted = !isMuted;
       document.getElementById('muteBtn').textContent = isMuted ? '\uD83D\uDD07 Muted' : '\uD83D\uDD0A Sound';
-      if (musicAudio) musicAudio.muted = isMuted;
       lobbyMusic.setMuted(isMuted);
-      quizNarrator.setMuted(isMuted);
+      gameMusic.setMuted(isMuted);
+      SH.eachGame(game => game.onMute?.(isMuted));
       if (isMuted) {
         audio._origPlay = audio._origPlay || audio.play;
         audio.play = () => {};
@@ -201,10 +204,6 @@
         audio.play = audio._origPlay;
       }
     }
-
-    // Sound state tracking — prevent duplicate triggers on re-renders
-    var lastShState = {};
-    var lastGrState = {};
 
     // Init audio on first user interaction (required by browser autoplay policy)
     document.addEventListener('click', function() { audio.init(); }, { once: true });
@@ -314,6 +313,7 @@
         case 'LOBBY_UPDATE':
           state.lobby = msg.state || msg;
           lobbyMusic.setActive(!state.lobby.game && !state.gameType);
+          if (!state.lobby.game) gameMusic.setActive(false);
           state.players = state.lobby.players || [];
           state.playerAvatars = state.playerAvatars || {};
           state.players.forEach(p => { state.playerAvatars[p.playerId] = p.avatar; });
@@ -462,10 +462,11 @@
 
     // --- Render: Game ---
     function showGameView(msg) {
-      quizNarrator.stop();
+      SH.game(state.gameType)?.onEnter?.(msg);
       if (mascotDuel) mascotDuel.setLobbyActive(false);
       placePartyChat(true);
       lobbyMusic.setActive(false);
+      gameMusic.setActive(!!shGame(state.gameType).music);
       state.gameEvents = [];
       document.getElementById('lobbyView').style.display = 'none';
       document.getElementById('gameView').style.display = 'flex';
@@ -476,27 +477,12 @@
       }
       document.body.classList.add('in-game');
 
-      const titles = {
-        'number-guess': 'Number Guess',
-        'quiz': 'Quiz Time',
-        'music-quiz': 'Music Quiz',
-        'spy': 'Spy Game',
-        'shithead': 'Palace',
-        'question-form': 'Question Form',
-        'gin-rummy': 'Gin Rummy',
-        'hilow': 'Högt/Lågt',
-        'skogai': 'SkogAI',
-        'sjuan': 'Sjuan',
-        'uno': 'Uno',
-        'yatzy': 'Yatzy',
-        'labyrint': 'Labyrint',
-        'template': 'Template'
-      };
-      document.getElementById('gameTitle').textContent = titles[msg.gameType] || msg.gameType;
+      const info = shGame(msg.gameType);
+      document.getElementById('gameTitle').textContent = info.title || info.label;
       document.getElementById('roundInfo').textContent = '';
 
       // Narrate the game's story (intro + TTS voice), but not when rejoining a running game
-      if (!msg.resume && !['quiz', 'music-quiz'].includes(msg.gameType)) playStory(msg.gameType);
+      if (!msg.resume) playStory(msg.gameType);
     }
 
     // --- Game story / narration ---
@@ -513,6 +499,9 @@
         if (data.url) {
           if (storyAudio) storyAudio.pause();
           storyAudio = new Audio(data.url);
+          storyAudio.addEventListener('playing', () => gameMusic.setDucked(true));
+          storyAudio.addEventListener('pause', () => gameMusic.setDucked(false));
+          storyAudio.addEventListener('ended', () => gameMusic.setDucked(false));
           storyAudio.play().catch(() => {});
         }
       } catch (e) { /* TTS optional */ }
@@ -547,729 +536,16 @@
     function renderGameState(msg) {
       if (msg.phase !== 'lobby' && msg.phase !== 'finished') lobbyMusic.setActive(false);
       if (!state.gameType) return;
+      gameMusic.setActive(!!shGame(state.gameType).music && msg.phase !== 'lobby' && msg.phase !== 'finished');
 
-      switch (state.gameType) {
-        case 'number-guess': renderNumberGuess(msg); break;
-        case 'quiz': case 'music-quiz': renderQuiz(msg); break;
-        case 'spy': renderSpy(msg); break;
-        case 'shithead': renderShithead(msg); break;
-        case 'question-form': renderQuestionForm(msg); break;
-        case 'gin-rummy': renderGinRummy(msg); break;
-        case 'template': renderTemplate(msg); break;
-      }
+      const game = SH.game(state.gameType);
+      if (game) game.render(msg);
 
-      if (msg.scores || state.gameType === 'number-guess' || state.gameType === 'shithead') {
+      if (msg.scores || game?.alwaysScoreboard) {
         renderScoreboard(msg, state.gameType);
       }
       if (msg.phase === 'lobby' || msg.phase === 'finished') returnToLobby(msg);
     }
-
-    function renderNumberGuess(msg) {
-      const content = document.getElementById('gameContent');
-      const events = state.gameEvents || [];
-
-      // Build guess log from events
-      const guessEvents = events.filter(e => e.type === 'guess_result');
-
-      let html = '<div class="number-guess-display">';
-
-      if (msg.phase === 'finished') {
-        html += '<div class="guess-feedback" style="color:var(--neon-green);font-size:2rem;">Number found!</div>';
-        if (msg.secret) {
-          html += '<div style="font-size:1.5rem;margin:12px 0;">The number was <strong style="color:var(--neon-blue);">' + msg.secret + '</strong></div>';
-        }
-      } else {
-        html += '<div class="guess-round-label">Guessing in progress...</div>' +
-          '<div class="guess-range" style="font-size:3rem;">1 &mdash; 100</div>';
-      }
-
-      if (guessEvents.length > 0) {
-        html += '<div class="card" style="max-width:500px;margin:16px auto;text-align:left;">';
-        // Show last 10 guesses
-        guessEvents.slice(-10).forEach(g => {
-          const icon = g.result === 'correct' ? '&#9989;' : (g.result === 'too_high' ? '&#11015; Too high' : '&#11014; Too low');
-          const color = g.result === 'correct' ? 'var(--neon-green)' : 'var(--text-secondary)';
-          // Look up player name
-          const name = (state.playerNames || {})[g.playerId] || 'Player';
-          html += '<div class="clue-item"><span class="clue-author">' + escapeHtml(name) + '</span>' +
-            '<span style="color:' + color + ';">' + g.number + ' ' + icon + '</span></div>';
-        });
-        html += '</div>';
-      } else {
-        html += '<div style="color:var(--text-secondary);margin-top:24px;">Waiting for guesses...</div>';
-      }
-
-      html += '</div>';
-      content.innerHTML = html;
-    }
-
-    // --- Music Quiz audio (plays on the TV only) ---
-    let musicAudio = null;
-    let musicQuestionId = null;
-    let musicFade = null;
-
-    function syncMusic(msg) {
-      const q = msg.question;
-      const preview = q && q.media && q.media.preview;
-      const audible = msg.phase === 'question' || msg.phase === 'reveal';
-      if (!preview || !audible) {
-        if (!audible) stopMusic();
-        return;
-      }
-      // Re-renders within the same question keep the clip running
-      if (q.id === musicQuestionId) { musicFade.sync(msg); return; }
-      if (msg.phase !== 'question') return;
-      stopMusic();
-      musicQuestionId = q.id;
-      musicAudio = new Audio(preview);
-      musicAudio.muted = isMuted;
-      musicFade = createMusicFade(musicAudio);
-      musicFade.start(msg.timeLeft);
-      musicAudio.play().catch(showSoundUnlock);
-    }
-
-    function stopMusic() {
-      if (musicFade) musicFade.stop();
-      musicFade = null;
-      if (musicAudio) musicAudio.pause();
-      musicAudio = null;
-      musicQuestionId = null;
-      hideSoundUnlock();
-    }
-
-    // Browsers block autoplay until the page has been clicked once
-    function showSoundUnlock() {
-      if (document.getElementById('soundUnlock')) return;
-      const btn = document.createElement('button');
-      btn.id = 'soundUnlock';
-      btn.className = 'fixed top-20 left-1/2 -translate-x-1/2 z-[1400] px-6 py-3 bg-sky-600 hover:bg-sky-700 text-white font-bold rounded-2xl shadow-lg shadow-sky-600/30 flex items-center gap-2';
-      btn.innerHTML = '<i class="fa-solid fa-volume-high"></i> Tap to enable sound';
-      btn.onclick = () => {
-        if (musicAudio) musicAudio.play().catch(() => {});
-        hideSoundUnlock();
-      };
-      document.body.appendChild(btn);
-    }
-
-    function hideSoundUnlock() {
-      document.getElementById('soundUnlock')?.remove();
-    }
-
-    function musicPanel(msg) {
-      const media = msg.question && msg.question.media;
-      if (!media) return '';
-      if (msg.phase === 'reveal' && media.artist) {
-        return '<div class="flex items-center justify-center gap-5 my-1">' +
-          (media.cover ? '<img src="' + escapeHtml(media.cover) + '" alt="" class="w-28 h-28 rounded-2xl object-cover shadow-lg border-4 border-white">' : '') +
-          '<div class="text-left"><div class="font-display text-3xl font-bold text-slate-800">' + escapeHtml(media.title) + '</div>' +
-          '<div class="text-xl text-slate-500 font-semibold">' + escapeHtml(media.artist) + '</div></div>' +
-        '</div>';
-      }
-      const genre = msg.question.category
-        ? '<div class="text-center"><span class="inline-block px-4 py-1 rounded-full bg-sky-100 border border-sky-200 text-sky-800 font-bold text-lg">Genre: ' + escapeHtml(msg.question.category) + '</span></div>'
-        : '';
-      return genre + '<div class="flex items-end justify-center gap-2 h-12 my-1" aria-label="Song playing">' +
-        [8, 14, 10, 16, 6, 12, 9, 15, 7].map((h, i) =>
-          '<span class="w-3 rounded-full ' + (i % 2 ? 'bg-sky-600 animate-pulse' : 'bg-sky-400 animate-bounce') + '" style="height:' + (h * 3) + 'px;animation-delay:' + (i * 90) + 'ms"></span>'
-        ).join('') +
-      '</div>';
-    }
-
-    // --- Question countdown, ticked locally from the server's time left ---
-    const hostCountdown = { deadline: 0, total: 0, interval: null };
-
-    function startHostCountdown(timeLeft, timeTotal) {
-      hostCountdown.deadline = Date.now() + timeLeft * 1000;
-      hostCountdown.total = timeTotal;
-      if (!hostCountdown.interval) hostCountdown.interval = setInterval(tickHostCountdown, 250);
-      tickHostCountdown();
-    }
-
-    function tickHostCountdown() {
-      const left = Math.max(0, (hostCountdown.deadline - Date.now()) / 1000);
-      const pct = hostCountdown.total ? (left / hostCountdown.total) * 100 : 0;
-      const cls = 'timer-bar' + (pct < 20 ? ' critical' : pct < 40 ? ' warning' : '');
-      // Only touch class/text when they change: Tailwind's CDN compiler re-runs on every class change
-      const container = document.getElementById('timerContainer');
-      if (container.style.display !== 'block') container.style.display = 'block';
-      const bar = document.getElementById('timerBar');
-      bar.style.width = pct + '%';
-      if (bar.className !== cls) bar.className = cls;
-      const seconds = document.getElementById('timerSeconds');
-      const secCls = 'timer-seconds' + (pct < 20 ? ' critical' : pct < 40 ? ' warning' : '');
-      const secText = String(Math.ceil(left));
-      if (seconds.style.display) seconds.style.display = '';
-      if (seconds.textContent !== secText) seconds.textContent = secText;
-      if (seconds.className !== secCls) seconds.className = secCls;
-      if (left <= 0) stopHostCountdown(true);
-    }
-
-    function stopHostCountdown(keepDisplay) {
-      clearInterval(hostCountdown.interval);
-      hostCountdown.interval = null;
-      if (!keepDisplay) {
-        hostCountdown.deadline = 0;
-        document.getElementById('timerContainer').style.display = 'none';
-        document.getElementById('timerSeconds').style.display = 'none';
-      }
-    }
-
-    function renderQuiz(msg) {
-      const content = document.getElementById('gameContent');
-      const timerContainer = document.getElementById('timerContainer');
-      const timerBar = document.getElementById('timerBar');
-      const roundInfo = document.getElementById('roundInfo');
-
-      // Quiz introductions must never cover a timed question.
-      document.getElementById('storyOverlay').style.display = 'none';
-      if (storyAudio) storyAudio.pause();
-      if (msg.phase !== 'countdown') stopQuizReadyCountdown();
-      syncMusic(msg);
-      quizNarrator.sync({ ...msg, gameType: state.gameType });
-      if (msg.phase !== 'question') stopHostCountdown();
-
-      // Progress indicator ("Question 3 of 10")
-      if (msg.currentQuestion != null && msg.totalQuestions) {
-        roundInfo.textContent = 'Question ' + (msg.currentQuestion + 1) + ' of ' + msg.totalQuestions;
-      }
-
-      if (msg.phase === 'countdown') {
-        timerContainer.style.display = 'none';
-        content.innerHTML = '<div class="quiz-display countdown-phase">' +
-          '<div class="quiz-question-text">Get ready!</div>' +
-          '<div class="quiz-ready-number" id="quizReadyNumber" role="timer" aria-label="Quiz starts in">5</div>' +
-          '<div class="quiz-countdown-text">First question coming up...</div>' +
-          '</div>';
-        startQuizReadyCountdown('quizReadyNumber', msg.timeLeft);
-        return;
-      }
-
-      if (msg.phase === 'between') {
-        timerContainer.style.display = 'none';
-        const nextQ = (msg.currentQuestion != null ? msg.currentQuestion + 1 : '?');
-        content.innerHTML = '<div class="quiz-display between-phase">' +
-          '<div class="quiz-question-text">Next up: Question ' + nextQ + '</div>' +
-          '<div class="quiz-between-text">Get ready for the next round...</div>' +
-          '</div>';
-        return;
-      }
-
-      if (msg.phase === 'question') {
-        const q = msg.question || {};
-        const imageHtml = q.image && !q.media
-          ? '<div class="quiz-image-wrap"><img src="' + escapeHtml(q.image) + '" alt="" class="quiz-question-image" loading="eager" onerror="this.parentElement.style.display=\'none\'"></div>'
-          : '';
-        // One countdown only: the bar under the game title plus the seconds badge in the header
-        let html = '<div class="quiz-display question-phase">' +
-          '<div class="quiz-question-text">' + escapeHtml(q.text || '') + '</div>' +
-          imageHtml +
-          musicPanel(msg) +
-          '<div class="quiz-answers-display">';
-
-        const labels = ['A', 'B', 'C', 'D'];
-        const neonColors = ['var(--neon-red)', 'var(--neon-blue)', 'var(--neon-green)', 'var(--neon-orange)'];
-        (q.answers || []).forEach((a, i) => {
-          html += '<button class="answer-btn answer-' + labels[i].toLowerCase() + '" style="background:' + neonColors[i] + '" data-index="' + i + '" aria-label="Answer ' + labels[i] + ': ' + escapeHtml(a) + '">' +
-            '<span class="answer-label">' + labels[i] + '.</span>' +
-            '<span class="answer-text">' + escapeHtml(a) + '</span>' +
-          '</button>';
-        });
-
-        html += '</div>';
-
-        const timed = msg.timeLeft != null && msg.timeTotal;
-        if (!timed) timerContainer.style.display = 'none';
-
-        html += '</div>';
-        content.innerHTML = html;
-        // Tick the countdown locally from the server's time left (bar + seconds badge)
-        if (timed) startHostCountdown(msg.timeLeft, msg.timeTotal);
-        else if (hostCountdown.deadline) tickHostCountdown();
-      } else if (msg.phase === 'reveal') {
-        timerContainer.style.display = 'none';
-        const q = msg.question || {};
-        const imageHtml = q.image && !q.media
-          ? '<div class="quiz-image-wrap"><img src="' + escapeHtml(q.image) + '" alt="" class="quiz-question-image" loading="eager" onerror="this.parentElement.style.display=\'none\'"></div>'
-          : '';
-        let html = '<div class="quiz-display reveal-phase">' +
-          '<div class="quiz-question-text">' + escapeHtml(q.text || '') + '</div>' +
-          imageHtml +
-          musicPanel(msg) +
-          '<div class="quiz-answers-display">';
-
-        const labels = ['A', 'B', 'C', 'D'];
-        const neonColors = ['var(--neon-red)', 'var(--neon-blue)', 'var(--neon-green)', 'var(--neon-orange)'];
-        (q.answers || []).forEach((a, i) => {
-          const isCorrect = i === msg.correctIndex;
-          const mark = isCorrect ? '<span class="answer-mark correct" aria-label="Correct answer">&#9989;</span>' : '<span class="answer-mark incorrect" aria-label="Incorrect">&#10060;</span>';
-          const correctClass = isCorrect ? ' correct' : ' incorrect';
-          const names = msg.playerNames || state.playerNames || {};
-          const guesses = Object.entries(msg.playerAnswers || {})
-            .filter(([, answer]) => answer === a)
-            .map(([pid]) => '<span class="answer-player">' + playerAvatarHtml(pid) +
-              '<span>' + escapeHtml(names[pid] || 'Player') + '</span></span>');
-          const guessHtml = '<span class="answer-guesses">' +
-            (guesses.length ? guesses.join(' ') : 'No guesses') + '</span>';
-          html += '<button class="answer-btn answer-' + labels[i].toLowerCase() + correctClass + '" style="background:' + (isCorrect ? 'var(--neon-green)' : neonColors[i]) + '" disabled aria-disabled="true" aria-label="' + (isCorrect ? 'Correct answer: ' : 'Incorrect: ') + escapeHtml(a) + '">' +
-            '<span class="answer-label">' + labels[i] + '.</span>' +
-            '<span class="answer-text">' + escapeHtml(a) + '</span>' +
-            mark + guessHtml +
-          '</button>';
-        });
-
-        html += '</div></div>';
-        content.innerHTML = html;
-      }
-    }
-
-    function renderSpy(msg) {
-      const content = document.getElementById('gameContent');
-      const round = msg.round || '?';
-      const names = msg.playerNames || {};
-      // Engine sends clues as { playerId: text }; the secret word only arrives at reveal.
-      const clues = Object.entries(msg.clues || {}).map(([id, text]) => ({ name: names[id] || 'Player', text }));
-
-      let html = '<div class="spy-display">' +
-        '<div class="spy-round-title">Round ' + round + '</div>';
-
-      if (msg.phase === 'clues') {
-        html += '<p class="text-secondary">Players are giving clues...</p>';
-      } else if (msg.phase === 'guess') {
-        html += '<p class="text-secondary">The spy is guessing the word...</p>';
-      } else if (msg.phase === 'reveal' || msg.phase === 'score') {
-        html += '<p style="font-size:1.5rem;margin:16px 0;">The word was: <strong style="color:var(--neon-green);">' +
-          escapeHtml(msg.revealedWord || '???') + '</strong></p>';
-        if (msg.spy) {
-          html += '<p>The spy was: <strong style="color:var(--neon-pink);">' + escapeHtml(names[msg.spy] || 'Player') + '</strong></p>';
-        }
-      }
-
-      if (clues.length > 0) {
-        html += '<div class="clue-list">';
-        clues.forEach(c => {
-          html += '<div class="clue-item">' +
-            '<span class="clue-author">' + escapeHtml(c.name) + '</span>' +
-            '<span class="clue-text">"' + escapeHtml(c.text) + '"</span></div>';
-        });
-        html += '</div>';
-      }
-
-      html += '</div>';
-      content.innerHTML = html;
-    }
-
-    function renderTemplate(msg) {
-      const content = document.getElementById('gameContent');
-      let html = '<div style="text-align:center;">';
-      if (msg.phase === 'finished') {
-        html += '<div style="font-size:2rem;color:var(--neon-green);font-weight:700;margin-bottom:16px;">Game Over!</div>';
-      }
-      html += '<div style="font-size:1.2rem;margin-bottom:16px;">Target: ' + (msg.target || 3) + '</div>';
-      html += '</div>';
-      content.innerHTML = html;
-    }
-
-    function renderQuestionForm(msg) {
-      const content = document.getElementById('gameContent');
-      const names = state.playerNames || msg.playerNames || {};
-
-      if (msg.phase === 'answering') {
-        const total = msg.totalPlayers || '?';
-        const submitted = msg.submittedCount || 0;
-        content.innerHTML = '<div class="qf-display">' +
-          '<div class="qf-host-question">Waiting for answers...</div>' +
-          '<div class="qf-waiting">' + submitted + ' / ' + total + ' players submitted</div>' +
-          '<div style="margin-top:24px;">' +
-            '<div style="width:200px;height:8px;border-radius:4px;background:rgba(15, 23, 42, 0.12);margin:0 auto;">' +
-              '<div style="width:' + (total > 0 ? Math.round(submitted / total * 100) : 0) + '%;height:100%;border-radius:4px;background:var(--neon-purple);transition:width 0.3s;"></div>' +
-            '</div>' +
-          '</div>' +
-          '</div>';
-        return;
-      }
-
-      if (msg.phase === 'review' || msg.phase === 'finished') {
-        const rq = msg.reviewQuestion || {};
-        const questions = msg.questions || [];
-        const qi = msg.currentQuestion || 0;
-
-        let html = '<div class="qf-display">';
-
-        // Question dots
-        html += '<div class="qf-progress-dots">';
-        questions.forEach(function(q, i) {
-          html += '<div class="qf-dot' + (i === qi ? ' active' : '') + '"></div>';
-        });
-        html += '</div>';
-
-        html += '<div class="qf-host-label">Question ' + (qi + 1) + ' of ' + questions.length + '</div>';
-        html += '<div class="qf-host-question">' + escapeHtml(rq.text || '') + '</div>';
-
-        if (msg.tally) {
-          const maxCount = Math.max(...Object.values(msg.tally), 1);
-          const options = rq.type === 'yesno' ? ['yes', 'no'] : (rq.options || Object.keys(msg.tally));
-          const barClasses = rq.type === 'yesno' ? { yes: 'yes', no: 'no' } : {};
-          const defaultClasses = ['a', 'b', 'c', 'd'];
-          html += '<div class="qf-host-tally">';
-          options.forEach(function(opt, i) {
-            const count = msg.tally[opt] || 0;
-            const pct = Math.round((count / maxCount) * 100);
-            const cls = barClasses[opt] || defaultClasses[i % 4];
-            html += '<div class="qf-host-bar ' + cls + '" style="width:' + Math.max(pct, 15) + '%;">' +
-              escapeHtml(opt) + ' \u2014 ' + count + '</div>';
-          });
-          html += '</div>';
-        } else if (msg.average != null) {
-          html += '<div class="qf-host-average">' + msg.average + '</div>' +
-            '<div style="font-size:1rem;color:var(--text-secondary);">Average rating</div>';
-        } else {
-          // Text responses
-          (msg.allResponses || []).forEach(function(r) {
-            const name = names[r.playerId] || 'Player';
-            html += '<div class="qf-host-response"><strong>' + escapeHtml(name) + ':</strong> ' + escapeHtml(String(r.value)) + '</div>';
-          });
-          if (!msg.allResponses || msg.allResponses.length === 0) {
-            html += '<div class="qf-waiting">No responses</div>';
-          }
-        }
-
-        html += '</div>';
-        content.innerHTML = html;
-      }
-    }
-
-    function renderTvStackVisual(cards, totalCount, opts) {
-      opts = opts || {};
-      const w = opts.width || 120;
-      const h = opts.height || 168;
-      const count = totalCount || 0;
-      if (count <= 0) {
-        return '<div class="tv-stack-3d" style="width:' + (w + 18) + 'px;height:' + (h + 18) + 'px;">' +
-          '<div class="pile-empty" style="width:' + w + 'px;height:' + h + 'px;" aria-label="Empty pile">' + (opts.emptyLabel || 'Empty') + '</div>' +
-        '</div>';
-      }
-      const isFacedown = !!opts.facedown;
-      const layerCount = Math.min(3, Math.max(0, count - 1));
-      const preview = Array.isArray(cards) ? cards : (cards ? [cards] : []);
-      let html = '<div class="tv-stack-3d" style="width:' + (w + 18) + 'px;height:' + (h + 18) + 'px;">';
-
-      for (let i = layerCount; i >= 1; i--) {
-        const dx = -i * 2;
-        const dy = i * 2;
-        const rot = (i % 2 === 0 ? 1 : -1) * (i * 0.4);
-        const layerCard = (!isFacedown && preview.length > i) ? preview[preview.length - 1 - i] : { rank: 0, suit: 'x' };
-        html += renderCardImg(layerCard, {
-          width: w,
-          height: h,
-          facedown: isFacedown || !layerCard.suit || layerCard.suit === 'x',
-          className: 'stack-layer-card',
-          style: 'width:' + w + 'px;height:' + h + 'px;transform:translate(' + dx + 'px,' + dy + 'px) rotate(' + rot + 'deg);opacity:' + (0.88 - i * 0.12) + ';'
-        });
-      }
-
-      const topCard = preview.length > 0 ? preview[preview.length - 1] : { rank: 0, suit: 'x' };
-      html += '<div class="pile-top-card" style="position:relative;z-index:5;">' +
-        renderCardImg(topCard, {
-          width: w,
-          height: h,
-          facedown: isFacedown,
-          pileCard: !isFacedown,
-          style: 'width:' + w + 'px;height:' + h + 'px;'
-        }) +
-      '</div>';
-      html += '</div>';
-      return html;
-    }
-
-    function shitheadRuleHintText(pileTopRank, pileCount) {
-      if (!pileCount) return 'Empty pile: play anything';
-      const top = pileTopRank == null ? null : Number(pileTopRank);
-      if (top == null || isNaN(top)) return 'A 2 reset the pile: play anything';
-      const rankLbl = tcRankLabel(top);
-      if (top === 7) return '7 on top: play 7 or lower, or a 2 or 10';
-      return 'Play ' + rankLbl + ' or higher, or a 2 or 10';
-    }
-
-    // Scale the card table so all of it fits the screen: smaller on a 720p TV,
-    // bigger on 1080p. CSS zoom changes layout size (unlike transform), so the
-    // page never scrolls under it.
-    function tcFitTv() {
-      const content = document.getElementById('gameContent');
-      const table = content && content.querySelector('.tc-tv');
-      if (!table) return;
-      const availW = content.clientWidth;
-      const availH = window.innerHeight - content.getBoundingClientRect().top - 12;
-      if (availW < 200 || availH < 200) return;
-      // Measure the natural size once, unzoomed. The seat row is centered, so when
-      // it is too wide it spills past both edges: measure its children, not scrollWidth.
-      table.classList.add('tc-tv-fit');
-      table.style.zoom = 1;
-      table.style.width = availW + 'px';
-      table.style.minHeight = '0px';
-      const pad = parseFloat(getComputedStyle(table).paddingLeft) * 2 || 0;
-      let left = Infinity;
-      let right = -Infinity;
-      for (const part of table.children) {
-        for (const el of part.classList.contains('tc-tv-row') ? part.children : [part]) {
-          const r = el.getBoundingClientRect();
-          left = Math.min(left, r.left);
-          right = Math.max(right, r.right);
-        }
-      }
-      const natW = Math.max(right - left + pad, 320);
-      const natH = table.scrollHeight;
-      const zoom = Math.max(0.5, Math.min(1.6, availW / natW, availH / natH));
-      table.style.zoom = zoom.toFixed(3);
-      table.style.width = (availW / zoom) + 'px';
-      table.style.minHeight = Math.floor(availH / zoom) + 'px';
-    }
-    window.addEventListener('resize', tcFitTv);
-
-    // ===== Card table on the TV: Gin Rummy + Palace (kit in /js/table-cards.js) =====
-    // Only shared fields are used here; per-player data never reaches host sockets.
-    function tvFanHtml(count, size, max) {
-      count = tcNum(count);
-      const shown = Math.min(max || 10, count || 0);
-      let html = '<div class="tc-fan" aria-label="' + (count || 0) + ' cards in hand">';
-      for (let i = 0; i < shown; i++) html += renderTableCard(null, { size: size || 'sm', facedown: true, dataId: '' });
-      if (count > shown) html += '<span class="tc-fan-more">+' + (count - shown) + '</span>';
-      return html + '</div>';
-    }
-
-    function tvSeatHtml(pid, names, opts) {
-      const cls = 'tc-seat' + (opts.turn ? ' tc-seat-turn' : '') + (opts.out ? ' tc-seat-out' : '');
-      return '<div class="' + cls + '" data-player-id="' + escapeHtml(pid) + '"' + (opts.turn ? ' aria-current="true"' : '') + '>' +
-        '<div class="tc-seat-head"><div class="tc-seat-name">' + playerAvatarHtml(pid) + '<span>' + escapeHtml(names[pid] || 'Player') + '</span></div>' +
-        (opts.tag ? '<span class="tc-seat-tag ' + (opts.tagClass || '') + '">' + escapeHtml(opts.tag) + '</span>' : '') + '</div>' +
-        (opts.stats ? '<div class="tc-seat-stats">' + opts.stats + '</div>' : '') +
-        (opts.cards ? '<div class="tc-seat-cards">' + opts.cards + '</div>' : '') +
-      '</div>';
-    }
-
-    function tvRevealHtml(title, melds, deadwood, layoffs) {
-      let html = '<div class="tc-reveal"><div class="tc-reveal-head"><span>' + escapeHtml(title) + '</span>' +
-        '<span>Deadwood ' + (deadwood || []).reduce((s, c) => s + Math.min(10, tcNum(c.rank)), 0) + '</span></div><div class="tc-meld-groups">';
-      (melds || []).forEach(m => {
-        html += '<div class="tc-meld-group">' + (m.cards || []).map(c => renderTableCard(c, { size: 'md', meld: m.type === 'set' ? 'set' : 'run', dataId: '' })).join('') + '</div>';
-      });
-      if ((layoffs || []).length) {
-        html += '<div class="tc-meld-group">' + layoffs.map(c => renderTableCard(c, { size: 'md', badge: 'laid off', dataId: '' })).join('') + '</div>';
-      }
-      if ((deadwood || []).length) {
-        html += '<div class="tc-meld-group tc-deadwood-group">' + deadwood.map(c => renderTableCard(c, { size: 'md', dataId: '' })).join('') + '</div>';
-      }
-      return html + '</div></div>';
-    }
-
-    function renderGinRummy(msg) {
-      const content = document.getElementById('gameContent');
-      const names = state.playerNames || msg.playerNames || {};
-      const cum = msg.cumulative || {};
-      const boxes = msg.boxes || {};
-      const pids = Object.keys(cum);
-      const playing = msg.phase !== 'scoring' && msg.phase !== 'finished';
-
-      // Sounds (TV speakers)
-      if (lastGrState.handNumber != null && msg.handNumber > lastGrState.handNumber) audio.play('deck_redraw');
-      if ((msg.phase === 'scoring' || msg.phase === 'finished') && lastGrState.phase !== msg.phase) audio.play('win');
-      if (msg.phase === 'drawing' && lastGrState.phase === 'drawing') {
-        if (msg.stockCount < lastGrState.stockCount) audio.play('draw');
-        if (msg.discardCount > lastGrState.discardCount) audio.play('place');
-      }
-      lastGrState = { handNumber: msg.handNumber, phase: msg.phase, stockCount: msg.stockCount, discardCount: msg.discardCount };
-
-      const current = msg.currentPlayer;
-      const action = msg.phase === 'first_turn' ? 'deciding on the upcard' : (msg.turnPhase === 'draw' ? 'drawing' : 'discarding');
-      let status = 'Gin Rummy';
-      if (playing && current) status = (names[current] || 'Player') + ' is ' + action;
-      else if (msg.phase === 'scoring') status = 'Hand over';
-      else if (msg.phase === 'finished') status = 'Game over';
-
-      const seat = pid => {
-        const count = tcNum((msg.playerCardCounts || {})[pid] != null ? msg.playerCardCounts[pid] : 10);
-        const pts = tcNum(cum[pid]);
-        const bx = tcNum(boxes[pid]);
-        const turn = playing && pid === current;
-        return tvSeatHtml(pid, names, {
-          turn,
-          tag: turn ? '▶ ' + action : null,
-          stats: '<span><span class="tc-seat-score">' + pts + '</span> pts</span><span>' + bx + (bx === 1 ? ' box · ' : ' boxes · ') + count + ' cards</span>',
-          cards: playing ? tvFanHtml(count, 'sm', 11) : '',
-        });
-      };
-
-      let html = '<div class="tc-tv tc-felt">';
-      html += '<div class="tc-tv-status"><span class="tc-dot' + (playing ? ' tc-dot-live' : '') + '"></span>' +
-        (msg.handNumber ? '<span class="tc-mono">Hand ' + tcNum(msg.handNumber) + '</span> · ' : '') + escapeHtml(status) + '</div>';
-      if (playing) {
-        html += '<div class="tc-tv-row"><div class="tc-tv-col">' + (pids[1] ? seat(pids[1]) : '') + '</div><div class="tc-tv-mid">';
-        const discardCount = tcNum(msg.discardCount != null ? msg.discardCount : (msg.discardTop ? 1 : 0));
-        const preview = (msg.discardPreview && msg.discardPreview.length) ? msg.discardPreview : (msg.discardTop ? [msg.discardTop] : []);
-        html += '<div class="tc-tv-center">' +
-          '<div class="tc-well"><span class="tc-well-label">Stock</span>' +
-            renderTableStack(null, msg.stockCount || 0, { size: 'xl', facedown: true, emptyLabel: 'Empty', highlight: msg.turnPhase === 'draw' }) +
-            '<span class="tc-count">' + tcNum(msg.stockCount) + ' left</span></div>' +
-          '<div class="tc-well"><span class="tc-well-label">Discard</span>' +
-            renderTableStack(preview, discardCount, { size: 'xl', emptyLabel: 'Empty', highlight: msg.phase === 'first_turn' }) +
-            '<span class="tc-count">' + discardCount + (discardCount === 1 ? ' card' : ' cards') + '</span></div>' +
-        '</div>';
-        const last = (msg.events || []).slice(-1)[0];
-        if (last && (last.type === 'draw' || last.type === 'discard')) {
-          const who = names[last.playerId] || 'Player';
-          const text = last.type === 'draw'
-            ? who + ' drew from the ' + (last.source === 'discard' ? 'discard pile' : 'stock')
-            : who + ' discarded' + (msg.discardTop && msg.discardTop.id === last.cardId ? ' ' + tcCardShort(msg.discardTop) : '');
-          html += '<div class="tc-tv-banner">' + escapeHtml(text) + '</div>';
-        }
-        html += '</div><div class="tc-tv-col">' + (pids[0] ? seat(pids[0]) : '') + '</div></div>';
-      } else {
-        const hr = msg.handResult || {};
-        const labels = { knock: 'Knock', undercut: 'Undercut!', gin: 'Gin!', bigGin: 'Big Gin!', cancelled: 'Stock ran out' };
-        html += '<div class="tc-tv-result">';
-        html += '<div class="tc-sheet-kicker">' + escapeHtml(msg.phase === 'finished' ? 'Game over' : (labels[hr.type] || 'Hand over')) + '</div>';
-        if (msg.phase === 'finished' && msg.winner) {
-          html += '<div class="tc-sheet-title tc-good">' + escapeHtml((names[msg.winner] || 'Player') + ' wins the game!') + '</div>';
-        } else if (hr.type === 'cancelled') {
-          html += '<div class="tc-sheet-title">No points this hand</div>';
-        } else if (hr.winner) {
-          html += '<div class="tc-sheet-title tc-good">' + escapeHtml((names[hr.winner] || 'Player') + ' wins +' + (hr.points || 0)) + '</div>';
-        }
-        if (msg.knocker) {
-          const oppId = pids.find(id => id !== msg.knocker);
-          html += tvRevealHtml((names[msg.knocker] || 'Player') + ' (knocked)', msg.knockerMelds, msg.knockerDeadwood);
-          html += tvRevealHtml(names[oppId] || 'Player', msg.opponentMelds, msg.opponentDeadwood, msg.opponentLayoffs);
-        }
-        html += '</div>';
-        html += '<div class="tc-tv-seats">' + pids.map(seat).join('') + '</div>';
-      }
-
-      html += '</div>';
-      content.innerHTML = html;
-      tcFitTv();
-    }
-
-    var shLog = [];
-    var shSeenSeq = null;
-
-    function renderShithead(msg) {
-      const content = document.getElementById('gameContent');
-      const names = state.playerNames || msg.playerNames || {};
-      const ev = msg.lastEvent || null;
-      const freshEvent = !!ev && ev.seq !== shSeenSeq && msg.phase !== 'swap';
-      shSeenSeq = ev ? ev.seq : null;
-      shLog = tcLogPush(shLog, ev, 6);
-      const flying = freshEvent && ev.cards && ev.cards.length && (ev.kind === 'play' || ev.kind === 'burn' || ev.kind === 'blind-miss');
-
-      // Sounds (TV speakers). A thrown card makes its sound when it lands.
-      if (msg.phase === 'play' || msg.phase === 'finished') {
-        if (lastShState.pileCount != null && msg.pileCount === 0 && lastShState.pileCount > 0 && !flying) audio.play('deck_redraw');
-        else if (lastShState.drawPileCount != null && msg.drawPileCount < lastShState.drawPileCount && !flying) audio.play('draw');
-        else if (lastShState.pileCount != null && msg.pileCount > lastShState.pileCount && !flying) audio.play('place');
-        if (msg.phase === 'finished' && lastShState.phase !== 'finished') audio.play('win');
-      }
-      lastShState = { pileCount: msg.pileCount || 0, drawPileCount: msg.drawPileCount, phase: msg.phase };
-
-      const players = msg.players || [];
-      const finish = msg.finishOrder || [];
-      const many = players.length > 4; // compact seats so 5-6 players fit a 1080p TV
-      const pileSize = many ? 'lg' : 'xl';
-      let status = 'Palace';
-      if (msg.phase === 'swap') status = 'Swap phase: everyone picks their face-up cards';
-      else if (msg.phase === 'finished') status = 'Game over';
-      else if (msg.currentPlayer) status = (names[msg.currentPlayer] || 'Player') + "'s turn";
-
-      const seat = p => {
-        const place = finish.indexOf(p.playerId);
-        const out = p.isOut || place >= 0;
-        const turn = msg.phase === 'play' && p.playerId === msg.currentPlayer;
-        let tag = null;
-        let tagClass = '';
-        if (msg.phase === 'swap') { tag = (msg.swapConfirmed || {})[p.playerId] ? '✓ ready' : '⏳ swapping'; tagClass = (msg.swapConfirmed || {})[p.playerId] ? 'tc-tag-out' : ''; }
-        else if (msg.phase === 'finished' && p.playerId === msg.loser) { tag = 'Palace keeper 💩'; tagClass = 'tc-tag-loser'; }
-        else if (out) { tag = '✓ out #' + (place + 1); tagClass = 'tc-tag-out'; }
-        else if (turn) tag = '▶ playing';
-        let cards = '';
-        if (!out || msg.phase === 'swap') {
-          cards += '<div><div class="tc-mini-label">Hand</div>' + tvFanHtml(p.handCount || 0, 'sm', 8) + '</div>';
-          cards += '<div><div class="tc-mini-label">Face up · down</div><div class="tc-mini-row">' +
-            (p.faceUp || []).map(c => renderTableCard(c, { size: many ? 'sm' : 'md', dataId: '' })).join('') +
-            Array.from({ length: p.faceDownCount || 0 }, () => renderTableCard(null, { size: 'sm', facedown: true, dataId: '' })).join('') +
-          '</div></div>';
-        }
-        return tvSeatHtml(p.playerId, names, { turn, out, tag, tagClass, cards });
-      };
-
-      // Seats around the table: half left, half right, and an odd player out above the
-      // pile, so three players sit left, top and right instead of two-against-one.
-      const half = Math.floor(players.length / 2);
-      const left = players.slice(0, half);
-      const top = players.length % 2 ? [players[half]] : [];
-      const right = players.slice(half + top.length);
-
-      let html = '<div class="tc-tv tc-felt' + (many ? ' tc-tv-many' : '') + '">';
-      html += '<div class="tc-tv-status"><span class="tc-dot' + (msg.phase === 'play' ? ' tc-dot-live' : '') + '"></span>' + escapeHtml(status) + '</div>';
-      html += '<div class="tc-tv-row"><div class="tc-tv-col">' + left.map(seat).join('') + '</div><div class="tc-tv-mid">';
-      if (top.length) html += '<div class="tc-tv-top">' + top.map(seat).join('') + '</div>';
-
-      if (msg.phase === 'finished') {
-        html += '<div class="tc-tv-result"><div class="tc-sheet-kicker">Final standings</div><div class="tc-standings">' +
-          finish.map((id, i) => '<div class="tc-standing"><span class="tc-place">#' + (i + 1) + '</span>' + playerAvatarHtml(id) + escapeHtml(names[id] || 'Player') + '</div>').join('') +
-          (msg.loser ? '<div class="tc-standing"><span class="tc-place">💩</span>' + playerAvatarHtml(msg.loser) + escapeHtml((names[msg.loser] || 'Player') + ' keeps the palace') + '</div>' : '') +
-        '</div></div>';
-      } else if (msg.phase === 'play') {
-        const pilePreview = (msg.pilePreview && msg.pilePreview.length) ? msg.pilePreview : (msg.pileTop ? [msg.pileTop] : []);
-        const pileCount = tcNum(msg.pileCount);
-        let side = '<div class="tc-rule">' + escapeHtml(shitheadRuleHintText(msg.pileTopRank, msg.pileCount || 0)) + '</div>';
-        side += renderMoveLog(shLog, { name: id => names[id] || 'Player', avatar: id => (String(id).startsWith('bot_') ? '🤖' : ((state.playerAvatars || {})[id] || '')), max: 4 });
-        html += '<div class="tc-tv-center">' +
-          '<div class="tc-well"><span class="tc-well-label">Draw deck</span>' +
-            renderTableStack(null, msg.drawPileCount || 0, { size: pileSize, facedown: true, emptyLabel: 'Empty' }) +
-            '<span class="tc-count">' + tcNum(msg.drawPileCount) + ' left</span></div>' +
-          '<div class="tc-well" id="tvPileWell"><span class="tc-well-label">Play pile</span>' +
-            renderMessyPile(pilePreview, pileCount || pilePreview.length, { size: pileSize, emptyLabel: 'Empty' }) +
-            '<span class="tc-count">' + pileCount + (pileCount === 1 ? ' card' : ' cards') + '</span></div>' +
-        '</div>' +
-        '<div class="tc-tv-side">' + side + '</div>';
-      } else {
-        html += '<div class="tc-tv-banner">Put your strongest cards (2, 10, A) face-up, then tap Done on your phone</div>';
-      }
-
-      html += '</div><div class="tc-tv-col">' + right.map(seat).join('') + '</div></div>';
-      html += '</div>';
-      content.innerHTML = html;
-      tcFitTv();
-      if (freshEvent) tvAnimateShEvent(ev, msg);
-    }
-
-    /** Play the move on the TV: the card flies in from the player's seat, or the pile slides to them. */
-    function tvAnimateShEvent(ev, msg) {
-      // Nothing flies while the story card covers the table: the card would land on top of it.
-      const story = document.getElementById('storyOverlay');
-      if (story && story.style.display !== 'none' && getComputedStyle(story).display !== 'none') return;
-      const content = document.getElementById('gameContent');
-      const seatEl = content.querySelector('.tc-seat[data-player-id="' + (window.CSS && CSS.escape ? CSS.escape(ev.by) : ev.by) + '"]');
-      const pile = content.querySelector('#tvPileWell .tc-pile');
-      if (!seatEl || !pile) return;
-      const fromRect = seatEl.getBoundingClientRect();
-      const card = (ev.cards || [])[ev.cards.length - 1];
-      if (ev.kind === 'pickup') {
-        tcSweepTo(pile, fromRect, ev.count);
-        audio.play('draw');
-        return;
-      }
-      if (!card) return;
-      const topEl = pile.querySelector('.tc-pile-top');
-      if (ev.kind === 'play' && topEl) topEl.classList.add('tc-in-flight');
-      tcFlyIn(card, fromRect, pile, ev, {
-        burn: ev.kind === 'burn',
-        onDone: () => {
-          if (topEl) topEl.classList.remove('tc-in-flight');
-          if (ev.kind === 'blind-miss') tcSweepTo(pile, fromRect, ev.count);
-          audio.play(ev.kind === 'play' ? 'place' : ev.kind === 'burn' ? 'deck_redraw' : 'draw');
-        },
-      });
-    }
-
 
     function playerAvatarHtml(playerId) {
       const avatar = (String(playerId).startsWith('bot_') ? '\u{1F916}' : null) || (state.playerAvatars || {})[playerId] ||
@@ -1285,69 +561,17 @@
       const names = msg.playerNames || {};
       const scores = msg.scores || {};
       const ids = Object.keys(scores);
-
-      let entries;
-      let roundLabel = null;
-      let status = (msg.phase === 'finished') ? 'Done' : 'Playing';
-
-      if (gameType === 'shithead') {
-        // `scores` here is players.length - placement; derive true placement from finishOrder.
-        const finishOrder = msg.finishOrder || [];
-        // Best-first: those who went out first rank above those still in.
-        const rankedIds = [
-          ...finishOrder,
-          ...ids.filter(id => !finishOrder.includes(id)),
-        ];
-        const cardsLeft = id => {
-          const p = (msg.players || []).find(x => x.playerId === id);
-          if (!p) return 'Playing';
-          const n = (p.handCount || 0) + (p.faceUp || []).length + (p.faceDownCount || 0);
-          return n + (n === 1 ? ' card' : ' cards');
-        };
-        entries = rankedIds.map((id, i) => ({
-          id,
-          name: names[id] || id,
-          valueText: finishOrder.includes(id) ? 'Place ' + (i + 1) : cardsLeft(id),
-          rank: i + 1,
-          isOut: finishOrder.includes(id),
-        }));
-      } else if (gameType === 'number-guess') {
-        // `scores` = maxRounds - guesses (guesses remaining). Higher = better.
-        const maxRounds = msg.maxRounds || 0;
-        const sorted = ids.slice().sort((a, b) => scores[b] - scores[a]);
-        entries = sorted.map((id, i) => {
-          const guessesLeft = scores[id];
-          return {
-            id,
-            name: names[id] || id,
-            valueText: guessesLeft + ' guesses left',
-            rank: i + 1,
-            isOut: false,
-          };
-        });
-        if (msg.round != null && maxRounds) {
-          roundLabel = 'Round ' + (msg.round + 1) + ' / ' + maxRounds;
-        }
-      } else {
-        // quiz / spy / gin-rummy / template: scores are accumulated points, higher = better.
-        const sorted = ids.slice().sort((a, b) => scores[b] - scores[a]);
-        entries = sorted.map((id, i) => ({
-          id,
-          name: names[id] || id,
-          valueText: scores[id] + ' p',
-          rank: i + 1,
-          isOut: false,
-        }));
-        if ((gameType === 'quiz' || gameType === 'music-quiz') && msg.totalQuestions) {
-          roundLabel = 'Question ' + ((msg.currentQuestion || 0) + 1) + ' / ' + msg.totalQuestions;
-        } else if (gameType === 'spy' && msg.totalRounds) {
-          roundLabel = 'Round ' + (msg.round || 0) + ' / ' + msg.totalRounds;
-        } else if (gameType === 'gin-rummy' && msg.handNumber != null) {
-          roundLabel = 'Hand ' + msg.handNumber;
-        }
-      }
-
-      return { roundLabel, status, entries };
+      const status = (msg.phase === 'finished') ? 'Done' : 'Playing';
+      const custom = SH.game(gameType)?.scoreboard?.(msg, { names, ids, scores }) || {};
+      // By default scores are accumulated points, higher = better.
+      const entries = custom.entries || ids.slice().sort((a, b) => scores[b] - scores[a]).map((id, i) => ({
+        id,
+        name: names[id] || id,
+        valueText: scores[id] + ' p',
+        rank: i + 1,
+        isOut: false,
+      }));
+      return { roundLabel: custom.roundLabel ?? null, status, entries };
     }
 
     function renderScoreboard(msg, gameType) {
@@ -1375,7 +599,8 @@
     }
 
     function returnToLobby(msg) {
-      quizNarrator.stop();
+      SH.game(state.gameType)?.onLeave?.(msg);
+      gameMusic.setActive(false);
       if (msg.phase === 'finished') {
         if (msg.winner) {
           const name = (state.playerNames || {})[msg.winner] || 'Someone';
@@ -1469,5 +694,6 @@
       return div.innerHTML;
     }
   </script>
+  <!-- game-scripts -->
 </body>
 </html>

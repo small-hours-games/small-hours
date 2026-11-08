@@ -15,7 +15,7 @@ describe('Quiz start flow', () => {
 
   beforeEach(() => {
     room = new Room('TEST');
-    // Add connected players so startGame meets minPlayers for both quiz and number-guess
+    // Add connected players so startGame meets minPlayers for both quiz and hilow
     room.addPlayer('Alice');
     room.addPlayer('Bob');
   });
@@ -40,7 +40,7 @@ describe('Quiz start flow', () => {
 
     const game = await room.startGame('quiz', { categoryId: 9, questionCount: 1 });
 
-    expect(fetchQuestions).toHaveBeenCalledWith(9, 1);
+    expect(fetchQuestions).toHaveBeenCalledWith(9, 50, { difficulty: 'easy' });
     expect(game).not.toBeNull();
     expect(room.game).not.toBeNull();
     expect(room.game.state.questions).toHaveLength(1);
@@ -61,7 +61,31 @@ describe('Quiz start flow', () => {
 
     await room.startGame('quiz', {});
 
-    expect(fetchQuestions).toHaveBeenCalledWith(undefined, 10);
+    expect(fetchQuestions).toHaveBeenCalledWith(undefined, 50, { difficulty: 'easy' });
+  });
+
+  const levelled = (id, difficulty) => ({ id, question: id + '?', correct_answer: 'A', incorrect_answers: ['B', 'C', 'D'], category: 'Test', difficulty });
+
+  it('falls back to the mixed bucket when no easy questions can be fetched', async () => {
+    fetchQuestions
+      .mockResolvedValueOnce({ ok: false, error: { code: 'RATE_LIMITED', message: 'Too many requests' } })
+      .mockResolvedValue({ ok: true, questions: [levelled('m1', 'medium')] });
+    await room.startGame('quiz', { questionCount: 1 });
+    expect(fetchQuestions).toHaveBeenLastCalledWith(undefined, 1);
+    expect(room.game.state.questions[0].id).toBe('m1');
+  });
+
+  it('plays easy, then medium, and hard only when nothing else is left', async () => {
+    fetchQuestions.mockResolvedValue({ ok: true, questions: [levelled('h1', 'hard'), levelled('m1', 'medium'), levelled('e1', 'easy')] });
+    await room.startGame('quiz', { questionCount: 2 });
+    expect(room.game.state.questions.map(q => q.id)).toEqual(['e1', 'm1']);
+  });
+
+  it('replays an easy question before serving a new hard one', async () => {
+    room.usedQuestionIds.add('e1');
+    fetchQuestions.mockResolvedValue({ ok: true, questions: [levelled('h1', 'hard'), levelled('e1', 'easy')] });
+    await room.startGame('quiz', { questionCount: 1 });
+    expect(room.game.state.questions[0].id).toBe('e1');
   });
 
   it('throws when API fails', async () => {
@@ -74,7 +98,7 @@ describe('Quiz start flow', () => {
   });
 
   it('non-quiz games still work without fetching', async () => {
-    const game = await room.startGame('number-guess', {});
+    const game = await room.startGame('hilow', {});
 
     expect(game).not.toBeNull();
     expect(room.game).not.toBeNull();

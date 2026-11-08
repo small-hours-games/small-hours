@@ -44,13 +44,17 @@ function decodeHtml(str) {
  *
  * @param {number} [categoryId] - OpenTrivia DB category ID (omit for any category)
  * @param {number} [amount=10] - Number of questions to fetch
+ * @param {{difficulty?: 'easy'|'medium'|'hard'}} [options]
  * @returns {Promise<{ok: true, questions: Array} | {ok: false, error: {code: string, message: string}}>}
  */
-export async function fetchQuestions(categoryId, amount = 10) {
+export async function fetchQuestions(categoryId, amount = 10, { difficulty } = {}) {
   try {
     let url = `https://opentdb.com/api.php?amount=${amount}&type=multiple`;
     if (categoryId) {
       url += `&category=${categoryId}`;
+    }
+    if (difficulty) {
+      url += `&difficulty=${difficulty}`;
     }
 
     const response = await fetch(url);

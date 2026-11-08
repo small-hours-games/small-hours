@@ -1,0 +1,18 @@
+// The contract between the phone/TV pages and the game plugins (games/<id>/client/).
+// A plugin is a plain script that calls SH.registerGame(id, { ... }). It may use the
+// page's globals: state, send, escapeHtml, showToast, and audio on the TV.
+//
+// Phone: section (element id), render(msg), and optionally onEnter(), reset(),
+//        redraw() (after a resize, an error or a setting), lobbyOptions(),
+//        startConfig(), startLabel().
+// TV:    render(msg), and optionally onEnter(msg), onLeave(msg), onMute(muted),
+//        scoreboard(msg, { names, ids, scores }) -> { entries?, roundLabel? },
+//        alwaysScoreboard (show it even before the game has scores).
+var SH_PLUGINS = {};
+var SH = {
+  registerGame: function (id, plugin) { SH_PLUGINS[id] = plugin; },
+  game: function (id) { return SH_PLUGINS[id] || null; },
+  eachGame: function (fn) { Object.keys(SH_PLUGINS).forEach(function (id) { fn(SH_PLUGINS[id], id); }); },
+  // Set by the TV page: lower the game music while a voice speaks.
+  duckMusic: function () {},
+};

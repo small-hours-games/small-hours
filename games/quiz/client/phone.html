@@ -1,0 +1,19 @@
+    <!-- QUIZ SECTION -->
+    <div class="section" id="quizSection">
+      <div class="quiz-top-meta" id="quizTopMeta">
+        <span class="quiz-meta-pill" id="quizRoundPill">Quiz</span>
+        <div class="quiz-timer-display" id="quizTimerText"></div>
+        <span class="quiz-meta-pill score-pill" id="quizScore" style="display:inline-flex;">&#11088; <span class="score-val" id="quizScoreVal">0</span> pts</span>
+      </div>
+      <div class="timer-bar-container" id="quizTimerContainer" style="display:none;">
+        <div class="timer-bar" id="quizTimerBar"></div>
+      </div>
+      <div id="quizMedia" class="hidden"></div>
+      <div class="question-text card" id="quizQuestion"></div>
+      <div class="answer-grid" id="quizAnswers"></div>
+      <div class="powerup-row" id="quizPowerups">
+        <button class="powerup-btn" id="pwDouble" onclick="usePowerup('double')">&#10006;2 Double</button>
+        <button class="powerup-btn" id="pwFifty" onclick="usePowerup('fifty')">50/50</button>
+        <button class="powerup-btn" id="pwFreeze" onclick="usePowerup('freeze')">&#10052; Freeze</button>
+      </div>
+    </div>

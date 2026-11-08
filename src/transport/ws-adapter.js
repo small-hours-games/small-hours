@@ -3,22 +3,13 @@
 
 import { WebSocketServer } from 'ws';
 import { processAction, getView, checkEnd } from '../engine/engine.js';
-import { saveAnswers } from '../fetcher/question-file.js';
-import { PHASE_DURATIONS as QUIZ_DURATIONS } from '../engine/games/quiz.js';
-import { PHASE_DURATIONS as SPY_DURATIONS } from '../engine/games/spy.js';
-import { PHASE_DURATIONS as MUSIC_QUIZ_DURATIONS } from '../engine/games/music-quiz.js';
 import * as lobbyHandlers from './handlers/lobby.js';
 import * as gameHandlers from './handlers/game.js';
 import * as chatHandlers from './handlers/chat.js';
 import * as voteHandlers from './handlers/vote.js';
 import { getHostView } from './host-view.js';
 import { nextBotAction } from '../engine/bots/index.js';
-
-const GAME_PHASE_DURATIONS = {
-  quiz: QUIZ_DURATIONS,
-  'music-quiz': MUSIC_QUIZ_DURATIONS,
-  spy: SPY_DURATIONS,
-};
+import { getGame } from '../games/registry.js';
 
 const HEARTBEAT_INTERVAL_MS = 30_000;
 const RATE_LIMIT_MAX = 30;          // messages per second
@@ -127,7 +118,7 @@ export function setupWebSocket(server, manager) {
     if (!force) {
       // Don't reset an already-running timer for the same phase. A GAME_ACTION
       // re-enters here on every player move; rescheduling would restart the
-      // countdown to full each time, stalling timed phases (quiz/spy) forever
+      // countdown to full each time, stalling timed phases forever
       // while players keep acting. Only reschedule when the phase changed.
       const current = phaseTimers.get(room.code);
       if (current && current.phase === room.game?.state.phase) {
@@ -138,7 +129,7 @@ export function setupWebSocket(server, manager) {
 
     if (!room.game) return;
 
-    const durations = GAME_PHASE_DURATIONS[gameType];
+    const durations = getGame(gameType)?.phases;
     if (!durations) return;
 
     const phase = room.game.state.phase;
@@ -187,7 +178,7 @@ export function setupWebSocket(server, manager) {
     room.game = updatedGame;
     room.lastActivity = Date.now();
 
-    // Timer-driven games (quiz/spy) end on their last timer, not on a player action
+    // Timer-driven games (quiz) end on their last timer, not on a player action
     const endResult = checkEnd(room.game);
     // Schedule first so the broadcast carries the new phase's time left
     if (!endResult) schedulePhaseTimer(room, gameType, { force: true });
@@ -234,7 +225,10 @@ export function setupWebSocket(server, manager) {
     const humansLeft = room.game.state.finishOrder
       ? room.game.state.players.some(id => !botIds.includes(id) && !room.game.state.finishOrder.includes(id))
       : true;
-    const delay = room.game.state.phase === 'swap' ? BOT_SWAP_DELAY_MS : humansLeft ? BOT_MOVE_DELAY_MS : BOT_FAST_DELAY_MS;
+    const state = room.game.state;
+    const delay = state.phase === 'swap' ? BOT_SWAP_DELAY_MS
+      : !humansLeft ? BOT_FAST_DELAY_MS
+      : getGame(gameType)?.ai?.delay?.(state) ?? BOT_MOVE_DELAY_MS;
 
     const timer = setTimeout(() => {
       botTimers.delete(room.code);

@@ -1,0 +1,433 @@
+// Small Hours - Quiz / Trivia Game
+import { fetchQuestions } from '../../src/fetcher/cached-fetcher.js';
+import { warmQuizNarration } from '../../src/fetcher/cached-narration.js';
+import { enrichQuestionsWithImages } from '../../src/fetcher/cached-question-images.js';
+
+/**
+ * Deterministic shuffle seeded by an integer.
+ * Ensures all viewers (host + players) see the same answer order for a given question.
+ */
+function seededShuffle(arr, seed) {
+  const shuffled = [...arr];
+  let s = seed | 0;
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    s = Math.imul(s, 1664525) + 1013904223 | 0;
+    const j = Math.abs(s) % (i + 1);
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  return shuffled;
+}
+
+const EASY_POOL_SIZE = 50;
+
+/** Easy before medium; stable, so the shuffled order holds within each difficulty. */
+function easierFirst(questions) {
+  return [...questions].sort((a, b) => (a.difficulty !== 'easy') - (b.difficulty !== 'easy'));
+}
+
+const PHASE_DURATIONS = {
+  countdown: 5000,
+  question: 15000,
+  reveal: 4000,
+  between: 5000,
+};
+
+const quiz = {
+  async prepare(config, { usedQuestionIds }) {
+    const amount = config.questionCount || 10;
+
+    // Party game: easy questions first. The mixed bucket is the fallback when they run out.
+    let result = await fetchQuestions(config.categoryId, EASY_POOL_SIZE, { difficulty: 'easy' });
+    if (!result.ok) result = await fetchQuestions(config.categoryId, amount);
+    if (!result.ok) {
+      throw new Error(`Failed to fetch questions: ${result.error.message}`);
+    }
+
+    // Shuffle the full pool, then prefer unseen questions. Set insertion order
+    // records recency so exhausted pools rotate oldest questions first.
+    let candidates = result.questions;
+    if (candidates.filter(q => !usedQuestionIds.has(q.id)).length < amount) {
+      const supplement = await fetchQuestions(config.categoryId, amount);
+      if (supplement.ok) candidates = [...candidates, ...supplement.questions];
+    }
+    const pool = [...new Map(candidates.map(q => [q.id, q])).values()];
+    for (let i = pool.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [pool[i], pool[j]] = [pool[j], pool[i]];
+    }
+    const recency = new Map([...usedQuestionIds].map((id, i) => [id, i]));
+    const unused = pool.filter(q => !recency.has(q.id));
+    const repeats = pool.filter(q => recency.has(q.id))
+      .sort((a, b) => recency.get(a.id) - recency.get(b.id));
+    const selected = [...easierFirst(unused), ...easierFirst(repeats)]
+      .sort((a, b) => (a.difficulty === 'hard') - (b.difficulty === 'hard'))
+      .slice(0, amount);
+    if (selected.length === 0) {
+      throw new Error('No questions available for this category');
+    }
+    const enriched = await enrichQuestionsWithImages(selected);
+    if (enriched.length > 0 && process.env.GEMINI_API_KEY) {
+      // Warm Question 1 up front (bounded to 3.5s) and continue caching the full set in the background
+      await Promise.race([
+        warmQuizNarration(enriched.slice(0, 1), { maxRetries: 0 }),
+        new Promise(resolve => setTimeout(resolve, 3500)),
+      ]).catch(() => {});
+    }
+    warmQuizNarration(enriched).catch(() => {});
+    return {
+      config: { ...config, questions: enriched },
+      trackIds: enriched.map(q => q.id),
+    };
+  },
+
+  setup({ players, config }) {
+    const questions = config.questions || [];
+    const questionCount = config.questionCount || questions.length;
+    const selectedQuestions = questions.slice(0, questionCount);
+
+    const scores = {};
+    const streaks = {};
+    const powerups = {};
+    for (const id of players) {
+      scores[id] = 0;
+      streaks[id] = 0;
+      powerups[id] = { double: true, fifty: true, freeze: true };
+    }
+
+    return {
+      phase: 'countdown',
+      currentQuestion: 0,
+      questions: selectedQuestions,
+      answers: {},
+      scores,
+      streaks,
+      powerups,
+      // { [playerId]: questionIndex } — tracks which question fifty was activated on
+      fiftyActivatedOn: {},
+      questionStartTime: null,
+      // Length of each question phase; the speed bonus scales with it
+      questionDuration: config.questionDuration || PHASE_DURATIONS.question,
+      round: 0,
+    };
+  },
+
+  actions: {
+    answer(state, { playerId, answerId, powerupType }) {
+      if (state.phase !== 'question') {
+        return {
+          state,
+          events: [{ type: 'error', playerId, message: 'Not in question phase' }],
+        };
+      }
+
+      if (state.answers[playerId]) {
+        return {
+          state,
+          events: [{ type: 'error', playerId, message: 'Already answered' }],
+        };
+      }
+
+      let newPowerups = state.powerups;
+      let newFiftyActivatedOn = state.fiftyActivatedOn || {};
+      if (powerupType) {
+        const playerPowerups = state.powerups[playerId];
+        if (!playerPowerups || !playerPowerups[powerupType]) {
+          return {
+            state,
+            events: [{ type: 'error', playerId, message: `Powerup ${powerupType} not available` }],
+          };
+        }
+        newPowerups = {
+          ...state.powerups,
+          [playerId]: {
+            ...playerPowerups,
+            [powerupType]: false,
+          },
+        };
+        if (powerupType === 'fifty') {
+          newFiftyActivatedOn = { ...newFiftyActivatedOn, [playerId]: state.currentQuestion };
+        }
+      }
+
+      const newAnswers = {
+        ...state.answers,
+        [playerId]: {
+          answerId,
+          timestamp: Date.now(),
+          powerupType: powerupType || null,
+        },
+      };
+
+      return {
+        state: {
+          ...state,
+          answers: newAnswers,
+          powerups: newPowerups,
+          fiftyActivatedOn: newFiftyActivatedOn,
+        },
+        events: [
+          {
+            type: 'answer_submitted',
+            playerId,
+            usedPowerup: powerupType || null,
+          },
+        ],
+      };
+    },
+
+    useFifty(state, { playerId }) {
+      if (state.phase !== 'question') {
+        return {
+          state,
+          events: [{ type: 'error', playerId, message: 'Not in question phase' }],
+        };
+      }
+      if (state.answers[playerId]) {
+        return {
+          state,
+          events: [{ type: 'error', playerId, message: 'Already answered' }],
+        };
+      }
+      const playerPowerups = state.powerups[playerId];
+      if (!playerPowerups || !playerPowerups.fifty) {
+        return {
+          state,
+          events: [{ type: 'error', playerId, message: 'Powerup fifty not available' }],
+        };
+      }
+      return {
+        state: {
+          ...state,
+          powerups: {
+            ...state.powerups,
+            [playerId]: { ...playerPowerups, fifty: false },
+          },
+          fiftyActivatedOn: {
+            ...(state.fiftyActivatedOn || {}),
+            [playerId]: state.currentQuestion,
+          },
+        },
+        events: [{ type: 'powerup_activated', playerId, powerupType: 'fifty' }],
+      };
+    },
+
+    timerExpired(state, { phase }) {
+      if (state.phase !== phase) {
+        return { state, events: [] };
+      }
+
+      switch (phase) {
+        case 'countdown': {
+          return {
+            state: {
+              ...state,
+              phase: 'question',
+              questionStartTime: Date.now(),
+              answers: {},
+            },
+            events: [{ type: 'phase_change', phase: 'question', questionIndex: state.currentQuestion }],
+          };
+        }
+
+        case 'question': {
+          // Score answers
+          const question = state.questions[state.currentQuestion];
+          const correctAnswer = question.correct_answer;
+          const newScores = { ...state.scores };
+          const newStreaks = { ...state.streaks };
+          const correctPlayers = [];
+
+          for (const [pid, answer] of Object.entries(state.answers)) {
+            const isCorrect = answer.answerId === correctAnswer;
+            if (isCorrect) {
+              const elapsed = answer.timestamp - state.questionStartTime;
+              const timeRatio = Math.max(0, 1 - elapsed / (state.questionDuration || PHASE_DURATIONS.question));
+              let points = Math.round(1000 * (0.5 + 0.5 * timeRatio));
+
+              if (answer.powerupType === 'double') {
+                points *= 2;
+              }
+
+              newStreaks[pid] = (newStreaks[pid] || 0) + 1;
+              newScores[pid] = (newScores[pid] || 0) + points;
+              correctPlayers.push(pid);
+            } else {
+              newStreaks[pid] = 0;
+            }
+          }
+
+          // Players who didn't answer get streak reset
+          for (const pid of Object.keys(newStreaks)) {
+            if (!state.answers[pid]) {
+              newStreaks[pid] = 0;
+            }
+          }
+
+          return {
+            state: {
+              ...state,
+              phase: 'reveal',
+              scores: newScores,
+              streaks: newStreaks,
+            },
+            events: [
+              {
+                type: 'phase_change',
+                phase: 'reveal',
+                correctAnswer,
+                correctPlayers,
+              },
+            ],
+          };
+        }
+
+        case 'reveal': {
+          const nextQuestion = state.currentQuestion + 1;
+          const hasMore = nextQuestion < state.questions.length;
+
+          if (!hasMore) {
+            return {
+              state: { ...state, phase: 'finished' },
+              events: [{ type: 'phase_change', phase: 'finished' }],
+            };
+          }
+
+          return {
+            state: {
+              ...state,
+              phase: 'between',
+              currentQuestion: nextQuestion,
+            },
+            events: [{ type: 'phase_change', phase: 'between', nextQuestion }],
+          };
+        }
+
+        case 'between': {
+          return {
+            state: {
+              ...state,
+              phase: 'question',
+              questionStartTime: Date.now(),
+              answers: {},
+              round: state.round + 1,
+            },
+            events: [{ type: 'phase_change', phase: 'question', questionIndex: state.currentQuestion }],
+          };
+        }
+
+        default:
+          return { state, events: [] };
+      }
+    },
+  },
+
+  view(state, playerId) {
+    const base = {
+      phase: state.phase,
+      currentQuestion: state.currentQuestion,
+      totalQuestions: state.questions.length,
+      scores: { ...state.scores },
+      score: state.scores[playerId] || 0,
+      myPowerups: state.powerups[playerId] ? { ...state.powerups[playerId] } : {},
+      myStreak: state.streaks[playerId] || 0,
+      round: state.round,
+    };
+
+    if (state.phase === 'question' || state.phase === 'reveal') {
+      const question = state.questions[state.currentQuestion];
+      if (question) {
+        const allAnswers = [question.correct_answer, ...question.incorrect_answers];
+        // Use seeded shuffle so host and all players see the same answer order
+        const answers = seededShuffle(allAnswers, state.currentQuestion);
+
+        base.question = {
+          id: question.id,
+          text: question.question,
+          answers,
+          category: question.category,
+          difficulty: question.difficulty,
+        };
+
+        if (question.image && !question.media) {
+          base.question.image = question.image;
+        }
+
+        // Music Quiz: the clip is playable during the question; cover and names
+        // would give the answer away, so they only appear at reveal.
+        if (question.media) {
+          base.question.media = state.phase === 'reveal'
+            ? { ...question.media }
+            : { preview: question.media.preview };
+        }
+
+        // Compute eliminatedAnswers for this player (fifty-fifty powerup).
+        // Fifty is per-question: only eliminate if the player activated fifty
+        // on this specific question (tracked via fiftyActivatedOn).
+        const fiftyOn = state.fiftyActivatedOn && state.fiftyActivatedOn[playerId];
+        const usedFiftyHere = fiftyOn === state.currentQuestion;
+
+        if (usedFiftyHere) {
+          // Eliminate all incorrect answers except the first one.
+          // Use the same seeded shuffle so the kept incorrect answer is deterministic.
+          const shuffledIncorrect = seededShuffle(question.incorrect_answers, state.currentQuestion);
+          const keepIncorrect = shuffledIncorrect[0];
+          base.eliminatedAnswers = answers
+            .map((a, i) => (a === question.correct_answer || a === keepIncorrect ? -1 : i))
+            .filter(i => i !== -1);
+        } else {
+          base.eliminatedAnswers = [];
+        }
+
+        base.hasAnswered = !!state.answers[playerId];
+        base.selectedAnswer = state.answers[playerId]?.answerId ?? null;
+      }
+    }
+
+    if (state.phase === 'reveal') {
+      const question = state.questions[state.currentQuestion];
+      base.correctAnswer = question.correct_answer;
+      // correctIndex = position of the correct answer in the shuffled answers array
+      base.correctIndex = base.question ? base.question.answers.indexOf(question.correct_answer) : -1;
+
+      const whoGotItRight = [];
+      for (const [pid, answer] of Object.entries(state.answers)) {
+        if (answer.answerId === question.correct_answer) {
+          whoGotItRight.push(pid);
+        }
+      }
+      base.correctPlayers = whoGotItRight;
+      base.playerAnswers = Object.fromEntries(
+        Object.entries(state.answers).map(([pid, answer]) => [pid, answer.answerId])
+      );
+    }
+
+    if (state.phase === 'finished') {
+      base.finalScores = { ...state.scores };
+    }
+
+    return base;
+  },
+
+  endIf(state) {
+    if (state.phase !== 'finished') {
+      return null;
+    }
+
+    let winner = null;
+    let highScore = -1;
+    for (const [pid, score] of Object.entries(state.scores)) {
+      if (score > highScore) {
+        highScore = score;
+        winner = pid;
+      }
+    }
+
+    return {
+      winner,
+      scores: { ...state.scores },
+    };
+  },
+};
+
+export { PHASE_DURATIONS };
+export default quiz;

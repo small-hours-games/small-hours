@@ -19,6 +19,10 @@ const CATEGORY_CACHE_PATH = resolve(__dirname, '../../data/categories.json');
 // Geography, History, Science & Nature, Sports, Film.
 export const MAIN_CATEGORY_IDS = [9, 22, 23, 17, 21, 11];
 
+function bucketKey(categoryId, difficulty) {
+  return (categoryId ?? 'any') + (difficulty ? '_' + difficulty : '');
+}
+
 // OpenTrivia allows about one request per 5 seconds per IP
 const API_SPACING_MS = 5500;
 
@@ -57,8 +61,8 @@ function normalizeIds(questions) {
  * @param {number} [amount=10] - Number of questions to fetch (used only on cache miss)
  * @returns {Promise<{ok: true, questions: Array} | {ok: false, error: {code, message}}>}
  */
-export async function fetchQuestions(categoryId, amount = 10) {
-  const cacheKey = categoryId ?? 'any';
+export async function fetchQuestions(categoryId, amount = 10, { difficulty } = {}) {
+  const cacheKey = bucketKey(categoryId, difficulty);
   const cachePath = join(CACHE_DIR, `${cacheKey}.json`);
 
   // Try to serve from cache
@@ -75,7 +79,7 @@ export async function fetchQuestions(categoryId, amount = 10) {
   }
 
   // Cache miss: fetch from API
-  const result = await fetchFromApi(categoryId, amount);
+  const result = await fetchFromApi(categoryId, amount, { difficulty });
   if (!result.ok) {
     // API error — don't cache, return error as-is
     return result;
@@ -93,10 +97,13 @@ export async function fetchQuestions(categoryId, amount = 10) {
     console.warn('[cache] write error:', err.message);
   }
 
-  // Fire-and-forget: generate TTS audio in background
-  generateAudioForQuestions(normalized).catch(err =>
-    console.warn('[tts] batch generation error:', err.message)
-  );
+  // Fire-and-forget: generate TTS audio in background. Not for the difficulty buckets:
+  // every game already narrates the questions it uses, and this would drain the Gemini quota.
+  if (!difficulty) {
+    generateAudioForQuestions(normalized).catch(err =>
+      console.warn('[tts] batch generation error:', err.message)
+    );
+  }
 
   return { ok: true, questions: normalized };
 }
@@ -138,9 +145,9 @@ export async function fetchCategories() {
   return result;
 }
 
-async function isCached(categoryId) {
+async function isCached(categoryId, difficulty) {
   try {
-    await readFile(join(CACHE_DIR, `${categoryId ?? 'any'}.json`), 'utf8');
+    await readFile(join(CACHE_DIR, `${bucketKey(categoryId, difficulty)}.json`), 'utf8');
     return true;
   } catch {
     return false;
@@ -163,19 +170,19 @@ export async function prewarmCache({ spacingMs = API_SPACING_MS } = {}) {
     return;
   }
   const names = new Map(catResult.categories.map(c => [c.id, c.name]));
-  const buckets = [...MAIN_CATEGORY_IDS, null];
+  const buckets = [...MAIN_CATEGORY_IDS, null].flatMap(id => [{ id }, { id, difficulty: 'easy' }]);
   console.log(`[prewarm] warming ${buckets.length} buckets...`);
 
   let warmed = 0;
   let calledApi = true; // fetchCategories may just have hit the API
-  for (const id of buckets) {
-    if (await isCached(id)) {
+  for (const { id, difficulty } of buckets) {
+    if (await isCached(id, difficulty)) {
       warmed++;
       continue;
     }
     if (calledApi) await new Promise(r => setTimeout(r, spacingMs));
     calledApi = true;
-    const result = await fetchQuestions(id, 50);
+    const result = await fetchQuestions(id, 50, { difficulty });
     if (result.ok) {
       warmed++;
     } else {
@@ -200,5 +207,6 @@ export async function clearCache(categoryId) {
     // Clear one category
     const key = categoryId ?? 'any';
     await unlink(join(CACHE_DIR, `${key}.json`)).catch(() => {});
+    await unlink(join(CACHE_DIR, `${bucketKey(categoryId, 'easy')}.json`)).catch(() => {});
   }
 }

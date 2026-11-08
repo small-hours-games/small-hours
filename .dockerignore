@@ -10,6 +10,7 @@ node_modules
 data
 tmp
 tests
+games/**/*.test.js
 *.zip
 .env
 
@@ -20,4 +21,3 @@ tests
 android-tv/build
 android-tv/dist
 android-tv/keystore
-smallhours-light-lobby

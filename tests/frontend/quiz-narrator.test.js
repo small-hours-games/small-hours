@@ -1,20 +1,95 @@
 import { describe, it, expect, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { runInNewContext } from 'node:vm';
-const source = readFileSync(new URL('../../public/js/quiz-narrator.js', import.meta.url), 'utf8');
+const source = readFileSync(new URL('../../games/quiz/client/lib/quiz-narrator.js', import.meta.url), 'utf8');
 const settle = () => new Promise(resolve => setTimeout(resolve, 0));
 const question = { phase: 'question', timeLeft: 15, question: { id: 'q1', text: 'Question?' } };
-function setup(fetcher = vi.fn(async () => ({ ok: true, json: async () => ({ url: '/voice.wav' }) }))) {
+function setup(fetcher = vi.fn(async () => ({ ok: true, json: async () => ({ url: '/voice.wav' }) })), playClip = () => Promise.resolve()) {
   const clips = [];
   const browserSpeech = { speak: vi.fn(), cancel: vi.fn(), getVoices: () => [{ name: 'Daniel', lang: 'en-GB' }] };
   const context = { speechSynthesis: browserSpeech, SpeechSynthesisUtterance: function(text) { this.text = text; }, Date, fetch: fetcher, Audio: function(url) {
-    const clip = { url, play: vi.fn(() => Promise.resolve()), pause: vi.fn() };
+    const clip = { url, play: vi.fn(playClip), pause: vi.fn() };
     clips.push(clip); return clip;
   } };
   runInNewContext(source, context);
-  return { narrator: context.createQuizNarrator(), clips, fetcher, browserSpeech };
+  const speaking = [];
+  return { narrator: context.createQuizNarrator(on => speaking.push(on)), clips, fetcher, browserSpeech, speaking };
 }
 describe('TV game-show narration', () => {
+  it('plays a prepared intro at once, without waiting for the network', async () => {
+    const { narrator, clips, fetcher } = setup();
+    narrator.prepareIntro();
+    narrator.prepareIntro();
+    await settle();
+    expect(fetcher).toHaveBeenCalledTimes(1);
+    expect(clips).toHaveLength(1);
+    narrator.sync({ phase: 'countdown', timeLeft: 5, gameType: 'quiz' });
+    expect(clips[0].play).toHaveBeenCalledTimes(1); // same tick, no await
+    expect(fetcher).toHaveBeenCalledTimes(1);
+    expect(clips[0].playbackRate).toBeGreaterThan(1.15);
+  });
+
+  it('rewinds the prepared intro for the next game', async () => {
+    const { narrator, clips } = setup();
+    narrator.prepareIntro();
+    await settle();
+    narrator.sync({ phase: 'countdown', timeLeft: 5, gameType: 'quiz' });
+    clips[0].currentTime = 3;
+    narrator.stop();
+    narrator.sync({ phase: 'countdown', timeLeft: 5, gameType: 'quiz' });
+    expect(clips[0].currentTime).toBe(0);
+    expect(clips[0].play).toHaveBeenCalledTimes(2);
+  });
+
+  it('still fetches the intro when preparing it failed', async () => {
+    const fetcher = vi.fn().mockResolvedValueOnce({ ok: false }).mockResolvedValue({ ok: true, json: async () => ({ url: '/voice.wav' }) });
+    const { narrator, clips } = setup(fetcher);
+    narrator.prepareIntro();
+    await settle();
+    narrator.sync({ phase: 'countdown', timeLeft: 5, gameType: 'quiz' });
+    await settle();
+    expect(fetcher).toHaveBeenCalledTimes(2);
+    expect(clips[0].play).toHaveBeenCalled();
+  });
+
+  it('says when the voice speaks and when it has finished', async () => {
+    const { narrator, clips, speaking } = setup();
+    narrator.sync(question);
+    await settle();
+    expect(speaking.at(-1)).toBe(true);
+    clips[0].onended();
+    expect(speaking.at(-1)).toBe(false);
+  });
+
+  it('ends the speaking state when a new phase cuts the voice off', async () => {
+    const { narrator, speaking } = setup();
+    narrator.sync(question);
+    await settle();
+    narrator.sync({ phase: 'lobby' });
+    expect(speaking.at(-1)).toBe(false);
+  });
+
+  it('does not count blocked autoplay as speaking until a gesture starts it', async () => {
+    const { narrator, clips, speaking } = setup(undefined, () => Promise.reject(new Error('blocked')));
+    narrator.sync(question);
+    await settle();
+    expect(speaking.at(-1)).toBe(false);
+    clips[0].play = vi.fn(() => Promise.resolve());
+    await narrator.retry();
+    expect(speaking.at(-1)).toBe(true);
+  });
+
+  it('reports the browser voice too', async () => {
+    const { narrator, browserSpeech, speaking } = setup(vi.fn(async () => ({ ok: false })));
+    narrator.sync(question);
+    await settle();
+    const utterance = browserSpeech.speak.mock.calls[0][0];
+    utterance.onstart();
+    expect(speaking.at(-1)).toBe(true);
+    utterance.onend();
+    expect(speaking.at(-1)).toBe(false);
+  });
+
   it('narrates countdown introduction and scales playbackRate to finish right as Question 1 starts', async () => {
     const { narrator, clips, fetcher } = setup();
     narrator.sync({ phase: 'countdown', timeLeft: 5, gameType: 'quiz' });

@@ -39,20 +39,19 @@ Before editing, inspect `git status` and the relevant diff. Preserve existing un
 | `src/session/manager.js` | Room creation, lookup, and cleanup |
 | `src/session/room.js` | Players, reconnect identity, admin, lobby, scores, game registry and startup |
 | `src/engine/engine.js` | `createGame`, `processAction`, `getView`, `checkEnd` |
-| `src/engine/games/` | Plain-object game definitions; `index.js` re-exports them |
-| `src/engine/bots/` | AI opponents: pure `(state, botId) -> action` policies for Gin Rummy and Palace |
-| `src/fetcher/` | Trivia, disk caches, Gemini TTS, question files, Deezer/music playlists |
-| `src/session/stories.js` | Game introduction/narration text |
+| `games/<id>/` | One game each: `index.js` manifest, `rules.js`, optional `bot.js`, tests, and `client/` (`phone.js`, `tv.js`, `phone.html`, `style.css`, `lib/`) |
+| `src/games/registry.js`, `client.js` | Find and validate the games; write their scripts, styles and phone section into the pages |
+| `public/js/game-api.js` | The contract between the pages and a game's client code |
+| `src/fetcher/` | Trivia, disk caches, Gemini TTS, Deezer/music playlists |
 | `src/notifications/discord.js` | Room-created webhook |
-| `public/host.html` | Shared display UI and game rendering |
-| `public/player.html` | Phone UI and player controls |
+| `public/host.html` | Shared display shell: lobby, scoreboard, music, story |
+| `public/player.html` | Phone shell: joining, voting, chat, reconnect |
 | `public/tv.html` | TV room creation and recovery entry point |
 | `public/js/`, `public/css/` | Shared browser helpers, game metadata, audio, styles |
 | `android-tv/` | Android WebView app; read its README before building |
 | `tests/` | Engine, session, transport, integration, fetcher, and frontend tests |
 | `README.md` | Project overview, game catalog, setup and development guide |
 | `public/images/` | Current brand assets |
-| `smallhours-light-lobby/` | Current lobby design reference |
 
 ## Architecture and contracts
 
@@ -71,48 +70,50 @@ export default {
 };
 ```
 
-`processAction` returns `{ game, events }`; an action handler returns `{ state, events }`. Preserve immutable state updates. Use `template.js` or `number-guess.js` as a small reference, then inspect a game with similar rules.
+`processAction` returns `{ game, events }`; an action handler returns `{ state, events }`. Preserve immutable state updates. Use `games/_template/` as a small reference, then inspect a game with similar rules.
 
 - Clients connect to `/ws/host/:code` or `/ws/player/:code`.
 - Actions use `{ type: 'GAME_ACTION', action: { type: '<action-name>', ...payload } }`.
 - Treat socket identity as authoritative; inspect existing authorization and validation before adding handlers.
-- Preserve private information in per-player views: hands, answers, and hidden roles must only reach their intended viewers. Host/TV sockets get `getHostView` (`src/transport/host-view.js`): a game's optional `hostView(state)`, or the first player's view minus `my*` keys and a short list of other per-player keys. Name new private fields `my*` or add them to that list.
+- Preserve private information in per-player views: hands, answers, and hidden roles must only reach their intended viewers. Host/TV sockets get `getHostView` (`src/transport/host-view.js`): a game's optional `hostView(state)`, or the first player's view minus `my*` and `isMyTurn` and the manifest's `privateKeys`. Name new private fields `my*` or list them in the manifest as `privateKeys`.
 - Keep game scores, session scores, and the shared scoreboard consistent. Inspect the scoreboard tests when changing result shapes.
 - Preserve reconnect, disconnect grace, admin reclaim, and timer cancellation behavior when changing lifecycle code.
 
 ## Adding or changing a game
 
-1. Implement rules in `src/engine/games/` and cover legal moves, invalid moves, private views, and end conditions as appropriate.
-2. Register the definition and metadata in `GAME_REGISTRY` in `src/session/room.js`, and re-export it from `src/engine/games/index.js`.
-3. Inspect `public/js/games.js` plus host and player rendering/dispatch. Both screens need usable states and controls.
-4. If the game needs fetched content, prepare it in the session/transport flow. If it needs phase timers, inspect `GAME_PHASE_DURATIONS` in `ws-adapter.js` and existing timer tests.
-5. Check lobby selection, start, actions, scoring, end, and return to lobby. Update affected integration tests.
+See `games/README.md`.
 
-The `question-form` game is an optional in-app polling tool. Its definition and tests document question types and the answering/review flow; it is not required for ordinary development discussions.
+1. Make a folder `games/<id>/`, implement the rules there, and cover legal moves, invalid moves, private views, and end conditions as appropriate.
+2. Export the manifest from `games/<id>/index.js` (see the other games). The server finds it by itself; `hidden: true` keeps a game without screens out of the lobby.
+3. Add `client/phone.js`, `client/tv.js` and `client/phone.html` and call `SH.registerGame` (see `public/js/game-api.js`). Do not edit the shell pages for one game. Both screens need usable states and controls.
+4. If the game needs fetched content, prepare it in the session/transport flow. Phase timers go in the manifest as `phases`; see the quiz.
+5. Check lobby selection, start, actions, scoring, end, and return to lobby. Update affected integration tests.
 
 ## Frontend conventions
 
 Browser helpers are loaded by plain `<script>` tags and expose globals. Check script order and existing helpers before adding another module or dependency. For UI changes, verify the shared display and phone layout, including reconnect and finished-game states when affected.
 
-A lone player can play Gin Rummy and Palace against AI seats: `GAME_REGISTRY` entries with `ai` metadata, `room.bots` (`bot_N` ids, never in `room.players`, so they get no session score), and `scheduleBotTurn` in `ws-adapter.js`, which plays each AI move after a short pause through the same `applyGameAction` path as people. Keep bot moves legal: `tests/engine/bots.test.js` plays full bot games and fails on any engine error.
+A lone player can play Gin Rummy and Palace against AI seats: games with `ai` in their manifest, `room.bots` (`bot_N` ids, never in `room.players`, so they get no session score), and `scheduleBotTurn` in `ws-adapter.js`, which plays each AI move after a short pause through the same `applyGameAction` path as people. Keep bot moves legal: `tests/engine/bots.test.js` plays full bot games and fails on any engine error.
 
-Gin Rummy and Palace use the card-table kit `public/js/table-cards.js` + `public/css/table-cards.css` (vector cards, stacks, 2-row rack/fan, tap / swipe-up / drag gestures, hand ordering), shared by phone and TV. Other card rendering lives in `public/js/cards.js` with SVGs/audio under `public/cards/`. Engine suits are `h`, `d`, `c`, `s`; ranks are numeric. Shithead's Ace-high rank 14 maps to the same card image as rank 1. Reuse the renderer and existing audio helpers.
+Card games use `src/cards/deck.js` on the server and the card-table kit `public/js/table-cards.js` (with `table-cards-phone.js` and `table-cards-tv.js`) + `public/css/table-cards.css` (vector cards, stacks, 2-row rack/fan, tap / swipe-up / drag gestures, hand ordering), shared by phone and TV. The phone hand lifts and enlarges the card under the thumb (press and slide, let go to pick), and a big Palace hand stacks same ranks with a ×N count. Four-colour suits (clubs blue, diamonds orange) are on by default on the TV and a toggle on the phone (`tcSetFourColour`); the A–10 art for them lives in `public/cards/faces-4c/`, made by `node scripts/four-colour-faces.js`. Card sounds are in `public/js/card-sounds.js`, with SVGs and audio under `public/cards/`. Engine suits are `h`, `d`, `c`, `s`; ranks are numeric. Shithead's Ace-high rank 14 maps to the same card image as rank 1. Reuse the renderer and existing audio helpers.
 
-Use `smallhours-light-lobby/` as the lobby design reference. Current shared styling lives in `public/css/`; brand images live in `public/images/`.
+The TV plays music from `music/`: `/api/lobby-music` serves the lobby songs, and files named `quiz-and-cards*` are served by `/api/game-music` only, for the game types in `GAME_MUSIC_TYPES` (`host.html`). Both use `createLobbyMusic` (`public/js/lobby-music.js`, volume, fades, rotation); `setDucked` lowers the game music while the quiz narrator or a game story speaks.
+
+Shared styling lives in `public/css/`; brand images live in `public/images/`.
 
 ## Verification
 
 Run focused tests for the behavior changed, then `npm test` for changes spanning shared rules, transport, or lifecycle. Documentation-only edits need path/command checks rather than a server restart.
 
 - `tests/engine/game-harness.js`: `createTestGame`, `act`, `actChain`, `viewFor`, `isOver`, `playUntilEnd`. `act` returns `{ game, events }`; `isOver` returns the end result or `null`.
-- `src/engine/games/shithead.test.js` is a co-located exception; other tests are under `tests/`.
+- Game tests live next to the game in `games/<id>/`; other tests are under `tests/`.
 - Frontend tests exercise browser code with lightweight test setups. Inspect the affected test's environment; do not assume every frontend test uses JSDOM.
 - For UI changes, report whether browser/phone/TV behavior was actually checked. A passing unit test does not establish visual correctness.
 - `/health` reports status, version, commit, build time, uptime, room count, and player count. `/api/version` returns the same build info for the front-page footer; see `src/version.js`.
 
 ## Runtime data and integrations
 
-Preserve `.env`, `data/`, question files, local music, generated APKs, and Android signing keys. `data/` holds runtime caches and is mounted into the container. Inspect fetcher code/tests before changing cache formats or fallback behavior.
+Preserve `.env`, `data/`, local music, generated APKs, and Android signing keys. `data/` holds runtime caches and is mounted into the container. Inspect fetcher code/tests before changing cache formats or fallback behavior. Quiz plays from easy-only buckets (`data/questions/{category}_easy.json`, filled at startup) and uses the mixed `{category}.json` buckets when they run out.
 
 Gemini TTS uses `GEMINI_API_KEY`. Room creation can send a Discord webhook when `DISCORD_WEBHOOK_URL` is set. Tests and manual room creation should account for that external effect. Discord payloads must include both `content` and `embeds` so push notifications contain text.
 

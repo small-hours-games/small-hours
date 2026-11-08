@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import { runInNewContext } from 'node:vm';
 const source = readFileSync(new URL('../../public/js/lobby-music.js', import.meta.url), 'utf8');
 afterEach(() => vi.useRealTimers());
-function setup(fetcher = async () => ({ ok: true, json: async () => ({ tracks: ['/music/one.mp3', '/music/two.mp3'] }) })) {
+function setup(fetcher = async () => ({ ok: true, json: async () => ({ tracks: ['/music/one.mp3', '/music/two.mp3'] }) }), options) {
   vi.useFakeTimers();
   const listeners = {};
   const audio = {
@@ -16,7 +16,7 @@ function setup(fetcher = async () => ({ ok: true, json: async () => ({ tracks: [
   const context = { fetch: fetcher, Date, setInterval, clearInterval };
   runInNewContext(source, context);
   const onPlaybackChange = vi.fn();
-  return { audio, listeners, onPlaybackChange, music: context.createLobbyMusic(audio, onPlaybackChange) };
+  return { audio, listeners, onPlaybackChange, music: context.createLobbyMusic(audio, onPlaybackChange, options) };
 }
 const settle = () => vi.advanceTimersByTimeAsync(0);
 describe('Lobby soundtrack fades', () => {
@@ -87,6 +87,53 @@ describe('Lobby soundtrack fades', () => {
     vi.advanceTimersByTime(1500);
     expect(audio.volume).toBeCloseTo(0.12);
     expect(audio.paused).toBe(false);
+  });
+  it('loads the playlist it is given', async () => {
+    const fetcher = vi.fn(async () => ({ ok: true, json: async () => ({ tracks: ['/music/game.mp3'] }) }));
+    const { music, audio } = setup(fetcher, { playlistUrl: '/api/game-music' });
+    music.setActive(true);
+    await settle();
+    expect(fetcher).toHaveBeenCalledWith('/api/game-music');
+    expect(audio.src).toBe('/music/game.mp3');
+  });
+  it('ducks under a voice and comes back to full level', async () => {
+    const { music, audio } = setup();
+    music.setActive(true);
+    await settle();
+    vi.advanceTimersByTime(1500);
+    music.setDucked(true);
+    vi.advanceTimersByTime(300);
+    expect(audio.volume).toBeCloseTo(0.042);
+    music.setDucked(false);
+    vi.advanceTimersByTime(250);
+    expect(audio.volume).toBeCloseTo(0.081);
+    vi.advanceTimersByTime(250);
+    expect(audio.volume).toBeCloseTo(0.12);
+  });
+  it('keeps the duck ramp going through repeated calls', async () => {
+    const { music, audio } = setup();
+    music.setActive(true);
+    await settle();
+    vi.advanceTimersByTime(1500);
+    music.setDucked(true);
+    vi.advanceTimersByTime(150);
+    music.setDucked(true);
+    vi.advanceTimersByTime(150);
+    expect(audio.volume).toBeCloseTo(0.042);
+  });
+  it('fades on the undocked level, so a duck during a fade does not disturb it', async () => {
+    const { music, audio } = setup();
+    music.setActive(true);
+    await settle();
+    music.setDucked(true);
+    vi.advanceTimersByTime(750);
+    expect(audio.volume).toBeCloseTo(0.021);
+    vi.advanceTimersByTime(750);
+    expect(audio.volume).toBeCloseTo(0.042);
+    music.setActive(false);
+    vi.advanceTimersByTime(1200);
+    expect(audio.volume).toBe(0);
+    expect(audio.paused).toBe(true);
   });
   it('does not start a late-loaded playlist during a game', async () => {
     let resolve;

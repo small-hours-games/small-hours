@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { createGame, processAction, checkEnd } from '../../src/engine/engine.js';
-import ginRummy from '../../src/engine/games/gin-rummy.js';
-import shithead from '../../src/engine/games/shithead.js';
+import ginRummy from '../../games/gin-rummy/rules.js';
+import shithead from '../../games/shithead/rules.js';
 import { nextBotAction, hasBot } from '../../src/engine/bots/index.js';
 
 // Drive a game with bots only. Gin's scoring phase waits for a person to press
