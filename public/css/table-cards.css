@@ -556,12 +556,12 @@
 }
 .tc-cidx {
   min-width: calc(var(--tc-w) * 0.36);
-  padding: calc(var(--tc-w) * 0.045) calc(var(--tc-w) * 0.02) calc(var(--tc-w) * 0.03) calc(var(--tc-w) * 0.035);
+  padding: calc(var(--tc-w) * 0.045) calc(var(--tc-w) * 0.02) calc(var(--tc-w) * 0.008) calc(var(--tc-w) * 0.035);
   font: 800 calc(var(--tc-w) * 0.38) / 0.84 'Barlow Condensed', 'Arial Narrow', 'Roboto Condensed', system-ui, sans-serif;
   letter-spacing: -0.02em;
   border-radius: 0 0 calc(var(--tc-w) * 0.06) 0;
 }
-.tc-cidx .tc-idx-suit { width: 0.55em; height: 0.55em; margin-top: 0.1em; }
+.tc-cidx .tc-idx-suit { width: 0.48em; height: 0.48em; margin-top: 0.08em; }
 .tc-cidx-ten .tc-rank { letter-spacing: -0.06em; transform: scaleX(0.86); margin-left: -0.05em; }
 /* The bottom corner only hides the deck's thin index; the top one is enough to read. */
 .tc-cidx-br {
@@ -638,3 +638,12 @@
   background: url(/images/smallhours-mark.svg) center / contain no-repeat;
   filter: drop-shadow(0 calc(var(--tc-w) * 0.015) calc(var(--tc-w) * 0.03) rgba(0, 0, 0, 0.35));
 }
+.tc-cidx-tl.tc-cidx-tall { padding-bottom: calc(var(--tc-w) * 0.1); }
+.tc-cidx-br .tc-idx-suit { width: 0.72em; height: 0.72em; margin-top: 0.06em; }
+
+/* Picked cards glow yellow, like the big Play button; blue stays for turns and NEW. */
+.tc-selected {
+  box-shadow: 0 0 0 3px #facc15, 0 0 22px 2px rgba(250, 204, 21, 0.4), 0 16px 28px -4px rgba(0, 0, 0, 0.5) !important;
+}
+.tc-pile-hot .tc-pile-top, .tc-stack-hot .tc-top { box-shadow: 0 0 0 3px #facc15, var(--tc-elev-2); }
+.tc-well.tc-well-active { border-color: #facc15; background: rgba(250, 204, 21, 0.08); }

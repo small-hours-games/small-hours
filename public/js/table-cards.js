@@ -94,6 +94,8 @@ function renderTableCard(card, opts) {
   // a bold corner index sits on top so the rank reads at any size, even fanned.
   var index = '<span class="tc-rank">' + tcEscape(label) + '</span>' + tcSuitSvg(card.suit, 'tc-idx-suit');
   var ten = label === '10' ? ' tc-cidx-ten' : '';
+  // On the 9 and 10 the deck's top-left pip reaches just below the index; a taller patch hides it.
+  if (label === '9' || label === '10') ten += ' tc-cidx-tall';
   var badge = '';
   if (opts.isNew) badge = '<span class="tc-badge tc-badge-new">NEW</span>';
   else if (opts.badge) badge = '<span class="tc-badge">' + tcEscape(opts.badge) + '</span>';
