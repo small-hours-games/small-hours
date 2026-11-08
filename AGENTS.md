@@ -42,7 +42,7 @@ Before editing, inspect `git status` and the relevant diff. Preserve existing un
 | `games/<id>/` | One game each: `index.js` manifest, `rules.js`, optional `bot.js`, tests, and `client/` (`phone.js`, `tv.js`, `phone.html`, `style.css`, `lib/`) |
 | `src/games/registry.js`, `client.js` | Find and validate the games; write their scripts, styles and phone section into the pages |
 | `public/js/game-api.js` | The contract between the pages and a game's client code |
-| `src/fetcher/` | Trivia, disk caches, Gemini TTS, Deezer/music playlists |
+| `src/fetcher/` | Trivia, disk caches, Gemini TTS narration, Deezer/music playlists |
 | `src/notifications/discord.js` | Room-created webhook |
 | `public/host.html` | Shared display shell: lobby, scoreboard, music, story |
 | `public/player.html` | Phone shell: joining, voting, chat, reconnect |
@@ -97,7 +97,7 @@ A lone player can play Gin Rummy and Palace against AI seats: games with `ai` in
 
 Card games use `src/cards/deck.js` on the server and the card-table kit `public/js/table-cards.js` (with `table-cards-phone.js` and `table-cards-tv.js`) + `public/css/table-cards.css` (vector cards, stacks, 2-row rack/fan, tap / swipe-up / drag gestures, hand ordering), shared by phone and TV. The phone hand lifts and enlarges the card under the thumb (press and slide, let go to pick), and a big Palace hand stacks same ranks with a ×N count. Four-colour suits (clubs blue, diamonds orange) are on by default on the TV and a toggle on the phone (`tcSetFourColour`); the A–10 art for them lives in `public/cards/faces-4c/`, made by `node scripts/four-colour-faces.js`. Card sounds are in `public/js/card-sounds.js`, with SVGs and audio under `public/cards/`. Engine suits are `h`, `d`, `c`, `s`; ranks are numeric. Shithead's Ace-high rank 14 maps to the same card image as rank 1. Reuse the renderer and existing audio helpers.
 
-The TV plays music from `music/`: `/api/lobby-music` serves the lobby songs, and files named `quiz-and-cards*` are served by `/api/game-music` only, for the game types in `GAME_MUSIC_TYPES` (`host.html`). Both use `createLobbyMusic` (`public/js/lobby-music.js`, volume, fades, rotation); `setDucked` lowers the game music while the quiz narrator or a game story speaks.
+The TV plays music from `music/`: `/api/lobby-music` serves the lobby songs, and files named `quiz-and-cards*` are served by `/api/game-music` only, for games with `music: true` in their manifest. Both use `createLobbyMusic` (`public/js/lobby-music.js`, volume, fades, rotation); `setDucked` lowers the game music while the quiz narrator or a game story speaks.
 
 Shared styling lives in `public/css/`; brand images live in `public/images/`.
 
