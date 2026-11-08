@@ -17,7 +17,7 @@ describe('Room game vote resolution', () => {
 
   it('picks the most-voted game', () => {
     const { room, ids } = roomWith(3);
-    room.suggestGame(ids[0], 'uno');
+    room.suggestGame(ids[0], 'shithead');
     room.suggestGame(ids[1], 'quiz');
     room.suggestGame(ids[2], 'quiz');
     expect(room.resolveWinningGame()).toBe('quiz');
@@ -27,16 +27,16 @@ describe('Room game vote resolution', () => {
   it('breaks ties with the admin vote', () => {
     const { room, ids } = roomWith(2);
     expect(room.players.get(ids[0]).isAdmin).toBe(true);
-    room.suggestGame(ids[0], 'sjuan');
-    room.suggestGame(ids[1], 'uno');
-    expect(room.resolveWinningGame()).toBe('sjuan');
+    room.suggestGame(ids[0], 'quiz');
+    room.suggestGame(ids[1], 'shithead');
+    expect(room.resolveWinningGame()).toBe('quiz');
   });
 
   it('falls back to alphabetical order when admin did not vote for a tied game', () => {
     const { room, ids } = roomWith(3);
-    room.suggestGame(ids[1], 'uno');
-    room.suggestGame(ids[2], 'sjuan');
-    expect(room.resolveWinningGame()).toBe('sjuan');
+    room.suggestGame(ids[1], 'shithead');
+    room.suggestGame(ids[2], 'quiz');
+    expect(room.resolveWinningGame()).toBe('quiz');
   });
 
   it('ignores games incompatible with the player count', () => {

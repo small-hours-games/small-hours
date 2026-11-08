@@ -3,19 +3,13 @@
 
 import { WebSocketServer } from 'ws';
 import { processAction, getView, checkEnd } from '../engine/engine.js';
-import { PHASE_DURATIONS as QUIZ_DURATIONS } from '../engine/games/quiz.js';
-import { PHASE_DURATIONS as MUSIC_QUIZ_DURATIONS } from '../engine/games/music-quiz.js';
 import * as lobbyHandlers from './handlers/lobby.js';
 import * as gameHandlers from './handlers/game.js';
 import * as chatHandlers from './handlers/chat.js';
 import * as voteHandlers from './handlers/vote.js';
 import { getHostView } from './host-view.js';
 import { nextBotAction } from '../engine/bots/index.js';
-
-const GAME_PHASE_DURATIONS = {
-  quiz: QUIZ_DURATIONS,
-  'music-quiz': MUSIC_QUIZ_DURATIONS,
-};
+import { getGame } from '../games/registry.js';
 
 const HEARTBEAT_INTERVAL_MS = 30_000;
 const RATE_LIMIT_MAX = 30;          // messages per second
@@ -26,8 +20,6 @@ const DISCONNECT_GRACE_MS = 30_000;
 const BOT_MOVE_DELAY_MS = 1_100;    // AI pause per move, so the table can be followed
 const BOT_SWAP_DELAY_MS = 400;
 const BOT_FAST_DELAY_MS = 450;      // every person is out; bots finish the game
-const BOT_AFTER_FLIGHT_MS = 2_000;  // Palace: let a card finish its flight to the pile on the TV (tcFlightMs)
-const FLIGHT_EVENTS = new Set(['play', 'burn', 'blind-miss']);
 
 /**
  * Set up WebSocket handling on the given HTTP server.
@@ -137,7 +129,7 @@ export function setupWebSocket(server, manager) {
 
     if (!room.game) return;
 
-    const durations = GAME_PHASE_DURATIONS[gameType];
+    const durations = getGame(gameType)?.phases;
     if (!durations) return;
 
     const phase = room.game.state.phase;
@@ -233,11 +225,10 @@ export function setupWebSocket(server, manager) {
     const humansLeft = room.game.state.finishOrder
       ? room.game.state.players.some(id => !botIds.includes(id) && !room.game.state.finishOrder.includes(id))
       : true;
-    const cardInFlight = gameType === 'shithead' && FLIGHT_EVENTS.has(room.game.state.lastEvent?.kind);
-    const delay = room.game.state.phase === 'swap' ? BOT_SWAP_DELAY_MS
+    const state = room.game.state;
+    const delay = state.phase === 'swap' ? BOT_SWAP_DELAY_MS
       : !humansLeft ? BOT_FAST_DELAY_MS
-      : cardInFlight ? BOT_AFTER_FLIGHT_MS
-      : BOT_MOVE_DELAY_MS;
+      : getGame(gameType)?.ai?.delay?.(state) ?? BOT_MOVE_DELAY_MS;
 
     const timer = setTimeout(() => {
       botTimers.delete(room.code);

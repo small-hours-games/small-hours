@@ -412,7 +412,7 @@ describe('Room - startGame (registry)', () => {
 
   it('caps Palace AI seats so every seat gets its 9 cards', () => {
     const room = new Room('TEST');
-    const entry = { ai: { default: 2, max: 9, cardsPerSeat: 9 }, minPlayers: 2, maxPlayers: 10 };
+    const entry = { ai: { default: 2, max: 9, cardsPerSeat: 9 }, min: 2, max: 10 };
     expect(room.aiSeatCount(entry, 1, { bots: 9 })).toBe(4);            // 52 / 9 = 5 seats
     expect(room.aiSeatCount(entry, 1, { bots: 9, decks: 2 })).toBe(9);  // 11 seats, AI max 9
   });

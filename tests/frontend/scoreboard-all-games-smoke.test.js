@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { createGame, processAction, getView, checkEnd } from '../../src/engine/engine.js';
-import quiz from '../../src/engine/games/quiz.js';
-import shithead from '../../src/engine/games/shithead.js';
-import ginRummy from '../../src/engine/games/gin-rummy.js';
+import quiz from '../../games/quiz/rules.js';
+import shithead from '../../games/shithead/rules.js';
+import ginRummy from '../../games/gin-rummy/rules.js';
 
 // --- Mirror of host.html getScoreboardData (kept in sync with the real UI) ---
 function getScoreboardData(msg, gameType) {

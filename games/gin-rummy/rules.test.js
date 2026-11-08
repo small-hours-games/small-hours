@@ -8,9 +8,9 @@ import {
   findLayoffs,
   applyLayoffs,
   scoreHand,
-} from '../../src/engine/games/gin-rummy.js';
-import ginRummy from '../../src/engine/games/gin-rummy.js';
-import { createTestGame, act, actChain, viewFor, isOver, playUntilEnd } from '../engine/game-harness.js';
+} from './rules.js';
+import ginRummy from './rules.js';
+import { createTestGame, act, actChain, viewFor, isOver, playUntilEnd } from '../../tests/engine/game-harness.js';
 
 // --- cardValue ---
 

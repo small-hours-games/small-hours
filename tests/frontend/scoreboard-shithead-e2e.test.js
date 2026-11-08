@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { createGame, processAction, getView, checkEnd } from '../../src/engine/engine.js';
-import shithead from '../../src/engine/games/shithead.js';
+import shithead from '../../games/shithead/rules.js';
 
 function getScoreboardData(msg) {
   const names = msg.playerNames || {};

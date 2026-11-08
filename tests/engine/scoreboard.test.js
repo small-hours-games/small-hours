@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { createTestGame, viewFor } from './game-harness.js';
-import quiz from '../../src/engine/games/quiz.js';
-import shithead from '../../src/engine/games/shithead.js';
-import ginRummy from '../../src/engine/games/gin-rummy.js';
+import quiz from '../../games/quiz/rules.js';
+import shithead from '../../games/shithead/rules.js';
+import ginRummy from '../../games/gin-rummy/rules.js';
 
 // Guards against regressions in the host scoreboard contract: every game's
 // view() must emit a `scores` object keyed by all player IDs, so the host

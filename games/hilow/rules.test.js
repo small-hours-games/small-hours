@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { createGame, processAction, getView, checkEnd } from '../../src/engine/engine.js';
-import hilow from '../../src/engine/games/hilow.js';
+import hilow from './rules.js';
 
 describe('hilow (Högt/Lågt) engine', () => {
   it('sets up with a current card and zeroed scores', () => {

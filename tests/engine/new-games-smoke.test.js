@@ -4,8 +4,8 @@
 // picks a legal move (so the game is proven winnable).
 import { describe, it, expect } from 'vitest';
 import { createGame, processAction, getView, checkEnd } from '../../src/engine/engine.js';
-import sjuan from '../../src/engine/games/sjuan.js';
-import uno from '../../src/engine/games/uno.js';
+import sjuan from '../../games/sjuan/rules.js';
+import uno from '../../games/uno/rules.js';
 
 // Pick a legal action for the current player, or null if stuck.
 function chooseAction(definition, game, turn) {

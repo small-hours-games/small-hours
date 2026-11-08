@@ -6,13 +6,14 @@ import path from 'path';
 import fs from 'fs';
 import express from 'express';
 import { notifyRoomCreated } from '../notifications/discord.js';
-import { STORIES } from '../session/stories.js';
+import { gameStories, publicGames } from '../games/registry.js';
 import { BUILD_INFO } from '../version.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const PUBLIC_DIR = path.resolve(__dirname, '../../public');
 const MUSIC_DIR = path.resolve(__dirname, '../../music');
+const CATALOG_MARKER = '<!-- game-catalog -->';
 const GAME_TRACK = /^quiz-and-cards/i; // played during card games and Quiz, never in the lobby
 const AUDIO_DIR = path.resolve(__dirname, '../../data/audio');
 
@@ -27,6 +28,20 @@ let lastRoomCreateAt = 0;
  * @param {import('express').Application} app
  * @param {import('../session/manager.js').RoomManager} manager
  */
+async function servePage(res, file) {
+  try {
+    const html = await fs.promises.readFile(path.join(PUBLIC_DIR, file), 'utf8');
+    res.type('html').send(html.replace(CATALOG_MARKER, pageCatalog()));
+  } catch {
+    res.status(404).json({ error: 'Not found' });
+  }
+}
+
+/** The game catalog, written into the page so plain scripts can use it right away. */
+function pageCatalog() {
+  return '<script>var SH_GAMES = ' + JSON.stringify(publicGames()).replace(/</g, '\\u003c') + ';</script>';
+}
+
 export function setupRoutes(app, manager) {
   const playlist = keep => async (_req, res) => {
     try {
@@ -93,9 +108,13 @@ export function setupRoutes(app, manager) {
     }
   });
 
+  app.get('/api/games', (_req, res) => {
+    res.json({ games: publicGames() });
+  });
+
   // Game narration stories (for host story overlay + TTS)
   app.get('/api/stories', (_req, res) => {
-    res.json({ stories: STORIES });
+    res.json({ stories: gameStories() });
   });
 
   // Generic TTS endpoint: text -> audio URL (uses Gemini if GEMINI_API_KEY set)
@@ -182,6 +201,11 @@ export function setupRoutes(app, manager) {
     if (req.path.startsWith('/host/')) file = 'host.html';
     else if (req.path.startsWith('/player/')) file = 'player.html';
     else if (req.path === '/tv' || req.path === '/tv/') file = 'tv.html'; // Android TV app entry
+
+    if (file === 'host.html' || file === 'player.html') {
+      servePage(res, file);
+      return;
+    }
 
     res.sendFile(path.join(PUBLIC_DIR, file), (err) => {
       if (err) {

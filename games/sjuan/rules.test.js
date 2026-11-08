@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import sjuan from '../../src/engine/games/sjuan.js';
-import { createTestGame, act, viewFor, isOver } from './game-harness.js';
+import sjuan from './rules.js';
+import { createTestGame, act, viewFor, isOver } from '../../tests/engine/game-harness.js';
 
 describe('Sjuan - setup', () => {
   it('initializes with play phase and correct structure', () => {

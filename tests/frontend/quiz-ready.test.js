@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { runInNewContext } from 'node:vm';
-import { PHASE_DURATIONS } from '../../src/engine/games/quiz.js';
-import { PHASE_DURATIONS as MUSIC_DURATIONS } from '../../src/engine/games/music-quiz.js';
+import { PHASE_DURATIONS } from '../../games/quiz/rules.js';
+import { PHASE_DURATIONS as MUSIC_DURATIONS } from '../../games/music-quiz/rules.js';
 
 const source = readFileSync(new URL('../../public/js/quiz-ready.js', import.meta.url), 'utf8');
 afterEach(() => vi.useRealTimers());

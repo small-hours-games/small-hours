@@ -1,6 +1,6 @@
 {
   "name": "small-hours",
-  "version": "2.8.1",
+  "version": "2.9.0",
   "description": "Real-time multiplayer party game platform",
   "type": "module",
   "main": "src/server.js",

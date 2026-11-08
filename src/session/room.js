@@ -2,14 +2,8 @@
 // Each room represents a lobby where players gather and play mini-games.
 
 import { createGame, processAction, getView, checkEnd } from '../engine/engine.js';
-import shithead from '../engine/games/shithead.js';
-import quiz from '../engine/games/quiz.js';
-import ginRummy from '../engine/games/gin-rummy.js';
-import hilow from '../engine/games/hilow.js';
-import sjuan from '../engine/games/sjuan.js';
-import uno from '../engine/games/uno.js';
-import musicQuiz from '../engine/games/music-quiz.js';
 import { BOT_NAMES } from '../engine/bots/index.js';
+import { getGame, listGames } from '../games/registry.js';
 import { randomBytes } from 'node:crypto';
 
 const AVATAR_POOL = [
@@ -21,16 +15,6 @@ const AVATAR_POOL = [
 
 // Characters that can appear in room codes (excludes I, O, S)
 const CODE_CHARS = 'ABCDEFGHJKLMNPQRTUVWXYZ0123456789';
-
-const GAME_REGISTRY = {
-  'shithead':     { definition: shithead,     label: 'Palace',       minPlayers: 2, maxPlayers: 6,  complexity: 3, ai: { default: 2, max: 4, cardsPerSeat: 9 } },
-  'quiz':         { definition: quiz,         label: 'Quiz',         minPlayers: 1, maxPlayers: 20, complexity: 1 },
-  'music-quiz':   { definition: musicQuiz,    label: 'Music Quiz',   minPlayers: 1, maxPlayers: 20, complexity: 1 },
-  'gin-rummy':    { definition: ginRummy,     label: 'Gin Rummy',    minPlayers: 2, maxPlayers: 2,  complexity: 4, ai: { default: 1, max: 1 } },
-  'hilow':        { definition: hilow,        label: 'Högt/Lågt',    minPlayers: 2, maxPlayers: 8,  complexity: 1 },
-  'sjuan':       { definition: sjuan,       label: 'Sjuan',        minPlayers: 2, maxPlayers: 8,  complexity: 2 },
-  'uno':         { definition: uno,         label: 'Uno',          minPlayers: 2, maxPlayers: 8,  complexity: 2 },
-};
 
 let playerCounter = 0;
 let observerCounter = 0;
@@ -292,28 +276,23 @@ export class Room {
    */
   availableGames() {
     const count = [...this.players.values()].filter(p => p.connected).length;
-    return Object.entries(GAME_REGISTRY)
-      .filter(([, m]) => (count >= m.minPlayers && count <= m.maxPlayers) || (count === 1 && m.ai))
-      .map(([type, m]) => ({
-        type, label: m.label, minPlayers: m.minPlayers, maxPlayers: m.maxPlayers, complexity: m.complexity,
-        ...(count === 1 && m.ai && count < m.minPlayers ? { vsAi: true } : {}),
+    return listGames()
+      .filter(g => !g.hidden && ((count >= g.min && count <= g.max) || (count === 1 && g.ai)))
+      .map(g => ({
+        type: g.id, label: g.label, minPlayers: g.min, maxPlayers: g.max,
+        ...(count === 1 && g.ai && count < g.min ? { vsAi: true } : {}),
       }));
   }
 
-  /**
-   * How many AI seats a game gets: only a lone player plays against bots
-   * (solo while waiting for friends). Palace is also capped by the cards:
-   * every seat takes 9 cards from 52 per deck.
-   */
   aiSeatCount(entry, humans, config = {}) {
     if (!entry.ai || humans !== 1) return 0;
-    let max = Math.min(entry.ai.max, entry.maxPlayers - humans);
+    let max = Math.min(entry.ai.max, entry.max - humans);
     if (entry.ai.cardsPerSeat) {
       const decks = Number(config.decks) || 1;
       max = Math.min(max, Math.floor((52 * decks) / entry.ai.cardsPerSeat) - humans);
     }
     const wanted = Number.isInteger(config.bots) ? config.bots : entry.ai.default;
-    return Math.max(Math.max(1, entry.minPlayers - humans), Math.min(wanted, max));
+    return Math.max(Math.max(1, entry.min - humans), Math.min(wanted, max));
   }
 
   /**
@@ -367,14 +346,12 @@ export class Room {
    * Creates a game instance via the engine.
    */
   async startGame(gameType, config = {}) {
-    const entry = GAME_REGISTRY[gameType];
+    const entry = getGame(gameType);
     if (!entry) throw new Error(`Unknown game type: ${gameType}`);
     const connectedCount = [...this.players.values()].filter(p => p.connected).length;
     const botCount = this.aiSeatCount(entry, connectedCount, config);
-    if (connectedCount + botCount < entry.minPlayers) throw new Error(`${entry.label} requires at least ${entry.minPlayers} players`);
-    if (connectedCount > entry.maxPlayers) throw new Error(`${entry.label} supports at most ${entry.maxPlayers} players`);
-
-    const { definition } = entry;
+    if (connectedCount + botCount < entry.min) throw new Error(`${entry.label} requires at least ${entry.min} players`);
+    if (connectedCount > entry.max) throw new Error(`${entry.label} supports at most ${entry.max} players`);
 
     const playerIds = [];
     for (const [id, p] of this.players) {
@@ -386,8 +363,8 @@ export class Room {
     let gameConfig = { ...config };
 
     // Let the game definition prepare its own config (fetch questions, load files, etc.)
-    if (definition.prepare) {
-      const result = await definition.prepare(gameConfig, { usedQuestionIds: this.usedQuestionIds });
+    if (entry.prepare) {
+      const result = await entry.prepare(gameConfig, { usedQuestionIds: this.usedQuestionIds });
       gameConfig = result.config;
       for (const id of result.trackIds ?? []) {
         this.usedQuestionIds.delete(id);
@@ -396,7 +373,7 @@ export class Room {
     }
 
     this.lastActivity = Date.now();
-    this.game = createGame(definition, { players: playerIds, config: gameConfig });
+    this.game = createGame(entry, { players: playerIds, config: gameConfig });
     this.gameType = gameType;
     this.bots = bots;
     this.gameSuggestions.clear();

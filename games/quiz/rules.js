@@ -1,7 +1,7 @@
 // Small Hours - Quiz / Trivia Game
-import { fetchQuestions } from '../../fetcher/cached-fetcher.js';
-import { warmQuizNarration } from '../../fetcher/cached-narration.js';
-import { enrichQuestionsWithImages } from '../../fetcher/cached-question-images.js';
+import { fetchQuestions } from '../../src/fetcher/cached-fetcher.js';
+import { warmQuizNarration } from '../../src/fetcher/cached-narration.js';
+import { enrichQuestionsWithImages } from '../../src/fetcher/cached-question-images.js';
 
 /**
  * Deterministic shuffle seeded by an integer.

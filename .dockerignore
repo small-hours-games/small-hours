@@ -10,6 +10,7 @@ node_modules
 data
 tmp
 tests
+games/**/*.test.js
 *.zip
 .env
 

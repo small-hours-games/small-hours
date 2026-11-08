@@ -5,19 +5,14 @@
 
 import { getView } from '../engine/engine.js';
 
-// Per-player fields that do not follow the `my*` naming convention.
-const PRIVATE_KEYS = new Set([
-  'isMyTurn', 'swapConfirmed', 'canKnock', 'lastDrawnCardId', // card games
-  'hasAnswered', 'selectedAnswer', 'eliminatedAnswers',      // quiz / music-quiz
-  'isActive',                                                // hilow
-]);
-
 /**
  * True for keys that describe the viewing player rather than the shared game.
+ * A game names any others in its manifest (privateKeys).
  * @param {string} key
+ * @param {string[]} [extra]
  */
-export function isPrivateViewKey(key) {
-  return /^my[A-Z]/.test(key) || PRIVATE_KEYS.has(key);
+export function isPrivateViewKey(key, extra = []) {
+  return /^my[A-Z]/.test(key) || key === 'isMyTurn' || extra.includes(key);
 }
 
 /**
@@ -35,7 +30,7 @@ export function getHostView(game, firstPlayerId) {
   const view = getView(game, firstPlayerId);
   const shared = {};
   for (const [key, value] of Object.entries(view)) {
-    if (!isPrivateViewKey(key)) shared[key] = value;
+    if (!isPrivateViewKey(key, game.definition.privateKeys)) shared[key] = value;
   }
   return shared;
 }

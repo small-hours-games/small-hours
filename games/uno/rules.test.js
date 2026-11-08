@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import uno from '../../src/engine/games/uno.js';
-import { createTestGame, act, viewFor, isOver } from './game-harness.js';
+import uno from './rules.js';
+import { createTestGame, act, viewFor, isOver } from '../../tests/engine/game-harness.js';
 
 describe('Uno - setup', () => {
   it('initializes with play phase and 7-card hands', () => {

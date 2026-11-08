@@ -1,19 +1,13 @@
 // Small Hours - AI opponents
-// A bot policy is a pure (state, botId) -> action | null. The transport layer
-// feeds the chosen action through processAction like any player's move.
+// A game's bot is a pure (state, botId) -> action | null in its manifest (ai.choose).
+// The transport layer feeds the chosen action through processAction like any player's move.
 
-import { chooseGinAction } from './gin-rummy.js';
-import { choosePalaceAction } from './palace.js';
-
-const BOTS = {
-  'gin-rummy': chooseGinAction,
-  'shithead': choosePalaceAction,
-};
+import { getGame } from '../../games/registry.js';
 
 export const BOT_NAMES = ['Robo', 'Bitsy', 'Chip', 'Pixel', 'Turbo'];
 
 export function hasBot(gameType) {
-  return Object.hasOwn(BOTS, gameType);
+  return typeof getGame(gameType)?.ai?.choose === 'function';
 }
 
 /**
@@ -21,7 +15,7 @@ export function hasBot(gameType) {
  * @returns {{ type: string, playerId: string } | null}
  */
 export function nextBotAction(gameType, state, botIds) {
-  const choose = BOTS[gameType];
+  const choose = getGame(gameType)?.ai?.choose;
   if (!choose) return null;
   for (const botId of botIds) {
     const action = choose(state, botId);

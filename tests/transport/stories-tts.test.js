@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { setupRoutes } from '../../src/transport/http.js';
-import { STORIES } from '../../src/session/stories.js';
+import { gameStories } from '../../src/games/registry.js';
 import express from 'express';
 import http from 'http';
 import { AddressInfo } from 'net';
@@ -38,6 +38,7 @@ describe('stories + tts routes', () => {
 
   it('every registered game type has a story', async () => {
     const types = ['quiz', 'shithead', 'gin-rummy', 'hilow'];
+    const STORIES = gameStories();
     for (const t of types) {
       expect(STORIES[t], `story for ${t}`).toBeTruthy();
       expect(STORIES[t].intro.length).toBeGreaterThan(10);

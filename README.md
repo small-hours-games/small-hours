@@ -36,7 +36,7 @@ Waiting for friends? A player alone in the room can start Gin Rummy or Palace ag
 
 Music Quiz mixes genres and decades, rotates songs, and builds believable alternatives from the same playlist. Each quiz starts with a five-second countdown; music clips fade in for one second and out over the final two seconds of the question.
 
-The engine also includes Högt/Lågt, Sjuan and Uno, which do not have screens yet. Dashboard availability is controlled separately in [`public/js/games.js`](public/js/games.js).
+The engine also includes Högt/Lågt, Sjuan and Uno, which do not have screens yet. A game with `hidden: true` in its manifest stays out of the lobby.
 
 ## Small touches, better game nights
 
@@ -163,7 +163,7 @@ Useful places to start:
 - [`public/css/light-lobby.css`](public/css/light-lobby.css) — shared light-lobby styling and compact TV layout.
 - [`public/js/lobby-music.js`](public/js/lobby-music.js) — TV lobby playback and mascot motion state.
 - [`music/`](music/) — local lobby tracks.
-- [`src/engine/games/`](src/engine/games/) — game definitions.
+- [`games/`](games/) — one folder per game.
 - [`src/fetcher/`](src/fetcher/) — trivia, music, caching, and speech fetching.
 - [`tests/`](tests/) — engine, session, transport, integration, and frontend tests.
 - [`android-tv/`](android-tv/) — Android TV app source and build instructions.
@@ -178,7 +178,7 @@ npm run test:watch        # rerun tests while working
 npx vitest run tests/engine/quiz.test.js
 ```
 
-To add a game, start from a small one such as `src/engine/games/hilow.js`. Define `setup`, `actions`, `view`, and `endIf`, register it in `src/session/room.js`, and export it from `src/engine/games/index.js`. Add phone and TV renderers, tests, and a dashboard entry when it's ready to play.
+To add a game, start from a small one such as `games/hilow/`. Define `setup`, `actions`, `view`, and `endIf` and export the manifest from `games/<id>/index.js`; the server finds it by itself. Add phone and TV screens and tests.
 
 Keep rules in the engine, secrets out of player views, and the next round easy to start.
 

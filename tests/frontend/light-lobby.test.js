@@ -1,7 +1,12 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { runInNewContext } from 'node:vm';
+import { publicGames } from '../../src/games/registry.js';
 const read = file => readFileSync(new URL('../../public/' + file, import.meta.url), 'utf8');
+function loadCatalog(context) {
+  context.SH_GAMES = publicGames();
+  runInNewContext(read('js/games.js'), context);
+}
 const escapeHtml = text => String(text).replaceAll('<', '&lt;').replaceAll('>', '&gt;');
 
 describe('Light lobby uses the multiplayer state', () => {
@@ -14,7 +19,7 @@ describe('Light lobby uses the multiplayer state', () => {
     };
     const list = {};
     context.document = { getElementById: () => list };
-    runInNewContext(read('js/games.js'), context);
+    loadCatalog(context);
     const source = read('player.html');
     runInNewContext(source.slice(source.indexOf('    function renderVoteList('), source.indexOf('    function suggestGame(')), context);
     context.renderVoteList();
@@ -26,7 +31,7 @@ describe('Light lobby uses the multiplayer state', () => {
   });
   it('lets a lone player pick the card games against AI, and only then', () => {
     const context = { state: { players: [{ playerId: 'p1', connected: true }] } };
-    runInNewContext(read('js/games.js'), context);
+    loadCatalog(context);
     const source = read('player.html');
     runInNewContext(source.slice(source.indexOf('    function connectedCount('), source.indexOf('    function renderLobby(')), context);
     const gin = context.shGame('gin-rummy');
@@ -45,7 +50,7 @@ describe('Light lobby uses the multiplayer state', () => {
       body: { classList: { toggle() {} }, appendChild: child => { document.body.child = child; } },
     };
     const context = { state: { lobby: { gameSuggestions: { p1: 'music-quiz' }, leadingGame: 'music-quiz' } }, document, escapeHtml };
-    runInNewContext(read('js/games.js'), context);
+    loadCatalog(context);
     const source = read('host.html');
     runInNewContext(source.slice(source.indexOf('    function renderHostVotes('), source.indexOf('    // --- Render: Game ---')), context);
     context.renderHostVotes();
@@ -140,7 +145,7 @@ describe('Light lobby uses the multiplayer state', () => {
       document,
       escapeHtml,
     };
-    runInNewContext(read('js/games.js'), context);
+    loadCatalog(context);
     runInNewContext(
       hostSource.slice(hostSource.indexOf('    function renderPlayers('), hostSource.indexOf('    // Live tallies:')),
       context

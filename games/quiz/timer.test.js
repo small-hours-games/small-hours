@@ -3,7 +3,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { createGame, processAction, getView, checkEnd } from '../../src/engine/engine.js';
-import quiz, { PHASE_DURATIONS } from '../../src/engine/games/quiz.js';
+import quiz, { PHASE_DURATIONS } from './rules.js';
 
 const mockQuestions = [
   {

@@ -2,8 +2,8 @@
 // The quiz game with questions built from Deezer playlists. Every question comes
 // from a randomly picked genre (playlist); its wrong options come from the same
 // genre. Phases, scoring and views are the regular quiz's.
-import quiz, { PHASE_DURATIONS as QUIZ_DURATIONS } from './quiz.js';
-import { musicPlaylists, fetchPlaylistTracks, buildMusicQuestions } from '../../fetcher/deezer.js';
+import quiz, { PHASE_DURATIONS as QUIZ_DURATIONS } from '../quiz/rules.js';
+import { musicPlaylists, fetchPlaylistTracks, buildMusicQuestions } from '../../src/fetcher/deezer.js';
 
 // Songs need longer than trivia to recognise; the 30 s clip runs on through the reveal
 const PHASE_DURATIONS = { ...QUIZ_DURATIONS, question: 20000 };

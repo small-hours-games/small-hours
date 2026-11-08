@@ -5,8 +5,8 @@ import { readFileSync } from 'node:fs';
 import { runInNewContext } from 'node:vm';
 import { createTestGame, act, viewFor } from '../engine/game-harness.js';
 import { getHostView } from '../../src/transport/host-view.js';
-import ginRummy from '../../src/engine/games/gin-rummy.js';
-import shithead from '../../src/engine/games/shithead.js';
+import ginRummy from '../../games/gin-rummy/rules.js';
+import shithead from '../../games/shithead/rules.js';
 
 const read = file => readFileSync(new URL('../../public/' + file, import.meta.url), 'utf8');
 const KIT = read('js/table-cards.js');

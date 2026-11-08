@@ -1,13 +1,5 @@
-// Shared game catalog for the dashboard (player) and the TV screen (host).
-// Only games listed here can be voted for. Player limits mirror GAME_REGISTRY in
-// src/session/room.js; `hasUi` marks games with phone/TV renderers. `aiMax` marks
-// games a lone player can play against that many AI opponents (GAME_REGISTRY ai).
-var SH_GAMES = [
-  { type: 'quiz',          label: 'Quiz',         icon: '🎯', min: 1, max: 20, hasUi: true,  blurb: 'Trivia challenge • Pick a topic & race the clock' },
-  { type: 'music-quiz',    label: 'Music Quiz',   icon: '🎵', min: 1, max: 20, hasUi: true,  blurb: 'Audio trivia • Hear the track & guess the hit' },
-  { type: 'shithead',      label: 'Palace',       icon: '👑', min: 2, max: 6,  hasUi: true,  aiMax: 4, soloBlurb: 'Solo vs AI • Beat the bots, don’t be last!', blurb: '2–6 players • Beat the pile, don’t be last!' },
-  { type: 'gin-rummy',     label: 'Gin Rummy',    icon: '♠️', min: 2, max: 2,  hasUi: true,  aiMax: 1, soloBlurb: 'Solo vs AI • Knock before Robo does!', blurb: '2 players • Build sets & runs, knock low!' },
-];
+// Game catalog helpers for the phone and the TV. The server writes the list itself
+// (SH_GAMES) into the page, from the manifests in games/.
 
 function shGame(type) {
   return SH_GAMES.find(g => g.type === type) || { type: type, label: type, icon: '🎮', min: 1, max: 99, hasUi: false };

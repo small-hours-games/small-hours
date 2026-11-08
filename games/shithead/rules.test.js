@@ -1,6 +1,6 @@
 // Tests for Shithead card game — focused on rank-2 special card behavior
 import { describe, it, expect } from 'vitest';
-import shithead from './shithead.js';
+import shithead from './rules.js';
 
 // --- Helper: build a minimal play-phase state ---
 

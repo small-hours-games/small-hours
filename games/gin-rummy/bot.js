@@ -2,7 +2,7 @@
 // Pure: (state, botId) -> action payload or null. Uses the engine's own meld search,
 // so the bot's idea of deadwood is exactly what knock() will score.
 
-import { findOptimalMelds, cardValue } from '../games/gin-rummy.js';
+import { findOptimalMelds, cardValue } from './rules.js';
 
 const PLAY_PHASES = new Set(['first_turn', 'first_turn_draw', 'drawing']);
 

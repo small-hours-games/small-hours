@@ -39,10 +39,9 @@ Before editing, inspect `git status` and the relevant diff. Preserve existing un
 | `src/session/manager.js` | Room creation, lookup, and cleanup |
 | `src/session/room.js` | Players, reconnect identity, admin, lobby, scores, game registry and startup |
 | `src/engine/engine.js` | `createGame`, `processAction`, `getView`, `checkEnd` |
-| `src/engine/games/` | Plain-object game definitions; `index.js` re-exports them |
-| `src/engine/bots/` | AI opponents: pure `(state, botId) -> action` policies for Gin Rummy and Palace |
+| `games/<id>/` | One game each: `index.js` manifest, `rules.js`, optional `bot.js`, tests |
+| `src/games/registry.js` | Finds and validates the games in `games/` |
 | `src/fetcher/` | Trivia, disk caches, Gemini TTS, Deezer/music playlists |
-| `src/session/stories.js` | Game introduction/narration text |
 | `src/notifications/discord.js` | Room-created webhook |
 | `public/host.html` | Shared display UI and game rendering |
 | `public/player.html` | Phone UI and player controls |
@@ -70,28 +69,28 @@ export default {
 };
 ```
 
-`processAction` returns `{ game, events }`; an action handler returns `{ state, events }`. Preserve immutable state updates. Use `hilow.js` as a small reference, then inspect a game with similar rules.
+`processAction` returns `{ game, events }`; an action handler returns `{ state, events }`. Preserve immutable state updates. Use `games/hilow/` as a small reference, then inspect a game with similar rules.
 
 - Clients connect to `/ws/host/:code` or `/ws/player/:code`.
 - Actions use `{ type: 'GAME_ACTION', action: { type: '<action-name>', ...payload } }`.
 - Treat socket identity as authoritative; inspect existing authorization and validation before adding handlers.
-- Preserve private information in per-player views: hands, answers, and hidden roles must only reach their intended viewers. Host/TV sockets get `getHostView` (`src/transport/host-view.js`): a game's optional `hostView(state)`, or the first player's view minus `my*` keys and a short list of other per-player keys. Name new private fields `my*` or add them to that list.
+- Preserve private information in per-player views: hands, answers, and hidden roles must only reach their intended viewers. Host/TV sockets get `getHostView` (`src/transport/host-view.js`): a game's optional `hostView(state)`, or the first player's view minus `my*` and `isMyTurn` and the manifest's `privateKeys`. Name new private fields `my*` or list them in the manifest as `privateKeys`.
 - Keep game scores, session scores, and the shared scoreboard consistent. Inspect the scoreboard tests when changing result shapes.
 - Preserve reconnect, disconnect grace, admin reclaim, and timer cancellation behavior when changing lifecycle code.
 
 ## Adding or changing a game
 
-1. Implement rules in `src/engine/games/` and cover legal moves, invalid moves, private views, and end conditions as appropriate.
-2. Register the definition and metadata in `GAME_REGISTRY` in `src/session/room.js`, and re-export it from `src/engine/games/index.js`.
+1. Make a folder `games/<id>/` and implement the rules there and cover legal moves, invalid moves, private views, and end conditions as appropriate.
+2. Export the manifest from `games/<id>/index.js` (see the other games). The server finds it by itself; `hidden: true` keeps a game without screens out of the lobby.
 3. Inspect `public/js/games.js` plus host and player rendering/dispatch. Both screens need usable states and controls.
-4. If the game needs fetched content, prepare it in the session/transport flow. If it needs phase timers, inspect `GAME_PHASE_DURATIONS` in `ws-adapter.js` and existing timer tests.
+4. If the game needs fetched content, prepare it in the session/transport flow. Phase timers go in the manifest as `phases`; see the quiz.
 5. Check lobby selection, start, actions, scoring, end, and return to lobby. Update affected integration tests.
 
 ## Frontend conventions
 
 Browser helpers are loaded by plain `<script>` tags and expose globals. Check script order and existing helpers before adding another module or dependency. For UI changes, verify the shared display and phone layout, including reconnect and finished-game states when affected.
 
-A lone player can play Gin Rummy and Palace against AI seats: `GAME_REGISTRY` entries with `ai` metadata, `room.bots` (`bot_N` ids, never in `room.players`, so they get no session score), and `scheduleBotTurn` in `ws-adapter.js`, which plays each AI move after a short pause through the same `applyGameAction` path as people. Keep bot moves legal: `tests/engine/bots.test.js` plays full bot games and fails on any engine error.
+A lone player can play Gin Rummy and Palace against AI seats: games with `ai` in their manifest, `room.bots` (`bot_N` ids, never in `room.players`, so they get no session score), and `scheduleBotTurn` in `ws-adapter.js`, which plays each AI move after a short pause through the same `applyGameAction` path as people. Keep bot moves legal: `tests/engine/bots.test.js` plays full bot games and fails on any engine error.
 
 Gin Rummy and Palace use the card-table kit `public/js/table-cards.js` + `public/css/table-cards.css` (vector cards, stacks, 2-row rack/fan, tap / swipe-up / drag gestures, hand ordering), shared by phone and TV. The phone hand lifts and enlarges the card under the thumb (press and slide, let go to pick), and a big Palace hand stacks same ranks with a ×N count. Four-colour suits (clubs blue, diamonds orange) are on by default on the TV and a toggle on the phone (`tcSetFourColour`); the A–10 art for them lives in `public/cards/faces-4c/`, made by `node scripts/four-colour-faces.js`. Card sounds are in `public/js/card-sounds.js`, with SVGs and audio under `public/cards/`. Engine suits are `h`, `d`, `c`, `s`; ranks are numeric. Shithead's Ace-high rank 14 maps to the same card image as rank 1. Reuse the renderer and existing audio helpers.
 
@@ -104,7 +103,7 @@ Shared styling lives in `public/css/`; brand images live in `public/images/`.
 Run focused tests for the behavior changed, then `npm test` for changes spanning shared rules, transport, or lifecycle. Documentation-only edits need path/command checks rather than a server restart.
 
 - `tests/engine/game-harness.js`: `createTestGame`, `act`, `actChain`, `viewFor`, `isOver`, `playUntilEnd`. `act` returns `{ game, events }`; `isOver` returns the end result or `null`.
-- `src/engine/games/shithead.test.js` is a co-located exception; other tests are under `tests/`.
+- Game tests live next to the game in `games/<id>/`; other tests are under `tests/`.
 - Frontend tests exercise browser code with lightweight test setups. Inspect the affected test's environment; do not assume every frontend test uses JSDOM.
 - For UI changes, report whether browser/phone/TV behavior was actually checked. A passing unit test does not establish visual correctness.
 - `/health` reports status, version, commit, build time, uptime, room count, and player count. `/api/version` returns the same build info for the front-page footer; see `src/version.js`.

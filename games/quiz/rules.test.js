@@ -5,7 +5,7 @@
 // actions, scoring, powerups, and view behaviour.
 
 import { describe, it, expect, beforeEach } from 'vitest';
-import quiz, { PHASE_DURATIONS } from '../../src/engine/games/quiz.js';
+import quiz, { PHASE_DURATIONS } from './rules.js';
 import { createGame, processAction, getView, checkEnd } from '../../src/engine/engine.js';
 
 // -----------------------------------------------------------------------
