@@ -12,7 +12,7 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Fredoka:wght@500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Fredoka:wght@500;600;700&family=Barlow+Condensed:wght@700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/smallhours.css">
   <link rel="stylesheet" href="/css/player.css">
   <link rel="stylesheet" href="/css/light-lobby.css">
@@ -259,19 +259,20 @@
         <div class="tc-table-cards" id="shTableCards"></div>
         <div class="tc-hud-row">
           <span id="shAssist"></span>
-          <button type="button" class="tc-cta" id="shCta" onclick="shCtaAction()">Palace</button>
         </div>
         <div class="tc-hand-area" id="shHand"></div>
         <div class="tc-actionbar">
           <div>
+            <button type="button" class="tc-btn" id="shSortBtn" onclick="shCycleSort()">Sort: rank</button>
             <button type="button" class="tc-btn" id="shLayoutBtn" onclick="shToggleLayout()">2-Row</button>
-            <button type="button" class="tc-btn" id="shSortRank" onclick="shSetSort('rank')">Rank</button>
-            <button type="button" class="tc-btn" id="shSortSuit" onclick="shSetSort('suit')">Suit</button>
+            <button type="button" class="tc-btn" id="shStackBtn" onclick="shToggleStacks()" hidden>Split stacks</button>
+            <button type="button" class="tc-btn tc-btn-colours" id="shColoursBtn" onclick="tcToggleFourColour()" aria-pressed="false" title="Four-colour suits"><span class="tc-dot-c">♣</span><span class="tc-dot-d">♦</span></button>
           </div>
           <div>
             <button type="button" class="tc-btn tc-btn-warn" id="shPickUpBtn" onclick="pickUpPile()">Pick up pile</button>
           </div>
         </div>
+        <button type="button" class="tc-cta tc-cta-big" id="shCta" onclick="shCtaAction()">Palace</button>
       </div>
     </div>
 
@@ -309,21 +310,20 @@
       <div class="tc-hand-zone">
         <div class="tc-hud-row">
           <div class="tc-hud" id="grHud"></div>
-          <button type="button" class="tc-cta" id="grCta" onclick="grCtaAction()">Gin Rummy</button>
         </div>
         <div class="tc-hand-area" id="grHand"></div>
         <div class="tc-actionbar" id="grActionBar">
           <div>
+            <button type="button" class="tc-btn" id="grSortBtn" onclick="grCycleSort()">Sort: melds</button>
             <button type="button" class="tc-btn" id="grLayoutBtn" onclick="grToggleLayout()">2-Row</button>
-            <button type="button" class="tc-btn" id="grSortMelds" onclick="grSetSortMode('melds')">Melds</button>
-            <button type="button" class="tc-btn" id="grSortRank" onclick="grSetSortMode('rank')">Rank</button>
-            <button type="button" class="tc-btn" id="grSortSuit" onclick="grSetSortMode('suit')">Suit</button>
+            <button type="button" class="tc-btn tc-btn-colours" id="grColoursBtn" onclick="tcToggleFourColour()" aria-pressed="false" title="Four-colour suits"><span class="tc-dot-c">♣</span><span class="tc-dot-d">♦</span></button>
           </div>
           <div>
             <button type="button" class="tc-btn" id="grDeclineBtn" onclick="grAction('declineUpcard')" hidden>Decline</button>
             <button type="button" class="tc-btn tc-btn-knock" id="grKnockBtn" onclick="grAction('knock')" hidden>Knock</button>
           </div>
         </div>
+        <button type="button" class="tc-cta tc-cta-big" id="grCta" onclick="grCtaAction()">Gin Rummy</button>
       </div>
     </div>
 
@@ -1418,9 +1418,33 @@
       if (isTurn && !state[key] && navigator.vibrate) navigator.vibrate([50, 30, 50]);
       state[key] = !!isTurn;
     }
+    // Four-colour suits on the phone: an option, remembered per phone.
+    function tcFourColourPref() {
+      try { return localStorage.getItem('sh_four_colour') === '1'; } catch { return false; }
+    }
+    tcSetFourColour(tcFourColourPref());
+    function tcToggleFourColour() {
+      tcSetFourColour(!tcFourColourOn);
+      try { localStorage.setItem('sh_four_colour', tcFourColourOn ? '1' : '0'); } catch { /* ignore */ }
+      if (state.shLastMsg && document.getElementById('shitheadSection').classList.contains('active')) renderShitheadState(state.shLastMsg);
+      if (state.grLastMsg && document.getElementById('ginRummySection').classList.contains('active')) renderGinRummyState(state.grLastMsg);
+    }
+    function tcSyncColoursBtn(id) {
+      const btn = document.getElementById(id);
+      if (!btn) return;
+      btn.classList.toggle('tc-active', tcFourColourOn);
+      btn.setAttribute('aria-pressed', tcFourColourOn ? 'true' : 'false');
+    }
+    /** The big thumb button: a verb plus the card it plays ("Play [6♥]", "Play 3 × [6♣]"). */
     function tcSetCta(id, cta) {
       const btn = document.getElementById(id);
-      btn.textContent = cta.label;
+      if (cta.verb && cta.card) {
+        btn.innerHTML = '<span class="tc-cta-label">' + escapeHtml(cta.verb + (cta.count > 1 ? ' ' + tcNum(cta.count) + ' ×' : '')) + '</span>' + renderCardChip(cta.card);
+        btn.setAttribute('aria-label', cta.label);
+      } else {
+        btn.textContent = cta.label;
+        btn.removeAttribute('aria-label');
+      }
       btn.disabled = !!cta.disabled;
       btn.dataset.action = cta.action || '';
       btn.classList.toggle('tc-cta-gin', cta.action === 'knock-gin');
@@ -1477,7 +1501,8 @@
       const cards = shActiveZoneCards(msg);
       const sel = cards.filter(c => selectedIds.includes(c.id));
       if (sel.length) {
-        return { label: 'Play ' + (sel.length > 1 ? sel.length + '× ' + tcRankLabel(sel[0].rank) : tcCardShort(sel[0])), action: 'playCards' };
+        return { label: 'Play ' + (sel.length > 1 ? sel.length + '× ' + tcRankLabel(sel[0].rank) : tcCardShort(sel[0])), action: 'playCards',
+          verb: 'Play', card: sel[0], count: sel.length };
       }
       const pileCount = msg.pileCount || 0;
       if (pileCount > 0 && !cards.some(c => canPlayCard(c.rank, msg.pileTopRank, pileCount))) {
@@ -1572,12 +1597,16 @@
       else if (zone === 'faceUp') rackCards = faceUp;
       const sortMode = state.shSortMode || 'rank';
       let ordered = orderHand(rackCards, sortMode, state.shOrder);
+      // A big hand (after a pickup) stacks same ranks: Palace plays them together anyway.
+      const stackable = msg.phase === 'play' && zone === 'hand' && shHasStacks(rackCards);
+      const stacked = stackable && !state.shSplitStacks;
+      state.shStacked = stacked;
       let rackOpts;
       if (msg.phase === 'swap') {
         rackOpts = c => ({ selected: state.shSwapSelected.hand === c.id });
       } else {
-        rackOpts = c => ({
-          selected: state.shSelectedCards.includes(c.id),
+        rackOpts = (c, group) => ({
+          selected: (group || [c]).some(g => state.shSelectedCards.includes(g.id)),
           dim: myTurn && !canPlayCard(c.rank, msg.pileTopRank, pileCount),
         });
       }
@@ -1588,9 +1617,11 @@
       const handEl = document.getElementById('shHand');
       handEl.innerHTML = renderHandRack(ordered, {
         layout: tcLayout(), width: tcHandWidth('shHand'), cardW: tcHandCardW('shHand'), cardOpts: rackOpts,
+        stack: stacked,
         emptyText: msg.phase === 'finished' ? 'Game over' : 'No cards left',
       });
       attachHandGestures(handEl, {
+        peek: true,
         onTap: id => shTapCard(id),
         onPlay: (id, flick) => shSwipePlay(id, flick),
         onReorder: (id, targetId) => {
@@ -1603,8 +1634,11 @@
       // Thumb button and action bar
       tcSetCta('shCta', shCtaState(msg, state.shSelectedCards));
       document.getElementById('shLayoutBtn').textContent = tcLayout() === 'fan' ? 'Fan' : '2-Row';
-      document.getElementById('shSortRank').classList.toggle('tc-active', sortMode === 'rank');
-      document.getElementById('shSortSuit').classList.toggle('tc-active', sortMode === 'suit');
+      document.getElementById('shSortBtn').textContent = 'Sort: ' + (sortMode === 'custom' ? 'mine' : sortMode);
+      const stackBtn = document.getElementById('shStackBtn');
+      stackBtn.hidden = !stackable;
+      stackBtn.textContent = state.shSplitStacks ? 'Stack' : 'Split stacks';
+      tcSyncColoursBtn('shColoursBtn');
       const pickUp = document.getElementById('shPickUpBtn');
       pickUp.hidden = msg.phase !== 'play';
       pickUp.disabled = !myTurn || pileCount === 0;
@@ -1644,6 +1678,15 @@
         showToast(shRuleBannerText(msg.pileTopRank, msg.pileCount || 0), 'info');
         return;
       }
+      if (state.shStacked) {
+        // One tap takes the whole stack; a second tap plays it.
+        const group = shActiveZoneCards(msg).filter(c => c.rank === card.rank).map(c => c.id);
+        const all = group.every(g => state.shSelectedCards.includes(g));
+        if (all && msg.isMyTurn) { playSelectedCards(); return; }
+        state.shSelectedCards = all ? [] : group;
+        renderShitheadState(msg);
+        return;
+      }
       if (state.shSelectedCards.includes(id)) {
         // Second tap on a selected card plays the selection
         if (msg.isMyTurn) { playSelectedCards(); return; }
@@ -1667,7 +1710,9 @@
         showToast(shRuleBannerText(msg.pileTopRank, msg.pileCount || 0), 'info');
         return;
       }
-      const sameRank = cards.filter(c => state.shSelectedCards.includes(c.id) && c.rank === card.rank).map(c => c.id);
+      const sameRank = state.shStacked
+        ? cards.filter(c => c.rank === card.rank).map(c => c.id)
+        : cards.filter(c => state.shSelectedCards.includes(c.id) && c.rank === card.rank).map(c => c.id);
       state.shSelectedCards = sameRank.includes(id) ? sameRank : [...sameRank, id];
       playSelectedCards(flick);
     }
@@ -1695,6 +1740,21 @@
     function shSetSort(mode) {
       state.shSortMode = mode;
       state.shOrder = null;
+      if (state.shLastMsg) renderShitheadState(state.shLastMsg);
+    }
+
+    function shCycleSort() {
+      shSetSort(state.shSortMode === 'rank' || !state.shSortMode ? 'suit' : 'rank');
+    }
+
+    /** Stack same ranks once the hand no longer fits two rows of six. Pure, for tests. */
+    function shHasStacks(cards) {
+      if (!cards || cards.length <= 12) return false;
+      return new Set(cards.map(c => c.rank)).size < cards.length;
+    }
+
+    function shToggleStacks() {
+      state.shSplitStacks = !state.shSplitStacks;
       if (state.shLastMsg) renderShitheadState(state.shLastMsg);
     }
 
@@ -1831,7 +1891,7 @@
       if (!selectedId) return { label: 'Tap a card to discard', disabled: true };
       if (selectedId === msg.lastDrawnCardId) return { label: "Can't discard the card you just took", disabled: true };
       const card = (msg.myHand || []).find(c => c.id === selectedId);
-      return card ? { label: 'Discard ' + tcCardShort(card), action: 'discard' } : { label: 'Tap a card to discard', disabled: true };
+      return card ? { label: 'Discard ' + tcCardShort(card), action: 'discard', verb: 'Discard', card: card } : { label: 'Tap a card to discard', disabled: true };
     }
 
     function grStatusText(msg) {
@@ -1905,6 +1965,7 @@
         cardOpts: c => ({ selected: state.grSelectedCard === c.id, meld: meldOf[c.id], isNew: msg.lastDrawnCardId === c.id }),
       });
       attachHandGestures(handEl, {
+        peek: true,
         onTap: id => grSelectCard(id),
         onPlay: id => grSwipeDiscard(id),
         onReorder: (id, targetId) => {
@@ -1933,9 +1994,8 @@
       document.getElementById('grDeclineBtn').hidden = !(myTurn && msg.phase === 'first_turn');
       document.getElementById('grActionBar').hidden = !playing;
       document.getElementById('grLayoutBtn').textContent = tcLayout() === 'fan' ? 'Fan' : '2-Row';
-      ['melds', 'rank', 'suit'].forEach(m => {
-        document.getElementById('grSort' + m.charAt(0).toUpperCase() + m.slice(1)).classList.toggle('tc-active', m === sortMode);
-      });
+      document.getElementById('grSortBtn').textContent = 'Sort: ' + (sortMode === 'custom' ? 'mine' : sortMode);
+      tcSyncColoursBtn('grColoursBtn');
 
       // Result sheet
       const sheet = document.getElementById('grSheet');
@@ -1990,6 +2050,12 @@
       state.grSortMode = mode;
       state.grOrder = null;
       if (state.grLastMsg) renderGinRummyState(state.grLastMsg);
+    }
+
+    function grCycleSort() {
+      const order = ['melds', 'rank', 'suit'];
+      const i = order.indexOf(state.grSortMode || 'melds');
+      grSetSortMode(order[(i + 1) % order.length]);
     }
 
     function grToggleLayout() {

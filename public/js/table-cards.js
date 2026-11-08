@@ -21,6 +21,17 @@ var TC_SUIT_PATHS = {
   c: 'M16 4.5a5.5 5.5 0 00-4.4 8.8A5.8 5.8 0 009.5 24c2.1 0 4-1.1 5-2.7-.2 2.9-1.2 5.4-3.1 7.2h9.2c-1.9-1.8-2.9-4.3-3.1-7.2 1 1.6 2.9 2.7 5 2.7a5.8 5.8 0 00-2.1-10.7A5.5 5.5 0 0016 4.5z',
 };
 
+// Four-colour suits (clubs blue, diamonds orange): on by default on the TV, an
+// option on the phone. Pages call tcSetFourColour(); cards rendered after that
+// use it (the art for A to 10 comes from /cards/faces-4c).
+var tcFourColourOn = false;
+function tcSetFourColour(on) {
+  tcFourColourOn = !!on;
+  if (typeof document !== 'undefined' && document.documentElement) {
+    document.documentElement.classList.toggle('tc-four-colour', tcFourColourOn);
+  }
+}
+
 function tcEscape(text) {
   return String(text == null ? '' : text)
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
@@ -72,11 +83,12 @@ function renderTableCard(card, opts) {
   if (opts.facedown || !card || !TC_SUITS[card.suit]) {
     classes.push('tc-back');
     return '<div class="' + classes.join(' ') + '"' + attrs + ' aria-label="Face-down card">' +
-      '<div class="tc-back-inner"><div class="tc-back-gem"><i></i></div></div></div>';
+      '<div class="tc-back-inner"><div class="tc-back-logo"></div></div></div>';
   }
 
   var suit = TC_SUITS[card.suit];
   if (suit.red) classes.push('tc-red');
+  classes.push('tc-suit-' + card.suit);
   var label = tcRankLabel(card.rank);
   // The face is the classic deck in /cards/faces (pip layouts, drawn court figures);
   // a bold corner index sits on top so the rank reads at any size, even fanned.
@@ -87,6 +99,8 @@ function renderTableCard(card, opts) {
   else if (opts.badge) badge = '<span class="tc-badge">' + tcEscape(opts.badge) + '</span>';
   else if (opts.meld === 'set') badge = '<span class="tc-badge tc-badge-set">SET</span>';
   else if (opts.meld === 'run') badge = '<span class="tc-badge tc-badge-run">RUN</span>';
+  // A stack of same-rank cards in the hand: the count sits on the corner, outside the face.
+  var stackCount = opts.count > 1 ? '<span class="tc-stack-count">×' + tcNum(opts.count) + '</span>' : '';
 
   return '<div class="' + classes.join(' ') + '"' + attrs + ' aria-label="' + tcEscape(label + ' of ' + suit.name) + '">' +
     '<div class="tc-face">' +
@@ -94,7 +108,7 @@ function renderTableCard(card, opts) {
       '<div class="tc-cidx tc-cidx-tl' + ten + '">' + index + '</div>' +
       badge +
       '<div class="tc-cidx tc-cidx-br' + ten + '">' + index + '</div>' +
-    '</div></div>';
+    '</div>' + stackCount + '</div>';
 }
 
 var TC_FACE_SUITS = { h: 'HEART', d: 'DIAMOND', c: 'CLUB', s: 'SPADE' };
@@ -105,7 +119,8 @@ function tcFaceUrl(card) {
   // Built only from a known suit and a whole number, so nothing from the message reaches the URL.
   var rank = Math.round(tcNum(card.rank));
   if (rank === 14) rank = 1;
-  return '/cards/faces/' + TC_FACE_SUITS[card.suit] + '-' + (TC_FACE_COURTS[rank] || rank) + '.svg';
+  var four = tcFourColourOn && (card.suit === 'c' || card.suit === 'd') && rank <= 10;
+  return '/cards/' + (four ? 'faces-4c/' : 'faces/') + TC_FACE_SUITS[card.suit] + '-' + (TC_FACE_COURTS[rank] || rank) + '.svg';
 }
 
 /**
@@ -184,11 +199,27 @@ function tcMeldMap(melds) {
 }
 
 /**
+ * Group an ordered hand into stacks of the same rank, in order of first appearance.
+ * Returns [{ card, cards }] where card is the one shown on top.
+ */
+function tcStackHand(cards) {
+  var groups = [];
+  var byRank = {};
+  (cards || []).forEach(function (c) {
+    var g = byRank[c.rank];
+    if (!g) { g = byRank[c.rank] = { card: c, cards: [] }; groups.push(g); }
+    g.cards.push(c);
+  });
+  return groups;
+}
+
+/**
  * Lay out a hand as a 2-row rack (rows of up to ~7) or a single curved fan.
  * Each card sits in a .tc-slot positioned by inline styles so the card itself
  * stays free to lift when selected.
  * opts: layout ('rack'|'fan'), width (px available), size, cardW (px, overrides the
- * size's width so phones can fit cards to the screen), cardOpts(card) -> renderTableCard opts
+ * size's width so phones can fit cards to the screen), cardOpts(card) -> renderTableCard opts,
+ * stack (true: same ranks share one slot with a ×N count; cardOpts gets the group as 2nd arg)
  */
 function renderHandRack(cards, opts) {
   opts = opts || {};
@@ -197,13 +228,14 @@ function renderHandRack(cards, opts) {
   var cardH = cardW * 1.42;
   var sized = opts.cardW ? '--tc-w:' + Math.round(cardW) + 'px' : '';
   var width = Math.max(cardW, opts.width || 340);
-  var n = cards.length;
+  var slots = opts.stack ? tcStackHand(cards) : (cards || []).map(function (c) { return { card: c, cards: [c] }; });
+  var n = slots.length;
   if (!n) return '<div class="tc-rack tc-rack-empty">' + tcEscape(opts.emptyText || 'No cards') + '</div>';
   var rowsCount = opts.layout === 'fan' ? 1 : (n <= 6 ? 1 : (n <= 20 ? 2 : 3));
   var perRow = Math.ceil(n / rowsCount);
-  var html = '<div class="tc-rack tc-rack-' + (opts.layout === 'fan' ? 'fan' : 'rows') + '">';
+  var html = '<div class="tc-rack tc-rack-' + (opts.layout === 'fan' ? 'fan' : 'rows') + (opts.stack ? ' tc-rack-stacked' : '') + '">';
   for (var r = 0; r < rowsCount; r++) {
-    var row = cards.slice(r * perRow, (r + 1) * perRow);
+    var row = slots.slice(r * perRow, (r + 1) * perRow);
     if (!row.length) continue;
     var count = row.length;
     var step = count > 1 ? Math.min(cardW * 0.78, (width - cardW) / (count - 1)) : 0;
@@ -214,14 +246,27 @@ function renderHandRack(cards, opts) {
       if (r > 0 && opts.layout !== 'fan') rowStyle += ';margin-top:' + Math.round(-cardH * 0.56) + 'px';
     }
     html += '<div class="tc-rack-row" style="' + rowStyle + '">';
-    row.forEach(function (card, i) {
+    row.forEach(function (slot, i) {
+      var card = slot.card;
       var norm = count > 1 ? i / (count - 1) - 0.5 : 0;
       var rot = opts.layout === 'fan' ? norm * Math.min(18, count * 2) : norm * 4;
       var drop = opts.layout === 'fan' ? Math.pow(norm * 2, 2) * 14 : Math.pow(norm * 2, 2) * 3;
       var slotStyle = 'left:' + Math.round(i * step) + 'px;transform:translateY(' + drop.toFixed(1) +
         'px) rotate(' + rot.toFixed(2) + 'deg);z-index:' + (10 + i);
-      var cardOpts = Object.assign({ size: size }, sized ? { style: sized } : {}, opts.cardOpts ? opts.cardOpts(card) : {});
-      html += '<div class="tc-slot" style="' + slotStyle + '">' + renderTableCard(card, cardOpts) + '</div>';
+      var cardOpts = Object.assign({ size: size }, sized ? { style: sized } : {}, opts.cardOpts ? opts.cardOpts(card, slot.cards) : {});
+      var under = '';
+      if (slot.cards.length > 1) {
+        cardOpts.count = slot.cards.length;
+        // Up to two cards peek out behind the top one, up and to the left.
+        var behind = slot.cards.slice(1, 3);
+        for (var k = behind.length; k >= 1; k--) {
+          under += renderTableCard(behind[k - 1], {
+            size: size, dataId: '', className: 'tc-stack-under',
+            style: (sized ? sized + ';' : '') + '--tc-under:' + k,
+          });
+        }
+      }
+      html += '<div class="tc-slot" style="' + slotStyle + '">' + under + renderTableCard(card, cardOpts) + '</div>';
     });
     html += '</div>';
   }
@@ -272,8 +317,25 @@ function tcReleaseVelocity(samples, now) {
 }
 
 /**
+ * Which hand card is under a point, from rects measured before anything lifted.
+ * Later entries are drawn on top (DOM order), so the last hit wins. A finger
+ * that slides a little above or below the row still counts as on it.
+ */
+function tcCardAt(snapshot, x, y) {
+  var hit = null;
+  for (var i = 0; i < snapshot.length; i++) {
+    var r = snapshot[i].rect;
+    if (x >= r.left && x <= r.right && y >= r.top - 24 && y <= r.bottom + 48) hit = snapshot[i];
+  }
+  return hit;
+}
+
+/**
  * Pointer handling for a hand container that holds [data-card-id] cards.
- * handlers: onTap(id), onPlay(id) on swipe-up, onReorder(id, targetId) on drag-drop.
+ * handlers: onTap(id), onPlay(id) on swipe-up, onReorder(id, targetId) on drag-drop,
+ *   peek (true: on touch screens a finger down lifts and enlarges the card above the
+ *   thumb, sliding sideways moves it to the next card, and letting go picks it as a tap;
+ *   pushing up from there throws the lifted card).
  * The dragged card follows the finger, lifted above the thumb on touch screens.
  * Safe to call on every render: listeners are attached to the container once.
  */
@@ -284,13 +346,37 @@ function attachHandGestures(container, handlers) {
   container._tcBound = true;
   var drag = null;
 
+  function setPeek(d, item) {
+    if (d.peek === item) return;
+    if (d.peek) {
+      d.peek.el.classList.remove('tc-peek');
+      if (d.peek.el.parentElement) d.peek.el.parentElement.style.zIndex = d.peek.z;
+    }
+    d.peek = item;
+    if (!item) return;
+    var slot = item.el.parentElement;
+    item.z = slot ? slot.style.zIndex : '';
+    if (slot) slot.style.zIndex = 400;
+    item.el.classList.add('tc-peek');
+    d.el = item.el;
+    d.id = item.id;
+    if (navigator.vibrate && d.moved) navigator.vibrate(8);
+  }
+
   container.addEventListener('pointerdown', function (e) {
     if (e.button) return;
     var el = e.target.closest('[data-card-id]');
     if (!el || !container.contains(el) || !el.dataset.cardId) return;
+    var h = container._tcHandlers || {};
     drag = { el: el, id: el.dataset.cardId, x: e.clientX, y: e.clientY, touch: e.pointerType === 'touch', moved: false, pointerId: e.pointerId,
-      samples: [{ x: e.clientX, y: e.clientY, t: e.timeStamp || Date.now() }] };
-    try { el.setPointerCapture(e.pointerId); } catch (_) { /* ignore */ }
+      samples: [{ x: e.clientX, y: e.clientY, t: e.timeStamp || Date.now() }], mode: null, peek: null };
+    if (drag.touch && h.peek) {
+      drag.snapshot = Array.prototype.map.call(container.querySelectorAll('[data-card-id]'), function (c) {
+        return { el: c, id: c.dataset.cardId, rect: c.getBoundingClientRect() };
+      }).filter(function (c) { return c.id; });
+      setPeek(drag, drag.snapshot.find(function (c) { return c.el === el; }) || null);
+    }
+    try { container.setPointerCapture(e.pointerId); } catch (_) { /* ignore */ }
   });
 
   container.addEventListener('pointermove', function (e) {
@@ -299,14 +385,30 @@ function attachHandGestures(container, handlers) {
     if (drag.samples.length > 24) drag.samples.shift();
     var dx = e.clientX - drag.x;
     var dy = e.clientY - drag.y;
-    if (!drag.moved && Math.hypot(dx, dy) > 8) {
-      drag.moved = true;
+    if (!drag.moved && Math.hypot(dx, dy) > 8) drag.moved = true;
+    if (!drag.moved) return;
+    if (drag.snapshot && drag.mode !== 'throw') {
+      // Peeking: a clear push upward throws the lifted card, anything else scrubs along the hand.
+      if (dy < -28 && Math.abs(dy) > Math.abs(e.clientX - (drag.scrubX != null ? drag.scrubX : drag.x)) * 1.2) {
+        drag.mode = 'throw';
+        drag.throwX = e.clientX;
+        drag.peek && drag.peek.el.classList.remove('tc-peek');
+        drag.el.classList.add('tc-dragging');
+      } else {
+        drag.mode = 'scrub';
+        drag.scrubX = e.clientX;
+        var hit = tcCardAt(drag.snapshot, e.clientX, e.clientY);
+        if (hit) setPeek(drag, hit);
+        return;
+      }
+    }
+    if (!drag.mode) {
+      drag.mode = 'throw';
       drag.el.classList.add('tc-dragging');
     }
-    if (drag.moved) {
-      var lift = drag.touch ? -28 : 0;
-      drag.el.style.transform = 'translate(' + dx + 'px,' + (dy + lift) + 'px) scale(1.1) rotate(' + Math.max(-12, Math.min(12, dx * 0.05)) + 'deg)';
-    }
+    var tx = e.clientX - (drag.throwX != null ? drag.throwX : drag.x);
+    var lift = drag.touch ? -28 : 0;
+    drag.el.style.transform = 'translate(' + tx + 'px,' + (dy + lift) + 'px) scale(1.1) rotate(' + Math.max(-12, Math.min(12, tx * 0.05)) + 'deg)';
   });
 
   function finish(e, cancelled) {
@@ -316,11 +418,18 @@ function attachHandGestures(container, handlers) {
     d.rect = d.el.getBoundingClientRect(); // where the card was let go, for the throw animation
     d.el.classList.remove('tc-dragging');
     d.el.style.transform = '';
+    setPeek(d, null);
     if (cancelled) return;
     var h = container._tcHandlers || {};
+    if (d.snapshot && d.mode !== 'throw') {
+      // Letting go after a peek picks the lifted card, like a tap on it.
+      if (h.onTap) h.onTap(d.id);
+      return;
+    }
     var v = tcReleaseVelocity(d.samples, e.timeStamp || Date.now());
     var vh = window.innerHeight || 800;
-    var kind = classifyHandGesture({ dx: e.clientX - d.x, dy: e.clientY - d.y, vx: v.vx, vy: v.vy, releaseRatio: e.clientY / vh });
+    var startX = d.throwX != null ? d.throwX : d.x;
+    var kind = classifyHandGesture({ dx: e.clientX - startX, dy: e.clientY - d.y, vx: v.vx, vy: v.vy, releaseRatio: e.clientY / vh });
     if (kind === 'tap') { if (h.onTap) h.onTap(d.id); return; }
     if (kind === 'swipe-up') {
       // Velocity in viewport heights per second, so every screen size sends the same scale.
@@ -438,7 +547,7 @@ function tcLogPush(log, ev, max) {
 function renderCardChip(card) {
   if (!card || !TC_SUITS[card.suit]) return '<span class="tc-chip tc-chip-back" aria-label="Face-down card"></span>';
   var suit = TC_SUITS[card.suit];
-  return '<span class="tc-chip' + (suit.red ? ' tc-chip-red' : '') + '" aria-label="' + tcEscape(tcRankLabel(card.rank) + ' of ' + suit.name) + '">' +
+  return '<span class="tc-chip tc-chip-' + card.suit + (suit.red ? ' tc-chip-red' : '') + '" aria-label="' + tcEscape(tcRankLabel(card.rank) + ' of ' + suit.name) + '">' +
     tcEscape(tcRankLabel(card.rank)) + tcSuitSvg(card.suit, 'tc-chip-suit') + '</span>';
 }
 

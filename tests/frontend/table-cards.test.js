@@ -164,3 +164,60 @@ describe('move log and pile', () => {
     expect(kit.tcPileTilt('c17')).not.toEqual(kit.tcPileTilt('c18'));
   });
 });
+
+describe('four-colour suits', () => {
+  it('uses the four-colour art for clubs and diamonds A to 10 only, when switched on', () => {
+    const k = loadKit();
+    expect(k.tcFaceUrl(card(7, 'c'))).toBe('/cards/faces/CLUB-7.svg');
+    k.tcSetFourColour(true);
+    expect(k.tcFaceUrl(card(7, 'c'))).toBe('/cards/faces-4c/CLUB-7.svg');
+    expect(k.tcFaceUrl(card(14, 'd'))).toBe('/cards/faces-4c/DIAMOND-1.svg');
+    expect(k.tcFaceUrl(card(12, 'd'))).toBe('/cards/faces/DIAMOND-12-QUEEN.svg');
+    expect(k.tcFaceUrl(card(7, 'h'))).toBe('/cards/faces/HEART-7.svg');
+    expect(k.tcFaceUrl(card(7, 's'))).toBe('/cards/faces/SPADE-7.svg');
+  });
+
+  it('marks cards and chips with their suit so the index can be coloured', () => {
+    expect(kit.renderTableCard(card(5, 'c'))).toContain('tc-suit-c');
+    expect(kit.renderCardChip(card(5, 'd'))).toContain('tc-chip-d');
+  });
+});
+
+describe('stacked hand', () => {
+  it('groups same ranks in order of first appearance', () => {
+    const groups = kit.tcStackHand([card(6, 'h'), card(2, 's'), card(6, 'c'), card(6, 'd'), card(9, 'h')]);
+    expect(groups.map(g => g.card.id)).toEqual(['6h', '2s', '9h']);
+    expect(groups[0].cards.map(c => c.id)).toEqual(['6h', '6c', '6d']);
+  });
+
+  it('draws one slot per rank with a count, and only the top card is interactive', () => {
+    const html = kit.renderHandRack([card(6, 'h'), card(6, 'c'), card(6, 'd'), card(9, 'h')], { stack: true, width: 360 });
+    expect((html.match(/class="tc-slot"/g) || []).length).toBe(2);
+    expect(html).toContain('tc-stack-count">×3<');
+    expect((html.match(/data-card-id=/g) || []).length).toBe(2);
+    expect((html.match(/tc-stack-under/g) || []).length).toBe(2);
+  });
+
+  it('passes the whole group to cardOpts', () => {
+    const seen = [];
+    kit.renderHandRack([card(6, 'h'), card(6, 'c')], { stack: true, cardOpts: (c, group) => { seen.push(group.length); return {}; } });
+    expect(seen).toEqual([2]);
+  });
+});
+
+describe('press-and-slide hand', () => {
+  const rect = (left, top) => ({ left, right: left + 70, top, bottom: top + 100 });
+  const snap = [{ id: 'a', rect: rect(0, 500) }, { id: 'b', rect: rect(50, 500) }, { id: 'c', rect: rect(100, 500) }];
+
+  it('picks the card on top under the finger', () => {
+    expect(kit.tcCardAt(snap, 30, 550).id).toBe('a');
+    expect(kit.tcCardAt(snap, 60, 550).id).toBe('b');
+    expect(kit.tcCardAt(snap, 160, 550).id).toBe('c');
+  });
+
+  it('keeps the row when the finger drifts a little above or below it', () => {
+    expect(kit.tcCardAt(snap, 60, 485).id).toBe('b');
+    expect(kit.tcCardAt(snap, 60, 640).id).toBe('b');
+    expect(kit.tcCardAt(snap, 60, 300)).toBeNull();
+  });
+});

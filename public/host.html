@@ -12,7 +12,7 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Fredoka:wght@500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Fredoka:wght@500;600;700&family=Barlow+Condensed:wght@700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/smallhours.css">
   <link rel="stylesheet" href="/css/host.css">
   <link rel="stylesheet" href="/css/light-lobby.css">
@@ -1026,6 +1026,8 @@
     window.addEventListener('resize', tcFitTv);
 
     // ===== Card table on the TV: Gin Rummy + Palace (kit in /js/table-cards.js) =====
+    // Four-colour suits are the default on the TV: read from across the room.
+    if (typeof tcSetFourColour === 'function') tcSetFourColour(true);
     // Only shared fields are used here; per-player data never reaches host sockets.
     function tvFanHtml(count, size, max) {
       count = tcNum(count);

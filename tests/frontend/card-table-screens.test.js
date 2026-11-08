@@ -23,7 +23,7 @@ function fn(source, name) {
 function phoneContext(playerId) {
   const context = { state: { playerId, playerNames: { p1: 'Anna', p2: 'Bo', p3: 'Cy' } } };
   runInNewContext(KIT, context);
-  const names = ['tcName', 'canPlayCard', 'shZone', 'shActiveZoneCards', 'shCtaState', 'grOpponentId', 'grCtaState', 'grStatusText'];
+  const names = ['tcName', 'canPlayCard', 'shHasStacks', 'shZone', 'shActiveZoneCards', 'shCtaState', 'grOpponentId', 'grCtaState', 'grStatusText'];
   runInNewContext(names.map(n => fn(PLAYER, n)).join('\n'), context);
   return context;
 }
@@ -94,6 +94,22 @@ describe('Palace phone: next-move button', () => {
     const card = view.myHand[0];
     expect(pctx.shCtaState(view, [card.id]).label).toMatch(/^Play /);
     expect(pctx.shCtaState(view, [])).toMatchObject({ disabled: true, label: 'Tap cards to play' });
+  });
+
+  it('shows the played card on the button: verb, count and card', () => {
+    const ctx = phoneContext('p1');
+    const hand = [{ id: 'a', rank: 6, suit: 'c' }, { id: 'b', rank: 6, suit: 'h' }, { id: 'c', rank: 6, suit: 'd' }];
+    const view = { phase: 'play', isMyTurn: true, myHand: hand, pileTopRank: 5, pileCount: 2 };
+    expect(ctx.shCtaState(view, ['a', 'b', 'c'])).toMatchObject({ verb: 'Play', count: 3, label: 'Play 3× 6', action: 'playCards' });
+    expect(ctx.shCtaState(view, ['a']).card).toMatchObject({ id: 'a' });
+  });
+
+  it('stacks same ranks only once a hand no longer fits two rows of six', () => {
+    const ctx = phoneContext('p1');
+    const hand = n => Array.from({ length: n }, (_, i) => ({ id: 'x' + i, rank: 2 + (i % 11), suit: 'h' }));
+    expect(ctx.shHasStacks(hand(12))).toBe(false);
+    expect(ctx.shHasStacks(hand(13))).toBe(true);
+    expect(ctx.shHasStacks(hand(11))).toBe(false);
   });
 
   it('asks to pick up the pile when nothing can be played', () => {
