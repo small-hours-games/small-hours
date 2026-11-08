@@ -198,3 +198,73 @@ describe('Shithead view — pileTopRank for rank-2 piles', () => {
     expect(view.loser).toBe('bob');
   });
 });
+
+describe('Palace: hidden cards stay hidden', () => {
+  it('card ids are opaque and say nothing about rank or suit', () => {
+    const state = shithead.setup({ players: ['alice', 'bob'], config: {} });
+    const all = [...state.drawPile, ...Object.values(state.hands).flat(),
+      ...Object.values(state.faceUp).flat(), ...Object.values(state.faceDown).flat()];
+    expect(all).toHaveLength(52);
+    expect(new Set(all.map(c => c.id)).size).toBe(52);
+    for (const c of all) expect(c.id).toMatch(/^c\d+$/);
+  });
+
+  it("a player's view never contains the rank or suit of any face-down card", () => {
+    const state = shithead.setup({ players: ['alice', 'bob', 'carol'], config: {} });
+    for (const viewer of state.players) {
+      const json = JSON.stringify(shithead.view(state, viewer));
+      for (const owner of state.players) {
+        for (const card of state.faceDown[owner]) {
+          expect(json).not.toContain(JSON.stringify(card));
+          expect(json).not.toContain('"rank":' + card.rank + ',"suit":"' + card.suit + '","id":"' + card.id);
+        }
+      }
+      const view = shithead.view(state, viewer);
+      for (const p of view.players) expect(p.faceDown).toBeUndefined();
+    }
+  });
+});
+
+describe('Palace: move events', () => {
+  it('a normal play records a play event with a seed', () => {
+    const state = makeState({
+      hands: { alice: [{ id: 'c1', suit: 'h', rank: 5 }, { id: 'c2', suit: 'd', rank: 9 }], bob: [{ id: 'c3', suit: 'c', rank: 9 }] },
+    });
+    const { state: next } = shithead.actions.playCards(state, { playerId: 'alice', cardIds: ['c1'] });
+    expect(next.lastEvent).toMatchObject({ seq: 1, kind: 'play', by: 'alice' });
+    expect(next.lastEvent.cards.map(c => c.id)).toEqual(['c1']);
+    expect(Number.isInteger(next.lastEvent.seed)).toBe(true);
+    expect(shithead.view(next, 'bob').lastEvent.seq).toBe(1);
+  });
+
+  it('a 10 records a burn event', () => {
+    const state = makeState({
+      hands: { alice: [{ id: 'c1', suit: 'h', rank: 10 }, { id: 'c2', suit: 'd', rank: 9 }], bob: [{ id: 'c3', suit: 'c', rank: 9 }] },
+      pile: [{ id: 'c9', suit: 's', rank: 6 }],
+    });
+    const { state: next } = shithead.actions.playCards(state, { playerId: 'alice', cardIds: ['c1'] });
+    expect(next.lastEvent.kind).toBe('burn');
+  });
+
+  it('picking up records who took how many cards, and seq keeps counting', () => {
+    const state = makeState({
+      hands: { alice: [{ id: 'c1', suit: 'h', rank: 3 }], bob: [{ id: 'c3', suit: 'c', rank: 9 }] },
+      pile: [{ id: 'c8', suit: 's', rank: 6 }, { id: 'c9', suit: 's', rank: 13 }],
+      eventSeq: 4,
+    });
+    const { state: next } = shithead.actions.pickUpPile(state, { playerId: 'alice' });
+    expect(next.lastEvent).toMatchObject({ seq: 5, kind: 'pickup', by: 'alice', count: 2 });
+  });
+});
+
+describe('Palace: throw speed', () => {
+  it('keeps a clamped flick on the play event and ignores junk', () => {
+    const state = makeState({
+      hands: { alice: [{ id: 'c1', suit: 'h', rank: 5 }, { id: 'c2', suit: 'd', rank: 9 }], bob: [{ id: 'c3', suit: 'c', rank: 9 }] },
+    });
+    const thrown = shithead.actions.playCards(state, { playerId: 'alice', cardIds: ['c1'], flick: { vx: 0.5, vy: -99 } }).state;
+    expect(thrown.lastEvent.flick).toEqual({ vx: 0.5, vy: -20 });
+    const junk = shithead.actions.playCards(state, { playerId: 'alice', cardIds: ['c1'], flick: 'fast' }).state;
+    expect(junk.lastEvent.flick).toBeUndefined();
+  });
+});

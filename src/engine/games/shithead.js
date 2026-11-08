@@ -18,11 +18,47 @@ function createDeck(deckCount = 1) {
   for (let d = 0; d < deckCount; d++) {
     for (const suit of suits) {
       for (let rank = 2; rank <= 14; rank++) {
-        cards.push({ id: `${rank}${suit}_${d}`, suit, rank });
+        cards.push({ suit, rank });
       }
     }
   }
-  return shuffleArray(cards);
+  // Opaque ids, numbered AFTER the shuffle: an id says nothing about the card,
+  // so a face-down card's id (sent to its owner's phone) cannot reveal it.
+  return shuffleArray(cards).map((c, i) => ({ id: 'c' + i, ...c }));
+}
+
+/** Random 32-bit seed for presentation only (pile tilt on every screen). */
+function fxSeed() {
+  return Math.floor(Math.random() * 0x100000000);
+}
+
+/**
+ * Record what just happened as one small event: the screens animate from it,
+ * the state snapshot stays the truth. kind: 'play' | 'burn' | 'pickup' | 'blind-miss'.
+ */
+function withEvent(prev, next, kind, by, cards, extra) {
+  const seq = (prev.eventSeq || 0) + 1;
+  return {
+    ...next,
+    eventSeq: seq,
+    lastEvent: { seq, kind, by, cards: cards || [], seed: fxSeed(), ...(extra || {}) },
+  };
+}
+
+/** A phone's throw speed (viewport heights per second), clamped: it only shapes the TV animation. */
+function cleanFlick(flick) {
+  if (!flick || typeof flick !== 'object') return undefined;
+  const num = v => {
+    const n = Number(v);
+    return Number.isFinite(n) ? Math.max(-20, Math.min(20, Math.round(n * 100) / 100)) : 0;
+  };
+  return { vx: num(flick.vx), vy: num(flick.vy) };
+}
+
+function playOrBurnEvent(prev, after, by, cards, flick) {
+  const burned = after.burned.length > prev.burned.length;
+  const extra = cleanFlick(flick) ? { flick: cleanFlick(flick) } : undefined;
+  return withEvent(prev, after, burned ? 'burn' : 'play', by, cards, extra);
 }
 
 function getTopRank(pile) {
@@ -209,6 +245,8 @@ function setup({ players, config }) {
     finishOrder: [],
     lastPlayedBy: null,
     lastPlayedCards: [],
+    eventSeq: 0,
+    lastEvent: null,
   };
 }
 
@@ -262,7 +300,7 @@ function confirmSwap(state, { playerId }) {
   };
 }
 
-function playCards(state, { playerId, cardIds }) {
+function playCards(state, { playerId, cardIds, flick }) {
   if (state.phase !== 'play') {
     throw new Error('Can only play cards during play phase');
   }
@@ -311,10 +349,10 @@ function playCards(state, { playerId, cardIds }) {
     lastPlayedCards: cards,
   };
 
-  return checkBurnAndAdvance(newState);
+  return playOrBurnEvent(state, checkBurnAndAdvance(newState), playerId, cards, flick);
 }
 
-function playFaceDown(state, { playerId, cardId }) {
+function playFaceDown(state, { playerId, cardId, flick }) {
   if (state.phase !== 'play') {
     throw new Error('Can only play cards during play phase');
   }
@@ -351,7 +389,7 @@ function playFaceDown(state, { playerId, cardId }) {
       lastPlayedBy: playerId,
       lastPlayedCards: [card],
     };
-    return checkBurnAndAdvance(newState);
+    return playOrBurnEvent(state, checkBurnAndAdvance(newState), playerId, [card], flick);
   } else {
     // Invalid — player picks up entire pile plus the attempted card
     const newHand = [...state.pile, card];
@@ -359,7 +397,7 @@ function playFaceDown(state, { playerId, cardId }) {
       ...state,
       finishOrder: state.finishOrder,
     });
-    return {
+    return withEvent(state, {
       ...state,
       faceDown: { ...state.faceDown, [playerId]: newFaceDown },
       hands: { ...state.hands, [playerId]: newHand },
@@ -367,7 +405,7 @@ function playFaceDown(state, { playerId, cardId }) {
       lastPlayedBy: playerId,
       lastPlayedCards: [card],
       currentPlayerIndex: advancedIndex,
-    };
+    }, 'blind-miss', playerId, [card], { count: newHand.length });
   }
 }
 
@@ -383,14 +421,14 @@ function pickUpPile(state, { playerId }) {
   const newHand = [...hand, ...state.pile];
   const advancedIndex = nextPlayerIndex(state);
 
-  return {
+  return withEvent(state, {
     ...state,
     hands: { ...state.hands, [playerId]: newHand },
     pile: [],
     lastPlayedBy: null,
     lastPlayedCards: [],
     currentPlayerIndex: advancedIndex,
-  };
+  }, 'pickup', playerId, [], { count: state.pile.length });
 }
 
 function view(state, playerId) {
@@ -422,6 +460,7 @@ function view(state, playerId) {
     drawPileCount: state.drawPile.length,
     lastPlayedBy: state.lastPlayedBy || null,
     lastPlayedCards: state.lastPlayedCards || [],
+    lastEvent: state.lastEvent || null,
     loser: state.phase === 'finished' ? (remaining[0] || null) : undefined,
     players: state.players.map(id => ({
       playerId: id,
