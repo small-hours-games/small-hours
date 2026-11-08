@@ -4,58 +4,13 @@
 
 # Small Hours Games
 
-**One TV. A few phones. “Just one more round.”**
+**Real-time party games for one TV and a few phones.**
 
-Turn your living room into a game night. Small Hours is a real-time multiplayer party game platform: the big screen runs the show, and everyone plays from their phone. No accounts, no phone app, no hunting for the missing controller.
+The TV runs the show and everyone plays from their phone's browser. No accounts, no app to install, no missing controller.
 
-Bring your friends. Bring questionable trivia confidence. Stay for the music round.
+## Quickstart
 
-## Get the party started
-
-1. Open `/tv` on the shared screen to create a room automatically. Already have a room? Open `/host/CODE` instead.
-2. Join from your phones using the four-character room code or the QR code on the TV.
-3. Pick a nickname and vote for an activity. The first player to join becomes the room admin.
-4. Let the admin start the game. Quiz first opens a category vote; Music Quiz goes straight to its countdown.
-
-You can also create or join a room from the home page. Keep the TV and phones in the same room—the code is what connects them.
-
-The TV shows the questions, reveals, live scores, and party chat. Your phone holds your answers and game controls. Player avatars follow the action, so you can spot who picked *that* answer.
-
-## Pick your next obsession
-
-These games are available in the dashboard:
-
-| Game | Players | What you're getting into |
-| --- | --- | --- |
-| 🎯 **Quiz** | 1–20 | Vote for a category, race the timer, and defend your trivia reputation. |
-| 🎵 **Music Quiz** | 1–20 | Hear the clip. Name the artist or song. Try not to sing the answer out loud. |
-| 👑 **Palace** | 1–6 | Empty your cards and avoid being the last player standing. Alone? Play 1–4 AI opponents. |
-| ♠️ **Gin Rummy** | 1–2 | Build your hand, watch the discards, and pick your moment. Alone? Play Robo, the AI. |
-| 7️⃣ **Sjuan** | 2–8 | Build out from the sevens and get rid of your cards first. |
-
-Waiting for friends? A player alone in the room can start Gin Rummy or Palace against AI opponents. The game runs on the TV like any other; once the others arrive, the admin returns to the lobby and starts one for everyone. AI seats are only added for a lone player and never earn session points.
-
-Music Quiz mixes genres and decades, rotates songs, and builds believable alternatives from the same playlist. Each quiz starts with a five-second countdown; music clips fade in for one second and out over the final two seconds of the question.
-
-The engine also includes Högt/Lågt and Uno, which do not have screens yet. A game with `hidden: true` in its manifest stays out of the lobby.
-
-## Small touches, better game nights
-
-- **Vote together.** Players choose the next activity and trivia category from their phones.
-- **Your own quiz host.** Trivia questions and answer reveals are read through the TV, with an upbeat Gemini voice when configured and a browser speech fallback where supported. The TV Sound button controls narration too.
-- **See the reveal.** Quiz answers show who guessed what, with player names and avatars.
-- **Keep the banter going.** Party chat shows player names and avatars. On the TV it sits beneath the players in the lobby, then moves below the scoreboard during games.
-- **A lighter lobby.** White panels, soft blue backgrounds, colored activity cards, and a compact TV layout that keeps longer lists inside scrollable panels.
-- **A soundtrack while you wait.** Local tracks play quietly through the TV in the lobby and stop when gameplay starts. The little animal mascots sway at 136 BPM while music is audible. Reduced-motion preferences are respected.
-- **Accidental refresh?** Rejoin as the same player within the 30-second disconnect grace period, using the same browser with local storage available.
-- **Questions that rotate.** Unseen questions and songs come first; older picks return when the available pool runs out. History lasts for the room session.
-- **A proper TV option.** The [Android TV app](android-tv/README.md) opens the host display fullscreen and keeps the screen awake.
-
-## Run your own game night
-
-### With Node.js
-
-Requires **Node.js 22+** and npm.
+Needs Node.js 22 or later.
 
 ```bash
 git clone https://github.com/small-hours-games/small-hours.git
@@ -64,127 +19,217 @@ npm install
 npm start
 ```
 
-Open **http://localhost:3001**. On phones and the TV, use the server computer's local network address, for example `http://192.168.1.50:3001`. Devices must be able to reach the server; `localhost` on a phone points to the phone itself.
+You should see:
 
-Internet access is needed for external trivia, Music Quiz previews, and CDN-hosted frontend assets. Lobby music comes from local files.
-
-### With Docker Compose
-
-Build and run the checked-out source:
-
-```bash
-docker compose build
-docker compose up -d
+```text
+Small Hours server listening on port 3001
+  Local:   http://localhost:3001
+  Health:  http://localhost:3001/health
 ```
 
-The Compose setup uses host networking and is intended for a Linux host. Runtime data is mounted in `./data`.
+Open `http://<your-computer's-address>:3001/tv` on the TV, then scan the QR code with your phones. That's game night.
 
-To update a source deployment after changing the code, rebuild and restart with the same commands. Check the server with:
+## What is small-hours?
+
+Small Hours turns a living room into a game show. One shared screen (a TV, a monitor, a projector) shows the questions, the board and the scores; up to 20 players join from their phones with a four-letter room code and play in the browser. It is for friends and families on the same couch, and it replaces passing one controller around or everyone squinting at a laptop.
+
+You host it yourself: on a laptop for one evening, or on a small home server that is always on.
+
+## Key features
+
+- **Five games in the lobby.** Quiz, Music Quiz, Palace, Gin Rummy and Sjuan, from 1 to 20 players.
+- **Phones are the controllers.** Players join with a code or a QR code; nothing to install.
+- **Play alone against AI.** A lone player can start Palace or Gin Rummy against AI opponents while the others arrive.
+- **A host that talks.** Questions and reveals are read aloud on the TV (Gemini voice, or the browser's own speech).
+- **Votes, chat and avatars.** Players vote for the next game and category, chat, and see who picked which answer.
+- **Lobby music with a show.** Local tracks play on the TV; songs with a beat map light up the top bar with a dancing singer, fire over the logo and dancing mascots.
+- **Survives a refresh.** A player who reloads within 30 seconds comes back as the same player.
+- **Android TV app.** Opens the TV screen fullscreen and keeps the screen awake.
+
+## Prerequisites
+
+| What | Version | Check |
+| --- | --- | --- |
+| Node.js | 22 or later | `node --version` |
+| npm | comes with Node.js | `npm --version` |
+| Git | any recent | `git --version` |
+| Docker with Compose (optional, for a server) | Compose v2 | `docker compose version` |
+
+The TV and the phones must be on the same network as the computer running the server. Internet access is needed for trivia questions, Music Quiz previews and the fonts and libraries the screens load from a CDN.
+
+## Installation
+
+```bash
+git clone https://github.com/small-hours-games/small-hours.git
+cd small-hours
+npm install
+npm start
+```
+
+Check that it works:
 
 ```bash
 curl http://localhost:3001/health
+# {"status":"ok","version":"2.14.0",...}
 ```
 
-The front page footer shows the running build, for example `v2.1.0 · 2dbdd0b · built 7 Nov 2026, 14:02`: the version from `package.json`, the Git commit (linked to GitHub) and when the image was built. After an update, reload the front page to confirm the new build is live. `/api/version` returns the same as JSON.
+Then find the computer's address on your network (for example `192.168.1.50`) and use that on the TV and phones: `http://192.168.1.50:3001`. `localhost` on a phone means the phone itself.
 
-To cut a release, bump the version and tag it in one step, then push:
+## How to play
+
+1. Open `/tv` on the shared screen. It creates a room and shows a room code and a QR code. (Already have a room? Open `/host/CODE`.)
+2. Players scan the QR code or open the address on their phones and enter the code.
+3. Everyone picks a name and an avatar and votes for the next game. The first player to join is the room admin.
+4. The admin starts the game. Quiz first asks for a category; Music Quiz starts straight away.
+
+The TV shows the questions, reveals, live scores and party chat. Phones hold the answers and the game controls.
+
+### Games
+
+| Game | Players | What you're getting into |
+| --- | --- | --- |
+| 🎯 **Quiz** | 1–20 | Vote for a category, race the timer, defend your trivia reputation. |
+| 🎵 **Music Quiz** | 1–20 | Hear the clip, name the artist or song, try not to sing along. |
+| 👑 **Palace** | 1–6 | Get rid of your cards, don't be the last one left. Alone? Play 1–4 AI opponents. |
+| ♠️ **Gin Rummy** | 1–2 | Build sets and runs, watch the discards, knock low. Alone? Play Robo, the AI. |
+| 7️⃣ **Sjuan** | 2–8 | Build out from the sevens and be first out. |
+
+AI seats are only added for a lone player and never earn session points.
+
+## Examples
+
+**A game night on your laptop.** Start the server and point the TV at it:
 
 ```bash
-npm version minor        # or patch / major: updates package.json, commits, tags v2.1.0
-git push --follow-tags   # CI tests and publishes ghcr.io/...:2.1.0, :2.1 and :latest
+npm start
+# TV:     http://192.168.1.50:3001/tv
+# Phones: scan the QR code on the TV
 ```
 
-For published images, [`update.sh`](update.sh) pulls the configured GHCR image, seeds questions, and restarts the service. Pass a released tag to deploy or roll back to that version:
+**An always-on home server with Docker** (Linux host):
 
 ```bash
-./update.sh              # IMAGE_TAG from .env, or latest
-./update.sh 2.1.0        # example: requires this image tag to exist
+cp .env.example .env          # optional settings, see Configuration
+docker compose build
+docker compose up -d
+curl http://localhost:3001/health
 ```
 
-### Optional settings
+**Your own lobby music.** Drop audio files in `music/lobby/` and reload the TV page:
 
-Copy `.env.example` to `.env` if you want to customize the server. Core play does not require an API key.
+```bash
+cp ~/Music/our-party-song.mp3 music/lobby/
+# Docker: the music is built into the image, so rebuild
+docker compose build && docker compose up -d
+```
 
-| Variable | Purpose |
-| --- | --- |
-| `PORT` | HTTP and WebSocket port; defaults to `3001`. |
-| `DOMAIN` | Domain used in room notification links. |
-| `GEMINI_API_KEY` | Gemini speech generation, including the game-show host voice. Requires a valid Gemini API key. |
-| `DISCORD_WEBHOOK_URL` | Optional notification when a room is created. |
-| `IMAGE_TAG` | Published Docker image tag; defaults to `latest`. |
+**A topbar show for a song.** Make a beat map for a lobby track and list it in `TBS_SHOWS` in `public/js/topbar-show.js`:
 
-Trivia comes from OpenTrivia DB and is cached on disk. Music Quiz uses Deezer playlists and playable previews; availability depends on the upstream service.
+```bash
+pip install librosa
+python3 scripts/song-beatmap.py music/lobby/our-party-song.mp3 --drop 20.0 --title "Our Party Song" \
+  > public/shows/our-party-song.json
+```
 
-## Sound, music, and your own tracks
+## Configuration
 
-**Lobby music** plays through the TV at 12% volume. Tracks rotate while everyone joins and votes. Playback fades in over 1.5 seconds on lobby entry, fades out over 1.2 seconds when a game starts (including its countdown), and fades out over each song's final two seconds before the next track fades in. Phones stay quiet for the lobby soundtrack.
+Copy `.env.example` to `.env` to change a setting. Nothing is required: the games play without any key.
 
-To change the playlist:
+| Setting | Where | Default | What it changes |
+| --- | --- | --- | --- |
+| `PORT` | `.env` | `3001` | HTTP and WebSocket port. |
+| `DOMAIN` | `.env` | `localhost:3001` | Address used in room-created notification links. |
+| `GEMINI_API_KEY` | `.env` | none | Turns on the Gemini game-show voice. Without it the TV uses the browser's speech where available. |
+| `DISCORD_WEBHOOK_URL` | `.env` | none | Posts a Discord message when a room is created. |
+| `IMAGE_TAG` | `.env` | `latest` | Which published Docker image `update.sh` and Compose use. |
+| `showDelay` | TV address, `?showDelay=150` | `0` ms | Delays the topbar show to match a TV whose sound lags the picture. Saved on that TV. |
+| Lobby music | `music/lobby/` | the tracks in the repo | Songs played on the TV in the lobby (`.mp3`, `.ogg`, `.m4a`, `.wav`). |
+| Game music | `music/quiz-card/` | the tracks in the repo | Songs played during games that use music. |
 
-1. Add or remove audio files in [`music/lobby/`](music/lobby/) for the lobby and join screen, or [`music/quiz-card/`](music/quiz-card/) for the games. Supported extensions: `.mp3`, `.ogg`, `.m4a`, and `.wav`; playback support depends on the browser.
-2. For Docker deployments, rebuild and restart—the music folder is baked into the image.
-3. Refresh the TV page to reload the playlist.
+Trivia comes from OpenTrivia DB and is cached in `data/`. Music Quiz uses Deezer playlists and previews; availability depends on that service.
 
-The server discovers the files automatically through `/api/lobby-music`. No playlist configuration or API key is required for local music.
+## Troubleshooting
 
-**Music Quiz** plays Deezer previews on the TV and phones. TV sound is controlled by the header's Sound button; phones have their own sound control. If a browser blocks autoplay, tap or press a key on the TV page, or use the phone's “Tap to hear” button.
+**The phone says "This site can't be reached."**
+The phone is using `localhost` or a different network. Use the server computer's network address (`http://192.168.1.50:3001`), keep the phone on the same Wi-Fi, and allow port 3001 in the computer's firewall.
 
-## Data and updates
+**`Error: listen EADDRINUSE: address already in use :::3001`**
+Something else uses port 3001, often an earlier `npm start`. Stop it, or pick another port:
 
-- `data/` contains generated trivia caches and speech audio. It is ignored by Git and mounted into Docker, so rebuilding the image preserves it.
-- Rooms, scores, and reconnect identities live in memory. A server restart ends current sessions; the TV entry page can create a new room.
-- `music/` contains the local lobby and game soundtracks. Android signing keys, build output, and APK copies are ignored by Git; see the [Android TV instructions](android-tv/README.md) for building and signing.
-- GitHub Actions runs tests and publishes GHCR images from `main` and version tags. Pulling an image and building local source are separate deployment paths; use the commands above for the one you need.
+```bash
+PORT=3002 npm start
+```
 
-After a frontend update, refresh both TV and phone pages so they load the new JavaScript and styles.
+**No sound on the TV.**
+Browsers block audio until the page has been touched. Press a key or click once on the TV page, and check the Sound button in the top bar. For Music Quiz on a phone, tap "Tap to hear".
+
+**A lobby song stops early, or the topbar show runs without music.**
+The MP3 has no length header, so the browser guesses its length wrong. Rewrite the header without re-encoding:
+
+```bash
+ffmpeg -i song.mp3 -c copy -write_xing 1 song-fixed.mp3
+```
+
+**`Failed to fetch questions`** when a quiz starts.
+The server cannot reach OpenTrivia DB. Check the server's internet connection; categories already cached in `data/` still work.
+
+## Running a server
+
+The Compose setup uses host networking and keeps runtime data in `./data`, so rebuilding keeps caches and speech audio. After changing the code, rebuild and restart:
+
+```bash
+docker compose build && docker compose up -d
+```
+
+The front page footer and `/health` show the running version and commit, so you can see that a deploy is live. Reload the TV and phones after an update.
+
+To deploy a published image from GitHub Container Registry instead, use [`update.sh`](update.sh): `./update.sh` for `latest`, or `./update.sh 2.14.0` to deploy or roll back to a release.
+
+Rooms, scores and reconnect identities live in memory: a restart ends the current sessions, and the TV page makes a new room.
 
 ## Under the hood
 
-JavaScript, end to end. **Node.js + Express + WebSockets** on the server; vanilla HTML, CSS, and browser JavaScript on the screens. No frontend build step.
+JavaScript end to end: **Node.js, Express and WebSockets** on the server; plain HTML, CSS and browser JavaScript on the screens, with no frontend build step. The game engine is a pure function, `(state, action) → { newState, events }`.
 
-The engine is a pure function:
-
-```text
-(state, action) → { newState, events }
-```
-
-Three layers keep the responsibilities clear:
-
-| Layer | Responsibility |
+| Folder | What lives there |
 | --- | --- |
-| `src/transport/` | HTTP routes, WebSocket messages, rate limiting, and broadcasting. |
-| `src/session/` | Rooms, players, lobby votes, and game lifecycle. |
-| `src/engine/` | Game rules, actions, scoring, and private player views. |
+| `src/transport/` | HTTP routes, WebSocket messages, rate limits, broadcasts. |
+| `src/session/` | Rooms, players, lobby votes, game lifecycle. |
+| `src/engine/` | Game rules, actions, scoring, private player views. |
+| `games/` | One folder per game, found by the server at startup. |
+| `public/` | The TV, phone and landing pages and shared assets. |
+| `src/fetcher/` | Trivia, music, caching and speech. |
+| `tests/` | Engine, session, transport, integration and frontend tests. |
+| `android-tv/` | The Android TV app ([build instructions](android-tv/README.md)). |
 
-Game timers arrive as synthetic actions from the session/transport side. The engine doesn't need to know whether a player is holding a phone or looking at a TV.
+[`AGENTS.md`](AGENTS.md) describes the conventions in more detail.
 
-Useful places to start:
-
-- [`public/`](public/) — landing page, phone controller, TV display, and shared assets.
-- [`public/css/light-lobby.css`](public/css/light-lobby.css) — shared light-lobby styling and compact TV layout.
-- [`public/js/lobby-music.js`](public/js/lobby-music.js) — TV lobby playback and mascot motion state.
-- [`music/`](music/) — lobby and game tracks, one folder each.
-- [`games/`](games/) — one folder per game.
-- [`src/fetcher/`](src/fetcher/) — trivia, music, caching, and speech fetching.
-- [`tests/`](tests/) — engine, session, transport, integration, and frontend tests.
-- [`android-tv/`](android-tv/) — Android TV app source and build instructions.
-- [`AGENTS.md`](AGENTS.md) — repository conventions and development guidance.
-
-## Build the next round
+## Contributing
 
 ```bash
-npm run dev              # restart the server when source files change
-npm test                 # run the full Vitest suite
-npm run test:watch        # rerun tests while working
-npx vitest run tests/engine/quiz.test.js
+npm install
+npm run dev     # restart the server when a file changes
+npm test        # the full test suite (Vitest)
 ```
 
-To add a game, copy `games/_template/`; see [`games/README.md`](games/README.md). Define `setup`, `actions`, `view`, and `endIf` and export the manifest from `games/<id>/index.js`; the server finds it by itself. Add phone and TV screens and tests.
+1. Branch from `main`.
+2. Make the change with tests. To add a game, copy `games/_template/` and follow [`games/README.md`](games/README.md).
+3. Raise the version once per push: `npm version patch --no-git-tag-version` for fixes, `minor` for features.
+4. Open a pull request against `main`. CI runs the tests and checks that the version went up.
 
-Keep rules in the engine, secrets out of player views, and the next round easy to start.
+Keep game rules in the engine, private information (hands, answers) out of other players' views, and the next round easy to start.
+
+## Roadmap
+
+- **Next:** screens for Högt/Lågt and Uno, which already exist in the engine but are hidden from the lobby.
+- **Out of scope today:** user accounts and saved profiles (rooms live in memory by design), and a native phone app (the browser is the controller).
+
+Ideas and bugs go in [GitHub issues](https://github.com/small-hours-games/small-hours/issues).
+
+## License
+
+No open-source license has been chosen yet, so all rights are reserved by the authors. Ask before reusing the code. The card faces in `public/cards/faces/` are Chris Aguilar's Vector Playing Cards, under LGPL-3.0.
 
 ---
 
 **Good games. Better together.**
-
-*Party games best played in the small hours.*
