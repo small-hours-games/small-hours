@@ -127,3 +127,45 @@ The repository also supports registry deployments: `.github/workflows/docker.yml
 Versioning: `package.json` `version` is the release number shown on the front page and in `/health`; the commit comes from `GIT_SHA` (CI) or the checkout's `.git` refs, which `.dockerignore` keeps for local builds. **Every push of commits raises the version** in that same push: `npm version patch --no-git-tag-version` for fixes, docs and chores, `minor` for features (`major` only when asked). Bump once per push, in the last commit before pushing; it updates `package.json` and `package-lock.json`. The version is shown in the TV/host header and on the front page, so each deploy is identifiable. `.github/workflows/version-check.yml` fails a PR whose version is not higher than `main`'s. Tags are optional: `npm version <level>` (commit plus `vX.Y.Z` tag) and `git push --follow-tags` also publish a semver image; CI fails a tag that does not match `package.json`.
 
 Environment-only changes require container recreation rather than an image rebuild. Read `docker-compose.yml` for the actual mounts, image, and health check. Restarting the server interrupts in-memory rooms.
+
+<!-- trail:start -->
+## Trail — repo context graph
+
+This repo is indexed in `.trail/cache/`: small linked markdown nodes that explain each
+system and carry exact file:line spans, kept in sync with the code through git.
+
+For ANY task here — understanding how something works, finding where code lives,
+or scoping a change — get context from the graph before grepping or opening
+source files. Re-ask freely (it's cheap) and reuse literal identifiers you
+already have (symbol, error string, file name) as the query. New to this repo?
+Run `trail map` first — a token-budgeted orientation (dir clusters, hubs,
+hotspots), no LLM, no key.
+
+- Run `trail ask "<your question>" --source` → ranked nodes with the relevant
+  code spans inlined (each hit's ≤8-line crux by default; `--full` for whole
+  definitions when the crux isn't enough). Match the tool to the task shape:
+  for understanding or editing, the top node IS the answer — cite its
+  `covers:` file:line spans and edit straight from `--source`. For
+  exhaustive tasks ("every occurrence / every caller of this pattern"), ranked
+  results are top-N, not complete — run `trail grep "<literal>"` instead
+  (exhaustive over indexed files, grouped by enclosing symbol), falling back
+  to raw `grep -rn` only for unindexed files.
+- `trail skeleton <file>` → every definition's signature + span, ~10× cheaper
+  than reading the file; use it to skim an API surface.
+- `trail callers <symbol>` gives precomputed, exact edges — who calls this.
+  Add `--direction out` for what it calls, or `--depth N` to walk
+  transitively for the full blast radius. For structural questions, skip
+  ranking and use this directly.
+- Or browse: `.trail/cache/INDEX.md` lists every node; follow the links.
+- Monorepos and folders of multiple repos rank fairly across sub-projects —
+  hits carry `[scope/]` labels naming which one they're from. Narrow with
+  `trail ask "<task>" --in <scope>/` once you know where you're working.
+
+If a returned span is truncated ("+N more lines"), open the file at that exact
+range before finalizing. Only open source files when a node genuinely lacks a
+needed detail, and then at the exact file:line the node points to — never
+re-read whole files.
+
+After big code changes, refresh the graph with `trail build` (deterministic,
+no API key, $0).
+<!-- trail:end -->
