@@ -27,3 +27,5 @@ Manifest options: `order`, `title`, `icon`, `blurb`, `soloBlurb`, `hidden`, `mus
 The screens register themselves with `SH.registerGame`; `public/js/game-api.js` lists the hooks. Do not edit `host.html` or `player.html` for one game: if a game needs something new, add it to the shell as something every game can use.
 
 Fields in a view named `my*`, plus `isMyTurn` and the manifest's `privateKeys`, never reach the TV.
+
+To refuse a move, return `{ state, events: [{ type: 'error', message }] }`. The player who made it sees the message as a toast.
