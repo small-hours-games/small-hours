@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
+  <meta name="darkreader-lock">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="theme-color" content="#f4f8ff">
@@ -16,6 +17,7 @@
   <link rel="stylesheet" href="/css/player.css">
   <link rel="stylesheet" href="/css/light-lobby.css">
   <link rel="stylesheet" href="/css/table-cards.css">
+  <link rel="icon" type="image/svg+xml" href="/images/smallhours-icon.svg">
   <link rel="icon" type="image/png" sizes="64x64" href="/images/smallhours-favicon.png">
   <link rel="apple-touch-icon" href="/images/smallhours-icon.png">
 </head>
@@ -25,8 +27,8 @@
   <header class="bg-white/90 backdrop-blur-md border-b border-sky-100 sticky top-0 z-50">
     <div class="max-w-md mx-auto px-4 h-14 flex items-center justify-between gap-2">
       <a href="/" class="flex items-center gap-2.5 min-w-0">
-        <img class="brand-symbol" src="/images/smallhours-icon.png" alt="" width="36" height="36">
-        <span class="brand-phone-name">Smallhours</span>
+        <img class="brand-symbol" src="/images/smallhours-mark.svg" alt="" width="36" height="36">
+        <span class="brand-phone-name">Small<span class="brand-accent">hours</span></span>
       </a>
       <div class="flex items-center gap-2 min-w-0">
         <button id="shareBtn" onclick="shareRoom()" aria-label="Share room" class="hidden w-8 h-8 rounded-full bg-sky-50 hover:bg-sky-100 text-sky-700 items-center justify-center">
@@ -251,7 +253,7 @@
           </div>
         </div>
         <div class="tc-rule" id="shRule"></div>
-        <div class="tc-last" id="shLast"></div>
+        <div id="shLog" class="tc-log-phone"></div>
       </div>
       <div class="tc-hand-zone">
         <div class="tc-table-cards" id="shTableCards"></div>
@@ -531,6 +533,7 @@
 
         case 'ERROR':
           showToast(msg.message || 'An error occurred', 'error');
+          if (isSectionActive('shitheadSection') && state.shLastMsg) renderShitheadState(state.shLastMsg);
           break;
 
         case 'CHAT_MESSAGE':
@@ -608,6 +611,19 @@
       const map = { 'number-guess': 'numberGuessSection', 'quiz': 'quizSection', 'music-quiz': 'quizSection', 'spy': 'spySection', 'shithead': 'shitheadSection', 'question-form': 'questionFormSection', 'gin-rummy': 'ginRummySection', 'template': 'templateSection' };
       return map[game] || 'lobbySection';
     }
+
+    // Keep the phone awake while it is the controller. The lock drops whenever the tab
+    // is hidden, so ask again on return; it needs a tap first, and HTTPS.
+    let wakeLock = null;
+    async function keepAwake() {
+      if (!('wakeLock' in navigator) || document.visibilityState !== 'visible' || wakeLock) return;
+      try {
+        wakeLock = await navigator.wakeLock.request('screen');
+        wakeLock.addEventListener('release', () => { wakeLock = null; });
+      } catch { /* not allowed right now (no tap yet, battery saver): try later */ }
+    }
+    document.addEventListener('pointerdown', keepAwake, { passive: true });
+    document.addEventListener('visibilitychange', keepAwake);
 
     function isSectionActive(id) {
       return !!document.getElementById(id)?.classList.contains('active');
@@ -1423,12 +1439,12 @@
     }
 
     function shRuleBannerText(pileTopRank, pileCount) {
-      if (!pileCount) return 'Pile is empty: play any card or set';
+      if (!pileCount) return 'Empty pile: play anything';
       const top = pileTopRank == null ? null : Number(pileTopRank);
-      if (top == null || isNaN(top)) return '2 resets the pile · 10 burns it';
+      if (top == null || isNaN(top)) return 'A 2 reset the pile: play anything';
       const lbl = tcRankLabel(top);
-      if (top === 7) return 'Top is 7: play 7 or lower (2 resets · 10 burns)';
-      return 'Top is ' + lbl + ': play ' + lbl + ' or higher (2 resets · 7 lowers · 10 burns)';
+      if (top === 7) return '7 on top: play 7 or lower, or a 2 or 10';
+      return 'Play ' + lbl + ' or higher, or a 2 or 10';
     }
 
     /** Which of my zones is in play: hand, then face-up, then face-down. */
@@ -1504,20 +1520,29 @@
       // Table: draw deck and play pile
       document.getElementById('shDrawStack').innerHTML = renderTableStack(null, msg.drawPileCount || 0, { size: 'md', facedown: true, emptyLabel: 'Empty' });
       document.getElementById('shDrawCount').textContent = (msg.drawPileCount || 0) + ' left';
-      const pilePreview = msg.pileTop ? [msg.pileTop] : [];
-      document.getElementById('shPileStack').innerHTML = renderTableStack(pilePreview, pileCount || pilePreview.length, { size: 'md', emptyLabel: 'Empty', highlight: myTurn && state.shSelectedCards.length > 0 });
+      const pilePreview = (msg.pilePreview && msg.pilePreview.length) ? msg.pilePreview : (msg.pileTop ? [msg.pileTop] : []);
+      const pileStack = document.getElementById('shPileStack');
+      pileStack.innerHTML = renderMessyPile(pilePreview, pileCount || pilePreview.length, { size: 'md', emptyLabel: 'Empty', highlight: myTurn && state.shSelectedCards.length > 0 });
+      // Move log + a landing bounce for each new card on the pile
+      const ev = msg.lastEvent;
+      const freshEvent = ev && ev.seq !== state.shSeenSeq;
+      state.shLog = tcLogPush(state.shLog, ev, 6);
+      state.shSeenSeq = ev ? ev.seq : null;
+      if (freshEvent && ev.kind === 'play') {
+        const top = pileStack.querySelector('.tc-pile-top');
+        if (top) top.classList.add('tc-land');
+      }
+      if (freshEvent && ev.by !== state.playerId && (ev.kind === 'burn' || ev.kind === 'pickup' || ev.kind === 'blind-miss')) {
+        if (navigator.vibrate) navigator.vibrate(30);
+      }
+      document.getElementById('shLog').innerHTML = msg.phase === 'play'
+        ? renderMoveLog(state.shLog, { name: id => (id === state.playerId ? 'You' : tcName(id, msg)), avatar: id => tcAvatar(id), max: 3 })
+        : '';
       document.getElementById('shPileCount').textContent = pileCount + (pileCount === 1 ? ' card' : ' cards');
       document.getElementById('shPileWell').classList.toggle('tc-well-active', myTurn && state.shSelectedCards.length > 0);
       document.getElementById('shRule').textContent = msg.phase === 'swap'
         ? 'Tap a hand card, then a face-up card, to swap them. 2, 10 and A are strong face-up.'
         : shRuleBannerText(msg.pileTopRank, pileCount);
-      const last = document.getElementById('shLast');
-      if (msg.lastPlayedBy && (msg.lastPlayedCards || []).length) {
-        const cards = msg.lastPlayedCards;
-        last.textContent = tcName(msg.lastPlayedBy, msg) + ' played ' + (cards.length > 1 ? cards.length + '× ' + tcRankLabel(cards[0].rank) : tcCardShort(cards[0]));
-      } else {
-        last.textContent = '';
-      }
 
       // My table cards (face-up / face-down) above the hand
       const faceUp = msg.myFaceUp || [];
@@ -1567,7 +1592,7 @@
       });
       attachHandGestures(handEl, {
         onTap: id => shTapCard(id),
-        onPlay: id => shSwipePlay(id),
+        onPlay: (id, flick) => shSwipePlay(id, flick),
         onReorder: (id, targetId) => {
           state.shOrder = tcMoveId(ordered.map(c => c.id), id, targetId);
           state.shSortMode = 'custom';
@@ -1585,6 +1610,19 @@
       pickUp.disabled = !myTurn || pileCount === 0;
       pickUp.textContent = 'Pick up' + (pileCount ? ' (' + pileCount + ')' : '');
       updateShSelectionAssistUI();
+      shFitLog();
+    }
+
+    /** The hand is pinned to the bottom: drop the oldest log lines until none sit under it. */
+    function shFitLog() {
+      const logEl = document.getElementById('shLog');
+      const zone = document.querySelector('#shitheadSection .tc-hand-zone');
+      if (!logEl || !zone) return;
+      const items = Array.from(logEl.querySelectorAll('.tc-log-item'));
+      // The latest move always stays; older lines only when there is room.
+      while (items.length > 1 && logEl.getBoundingClientRect().bottom > zone.getBoundingClientRect().top + 8) {
+        items.pop().remove();
+      }
     }
 
     function shTapCard(id) {
@@ -1617,10 +1655,10 @@
       renderShitheadState(msg);
     }
 
-    function shSwipePlay(id) {
+    function shSwipePlay(id, flick) {
       const msg = state.shLastMsg;
       if (!msg || msg.phase !== 'play' || !msg.isMyTurn) { shTapCard(id); return; }
-      if (shZone(msg) === 'faceDown') { shPlayFaceDown(id); return; }
+      if (shZone(msg) === 'faceDown') { shPlayFaceDown(id, flick); return; }
       const cards = shActiveZoneCards(msg);
       const card = cards.find(c => c.id === id);
       if (!card) return;
@@ -1631,7 +1669,7 @@
       }
       const sameRank = cards.filter(c => state.shSelectedCards.includes(c.id) && c.rank === card.rank).map(c => c.id);
       state.shSelectedCards = sameRank.includes(id) ? sameRank : [...sameRank, id];
-      playSelectedCards();
+      playSelectedCards(flick);
     }
 
     function shTapPile() {
@@ -1700,16 +1738,43 @@
       renderShitheadState(msg);
     }
 
-    function playSelectedCards() {
+    // A tap-to-play throws like a gentle flick, so the TV animation always runs.
+    const SH_TAP_FLICK = { vx: 0, vy: -2.4 };
+
+    /** Send the cards flying off the top of the phone now; the server's answer follows. */
+    function shThrowCards(ids, flick) {
+      const msg = state.shLastMsg;
+      const handEl = document.getElementById('shHand');
+      const known = msg ? shActiveZoneCards(msg) : [];
+      ids.forEach((cid, i) => {
+        const el = handEl.querySelector('[data-card-id="' + (window.CSS && CSS.escape ? CSS.escape(cid) : cid) + '"]');
+        if (!el) return;
+        const rect = (i === 0 && flick && flick.rect) ? flick.rect : el.getBoundingClientRect();
+        const card = known.find(c => c.id === cid) || null;
+        if (card) tcThrowOff(card, rect, flick || SH_TAP_FLICK);
+        el.style.visibility = 'hidden';
+      });
+    }
+
+    function shFlickPayload(flick) {
+      const f = flick || SH_TAP_FLICK;
+      return { vx: f.vx || 0, vy: f.vy || 0 };
+    }
+
+    function playSelectedCards(flick) {
       if (state.shSelectedCards.length === 0) return;
-      send({ type: 'GAME_ACTION', action: { type: 'playCards', cardIds: [...state.shSelectedCards] } });
+      const ids = [...state.shSelectedCards];
+      shThrowCards(ids, flick);
+      send({ type: 'GAME_ACTION', action: { type: 'playCards', cardIds: ids, flick: shFlickPayload(flick) } });
       state.shSelectedCards = [];
     }
 
-    function shPlayFaceDown(cardId) {
+    function shPlayFaceDown(cardId, flick) {
       if (!cardId) return;
       state.shSelectedCards = [];
-      send({ type: 'GAME_ACTION', action: { type: 'playFaceDown', cardId: cardId } });
+      const el = document.querySelector('#shHand [data-card-id="' + (window.CSS && CSS.escape ? CSS.escape(cardId) : cardId) + '"]');
+      if (el) el.style.visibility = 'hidden';
+      send({ type: 'GAME_ACTION', action: { type: 'playFaceDown', cardId: cardId, flick: shFlickPayload(flick) } });
     }
 
     function pickUpPile() {
@@ -1719,19 +1784,28 @@
 
     function renderShOtherPlayers(msg) {
       const container = document.getElementById('shOpps');
+      container.classList.add('tc-opps-seats');
       const finish = msg.finishOrder || [];
       const others = (msg.players || []).filter(p => p.playerId !== state.playerId);
       container.innerHTML = others.map(p => {
         const turn = msg.phase === 'play' && p.playerId === msg.currentPlayer;
         const place = finish.indexOf(p.playerId);
-        let detail;
-        if (msg.phase === 'swap') detail = (msg.swapConfirmed || {})[p.playerId] ? '✓ ready' : '⏳ swapping';
-        else if (p.isOut || place >= 0) detail = '✓ out' + (place >= 0 ? ' #' + (place + 1) : '');
-        else detail = '<span class="tc-mono">' + tcNum(p.handCount) + '🂠</span>' +
-          ((p.faceUp || []).length ? '<span class="tc-opp-cards">' + p.faceUp.map(c => renderTableCard(c, { size: 'sm', dataId: '' })).join('') + '</span>' : '') +
-          (p.faceDownCount ? '<span class="tc-mono">+' + tcNum(p.faceDownCount) + '▢</span>' : '');
-        return '<span class="tc-pill' + (turn ? ' tc-pill-turn' : '') + (place >= 0 ? ' tc-pill-out' : '') + '">' +
-          escapeHtml(tcAvatar(p.playerId) + tcName(p.playerId, msg)) + ' ' + detail + '</span>';
+        const out = p.isOut || place >= 0;
+        let tag = '';
+        if (msg.phase === 'swap') tag = (msg.swapConfirmed || {})[p.playerId] ? '✓ ready' : 'swapping…';
+        else if (out) tag = '✓ out' + (place >= 0 ? ' #' + (place + 1) : '');
+        else if (turn) tag = '▶ playing';
+        let row = '';
+        if (!out) {
+          row = '<span class="tc-opp-count" title="Cards in hand">' + renderCardChip(null) + '×' + tcNum(p.handCount) + '</span>' +
+            (p.faceUp || []).map(renderCardChip).join('') +
+            (p.faceDownCount ? '<span class="tc-opp-count tc-opp-blind" title="Face-down cards">+' + tcNum(p.faceDownCount) + '</span>' : '');
+        }
+        return '<div class="tc-opp' + (turn ? ' tc-opp-turn' : '') + (out ? ' tc-opp-out' : '') + '">' +
+          '<div class="tc-opp-head"><span class="tc-opp-name">' + escapeHtml(tcAvatar(p.playerId) + tcName(p.playerId, msg)) + '</span>' +
+          (tag ? '<span class="tc-opp-tag">' + escapeHtml(tag) + '</span>' : '') + '</div>' +
+          (row ? '<div class="tc-opp-row">' + row + '</div>' : '') +
+        '</div>';
       }).join('');
     }
 

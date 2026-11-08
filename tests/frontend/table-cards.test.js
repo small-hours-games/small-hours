@@ -123,3 +123,44 @@ describe('tcNum', () => {
     expect(kit.tcNum(Infinity)).toBe(0);
   });
 });
+
+describe('flick detection', () => {
+  it('counts a short, fast upward throw as a play', () => {
+    expect(kit.classifyHandGesture({ dx: 4, dy: -30, vx: 0.1, vy: -1.2 })).toBe('swipe-up');
+    expect(kit.classifyHandGesture({ dx: 4, dy: -30, vx: 0.1, vy: -0.2 })).toBe('drag');
+    expect(kit.classifyHandGesture({ dx: 40, dy: -30, vx: 1.5, vy: -1 })).toBe('drag');
+  });
+
+  it('counts a slow drag released high up the screen as a play', () => {
+    expect(kit.classifyHandGesture({ dx: 30, dy: -45, releaseRatio: 0.25 })).toBe('swipe-up');
+    expect(kit.classifyHandGesture({ dx: 30, dy: -45, releaseRatio: 0.6 })).toBe('drag');
+  });
+
+  it('measures release velocity and drops it after a pause', () => {
+    const samples = [0, 16, 32, 48, 64, 80].map(t => ({ x: 100, y: 500 - t, t }));
+    const v = kit.tcReleaseVelocity(samples, 80);
+    expect(v.vy).toBeCloseTo(-1, 5);
+    expect(kit.tcReleaseVelocity(samples, 200)).toEqual({ vx: 0, vy: 0 });
+  });
+});
+
+describe('move log and pile', () => {
+  it('keeps new events, skips repeats and restarts with a new game', () => {
+    let log = kit.tcLogPush([], { seq: 1, kind: 'play' });
+    log = kit.tcLogPush(log, { seq: 1, kind: 'play' });
+    log = kit.tcLogPush(log, { seq: 2, kind: 'burn' });
+    expect(log.map(e => e.seq)).toEqual([1, 2]);
+    expect(kit.tcLogPush(log, { seq: 1, kind: 'play' }).map(e => e.seq)).toEqual([1]);
+  });
+
+  it('describes moves in plain words', () => {
+    const name = id => ({ bot_1: 'Robo' })[id] || id;
+    expect(kit.tcEventText({ kind: 'pickup', by: 'bot_1', count: 5 }, name)).toBe('Robo picked up 5 cards');
+    expect(kit.tcEventText({ kind: 'burn', by: 'bot_1', cards: [{ id: 'c1', suit: 's', rank: 10 }] }, name)).toBe('Robo burned the pile with 10♠');
+  });
+
+  it('gives a card the same pile tilt every time', () => {
+    expect(kit.tcPileTilt('c17')).toEqual(kit.tcPileTilt('c17'));
+    expect(kit.tcPileTilt('c17')).not.toEqual(kit.tcPileTilt('c18'));
+  });
+});

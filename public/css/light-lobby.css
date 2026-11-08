@@ -1283,7 +1283,7 @@ body.in-game .mascot-duel-stage {
 }
 .host-screen .build-badge.hidden { display: none; }
 /* The colour logo has navy lettering: give it a white chip on the night header */
-.host-screen .studio-header .brand-logo { background: #fff; padding: 6px 12px; border-radius: 14px; box-sizing: content-box; width: 190px; }
+.host-screen .studio-header .brand-logo { width: 200px; }
 .host-screen .studio-on-air-badge { background: var(--night-sun); border-color: var(--night-sun); color: var(--night); box-shadow: none; }
 .host-screen #headerInfo { background: var(--night-panel); border-color: var(--night-line); color: #dce3f2; }
 .host-screen #muteBtn { background: var(--night-panel); border-color: var(--night-line-strong); color: #fff; }
@@ -1340,7 +1340,7 @@ body.in-game .mascot-duel-stage {
 
 /* --- Phone header --- */
 .phone-screen.light-lobby header { background: rgba(11, 21, 48, 0.94); border-color: #1e2e58; }
-.phone-screen .brand-symbol { background: #fff; border-radius: 10px; padding: 3px; }
+.brand-accent { color: #facc15; }
 .phone-screen .brand-phone-name { color: #fff; font-family: 'Fredoka', system-ui, sans-serif; font-weight: 700; letter-spacing: 0; }
 .phone-screen #roomBadge { font-family: 'Fredoka', system-ui, sans-serif; background: var(--night-panel); border-color: var(--night-line-strong); color: var(--night-sun); }
 .phone-screen #shareBtn { background: var(--night-panel); color: #fff; }

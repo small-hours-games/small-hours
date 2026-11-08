@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
+  <meta name="darkreader-lock">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#f4f8ff">
   <title>Smallhours - TV Screen</title>
@@ -16,6 +17,7 @@
   <link rel="stylesheet" href="/css/host.css">
   <link rel="stylesheet" href="/css/light-lobby.css">
   <link rel="stylesheet" href="/css/table-cards.css">
+  <link rel="icon" type="image/svg+xml" href="/images/smallhours-icon.svg">
   <link rel="icon" type="image/png" sizes="64x64" href="/images/smallhours-favicon.png">
   <link rel="apple-touch-icon" href="/images/smallhours-icon.png">
 </head>
@@ -28,7 +30,7 @@
   <header class="studio-header bg-white/90 backdrop-blur-md border-b border-sky-100 sticky top-0 z-50">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
       <div class="flex items-center gap-3">
-        <img class="brand-logo" src="/images/smallhours-logo.png" alt="Smallhours — Good games. Better together." width="1400" height="297">
+        <img class="brand-logo" src="/images/smallhours-logo.svg" alt="Smallhours — Good games. Better together." width="280" height="64">
         <span class="studio-on-air-badge hidden md:inline-flex items-center gap-1.5">
           <span class="studio-live-dot"></span> LIVE STUDIO
         </span>
@@ -980,12 +982,12 @@
     }
 
     function shitheadRuleHintText(pileTopRank, pileCount) {
-      if (!pileCount) return 'Empty pile — any card can be played';
+      if (!pileCount) return 'Empty pile: play anything';
       const top = pileTopRank == null ? null : Number(pileTopRank);
-      if (top == null || isNaN(top)) return '2 resets (wild) • 10 burns pile';
-      const rankLbl = typeof cardRankLabel === 'function' ? cardRankLabel(top) : String(top);
-      if (top === 7) return 'Top is 7 — play 7 or lower (2 resets, 10 burns)';
-      return 'Beat or match ' + rankLbl + '+ (2 resets, 7 lowers, 10 burns)';
+      if (top == null || isNaN(top)) return 'A 2 reset the pile: play anything';
+      const rankLbl = tcRankLabel(top);
+      if (top === 7) return '7 on top: play 7 or lower, or a 2 or 10';
+      return 'Play ' + rankLbl + ' or higher, or a 2 or 10';
     }
 
     // Scale the card table so all of it fits the screen: smaller on a 720p TV,
@@ -1146,15 +1148,23 @@
       tcFitTv();
     }
 
+    var shLog = [];
+    var shSeenSeq = null;
+
     function renderShithead(msg) {
       const content = document.getElementById('gameContent');
       const names = state.playerNames || msg.playerNames || {};
+      const ev = msg.lastEvent || null;
+      const freshEvent = !!ev && ev.seq !== shSeenSeq && msg.phase !== 'swap';
+      shSeenSeq = ev ? ev.seq : null;
+      shLog = tcLogPush(shLog, ev, 6);
+      const flying = freshEvent && ev.cards && ev.cards.length && (ev.kind === 'play' || ev.kind === 'burn' || ev.kind === 'blind-miss');
 
-      // Sounds (TV speakers)
+      // Sounds (TV speakers). A thrown card makes its sound when it lands.
       if (msg.phase === 'play' || msg.phase === 'finished') {
-        if (lastShState.pileCount != null && msg.pileCount === 0 && lastShState.pileCount > 0) audio.play('deck_redraw');
-        else if (lastShState.drawPileCount != null && msg.drawPileCount < lastShState.drawPileCount) audio.play('draw');
-        else if (lastShState.pileCount != null && msg.pileCount > lastShState.pileCount) audio.play('place');
+        if (lastShState.pileCount != null && msg.pileCount === 0 && lastShState.pileCount > 0 && !flying) audio.play('deck_redraw');
+        else if (lastShState.drawPileCount != null && msg.drawPileCount < lastShState.drawPileCount && !flying) audio.play('draw');
+        else if (lastShState.pileCount != null && msg.pileCount > lastShState.pileCount && !flying) audio.play('place');
         if (msg.phase === 'finished' && lastShState.phase !== 'finished') audio.play('win');
       }
       lastShState = { pileCount: msg.pileCount || 0, drawPileCount: msg.drawPileCount, phase: msg.phase };
@@ -1189,11 +1199,17 @@
         return tvSeatHtml(p.playerId, names, { turn, out, tag, tagClass, cards });
       };
 
-      const left = players.slice(0, Math.ceil(players.length / 2));
-      const right = players.slice(Math.ceil(players.length / 2));
+      // Seats around the table: half left, half right, and an odd player out above the
+      // pile, so three players sit left, top and right instead of two-against-one.
+      const half = Math.floor(players.length / 2);
+      const left = players.slice(0, half);
+      const top = players.length % 2 ? [players[half]] : [];
+      const right = players.slice(half + top.length);
+
       let html = '<div class="tc-tv tc-felt' + (many ? ' tc-tv-many' : '') + '">';
       html += '<div class="tc-tv-status"><span class="tc-dot' + (msg.phase === 'play' ? ' tc-dot-live' : '') + '"></span>' + escapeHtml(status) + '</div>';
       html += '<div class="tc-tv-row"><div class="tc-tv-col">' + left.map(seat).join('') + '</div><div class="tc-tv-mid">';
+      if (top.length) html += '<div class="tc-tv-top">' + top.map(seat).join('') + '</div>';
 
       if (msg.phase === 'finished') {
         html += '<div class="tc-tv-result"><div class="tc-sheet-kicker">Final standings</div><div class="tc-standings">' +
@@ -1201,20 +1217,16 @@
           (msg.loser ? '<div class="tc-standing"><span class="tc-place">💩</span>' + playerAvatarHtml(msg.loser) + escapeHtml((names[msg.loser] || 'Player') + ' keeps the palace') + '</div>' : '') +
         '</div></div>';
       } else if (msg.phase === 'play') {
-        const pilePreview = msg.pileTop ? [msg.pileTop] : [];
-        let side = '<div class="tc-rule">' + escapeHtml(shitheadRuleHintText(msg.pileTopRank, msg.pileCount || 0)) + '</div>';
-        if (msg.lastPlayedBy && (msg.lastPlayedCards || []).length) {
-          const cards = msg.lastPlayedCards;
-          side += '<div class="tc-tv-banner">' + escapeHtml((names[msg.lastPlayedBy] || 'Player') + ' played ' +
-            (cards.length > 1 ? cards.length + '× ' + tcRankLabel(cards[0].rank) : tcCardShort(cards[0]))) + '</div>';
-        }
+        const pilePreview = (msg.pilePreview && msg.pilePreview.length) ? msg.pilePreview : (msg.pileTop ? [msg.pileTop] : []);
         const pileCount = tcNum(msg.pileCount);
+        let side = '<div class="tc-rule">' + escapeHtml(shitheadRuleHintText(msg.pileTopRank, msg.pileCount || 0)) + '</div>';
+        side += renderMoveLog(shLog, { name: id => names[id] || 'Player', avatar: id => (String(id).startsWith('bot_') ? '🤖' : ((state.playerAvatars || {})[id] || '')), max: 4 });
         html += '<div class="tc-tv-center">' +
           '<div class="tc-well"><span class="tc-well-label">Draw deck</span>' +
             renderTableStack(null, msg.drawPileCount || 0, { size: pileSize, facedown: true, emptyLabel: 'Empty' }) +
             '<span class="tc-count">' + tcNum(msg.drawPileCount) + ' left</span></div>' +
-          '<div class="tc-well"><span class="tc-well-label">Play pile</span>' +
-            renderTableStack(pilePreview, pileCount || pilePreview.length, { size: pileSize, emptyLabel: 'Empty' }) +
+          '<div class="tc-well" id="tvPileWell"><span class="tc-well-label">Play pile</span>' +
+            renderMessyPile(pilePreview, pileCount || pilePreview.length, { size: pileSize, emptyLabel: 'Empty' }) +
             '<span class="tc-count">' + pileCount + (pileCount === 1 ? ' card' : ' cards') + '</span></div>' +
         '</div>' +
         '<div class="tc-tv-side">' + side + '</div>';
@@ -1226,6 +1238,36 @@
       html += '</div>';
       content.innerHTML = html;
       tcFitTv();
+      if (freshEvent) tvAnimateShEvent(ev, msg);
+    }
+
+    /** Play the move on the TV: the card flies in from the player's seat, or the pile slides to them. */
+    function tvAnimateShEvent(ev, msg) {
+      // Nothing flies while the story card covers the table: the card would land on top of it.
+      const story = document.getElementById('storyOverlay');
+      if (story && story.style.display !== 'none' && getComputedStyle(story).display !== 'none') return;
+      const content = document.getElementById('gameContent');
+      const seatEl = content.querySelector('.tc-seat[data-player-id="' + (window.CSS && CSS.escape ? CSS.escape(ev.by) : ev.by) + '"]');
+      const pile = content.querySelector('#tvPileWell .tc-pile');
+      if (!seatEl || !pile) return;
+      const fromRect = seatEl.getBoundingClientRect();
+      const card = (ev.cards || [])[ev.cards.length - 1];
+      if (ev.kind === 'pickup') {
+        tcSweepTo(pile, fromRect, ev.count);
+        audio.play('draw');
+        return;
+      }
+      if (!card) return;
+      const topEl = pile.querySelector('.tc-pile-top');
+      if (ev.kind === 'play' && topEl) topEl.classList.add('tc-in-flight');
+      tcFlyIn(card, fromRect, pile, ev, {
+        burn: ev.kind === 'burn',
+        onDone: () => {
+          if (topEl) topEl.classList.remove('tc-in-flight');
+          if (ev.kind === 'blind-miss') tcSweepTo(pile, fromRect, ev.count);
+          audio.play(ev.kind === 'play' ? 'place' : ev.kind === 'burn' ? 'deck_redraw' : 'draw');
+        },
+      });
     }
 
 
@@ -1246,7 +1288,7 @@
 
       let entries;
       let roundLabel = null;
-      let status = (msg.phase === 'finished') ? 'Klart' : 'Spelar';
+      let status = (msg.phase === 'finished') ? 'Done' : 'Playing';
 
       if (gameType === 'shithead') {
         // `scores` here is players.length - placement; derive true placement from finishOrder.
@@ -1256,10 +1298,16 @@
           ...finishOrder,
           ...ids.filter(id => !finishOrder.includes(id)),
         ];
+        const cardsLeft = id => {
+          const p = (msg.players || []).find(x => x.playerId === id);
+          if (!p) return 'Playing';
+          const n = (p.handCount || 0) + (p.faceUp || []).length + (p.faceDownCount || 0);
+          return n + (n === 1 ? ' card' : ' cards');
+        };
         entries = rankedIds.map((id, i) => ({
           id,
           name: names[id] || id,
-          valueText: finishOrder.includes(id) ? 'Plats ' + (i + 1) : 'Spelar',
+          valueText: finishOrder.includes(id) ? 'Place ' + (i + 1) : cardsLeft(id),
           rank: i + 1,
           isOut: finishOrder.includes(id),
         }));
@@ -1272,7 +1320,7 @@
           return {
             id,
             name: names[id] || id,
-            valueText: guessesLeft + ' gissningar kvar',
+            valueText: guessesLeft + ' guesses left',
             rank: i + 1,
             isOut: false,
           };
@@ -1291,7 +1339,7 @@
           isOut: false,
         }));
         if ((gameType === 'quiz' || gameType === 'music-quiz') && msg.totalQuestions) {
-          roundLabel = 'Fråga ' + ((msg.currentQuestion || 0) + 1) + ' / ' + msg.totalQuestions;
+          roundLabel = 'Question ' + ((msg.currentQuestion || 0) + 1) + ' / ' + msg.totalQuestions;
         } else if (gameType === 'spy' && msg.totalRounds) {
           roundLabel = 'Round ' + (msg.round || 0) + ' / ' + msg.totalRounds;
         } else if (gameType === 'gin-rummy' && msg.handNumber != null) {
@@ -1316,7 +1364,7 @@
 
       const rows = entries.map(e => {
         const rankClass = e.rank === 1 ? 'rank-gold' : e.rank === 2 ? 'rank-silver' : e.rank === 3 ? 'rank-bronze' : '';
-        const outBadge = e.isOut ? ' <span class="score-out-badge">UTE</span>' : '';
+        const outBadge = e.isOut ? ' <span class="score-out-badge">OUT</span>' : '';
         return '<div class="score-entry card' + (e.isOut ? ' is-out' : '') + '" data-player-id="' + escapeHtml(e.id) + '">' +
           '<span class="score-rank ' + rankClass + '">' + e.rank + '</span>' +
           '<span class="score-name">' + playerAvatarHtml(e.id) + escapeHtml(e.name) + outBadge + '</span>' +
