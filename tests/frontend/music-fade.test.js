@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { runInNewContext } from 'node:vm';
-const source = readFileSync(new URL('../../public/js/music-fade.js', import.meta.url), 'utf8');
+const source = readFileSync(new URL('../../games/quiz/client/lib/music-fade.js', import.meta.url), 'utf8');
 afterEach(() => vi.useRealTimers());
 function setup() {
   vi.useFakeTimers();

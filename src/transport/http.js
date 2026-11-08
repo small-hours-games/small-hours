@@ -6,14 +6,14 @@ import path from 'path';
 import fs from 'fs';
 import express from 'express';
 import { notifyRoomCreated } from '../notifications/discord.js';
-import { gameStories, publicGames } from '../games/registry.js';
+import { gameStories, listGames, publicGames } from '../games/registry.js';
+import { GAMES_DIR, renderGamePage } from '../games/client.js';
 import { BUILD_INFO } from '../version.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const PUBLIC_DIR = path.resolve(__dirname, '../../public');
 const MUSIC_DIR = path.resolve(__dirname, '../../music');
-const CATALOG_MARKER = '<!-- game-catalog -->';
 const GAME_TRACK = /^quiz-and-cards/i; // played during card games and Quiz, never in the lobby
 const AUDIO_DIR = path.resolve(__dirname, '../../data/audio');
 
@@ -31,15 +31,10 @@ let lastRoomCreateAt = 0;
 async function servePage(res, file) {
   try {
     const html = await fs.promises.readFile(path.join(PUBLIC_DIR, file), 'utf8');
-    res.type('html').send(html.replace(CATALOG_MARKER, pageCatalog()));
+    res.type('html').send(renderGamePage(html, file === 'host.html' ? 'tv' : 'phone'));
   } catch {
     res.status(404).json({ error: 'Not found' });
   }
-}
-
-/** The game catalog, written into the page so plain scripts can use it right away. */
-function pageCatalog() {
-  return '<script>var SH_GAMES = ' + JSON.stringify(publicGames()).replace(/</g, '\\u003c') + ';</script>';
 }
 
 export function setupRoutes(app, manager) {
@@ -107,6 +102,11 @@ export function setupRoutes(app, manager) {
       res.status(500).json({ error: err.message });
     }
   });
+
+  // Only client/ is public: a game's rules stay on the server.
+  for (const game of listGames()) {
+    app.use('/games/' + game.id, express.static(path.join(GAMES_DIR, game.id, 'client'), { index: false }));
+  }
 
   app.get('/api/games', (_req, res) => {
     res.json({ games: publicGames() });

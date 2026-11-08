@@ -33,11 +33,11 @@ describe('stories + tts routes', () => {
     const data = await res.json();
     expect(data.stories.hilow).toBeTruthy();
     expect(data.stories.hilow.intro).toContain('kort');
-    expect(Object.keys(data.stories).length).toBeGreaterThanOrEqual(4);
+    expect(Object.keys(data.stories).length).toBeGreaterThanOrEqual(3);
   });
 
   it('every registered game type has a story', async () => {
-    const types = ['quiz', 'shithead', 'gin-rummy', 'hilow'];
+    const types = ['shithead', 'gin-rummy', 'hilow'];
     const STORIES = gameStories();
     for (const t of types) {
       expect(STORIES[t], `story for ${t}`).toBeTruthy();

@@ -79,6 +79,22 @@ describe('game routes', () => {
     }
   });
 
+  it('writes each game into the pages and serves its client files', async () => {
+    const phone = await (await fetch(base + '/player/ABCD')).text();
+    const tv = await (await fetch(base + '/host/ABCD')).text();
+    expect(phone).toContain('<script src="/games/shithead/phone.js"></script>');
+    expect(phone).toContain('id="shitheadSection"');
+    expect(tv).toContain('<script src="/games/shithead/tv.js"></script>');
+    expect(tv).not.toContain('id="shitheadSection"');
+    expect(phone).not.toContain('<!-- game-');
+    const res = await fetch(base + '/games/shithead/tv.js');
+    expect(await res.text()).toContain("SH.registerGame('shithead'");
+  });
+
+  it('does not write a hidden game into the pages', async () => {
+    expect(await (await fetch(base + '/player/ABCD')).text()).not.toContain('/games/uno/');
+  });
+
   it('does not serve the rules of a game', async () => {
     const res = await fetch(base + '/games/shithead/rules.js');
     expect(await res.text()).not.toContain('swapCard');

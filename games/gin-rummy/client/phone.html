@@ -1,0 +1,43 @@
+    <!-- GIN RUMMY SECTION: card-table layout, see public/js/table-cards.js -->
+    <div class="section tc-screen" id="ginRummySection">
+      <div class="tc-topbar">
+        <div class="tc-status" id="grStatus"><span class="tc-dot" id="grStatusDot"></span><span id="grStatusText">Gin Rummy</span></div>
+        <span class="tc-pill" id="grOppPill"></span>
+      </div>
+      <div class="tc-chips" id="grChips"></div>
+      <div class="tc-sheet" id="grSheet" hidden></div>
+      <div class="tc-table tc-felt" id="grTable">
+        <div class="tc-wells">
+          <button type="button" class="tc-well" id="grStockWell" onclick="grTapStack('stock')">
+            <span class="tc-well-label">Stock</span>
+            <div id="grStockStack"></div>
+            <span class="tc-count" id="grStockCount">0</span>
+            <span class="tc-well-hint" id="grStockHint"></span>
+          </button>
+          <button type="button" class="tc-well" id="grDiscardWell" onclick="grTapStack('discard')">
+            <span class="tc-well-label">Discard</span>
+            <div id="grDiscardStack"></div>
+            <span class="tc-count" id="grDiscardCount">0</span>
+            <span class="tc-well-hint" id="grDiscardHint"></span>
+          </button>
+        </div>
+      </div>
+      <div class="tc-hand-zone">
+        <div class="tc-hud-row">
+          <div class="tc-hud" id="grHud"></div>
+        </div>
+        <div class="tc-hand-area" id="grHand"></div>
+        <div class="tc-actionbar" id="grActionBar">
+          <div>
+            <button type="button" class="tc-btn" id="grSortBtn" onclick="grCycleSort()">Sort: melds</button>
+            <button type="button" class="tc-btn" id="grLayoutBtn" onclick="grToggleLayout()">2-Row</button>
+            <button type="button" class="tc-btn tc-btn-colours" id="grColoursBtn" onclick="tcToggleFourColour()" aria-pressed="false" title="Four-colour suits"><span class="tc-dot-c">♣</span><span class="tc-dot-d">♦</span></button>
+          </div>
+          <div>
+            <button type="button" class="tc-btn" id="grDeclineBtn" onclick="grAction('declineUpcard')" hidden>Decline</button>
+            <button type="button" class="tc-btn tc-btn-knock" id="grKnockBtn" onclick="grAction('knock')" hidden>Knock</button>
+          </div>
+        </div>
+        <button type="button" class="tc-cta tc-cta-big" id="grCta" onclick="grCtaAction()">Gin Rummy</button>
+      </div>
+    </div>

@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { runInNewContext } from 'node:vm';
-const source = readFileSync(new URL('../../public/js/quiz-narrator.js', import.meta.url), 'utf8');
+const source = readFileSync(new URL('../../games/quiz/client/lib/quiz-narrator.js', import.meta.url), 'utf8');
 const settle = () => new Promise(resolve => setTimeout(resolve, 0));
 const question = { phase: 'question', timeLeft: 15, question: { id: 'q1', text: 'Question?' } };
 function setup(fetcher = vi.fn(async () => ({ ok: true, json: async () => ({ url: '/voice.wav' }) })), playClip = () => Promise.resolve()) {

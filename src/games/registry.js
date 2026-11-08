@@ -61,6 +61,8 @@ export function publicGames(games = listGames()) {
   return games.filter(g => !g.hidden).map(g => ({
     type: g.id,
     label: g.label,
+    ...(g.title ? { title: g.title } : {}),
+    ...(g.music ? { music: true } : {}),
     icon: g.icon,
     min: g.min,
     max: g.max,

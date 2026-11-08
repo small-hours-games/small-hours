@@ -10,6 +10,7 @@ describe('Player avatars in live scores', () => {
       state: { playerAvatars: { alice: '🐸', bob: '🦊' } },
       document: { getElementById: () => list },
       escapeHtml: text => String(text),
+      SH: { game: () => null },
     };
     runInNewContext(source.slice(source.indexOf('    function playerAvatarHtml('), source.indexOf('    function returnToLobby(')), context);
     for (const game of ['quiz', 'music-quiz', 'gin-rummy', 'shithead']) {

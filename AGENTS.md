@@ -39,12 +39,13 @@ Before editing, inspect `git status` and the relevant diff. Preserve existing un
 | `src/session/manager.js` | Room creation, lookup, and cleanup |
 | `src/session/room.js` | Players, reconnect identity, admin, lobby, scores, game registry and startup |
 | `src/engine/engine.js` | `createGame`, `processAction`, `getView`, `checkEnd` |
-| `games/<id>/` | One game each: `index.js` manifest, `rules.js`, optional `bot.js`, tests |
-| `src/games/registry.js` | Finds and validates the games in `games/` |
+| `games/<id>/` | One game each: `index.js` manifest, `rules.js`, optional `bot.js`, tests, and `client/` (`phone.js`, `tv.js`, `phone.html`, `style.css`, `lib/`) |
+| `src/games/registry.js`, `client.js` | Find and validate the games; write their scripts, styles and phone section into the pages |
+| `public/js/game-api.js` | The contract between the pages and a game's client code |
 | `src/fetcher/` | Trivia, disk caches, Gemini TTS, Deezer/music playlists |
 | `src/notifications/discord.js` | Room-created webhook |
-| `public/host.html` | Shared display UI and game rendering |
-| `public/player.html` | Phone UI and player controls |
+| `public/host.html` | Shared display shell: lobby, scoreboard, music, story |
+| `public/player.html` | Phone shell: joining, voting, chat, reconnect |
 | `public/tv.html` | TV room creation and recovery entry point |
 | `public/js/`, `public/css/` | Shared browser helpers, game metadata, audio, styles |
 | `android-tv/` | Android WebView app; read its README before building |
@@ -80,9 +81,9 @@ export default {
 
 ## Adding or changing a game
 
-1. Make a folder `games/<id>/` and implement the rules there and cover legal moves, invalid moves, private views, and end conditions as appropriate.
+1. Make a folder `games/<id>/`, implement the rules there, and cover legal moves, invalid moves, private views, and end conditions as appropriate.
 2. Export the manifest from `games/<id>/index.js` (see the other games). The server finds it by itself; `hidden: true` keeps a game without screens out of the lobby.
-3. Inspect `public/js/games.js` plus host and player rendering/dispatch. Both screens need usable states and controls.
+3. Add `client/phone.js`, `client/tv.js` and `client/phone.html` and call `SH.registerGame` (see `public/js/game-api.js`). Do not edit the shell pages for one game. Both screens need usable states and controls.
 4. If the game needs fetched content, prepare it in the session/transport flow. Phase timers go in the manifest as `phases`; see the quiz.
 5. Check lobby selection, start, actions, scoring, end, and return to lobby. Update affected integration tests.
 

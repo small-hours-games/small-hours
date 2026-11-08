@@ -4,7 +4,7 @@ import { runInNewContext } from 'node:vm';
 import { PHASE_DURATIONS } from '../../games/quiz/rules.js';
 import { PHASE_DURATIONS as MUSIC_DURATIONS } from '../../games/music-quiz/rules.js';
 
-const source = readFileSync(new URL('../../public/js/quiz-ready.js', import.meta.url), 'utf8');
+const source = readFileSync(new URL('../../games/quiz/client/lib/quiz-ready.js', import.meta.url), 'utf8');
 afterEach(() => vi.useRealTimers());
 describe('Quiz preparation countdown', () => {
   it('gives both quiz modes five seconds', () => {

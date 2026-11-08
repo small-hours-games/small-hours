@@ -17,6 +17,7 @@
   <link rel="stylesheet" href="/css/player.css">
   <link rel="stylesheet" href="/css/light-lobby.css">
   <link rel="stylesheet" href="/css/table-cards.css">
+  <!-- game-styles -->
   <link rel="icon" type="image/svg+xml" href="/images/smallhours-icon.svg">
   <link rel="icon" type="image/png" sizes="64x64" href="/images/smallhours-favicon.png">
   <link rel="apple-touch-icon" href="/images/smallhours-icon.png">
@@ -150,124 +151,16 @@
       </div>
     </div>
 
-    <!-- QUIZ SECTION -->
-    <div class="section" id="quizSection">
-      <div class="quiz-top-meta" id="quizTopMeta">
-        <span class="quiz-meta-pill" id="quizRoundPill">Quiz</span>
-        <div class="quiz-timer-display" id="quizTimerText"></div>
-        <span class="quiz-meta-pill score-pill" id="quizScore" style="display:inline-flex;">&#11088; <span class="score-val" id="quizScoreVal">0</span> pts</span>
-      </div>
-      <div class="timer-bar-container" id="quizTimerContainer" style="display:none;">
-        <div class="timer-bar" id="quizTimerBar"></div>
-      </div>
-      <div id="quizMedia" class="hidden"></div>
-      <div class="question-text card" id="quizQuestion"></div>
-      <div class="answer-grid" id="quizAnswers"></div>
-      <div class="powerup-row" id="quizPowerups">
-        <button class="powerup-btn" id="pwDouble" onclick="usePowerup('double')">&#10006;2 Double</button>
-        <button class="powerup-btn" id="pwFifty" onclick="usePowerup('fifty')">50/50</button>
-        <button class="powerup-btn" id="pwFreeze" onclick="usePowerup('freeze')">&#10052; Freeze</button>
-      </div>
-    </div>
-
-    <!-- SHITHEAD (PALACE) SECTION: card-table layout, see public/js/table-cards.js -->
-    <div class="section tc-screen" id="shitheadSection">
-      <div class="tc-topbar">
-        <div class="tc-status" id="shStatus"><span class="tc-dot" id="shStatusDot"></span><span id="shStatusText">Palace</span></div>
-        <span class="tc-pill tc-mono" id="shMeta">Palace</span>
-      </div>
-      <div class="tc-opps" id="shOpps"></div>
-      <div class="tc-table tc-felt">
-        <div class="tc-wells">
-          <div class="tc-well" id="shDrawWell">
-            <span class="tc-well-label">Draw deck</span>
-            <div id="shDrawStack"></div>
-            <span class="tc-count" id="shDrawCount">0</span>
-          </div>
-          <div class="tc-well" id="shPileWell" onclick="shTapPile()">
-            <span class="tc-well-label">Play pile</span>
-            <div id="shPileStack"></div>
-            <span class="tc-count" id="shPileCount">0</span>
-          </div>
-        </div>
-        <div class="tc-rule" id="shRule"></div>
-        <div id="shLog" class="tc-log-phone"></div>
-      </div>
-      <div class="tc-hand-zone">
-        <div class="tc-table-cards" id="shTableCards"></div>
-        <div class="tc-hud-row">
-          <span id="shAssist"></span>
-        </div>
-        <div class="tc-hand-area" id="shHand"></div>
-        <div class="tc-actionbar">
-          <div>
-            <button type="button" class="tc-btn" id="shSortBtn" onclick="shCycleSort()">Sort: rank</button>
-            <button type="button" class="tc-btn" id="shLayoutBtn" onclick="shToggleLayout()">2-Row</button>
-            <button type="button" class="tc-btn" id="shStackBtn" onclick="shToggleStacks()" hidden>Split stacks</button>
-            <button type="button" class="tc-btn tc-btn-colours" id="shColoursBtn" onclick="tcToggleFourColour()" aria-pressed="false" title="Four-colour suits"><span class="tc-dot-c">♣</span><span class="tc-dot-d">♦</span></button>
-          </div>
-          <div>
-            <button type="button" class="tc-btn tc-btn-warn" id="shPickUpBtn" onclick="pickUpPile()">Pick up pile</button>
-          </div>
-        </div>
-        <button type="button" class="tc-cta tc-cta-big" id="shCta" onclick="shCtaAction()">Palace</button>
-      </div>
-    </div>
-
-    <!-- GIN RUMMY SECTION: card-table layout, see public/js/table-cards.js -->
-    <div class="section tc-screen" id="ginRummySection">
-      <div class="tc-topbar">
-        <div class="tc-status" id="grStatus"><span class="tc-dot" id="grStatusDot"></span><span id="grStatusText">Gin Rummy</span></div>
-        <span class="tc-pill" id="grOppPill"></span>
-      </div>
-      <div class="tc-chips" id="grChips"></div>
-      <div class="tc-sheet" id="grSheet" hidden></div>
-      <div class="tc-table tc-felt" id="grTable">
-        <div class="tc-wells">
-          <button type="button" class="tc-well" id="grStockWell" onclick="grTapStack('stock')">
-            <span class="tc-well-label">Stock</span>
-            <div id="grStockStack"></div>
-            <span class="tc-count" id="grStockCount">0</span>
-            <span class="tc-well-hint" id="grStockHint"></span>
-          </button>
-          <button type="button" class="tc-well" id="grDiscardWell" onclick="grTapStack('discard')">
-            <span class="tc-well-label">Discard</span>
-            <div id="grDiscardStack"></div>
-            <span class="tc-count" id="grDiscardCount">0</span>
-            <span class="tc-well-hint" id="grDiscardHint"></span>
-          </button>
-        </div>
-      </div>
-      <div class="tc-hand-zone">
-        <div class="tc-hud-row">
-          <div class="tc-hud" id="grHud"></div>
-        </div>
-        <div class="tc-hand-area" id="grHand"></div>
-        <div class="tc-actionbar" id="grActionBar">
-          <div>
-            <button type="button" class="tc-btn" id="grSortBtn" onclick="grCycleSort()">Sort: melds</button>
-            <button type="button" class="tc-btn" id="grLayoutBtn" onclick="grToggleLayout()">2-Row</button>
-            <button type="button" class="tc-btn tc-btn-colours" id="grColoursBtn" onclick="tcToggleFourColour()" aria-pressed="false" title="Four-colour suits"><span class="tc-dot-c">♣</span><span class="tc-dot-d">♦</span></button>
-          </div>
-          <div>
-            <button type="button" class="tc-btn" id="grDeclineBtn" onclick="grAction('declineUpcard')" hidden>Decline</button>
-            <button type="button" class="tc-btn tc-btn-knock" id="grKnockBtn" onclick="grAction('knock')" hidden>Knock</button>
-          </div>
-        </div>
-        <button type="button" class="tc-cta tc-cta-big" id="grCta" onclick="grCtaAction()">Gin Rummy</button>
-      </div>
-    </div>
-
+    <!-- game-sections -->
   </main>
 
   <!-- Toast container -->
   <div class="toast-container" id="toasts"></div>
 
   <script src="/js/table-cards.js"></script>
+  <script src="/js/game-api.js"></script>
   <!-- game-catalog -->
   <script src="/js/games.js"></script>
-  <script src="/js/quiz-ready.js"></script>
-  <script src="/js/music-fade.js"></script>
   <script>
     // --- Avatars ---
     const AVATARS = ['\u{1F438}', '\u{1F431}', '\u{1F984}', '\u{1F41D}', '\u{1F419}', '\u{1F99A}', '\u{1F427}', '\u{1F981}',
@@ -282,22 +175,11 @@
       players: [],
       gameType: null,
       myIndex: -1,
-      selectedAnswer: null,
-      powerupsUsed: { double: false, fifty: false, freeze: false },
-      eliminatedAnswers: [],
-      pendingPowerup: null,
-      lastQuizQuestionId: null,
-      guessHistory: [],
       reconnectToken: null,
       reconnectAttempts: 0,
       maxReconnect: 10,
       reconnectTimer: null,
       votedGame: null,
-      shSelectedCards: [],
-      shSwapSelected: { hand: null, faceUp: null },
-      shitheadDecks: 1,
-      shWasTurn: false,
-      grSelectedCard: null,
     };
 
     // --- Init ---
@@ -435,12 +317,7 @@
 
         case 'MINI_GAME_STARTING':
           state.gameType = msg.gameType;
-          state.selectedAnswer = null;
-          state.eliminatedAnswers = [];
-          state.pendingPowerup = null;
-          state.lastQuizQuestionId = null;
-          state.guessHistory = [];
-          state.powerupsUsed = { double: false, fifty: false, freeze: false };
+          SH.game(msg.gameType)?.onEnter?.();
           showSection(getGameSectionId(msg.gameType));
           showToast('Game starting!', 'success');
           break;
@@ -451,7 +328,7 @@
 
         case 'ERROR':
           showToast(msg.message || 'An error occurred', 'error');
-          if (isSectionActive('shitheadSection') && state.shLastMsg) renderShitheadState(state.shLastMsg);
+          SH.game(state.gameType)?.redraw?.();
           break;
 
         case 'CHAT_MESSAGE':
@@ -473,16 +350,12 @@
           showToast('Game over! Winner decided!', 'success');
         }
         // Show final state before returning to lobby
-        switch (state.gameType) {
-          case 'quiz': case 'music-quiz': renderQuizState(msg); break;
-          case 'shithead': renderShitheadState(msg); break;
-          case 'gin-rummy': renderGinRummyState(msg); break;
-        }
+        SH.game(state.gameType)?.render(msg);
         // Return to lobby after a delay
         setTimeout(() => {
+          SH.game(state.gameType)?.reset?.();
           state.gameType = null;
           state.ready = false;
-          state.grSelectedCard = null;
           showSection('lobbySection');
         }, 3000);
         return;
@@ -497,11 +370,7 @@
         }
       }
 
-      switch (state.gameType) {
-        case 'quiz': case 'music-quiz': renderQuizState(msg); break;
-        case 'shithead': renderShitheadState(msg); break;
-        case 'gin-rummy': renderGinRummyState(msg); break;
-      }
+      SH.game(state.gameType)?.render(msg);
     }
 
     // --- Sections ---
@@ -517,8 +386,7 @@
     }
 
     function getGameSectionId(game) {
-      const map = { 'quiz': 'quizSection', 'music-quiz': 'quizSection', 'shithead': 'shitheadSection', 'gin-rummy': 'ginRummySection' };
-      return map[game] || 'lobbySection';
+      return SH.game(game)?.section || 'lobbySection';
     }
 
     // Keep the phone awake while it is the controller. The lock drops whenever the tab
@@ -627,18 +495,12 @@
           (seats === n ? 'bg-sky-50 border-sky-500 text-sky-900 shadow-sm' : 'bg-white/90 border-sky-200 text-slate-700') + '">' +
           '\u{1F916} ' + n + '</button>').join('') + '</div></div>';
       }
-      if (leader && leader.type === 'shithead') {
-        html += '<div class="grid grid-cols-3 gap-2">' + [1, 2, 4].map(n =>
-          '<button onclick="setShDecks(' + n + ')" class="p-2.5 rounded-xl border-2 text-xs font-extrabold transition ' +
-          (state.shitheadDecks === n ? 'bg-sky-50 border-sky-500 text-sky-900 shadow-sm' : 'bg-white/90 border-sky-200 text-slate-700') + '">' +
-          n + ' deck' + (n > 1 ? 's' : '') + '<br><span class="font-normal text-[10px] opacity-75">' + (52 * n) + ' cards</span></button>'
-        ).join('') + '</div>';
-      }
+      const lobbyOptions = leader && SH.game(leader.type)?.lobbyOptions;
+      if (lobbyOptions) html += lobbyOptions();
       if (leader) {
-        const label = leader.type === 'quiz' && !state.votingActive
-          ? 'Start Quiz &rarr; Pick Topic'
-          : vsAi ? 'Play ' + escapeHtml(leader.label) + ' vs AI'
-          : 'Start ' + escapeHtml(leader.label) + ' Now';
+        const label = SH.game(leader.type)?.startLabel?.()
+          || (vsAi ? 'Play ' + escapeHtml(leader.label) + ' vs AI'
+            : 'Start ' + escapeHtml(leader.label) + ' Now');
         html += '<button onclick="startGame()" id="startGameBtn" class="start-game-cta">' +
           '<i class="fa-solid fa-play text-base"></i> <span>' + leader.icon + ' ' + label + '</span></button>';
       } else {
@@ -653,15 +515,10 @@
       renderAdminControls();
     }
 
-    function setShDecks(n) {
-      state.shitheadDecks = n;
-      renderAdminControls();
-    }
-
     // The server resolves the most-voted game (quiz first opens its category vote).
     function startGame() {
       const config = {};
-      if (state.leadingGame === 'shithead') config.decks = state.shitheadDecks || 1;
+      Object.assign(config, SH.game(state.leadingGame)?.startConfig?.());
       const leader = shGame(state.leadingGame);
       if (playsVsAi(leader)) config.bots = Math.min(state.aiSeats || 2, leader.aiMax);
       send({ type: 'START_VOTED_GAME', config });
@@ -780,352 +637,13 @@
       while (container.children.length > 50) container.removeChild(container.firstChild);
     }
 
-    // --- Quiz ---
-    const QUIZ_POWERUP_BTNS = { double: 'pwDouble', fifty: 'pwFifty', freeze: 'pwFreeze' };
-
-    function renderQuizState(msg) {
-      const timerContainer = document.getElementById('quizTimerContainer');
-      const timerBar = document.getElementById('quizTimerBar');
-      const timerText = document.getElementById('quizTimerText');
-      const questionEl = document.getElementById('quizQuestion');
-      const grid = document.getElementById('quizAnswers');
-      const powerupsEl = document.getElementById('quizPowerups');
-
-      if (msg.phase !== 'countdown') {
-        stopQuizReadyCountdown();
-        timerText.classList.remove('quiz-ready-number');
-      }
-
-      // Reset per-question state when a new question arrives
-      const q = msg.question || null;
-      if (q && q.id && q.id !== state.lastQuizQuestionId) {
-        state.selectedAnswer = null;
-        state.eliminatedAnswers = [];
-        state.pendingPowerup = null;
-        state.lastQuizQuestionId = q.id;
-      }
-
-      if (q && msg.selectedAnswer != null) {
-        const selectedIndex = q.answers.indexOf(msg.selectedAnswer);
-        if (selectedIndex !== -1) state.selectedAnswer = selectedIndex;
-      }
-
-      // Engine-provided eliminatedAnswers override local (keeps fifty powerup in sync)
-      if (Array.isArray(msg.eliminatedAnswers)) {
-        state.eliminatedAnswers = msg.eliminatedAnswers;
-      }
-
-      // Sync pending powerup with server powerup state — if the server says a
-      // powerup is no longer available and we haven't marked it locally, sync.
-      if (msg.myPowerups) {
-        for (const p of ['double', 'fifty', 'freeze']) {
-          if (msg.myPowerups[p] === false) {
-            state.powerupsUsed[p] = true;
-          }
-        }
-      }
-
-      // Header line: "Question X of Y"
-      const headerText = (msg.currentQuestion != null && msg.totalQuestions)
-        ? 'Question ' + (msg.currentQuestion + 1) + ' of ' + msg.totalQuestions
-        : '';
-      const roundPill = document.getElementById('quizRoundPill');
-      if (roundPill) {
-        roundPill.textContent = headerText || (q && q.media ? '🎵 Music Quiz' : '🎯 Quiz');
-      }
-
-      if (msg.phase === 'countdown') {
-        timerContainer.style.display = 'none';
-        timerText.classList.add('quiz-ready-number');
-        startQuizReadyCountdown('quizTimerText', msg.timeLeft);
-        questionEl.textContent = headerText || 'Get ready!';
-        grid.innerHTML = '';
-        powerupsEl.style.display = 'none';
-      } else if (msg.phase === 'between') {
-        timerContainer.style.display = 'none';
-        timerText.textContent = '';
-        questionEl.textContent = 'Next up: ' + headerText;
-        grid.innerHTML = '';
-        powerupsEl.style.display = 'none';
-      } else if (msg.phase === 'question') {
-        questionEl.textContent = (q && q.text) ? q.text : headerText;
-
-        // Save question state for re-renders (e.g. after answer selection)
-        state._lastQuestion = q;
-
-        // Timer: the server sends the time left; tick it down locally
-        if (msg.timeLeft != null && msg.timeTotal) {
-          startQuizCountdown(msg.timeLeft, msg.timeTotal);
-        } else if (!state.quizCountdown) {
-          timerContainer.style.display = 'none';
-          timerText.textContent = '';
-        }
-
-        // Answers
-        const labels = ['A', 'B', 'C', 'D'];
-        const classes = ['answer-a', 'answer-b', 'answer-c', 'answer-d'];
-        const answers = (q && q.answers) || [];
-        grid.innerHTML = answers.map((a, i) => {
-          let cls = 'answer-btn ' + classes[i];
-          if (state.selectedAnswer === i) cls += ' selected';
-          if (state.eliminatedAnswers.includes(i)) cls += ' eliminated';
-          const disabled = state.selectedAnswer !== null ? ' disabled' : '';
-          return '<button class="' + cls + '"' + disabled + ' aria-pressed="' + (state.selectedAnswer === i) + '" onclick="selectAnswer(' + i + ')">' +
-            '<strong>' + labels[i] + '.</strong> ' + escapeHtml(a) + '</button>';
-        }).join('');
-
-        // Powerups
-        powerupsEl.style.display = state.selectedAnswer === null ? 'grid' : 'none';
-        updatePowerupBtns();
-
-      } else if (msg.phase === 'reveal') {
-        timerContainer.style.display = 'none';
-        timerText.textContent = '';
-        questionEl.textContent = (q && q.text) ? q.text : headerText;
-
-        const labels = ['A', 'B', 'C', 'D'];
-        const classes = ['answer-a', 'answer-b', 'answer-c', 'answer-d'];
-        const answers = (q && q.answers) || [];
-        grid.innerHTML = answers.map((a, i) => {
-          let cls = 'answer-btn ' + classes[i];
-          if (state.selectedAnswer === i) cls += ' selected';
-          if (i === msg.correctIndex) cls += ' correct';
-          else if (state.selectedAnswer === i) cls += ' incorrect';
-          if (state.eliminatedAnswers.includes(i) && i !== msg.correctIndex) cls += ' eliminated';
-          return '<button class="' + cls + '" aria-pressed="' + (state.selectedAnswer === i) + '" disabled>' +
-            '<strong>' + labels[i] + '.</strong> ' + escapeHtml(a) + '</button>';
-        }).join('');
-
-        powerupsEl.style.display = 'none';
-      }
-
-      if (msg.phase !== 'question') stopQuizCountdown(msg.phase === 'countdown');
-      renderQuizMedia(msg);
-
-      if (msg.score != null) {
-        document.getElementById('quizScore').style.display = 'inline-flex';
-        document.getElementById('quizScoreVal').textContent = msg.score;
-      }
-    }
-
-    // --- Question countdown (bar + seconds), ticked locally from the server's time left ---
-    function startQuizCountdown(timeLeft, timeTotal) {
-      state.quizDeadline = Date.now() + timeLeft * 1000;
-      state.quizTotal = timeTotal;
-      if (!state.quizCountdown) state.quizCountdown = setInterval(tickQuizCountdown, 250);
-      tickQuizCountdown();
-    }
-
-    function tickQuizCountdown() {
-      const left = Math.max(0, (state.quizDeadline - Date.now()) / 1000);
-      const pct = state.quizTotal ? (left / state.quizTotal) * 100 : 0;
-      // Only touch class/text when they change: Tailwind's CDN compiler re-runs on every class change
-      const bar = document.getElementById('quizTimerBar');
-      const container = document.getElementById('quizTimerContainer');
-      if (container.style.display !== 'block') container.style.display = 'block';
-      bar.style.width = pct + '%';
-      const cls = 'timer-bar' + (pct < 20 ? ' critical' : pct < 40 ? ' warning' : '');
-      if (bar.className !== cls) bar.className = cls;
-      const text = document.getElementById('quizTimerText');
-      const secText = String(Math.ceil(left));
-      if (text.textContent !== secText) text.textContent = secText;
-      if (left <= 0) stopQuizCountdown(true);
-    }
-
-    function stopQuizCountdown(keepDisplay) {
-      clearInterval(state.quizCountdown);
-      state.quizCountdown = null;
-      if (!keepDisplay) {
-        document.getElementById('quizTimerContainer').style.display = 'none';
-        document.getElementById('quizTimerText').textContent = '';
-      }
-    }
-
-    // --- Music Quiz audio: the clip plays on every phone (and the TV); big mute button per phone ---
-    const SILENT_CLIP = 'data:audio/wav;base64,UklGRogAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YWQAAACAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICA';
-    const phoneAudio = new Audio();
-    const phoneMusicFade = createMusicFade(phoneAudio);
-    let phoneAudioQuestion = null;
-    state.musicMuted = (() => { try { return localStorage.getItem('sh_music_muted') === '1'; } catch { return false; } })();
-    state.musicBlocked = false;
-    phoneAudio.muted = state.musicMuted;
-
-    // Phones only allow sound after a tap: unlock this one reusable element on the first tap
-    document.addEventListener('pointerdown', () => {
-      if (phoneAudioQuestion) {
-        phoneAudio.play().then(() => { state.musicBlocked = false; updateMusicBtn(); }).catch(() => {});
-        return;
-      }
-      phoneAudio.src = SILENT_CLIP;
-      phoneAudio.play().catch(() => {});
-    }, { once: true });
-
-    function syncPhoneMusic(msg) {
-      const q = msg.question;
-      const preview = q && q.media && q.media.preview;
-      const audible = msg.phase === 'question' || msg.phase === 'reveal';
-      if (!preview || !audible) {
-        if (!audible) stopPhoneMusic();
-        return;
-      }
-      // Re-renders within the same question keep the clip running
-      if (q.id === phoneAudioQuestion) { phoneMusicFade.sync(msg); return; }
-      if (msg.phase !== 'question') return;
-      phoneAudioQuestion = q.id;
-      state.musicBlocked = false;
-      phoneAudio.src = preview;
-      phoneMusicFade.start(msg.timeLeft);
-      phoneAudio.play().catch(() => { state.musicBlocked = true; updateMusicBtn(); });
-    }
-
-    function stopPhoneMusic() {
-      phoneMusicFade.stop();
-      if (phoneAudioQuestion) phoneAudio.pause();
-      phoneAudioQuestion = null;
-      state.musicBlocked = false;
-    }
-
-    function toggleMusicMute() {
-      if (state.musicBlocked) {
-        phoneAudio.play().then(() => { state.musicBlocked = false; updateMusicBtn(); }).catch(() => {});
-        return;
-      }
-      state.musicMuted = !state.musicMuted;
-      phoneAudio.muted = state.musicMuted;
-      try { localStorage.setItem('sh_music_muted', state.musicMuted ? '1' : '0'); } catch { /* ignore */ }
-      updateMusicBtn();
-    }
-
-    function musicBtnHtml() {
-      const [icon, label, tone] = state.musicBlocked
-        ? ['fa-play', 'Tap to hear', 'bg-sky-600 text-white shadow-md shadow-sky-600/30']
-        : state.musicMuted
-          ? ['fa-volume-xmark', 'Muted', 'bg-slate-200 text-slate-600']
-          : ['fa-volume-high', 'Sound on', 'bg-sky-100 text-sky-700'];
-      return '<button id="musicBtn" onclick="toggleMusicMute()" aria-label="' + label + '" class="shrink-0 w-16 h-16 rounded-2xl flex flex-col items-center justify-center gap-0.5 font-bold transition active:scale-95 ' + tone + '">' +
-        '<i class="fa-solid ' + icon + ' text-2xl"></i><span class="text-[10px] leading-none">' + label + '</span></button>';
-    }
-
-    function updateMusicBtn() {
-      const btn = document.getElementById('musicBtn');
-      if (btn) btn.outerHTML = musicBtnHtml();
-    }
-
-    // Music Quiz strip: now playing + mute during the question, the song at reveal
-    function renderQuizMedia(msg) {
-      syncPhoneMusic(msg);
-      const box = document.getElementById('quizMedia');
-      const media = msg.question && msg.question.media;
-      const image = msg.question && !media && msg.question.image;
-      if ((!media && !image) || (msg.phase !== 'question' && msg.phase !== 'reveal')) {
-        box.className = 'hidden';
-        box.innerHTML = '';
-        return;
-      }
-      if (image) {
-        box.className = 'quiz-phone-image-wrap my-1 flex justify-center';
-        box.innerHTML = '<img src="' + escapeHtml(image) + '" alt="" class="quiz-phone-image max-h-24 w-auto rounded-xl object-contain shadow-sm border-2 border-white bg-white/85" loading="eager" onerror="this.parentElement.className=\'hidden\'">';
-        return;
-      }
-      box.className = 'device-screen bg-white/95 border-2 border-sky-200 rounded-xl p-2.5 flex items-center gap-3 shadow-sm';
-      if (msg.phase === 'reveal' && media.artist) {
-        box.innerHTML =
-          (media.cover ? '<img src="' + escapeHtml(media.cover) + '" alt="" class="w-16 h-16 rounded-xl object-cover shadow-md border border-slate-200">' : '') +
-          '<div class="min-w-0 flex-1">' +
-            '<div class="text-[10px] font-extrabold uppercase tracking-wider text-emerald-600 mb-0.5">&#127925; Answer Track</div>' +
-            '<div class="font-extrabold text-base text-slate-900 truncate">' + escapeHtml(media.title) + '</div>' +
-            '<div class="text-xs font-semibold text-slate-600 truncate">' + escapeHtml(media.artist) + '</div>' +
-          '</div>' +
-          musicBtnHtml();
-      } else {
-        box.innerHTML =
-          '<div class="flex-1 min-w-0">' +
-            '<div class="flex items-center gap-2">' +
-              '<span class="font-extrabold text-sm text-slate-800">&#127911; Listen &amp; Guess</span>' +
-              (msg.question.category ? '<span class="px-2 py-0.5 rounded-full bg-sky-100 text-sky-800 text-[11px] font-extrabold truncate">' + escapeHtml(msg.question.category) + '</span>' : '') +
-            '</div>' +
-            '<div class="flex items-end gap-1.5 h-7 mt-2">' +
-              '<span class="w-2 h-3 bg-sky-500 rounded-full animate-bounce"></span>' +
-              '<span class="w-2 h-6 bg-sky-600 rounded-full animate-pulse"></span>' +
-              '<span class="w-2 h-4 bg-sky-400 rounded-full animate-bounce"></span>' +
-              '<span class="w-2 h-7 bg-sky-700 rounded-full animate-pulse"></span>' +
-              '<span class="w-2 h-3 bg-sky-500 rounded-full animate-bounce"></span>' +
-              '<span class="w-2 h-5 bg-sky-600 rounded-full animate-pulse"></span>' +
-            '</div>' +
-          '</div>' +
-          musicBtnHtml();
-      }
-    }
-
-    function selectAnswer(index) {
-      if (state.selectedAnswer !== null) return;
-      if (state.eliminatedAnswers.includes(index)) return;
-      state.selectedAnswer = index;
-      // Send the answer text (not index) so the engine can compare against correct_answer string
-      const answerId = state._lastQuestion && state._lastQuestion.answers
-        ? state._lastQuestion.answers[index]
-        : index;
-      const action = { type: 'answer', answerId };
-      // Attach any pending powerup (double/freeze) to the submission
-      if (state.pendingPowerup && state.pendingPowerup !== 'fifty') {
-        action.powerupType = state.pendingPowerup;
-      }
-      send({ type: 'GAME_ACTION', action });
-
-      // Immediately reflect the selection in the DOM (server will confirm shortly)
-      const btns = document.querySelectorAll('#quizAnswers .answer-btn');
-      btns.forEach((btn, i) => {
-        btn.disabled = true;
-        btn.setAttribute('aria-pressed', String(i === index));
-        if (i === index) btn.classList.add('selected');
-      });
-      document.getElementById('quizPowerups').style.display = 'none';
-    }
-
-    function usePowerup(type) {
-      if (state.powerupsUsed[type]) return;
-      if (state.selectedAnswer !== null) return;
-
-      if (type === 'fifty') {
-        // Fifty is activated immediately on the server — it trims the answer list
-        // via the next view update (eliminatedAnswers).
-        state.powerupsUsed.fifty = true;
-        send({ type: 'GAME_ACTION', action: { type: 'useFifty' } });
-      } else {
-        // Double / freeze are tracked locally and attached to the answer on submit
-        state.pendingPowerup = type;
-        state.powerupsUsed[type] = true;
-      }
-      updatePowerupBtns();
-    }
-
-    function updatePowerupBtns() {
-      for (const [p, btnId] of Object.entries(QUIZ_POWERUP_BTNS)) {
-        const btn = document.getElementById(btnId);
-        if (!btn) continue;
-        if (state.powerupsUsed[p]) {
-          btn.disabled = true;
-          btn.classList.add('used');
-        } else {
-          btn.disabled = false;
-          btn.classList.remove('used');
-        }
-        if (state.pendingPowerup === p) {
-          btn.classList.add('selected');
-        } else {
-          btn.classList.remove('selected');
-        }
-      }
-    }
-
-    // ===== Card table: Palace + Gin Rummy (rendering kit in /js/table-cards.js) =====
+    // --- Card table helpers (rendering kit in /js/table-cards.js) ---
     // Card sizes depend on the screen, so redraw the open card table on rotate/resize.
     let tcResizeTimer = null;
     window.addEventListener('resize', () => {
       clearTimeout(tcResizeTimer);
       tcResizeTimer = setTimeout(() => {
-        if (isSectionActive('ginRummySection') && state.grLastMsg) renderGinRummyState(state.grLastMsg);
-        if (isSectionActive('shitheadSection') && state.shLastMsg) renderShitheadState(state.shLastMsg);
+        SH.game(state.gameType)?.redraw?.();
       }, 150);
     });
 
@@ -1224,8 +742,7 @@
     function tcToggleFourColour() {
       tcSetFourColour(!tcFourColourOn);
       try { localStorage.setItem('sh_four_colour', tcFourColourOn ? '1' : '0'); } catch { /* ignore */ }
-      if (state.shLastMsg && document.getElementById('shitheadSection').classList.contains('active')) renderShitheadState(state.shLastMsg);
-      if (state.grLastMsg && document.getElementById('ginRummySection').classList.contains('active')) renderGinRummyState(state.grLastMsg);
+      SH.game(state.gameType)?.redraw?.();
     }
     function tcSyncColoursBtn(id) {
       const btn = document.getElementById(id);
@@ -1248,682 +765,11 @@
       btn.classList.toggle('tc-cta-gin', cta.action === 'knock-gin');
     }
 
-    // --- Palace (shithead engine) ---
-    function canPlayCard(rank, pileTopRank, pileCount) {
-      // Coerce to numbers defensively; mirrors canPlayOnPile in the engine
-      const r = Number(rank);
-      const top = pileTopRank == null ? null : Number(pileTopRank);
-      if (!pileCount) return true;
-      if (r === 2 || r === 10) return true; // 2 resets, 10 burns
-      if (top === null || isNaN(top)) return true;
-      if (top === 7) return r <= 7;
-      return r >= top;
-    }
-
-    function shRuleBannerText(pileTopRank, pileCount) {
-      if (!pileCount) return 'Empty pile: play anything';
-      const top = pileTopRank == null ? null : Number(pileTopRank);
-      if (top == null || isNaN(top)) return 'A 2 reset the pile: play anything';
-      const lbl = tcRankLabel(top);
-      if (top === 7) return '7 on top: play 7 or lower, or a 2 or 10';
-      return 'Play ' + lbl + ' or higher, or a 2 or 10';
-    }
-
-    /** Which of my zones is in play: hand, then face-up, then face-down. */
-    function shZone(msg) {
-      if ((msg.myHand || []).length) return 'hand';
-      if ((msg.myFaceUp || []).length) return 'faceUp';
-      if ((msg.myFaceDownIds || []).length) return 'faceDown';
-      return 'none';
-    }
-
-    function shActiveZoneCards(msg) {
-      const zone = shZone(msg);
-      if (zone === 'hand') return msg.myHand;
-      if (zone === 'faceUp') return msg.myFaceUp;
-      return [];
-    }
-
-    /** The thumb button: what the next move is. Pure, for tests. */
-    function shCtaState(msg, selectedIds) {
-      if (msg.phase === 'finished') return { label: 'Game over', disabled: true };
-      if (msg.phase === 'swap') {
-        const ready = msg.swapConfirmed && msg.swapConfirmed[state.playerId];
-        return ready ? { label: 'Ready ✓ waiting for others', disabled: true } : { label: 'Done swapping', action: 'confirmSwap' };
-      }
-      if (!msg.isMyTurn) return { label: 'Waiting for ' + tcName(msg.currentPlayer, msg) + '…', disabled: true };
-      const zone = shZone(msg);
-      if (zone === 'faceDown') {
-        return selectedIds.length ? { label: 'Flip the blind card', action: 'playFaceDown' } : { label: 'Pick a face-down card', disabled: true };
-      }
-      const cards = shActiveZoneCards(msg);
-      const sel = cards.filter(c => selectedIds.includes(c.id));
-      if (sel.length) {
-        return { label: 'Play ' + (sel.length > 1 ? sel.length + '× ' + tcRankLabel(sel[0].rank) : tcCardShort(sel[0])), action: 'playCards',
-          verb: 'Play', card: sel[0], count: sel.length };
-      }
-      const pileCount = msg.pileCount || 0;
-      if (pileCount > 0 && !cards.some(c => canPlayCard(c.rank, msg.pileTopRank, pileCount))) {
-        return { label: 'Pick up the pile (' + pileCount + ')', action: 'pickUpPile' };
-      }
-      return { label: 'Tap cards to play', disabled: true };
-    }
-
-    function renderShitheadState(msg) {
-      state.shLastMsg = msg;
-      tcFitScreen('shitheadSection');
-      const zone = shZone(msg);
-      const pileCount = msg.pileCount || 0;
-      const myTurn = msg.phase === 'play' && !!msg.isMyTurn;
-
-      // Keep only selections that are still in my active zone
-      const validIds = new Set(zone === 'faceDown' ? (msg.myFaceDownIds || []) : shActiveZoneCards(msg).map(c => c.id));
-      state.shSelectedCards = msg.phase === 'play' ? state.shSelectedCards.filter(id => validIds.has(id)) : [];
-
-      // Status line
-      let status = 'Palace';
-      if (msg.phase === 'swap') status = 'Swap: put your strongest cards face-up';
-      else if (msg.phase === 'finished') {
-        const place = (msg.finishOrder || []).indexOf(state.playerId);
-        status = place >= 0 ? 'You finished #' + (place + 1) : 'Game over';
-      } else if (myTurn) {
-        status = zone === 'faceUp' ? 'Your turn: play from your face-up cards'
-          : zone === 'faceDown' ? 'Your turn: flip a blind card!' : 'Your turn';
-      } else if ((msg.finishOrder || []).includes(state.playerId)) {
-        status = "You're out! Watching the others";
-      } else {
-        status = tcName(msg.currentPlayer, msg) + "'s turn";
-      }
-      tcSetStatus('sh', status, myTurn || (msg.phase === 'swap' && !(msg.swapConfirmed || {})[state.playerId]));
-      tcBuzz('shWasTurn', myTurn);
-      document.getElementById('shMeta').textContent = 'Deck ' + (msg.drawPileCount || 0);
-
-      renderShOtherPlayers(msg);
-
-      // Table: draw deck and play pile
-      document.getElementById('shDrawStack').innerHTML = renderTableStack(null, msg.drawPileCount || 0, { size: 'md', facedown: true, emptyLabel: 'Empty' });
-      document.getElementById('shDrawCount').textContent = (msg.drawPileCount || 0) + ' left';
-      const pilePreview = (msg.pilePreview && msg.pilePreview.length) ? msg.pilePreview : (msg.pileTop ? [msg.pileTop] : []);
-      const pileStack = document.getElementById('shPileStack');
-      pileStack.innerHTML = renderMessyPile(pilePreview, pileCount || pilePreview.length, { size: 'md', emptyLabel: 'Empty', highlight: myTurn && state.shSelectedCards.length > 0 });
-      // Move log + a landing bounce for each new card on the pile
-      const ev = msg.lastEvent;
-      const freshEvent = ev && ev.seq !== state.shSeenSeq;
-      state.shLog = tcLogPush(state.shLog, ev, 6);
-      state.shSeenSeq = ev ? ev.seq : null;
-      if (freshEvent && ev.kind === 'play') {
-        const top = pileStack.querySelector('.tc-pile-top');
-        if (top) top.classList.add('tc-land');
-      }
-      if (freshEvent && ev.by !== state.playerId && (ev.kind === 'burn' || ev.kind === 'pickup' || ev.kind === 'blind-miss')) {
-        if (navigator.vibrate) navigator.vibrate(30);
-      }
-      document.getElementById('shLog').innerHTML = msg.phase === 'play'
-        ? renderMoveLog(state.shLog, { name: id => (id === state.playerId ? 'You' : tcName(id, msg)), avatar: id => tcAvatar(id), max: 3 })
-        : '';
-      document.getElementById('shPileCount').textContent = pileCount + (pileCount === 1 ? ' card' : ' cards');
-      document.getElementById('shPileWell').classList.toggle('tc-well-active', myTurn && state.shSelectedCards.length > 0);
-      document.getElementById('shRule').textContent = msg.phase === 'swap'
-        ? 'Tap a hand card, then a face-up card, to swap them. 2, 10 and A are strong face-up.'
-        : shRuleBannerText(msg.pileTopRank, pileCount);
-
-      // My table cards (face-up / face-down) above the hand
-      const faceUp = msg.myFaceUp || [];
-      const fdIds = msg.myFaceDownIds || [];
-      let table = '';
-      if (msg.phase === 'swap' || zone === 'hand') {
-        table += '<div class="tc-table-group"><span class="tc-group-label">Face up</span><div class="tc-row">' +
-          (faceUp.length ? faceUp.map(c => renderTableCard(c, {
-            size: 'md',
-            selected: msg.phase === 'swap' && state.shSwapSelected.faceUp === c.id,
-            dim: msg.phase !== 'swap',
-          })).join('') : '<span class="tc-group-label">none</span>') + '</div></div>';
-      }
-      if (zone !== 'faceDown' && fdIds.length) {
-        table += '<div class="tc-table-group"><span class="tc-group-label">Face down</span><div class="tc-row">' +
-          fdIds.map(() => renderTableCard(null, { size: 'sm', facedown: true, dataId: '' })).join('') + '</div></div>';
-      }
-      const tableEl = document.getElementById('shTableCards');
-      tableEl.innerHTML = table;
-      attachHandGestures(tableEl, {
-        onTap: id => { if (state.shLastMsg && state.shLastMsg.phase === 'swap') shSwapSelect('faceUp', id); },
-      });
-
-      // The rack: whatever zone I play from
-      let rackCards = [];
-      if (msg.phase === 'swap' || zone === 'hand') rackCards = msg.myHand || [];
-      else if (zone === 'faceUp') rackCards = faceUp;
-      const sortMode = state.shSortMode || 'rank';
-      let ordered = orderHand(rackCards, sortMode, state.shOrder);
-      // A big hand (after a pickup) stacks same ranks: Palace plays them together anyway.
-      const stackable = msg.phase === 'play' && zone === 'hand' && shHasStacks(rackCards);
-      const stacked = stackable && !state.shSplitStacks;
-      state.shStacked = stacked;
-      const myHand = msg.myHand || [];
-      const arrivals = tcTrackArrivals('sh', myHand, msg.phase === 'play' ? 'play' : null);
-      let rackOpts;
-      if (msg.phase === 'swap') {
-        rackOpts = c => ({ selected: state.shSwapSelected.hand === c.id });
-      } else {
-        rackOpts = (c, group) => ({
-          selected: (group || [c]).some(g => state.shSelectedCards.includes(g.id)),
-          dim: myTurn && !canPlayCard(c.rank, msg.pileTopRank, pileCount),
-          ...tcArrivalOpts(arrivals, c, group),
-        });
-      }
-      if (msg.phase === 'play' && zone === 'faceDown') {
-        ordered = fdIds.map(id => ({ id }));
-        rackOpts = c => ({ facedown: true, selected: state.shSelectedCards.includes(c.id) });
-      }
-      const handEl = document.getElementById('shHand');
-      handEl.innerHTML = renderHandRack(ordered, {
-        layout: tcLayout(), width: tcHandWidth('shHand'), cardW: tcHandCardW('shHand'), cardOpts: rackOpts,
-        stack: stacked,
-        emptyText: msg.phase === 'finished' ? 'Game over' : 'No cards left',
-      });
-      attachHandGestures(handEl, {
-        peek: true,
-        onTap: id => shTapCard(id),
-        onPlay: (id, flick) => shSwipePlay(id, flick),
-        onReorder: (id, targetId) => {
-          state.shOrder = tcMoveId(ordered.map(c => c.id), id, targetId);
-          state.shSortMode = 'custom';
-          renderShitheadState(state.shLastMsg);
-        },
-      });
-
-      // Thumb button and action bar
-      tcSetCta('shCta', shCtaState(msg, state.shSelectedCards));
-      document.getElementById('shLayoutBtn').textContent = tcLayout() === 'fan' ? 'Fan' : '2-Row';
-      document.getElementById('shSortBtn').textContent = 'Sort: ' + (sortMode === 'custom' ? 'mine' : sortMode);
-      const stackBtn = document.getElementById('shStackBtn');
-      stackBtn.hidden = !stackable;
-      stackBtn.textContent = state.shSplitStacks ? 'Stack' : 'Split stacks';
-      tcSyncColoursBtn('shColoursBtn');
-      const pickUp = document.getElementById('shPickUpBtn');
-      pickUp.hidden = msg.phase !== 'play';
-      pickUp.disabled = !myTurn || pileCount === 0;
-      pickUp.textContent = 'Pick up' + (pileCount ? ' (' + pileCount + ')' : '');
-      updateShSelectionAssistUI();
-      shFitLog();
-      const fromPile = ev && (ev.kind === 'pickup' || ev.kind === 'blind-miss');
-      tcLaunchArrivals(arrivals, myHand, fromPile ? pileStack : document.getElementById('shDrawStack'), handEl);
-    }
-
-    /** The hand is pinned to the bottom: drop the oldest log lines until none sit under it. */
-    function shFitLog() {
-      const logEl = document.getElementById('shLog');
-      const zone = document.querySelector('#shitheadSection .tc-hand-zone');
-      if (!logEl || !zone) return;
-      const items = Array.from(logEl.querySelectorAll('.tc-log-item'));
-      // The latest move always stays; older lines only when there is room.
-      while (items.length > 1 && logEl.getBoundingClientRect().bottom > zone.getBoundingClientRect().top + 8) {
-        items.pop().remove();
-      }
-    }
-
-    function shTapCard(id) {
-      const msg = state.shLastMsg;
-      if (!msg) return;
-      if (msg.phase === 'swap') { shSwapSelect('hand', id); return; }
-      if (msg.phase !== 'play') return;
-      const handEl = document.getElementById('shHand');
-      if (shZone(msg) === 'faceDown') {
-        state.shSelectedCards = state.shSelectedCards.includes(id) ? [] : [id];
-        renderShitheadState(msg);
-        return;
-      }
-      const card = shActiveZoneCards(msg).find(c => c.id === id);
-      if (!card) return;
-      if (msg.isMyTurn && !canPlayCard(card.rank, msg.pileTopRank, msg.pileCount || 0)) {
-        tcShake(handEl, id);
-        showToast(shRuleBannerText(msg.pileTopRank, msg.pileCount || 0), 'info');
-        return;
-      }
-      if (state.shStacked) {
-        // One tap takes the whole stack; a second tap puts it back.
-        const group = shActiveZoneCards(msg).filter(c => c.rank === card.rank).map(c => c.id);
-        const all = group.every(g => state.shSelectedCards.includes(g));
-        state.shSelectedCards = all ? [] : group;
-        renderShitheadState(msg);
-        return;
-      }
-      if (state.shSelectedCards.includes(id)) {
-        // A second tap only deselects: a quick double tap must never play a card by accident.
-        state.shSelectedCards = state.shSelectedCards.filter(x => x !== id);
-      } else {
-        const first = shActiveZoneCards(msg).find(c => c.id === state.shSelectedCards[0]);
-        state.shSelectedCards = first && first.rank === card.rank ? [...state.shSelectedCards, id] : [id];
-      }
-      renderShitheadState(msg);
-    }
-
-    function shSwipePlay(id, flick) {
-      const msg = state.shLastMsg;
-      if (!msg || msg.phase !== 'play' || !msg.isMyTurn) { shTapCard(id); return; }
-      if (shZone(msg) === 'faceDown') { shPlayFaceDown(id, flick); return; }
-      const cards = shActiveZoneCards(msg);
-      const card = cards.find(c => c.id === id);
-      if (!card) return;
-      if (!canPlayCard(card.rank, msg.pileTopRank, msg.pileCount || 0)) {
-        tcShake(document.getElementById('shHand'), id);
-        showToast(shRuleBannerText(msg.pileTopRank, msg.pileCount || 0), 'info');
-        return;
-      }
-      const sameRank = state.shStacked
-        ? cards.filter(c => c.rank === card.rank).map(c => c.id)
-        : cards.filter(c => state.shSelectedCards.includes(c.id) && c.rank === card.rank).map(c => c.id);
-      state.shSelectedCards = sameRank.includes(id) ? sameRank : [...sameRank, id];
-      playSelectedCards(flick);
-    }
-
-    function shTapPile() {
-      const msg = state.shLastMsg;
-      if (!msg || !msg.isMyTurn || !state.shSelectedCards.length) return;
-      if (shZone(msg) === 'faceDown') shPlayFaceDown(state.shSelectedCards[0]);
-      else playSelectedCards();
-    }
-
-    function shCtaAction() {
-      const action = document.getElementById('shCta').dataset.action;
-      if (action === 'confirmSwap') confirmShSwap();
-      else if (action === 'playCards') playSelectedCards();
-      else if (action === 'playFaceDown') shPlayFaceDown(state.shSelectedCards[0]);
-      else if (action === 'pickUpPile') pickUpPile();
-    }
-
-    function shToggleLayout() {
-      tcSetLayout(tcLayout() === 'fan' ? 'rack' : 'fan');
-      if (state.shLastMsg) renderShitheadState(state.shLastMsg);
-    }
-
-    function shSetSort(mode) {
-      state.shSortMode = mode;
-      state.shOrder = null;
-      if (state.shLastMsg) renderShitheadState(state.shLastMsg);
-    }
-
-    function shCycleSort() {
-      shSetSort(state.shSortMode === 'rank' || !state.shSortMode ? 'suit' : 'rank');
-    }
-
-    /** Stack same ranks once the hand no longer fits two rows of six. Pure, for tests. */
-    function shHasStacks(cards) {
-      if (!cards || cards.length <= 12) return false;
-      return new Set(cards.map(c => c.rank)).size < cards.length;
-    }
-
-    function shToggleStacks() {
-      state.shSplitStacks = !state.shSplitStacks;
-      if (state.shLastMsg) renderShitheadState(state.shLastMsg);
-    }
-
-    function shSwapSelect(source, cardId) {
-      if (source === 'hand') {
-        state.shSwapSelected.hand = state.shSwapSelected.hand === cardId ? null : cardId;
-      } else {
-        state.shSwapSelected.faceUp = state.shSwapSelected.faceUp === cardId ? null : cardId;
-      }
-      if (state.shSwapSelected.hand && state.shSwapSelected.faceUp) {
-        send({ type: 'GAME_ACTION', action: { type: 'swapCard', handCardId: state.shSwapSelected.hand, faceUpCardId: state.shSwapSelected.faceUp } });
-        state.shSwapSelected = { hand: null, faceUp: null };
-      }
-      if (state.shLastMsg) renderShitheadState(state.shLastMsg);
-    }
-
-    function confirmShSwap() {
-      send({ type: 'GAME_ACTION', action: { type: 'confirmSwap' } });
-    }
-
-    function updateShSelectionAssistUI() {
-      const msg = state.shLastMsg;
-      const assist = document.getElementById('shAssist');
-      if (!msg || !assist) return;
-      assist.innerHTML = '';
-      if (msg.phase !== 'play' || !msg.isMyTurn || !state.shSelectedCards.length) return;
-      const cards = shActiveZoneCards(msg);
-      const first = cards.find(c => c.id === state.shSelectedCards[0]);
-      if (!first) return;
-      const same = cards.filter(c => c.rank === first.rank);
-      if (same.length > 1 && state.shSelectedCards.length < same.length) {
-        assist.innerHTML = '<button type="button" class="tc-btn tc-active" onclick="shSelectAllRank(' + tcNum(first.rank) + ')">All ' +
-          escapeHtml(tcRankLabel(first.rank)) + 's (×' + same.length + ')</button>';
-      }
-    }
-
-    function shSelectAllRank(rank) {
-      const msg = state.shLastMsg;
-      if (!msg) return;
-      state.shSelectedCards = shActiveZoneCards(msg).filter(c => c.rank === Number(rank)).map(c => c.id);
-      renderShitheadState(msg);
-    }
-
-    // A tap-to-play throws like a gentle flick, so the TV animation always runs.
-    const SH_TAP_FLICK = { vx: 0, vy: -2.4 };
-
-    /** Send the cards flying off the top of the phone now; the server's answer follows. */
-    function shThrowCards(ids, flick) {
-      const msg = state.shLastMsg;
-      const handEl = document.getElementById('shHand');
-      const known = msg ? shActiveZoneCards(msg) : [];
-      ids.forEach((cid, i) => {
-        const el = handEl.querySelector('[data-card-id="' + (window.CSS && CSS.escape ? CSS.escape(cid) : cid) + '"]');
-        if (!el) return;
-        const rect = (i === 0 && flick && flick.rect) ? flick.rect : el.getBoundingClientRect();
-        const card = known.find(c => c.id === cid) || null;
-        if (card) tcThrowOff(card, rect, flick || SH_TAP_FLICK);
-        el.style.visibility = 'hidden';
-      });
-    }
-
-    function shFlickPayload(flick) {
-      const f = flick || SH_TAP_FLICK;
-      return { vx: f.vx || 0, vy: f.vy || 0 };
-    }
-
-    function playSelectedCards(flick) {
-      if (state.shSelectedCards.length === 0) return;
-      const ids = [...state.shSelectedCards];
-      shThrowCards(ids, flick);
-      send({ type: 'GAME_ACTION', action: { type: 'playCards', cardIds: ids, flick: shFlickPayload(flick) } });
-      state.shSelectedCards = [];
-    }
-
-    function shPlayFaceDown(cardId, flick) {
-      if (!cardId) return;
-      state.shSelectedCards = [];
-      const el = document.querySelector('#shHand [data-card-id="' + (window.CSS && CSS.escape ? CSS.escape(cardId) : cardId) + '"]');
-      if (el) el.style.visibility = 'hidden';
-      send({ type: 'GAME_ACTION', action: { type: 'playFaceDown', cardId: cardId, flick: shFlickPayload(flick) } });
-    }
-
-    function pickUpPile() {
-      state.shSelectedCards = [];
-      send({ type: 'GAME_ACTION', action: { type: 'pickUpPile' } });
-    }
-
-    function renderShOtherPlayers(msg) {
-      const container = document.getElementById('shOpps');
-      container.classList.add('tc-opps-seats');
-      const finish = msg.finishOrder || [];
-      const others = (msg.players || []).filter(p => p.playerId !== state.playerId);
-      container.innerHTML = others.map(p => {
-        const turn = msg.phase === 'play' && p.playerId === msg.currentPlayer;
-        const place = finish.indexOf(p.playerId);
-        const out = p.isOut || place >= 0;
-        let tag = '';
-        if (msg.phase === 'swap') tag = (msg.swapConfirmed || {})[p.playerId] ? '✓ ready' : 'swapping…';
-        else if (out) tag = '✓ out' + (place >= 0 ? ' #' + (place + 1) : '');
-        else if (turn) tag = '▶ playing';
-        let row = '';
-        if (!out) {
-          row = '<span class="tc-opp-count" title="Cards in hand">' + renderCardChip(null) + '×' + tcNum(p.handCount) + '</span>' +
-            (p.faceUp || []).map(renderCardChip).join('') +
-            (p.faceDownCount ? '<span class="tc-opp-count tc-opp-blind" title="Face-down cards">+' + tcNum(p.faceDownCount) + '</span>' : '');
-        }
-        return '<div class="tc-opp' + (turn ? ' tc-opp-turn' : '') + (out ? ' tc-opp-out' : '') + '">' +
-          '<div class="tc-opp-head"><span class="tc-opp-name">' + escapeHtml(tcAvatar(p.playerId) + tcName(p.playerId, msg)) + '</span>' +
-          (tag ? '<span class="tc-opp-tag">' + escapeHtml(tag) + '</span>' : '') + '</div>' +
-          (row ? '<div class="tc-opp-row">' + row + '</div>' : '') +
-        '</div>';
-      }).join('');
-    }
-
     // --- UI Helpers ---
     function setConnectionStatus(status, text) {
       const el = document.getElementById('connStatus');
       el.className = 'connection-status ' + status;
       document.getElementById('connText').textContent = text;
-    }
-
-    // --- Gin Rummy ---
-    function grOpponentId(msg) {
-      return Object.keys(msg.cumulative || {}).find(id => id !== state.playerId) || null;
-    }
-
-    /** The thumb button: what the next move is. Pure, for tests. */
-    function grCtaState(msg, selectedId) {
-      if (msg.phase === 'scoring') return { label: 'Next hand', action: 'nextHand' };
-      if (msg.phase === 'finished') return { label: 'Game over', disabled: true };
-      if (!msg.isMyTurn) return { label: 'Waiting for ' + tcName(grOpponentId(msg), msg) + '…', disabled: true };
-      if (msg.phase === 'first_turn') return { label: 'Take ' + tcCardShort(msg.discardTop), action: 'takeUpcard' };
-      if (msg.turnPhase === 'draw') return { label: 'Draw from stock', action: 'drawStock' };
-      if (!selectedId) return { label: 'Tap a card to discard', disabled: true };
-      if (selectedId === msg.lastDrawnCardId) return { label: "Can't discard the card you just took", disabled: true };
-      const card = (msg.myHand || []).find(c => c.id === selectedId);
-      return card ? { label: 'Discard ' + tcCardShort(card), action: 'discard', verb: 'Discard', card: card } : { label: 'Tap a card to discard', disabled: true };
-    }
-
-    function grStatusText(msg) {
-      const opp = tcName(grOpponentId(msg), msg);
-      if (msg.phase === 'scoring') return 'Hand over';
-      if (msg.phase === 'finished') return 'Game over';
-      if (!msg.isMyTurn) {
-        if (msg.phase === 'first_turn') return opp + ' is deciding on the upcard';
-        return opp + (msg.turnPhase === 'draw' ? ' is drawing' : ' is discarding');
-      }
-      if (msg.phase === 'first_turn') return 'Take the upcard or decline it';
-      if (msg.turnPhase === 'draw') return 'Tap Stock or Discard to draw';
-      if (msg.canKnock) return msg.myDeadwoodValue === 0 ? 'Gin! Declare it or discard' : 'You can knock, or discard a card';
-      return 'Pick a card to discard, or swipe it up';
-    }
-
-    function renderGinRummyState(msg) {
-      state.grLastMsg = msg;
-      tcFitScreen('ginRummySection');
-      const me = state.playerId;
-      const oppId = grOpponentId(msg);
-      const playing = msg.phase !== 'scoring' && msg.phase !== 'finished';
-      const myTurn = playing && !!msg.isMyTurn;
-      const discardPhase = myTurn && msg.phase === 'drawing' && msg.turnPhase === 'discard';
-      const drawPhase = myTurn && (msg.phase === 'drawing' || msg.phase === 'first_turn_draw') && msg.turnPhase === 'draw';
-      const hand = msg.myHand || [];
-      if (!hand.some(c => c.id === state.grSelectedCard)) state.grSelectedCard = null;
-      if (!discardPhase) state.grSelectedCard = null;
-
-      tcSetStatus('gr', grStatusText(msg), myTurn);
-      tcBuzz('grWasTurn', myTurn);
-
-      // Opponent pill and score chips
-      const counts = msg.playerCardCounts || {};
-      const oppCount = counts[oppId] != null ? counts[oppId] : (msg.opponentCardCount || 0);
-      document.getElementById('grOppPill').className = 'tc-pill' + (playing && !msg.isMyTurn ? ' tc-pill-turn' : '');
-      document.getElementById('grOppPill').innerHTML = escapeHtml(tcAvatar(oppId) + tcName(oppId, msg)) + ' <span class="tc-mono">' + tcNum(oppCount) + '🂠</span>';
-      const cum = msg.cumulative || {};
-      const boxes = msg.boxes || {};
-      document.getElementById('grChips').innerHTML =
-        (msg.handNumber ? '<span class="tc-pill tc-mono">Hand ' + tcNum(msg.handNumber) + '</span>' : '') +
-        Object.keys(cum).map(id => '<span class="tc-pill">' + escapeHtml(id === me ? 'You' : tcName(id, msg)) +
-          ' <b class="tc-mono">' + tcNum(cum[id]) + '</b>' + (boxes[id] ? ' <span class="tc-mono">▣' + tcNum(boxes[id]) + '</span>' : '') + '</span>').join('');
-
-      // Table wells
-      const stockCount = msg.stockCount || 0;
-      const discardCount = msg.discardCount != null ? msg.discardCount : (msg.discardTop ? 1 : 0);
-      const preview = (msg.discardPreview && msg.discardPreview.length) ? msg.discardPreview : (msg.discardTop ? [msg.discardTop] : []);
-      const canStock = drawPhase && stockCount > 0;
-      const canTakeDiscard = myTurn && !!msg.discardTop && (msg.phase === 'first_turn' || drawPhase);
-      const canDropDiscard = discardPhase && !!state.grSelectedCard && state.grSelectedCard !== msg.lastDrawnCardId;
-      document.getElementById('grStockStack').innerHTML = renderTableStack(null, stockCount, { size: 'md', facedown: true, emptyLabel: 'Empty', highlight: canStock });
-      document.getElementById('grStockCount').textContent = stockCount + ' left';
-      document.getElementById('grStockHint').textContent = canStock ? 'Tap to draw' : '';
-      document.getElementById('grStockWell').classList.toggle('tc-well-active', canStock);
-      document.getElementById('grDiscardStack').innerHTML = renderTableStack(preview, discardCount, { size: 'md', emptyLabel: 'Empty', highlight: canTakeDiscard || canDropDiscard });
-      document.getElementById('grDiscardCount').textContent = discardCount + (discardCount === 1 ? ' card' : ' cards');
-      document.getElementById('grDiscardHint').textContent = canDropDiscard ? 'Tap to discard' : canTakeDiscard ? (msg.phase === 'first_turn' ? 'Tap to take upcard' : 'Tap to take') : '';
-      document.getElementById('grDiscardWell').classList.toggle('tc-well-active', canTakeDiscard || canDropDiscard);
-      document.getElementById('grTable').hidden = !playing;
-
-      // Hand rack with meld glows
-      const melds = msg.myMelds || [];
-      const meldOf = tcMeldMap(melds);
-      const sortMode = state.grSortMode || 'melds';
-      const ordered = orderHand(hand, sortMode, state.grOrder, melds);
-      const handEl = document.getElementById('grHand');
-      handEl.hidden = !playing;
-      const arrivals = tcTrackArrivals('gr', hand, playing ? (msg.handNumber || 1) : null);
-      const fromStock = state.grPrevStock != null && stockCount < state.grPrevStock;
-      state.grPrevStock = stockCount;
-      handEl.innerHTML = renderHandRack(ordered, {
-        layout: tcLayout(), width: tcHandWidth('grHand'), cardW: tcHandCardW('grHand'),
-        cardOpts: c => {
-          const arrival = tcArrivalOpts(arrivals, c);
-          return { selected: state.grSelectedCard === c.id, meld: meldOf[c.id], ...arrival, isNew: arrival.isNew || msg.lastDrawnCardId === c.id };
-        },
-      });
-      attachHandGestures(handEl, {
-        peek: true,
-        onTap: id => grSelectCard(id),
-        onPlay: id => grSwipeDiscard(id),
-        onReorder: (id, targetId) => {
-          state.grOrder = tcMoveId(ordered.map(c => c.id), id, targetId);
-          state.grSortMode = 'custom';
-          renderGinRummyState(state.grLastMsg);
-        },
-      });
-
-      // HUD: sets / runs / deadwood
-      const sets = melds.filter(m => m.type === 'set').length;
-      const runs = melds.filter(m => m.type !== 'set').length;
-      const dw = msg.myDeadwoodValue != null ? msg.myDeadwoodValue : null;
-      const hud = document.getElementById('grHud');
-      hud.hidden = !playing;
-      hud.innerHTML = '<span><i style="background:var(--tc-set)"></i>Sets <b>' + sets + '</b></span><span class="tc-sep">|</span>' +
-        '<span><i style="background:var(--tc-run)"></i>Runs <b>' + runs + '</b></span><span class="tc-sep">|</span>' +
-        '<span>DW <b class="tc-dw' + (dw != null && dw <= 10 ? ' tc-dw-ok' : '') + '">' + (dw == null ? '–' : tcNum(dw)) + '</b></span>';
-
-      // Thumb button, knock / decline, sort bar
-      tcSetCta('grCta', grCtaState(msg, state.grSelectedCard));
-      const knock = document.getElementById('grKnockBtn');
-      knock.hidden = !(discardPhase && msg.canKnock);
-      knock.textContent = dw === 0 ? 'GIN!' : 'Knock (' + dw + ')';
-      knock.classList.toggle('tc-btn-gin', dw === 0);
-      document.getElementById('grDeclineBtn').hidden = !(myTurn && msg.phase === 'first_turn');
-      document.getElementById('grActionBar').hidden = !playing;
-      document.getElementById('grLayoutBtn').textContent = tcLayout() === 'fan' ? 'Fan' : '2-Row';
-      document.getElementById('grSortBtn').textContent = 'Sort: ' + (sortMode === 'custom' ? 'mine' : sortMode);
-      tcSyncColoursBtn('grColoursBtn');
-
-      // Result sheet
-      const sheet = document.getElementById('grSheet');
-      sheet.hidden = playing;
-      if (!playing) renderGrScoring(msg);
-      tcLaunchArrivals(arrivals, hand, document.getElementById(fromStock ? 'grStockStack' : 'grDiscardStack'), handEl);
-    }
-
-    function grSelectCard(id) {
-      const msg = state.grLastMsg;
-      if (!msg) return;
-      state.grSelectedCard = state.grSelectedCard === id ? null : id;
-      renderGinRummyState(msg);
-    }
-
-    function grSwipeDiscard(id) {
-      const msg = state.grLastMsg;
-      if (!msg || !(msg.isMyTurn && msg.phase === 'drawing' && msg.turnPhase === 'discard')) { grSelectCard(id); return; }
-      if (id === msg.lastDrawnCardId) {
-        tcShake(document.getElementById('grHand'), id);
-        showToast("You can't discard the card you just took", 'info');
-        return;
-      }
-      state.grSelectedCard = id;
-      grDiscard();
-    }
-
-    function grTapStack(source) {
-      const msg = state.grLastMsg;
-      if (!msg || !msg.isMyTurn) return;
-      if (msg.phase === 'first_turn' && source === 'discard') { grAction('takeUpcard'); return; }
-      if ((msg.phase === 'drawing' || msg.phase === 'first_turn_draw') && msg.turnPhase === 'draw') {
-        if (source === 'stock' && (msg.stockCount || 0) > 0) grDraw('stock');
-        else if (source === 'discard' && msg.discardTop) grDraw('discard');
-        return;
-      }
-      if (source === 'discard' && msg.turnPhase === 'discard' && state.grSelectedCard) {
-        if (state.grSelectedCard === msg.lastDrawnCardId) { showToast("You can't discard the card you just took", 'info'); return; }
-        grDiscard();
-      }
-    }
-
-    function grCtaAction() {
-      const action = document.getElementById('grCta').dataset.action;
-      if (action === 'takeUpcard' || action === 'nextHand') grAction(action);
-      else if (action === 'drawStock') grDraw('stock');
-      else if (action === 'discard') grDiscard();
-    }
-
-    function grSetSortMode(mode) {
-      state.grSortMode = mode;
-      state.grOrder = null;
-      if (state.grLastMsg) renderGinRummyState(state.grLastMsg);
-    }
-
-    function grCycleSort() {
-      const order = ['melds', 'rank', 'suit'];
-      const i = order.indexOf(state.grSortMode || 'melds');
-      grSetSortMode(order[(i + 1) % order.length]);
-    }
-
-    function grToggleLayout() {
-      tcSetLayout(tcLayout() === 'fan' ? 'rack' : 'fan');
-      if (state.grLastMsg) renderGinRummyState(state.grLastMsg);
-    }
-
-    function grDraw(source) {
-      state.grSelectedCard = null;
-      send({ type: 'GAME_ACTION', action: { type: 'draw', source } });
-    }
-
-    function grDiscard() {
-      if (!state.grSelectedCard) return;
-      const cardId = state.grSelectedCard;
-      state.grSelectedCard = null;
-      send({ type: 'GAME_ACTION', action: { type: 'discard', cardId } });
-    }
-
-    function grAction(actionType) {
-      state.grSelectedCard = null;
-      send({ type: 'GAME_ACTION', action: { type: actionType } });
-    }
-
-    /** Melds + deadwood of one player as glowing card groups. */
-    function grRevealHtml(title, melds, deadwood, size, layoffs) {
-      let html = '<div class="tc-reveal"><div class="tc-reveal-head"><span>' + escapeHtml(title) + '</span>' +
-        '<span>Deadwood ' + (deadwood || []).reduce((s, c) => s + Math.min(10, tcNum(c.rank)), 0) + '</span></div><div class="tc-meld-groups">';
-      (melds || []).forEach(m => {
-        html += '<div class="tc-meld-group">' + (m.cards || []).map(c => renderTableCard(c, { size: size, meld: m.type === 'set' ? 'set' : 'run', dataId: '' })).join('') + '</div>';
-      });
-      if ((layoffs || []).length) {
-        html += '<div class="tc-meld-group">' + layoffs.map(c => renderTableCard(c, { size: size, badge: 'laid off', dataId: '' })).join('') + '</div>';
-      }
-      if ((deadwood || []).length) {
-        html += '<div class="tc-meld-group tc-deadwood-group">' + deadwood.map(c => renderTableCard(c, { size: size, dataId: '' })).join('') + '</div>';
-      }
-      return html + '</div></div>';
-    }
-
-    function renderGrScoring(msg) {
-      const hr = msg.handResult || {};
-      const me = state.playerId;
-      const typeLabels = { knock: 'Knock', undercut: 'Undercut!', gin: 'Gin!', bigGin: 'Big Gin!', cancelled: 'Stock ran out' };
-      let html = '<div class="tc-sheet-kicker">' + escapeHtml(msg.phase === 'finished' ? 'Game over' : (typeLabels[hr.type] || 'Hand over')) + '</div>';
-      if (hr.type === 'cancelled') {
-        html += '<div class="tc-sheet-title">No points this hand</div>';
-      } else if (hr.winner) {
-        const good = hr.winner === me;
-        html += '<div class="tc-sheet-title ' + (good ? 'tc-good' : 'tc-bad') + '">' +
-          escapeHtml((good ? 'You win' : tcName(hr.winner, msg) + ' wins') + ' +' + (hr.points || 0)) + '</div>';
-      }
-      if (msg.knocker) {
-        const oppId = Object.keys(msg.cumulative || {}).find(id => id !== msg.knocker);
-        const knockName = msg.knocker === me ? 'You' : tcName(msg.knocker, msg);
-        const oppName = oppId === me ? 'You' : tcName(oppId, msg);
-        html += grRevealHtml(knockName + ' (knocked)', msg.knockerMelds, msg.knockerDeadwood, 'sm');
-        html += grRevealHtml(oppName, msg.opponentMelds, msg.opponentDeadwood, 'sm', msg.opponentLayoffs);
-      }
-      const totals = msg.finalScores || msg.cumulative || {};
-      html += '<div class="tc-scoreline">' + Object.keys(totals).map(id =>
-        '<span>' + escapeHtml(id === me ? 'You' : tcName(id, msg)) + ' <b>' + tcNum(totals[id]) + '</b></span>').join('') + '</div>';
-      document.getElementById('grSheet').innerHTML = html;
     }
 
     function showToast(message, type) {
@@ -1944,5 +790,6 @@
       return div.innerHTML;
     }
   </script>
+  <!-- game-scripts -->
 </body>
 </html>

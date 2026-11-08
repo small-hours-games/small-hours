@@ -10,8 +10,10 @@ import shithead from '../../games/shithead/rules.js';
 
 const read = file => readFileSync(new URL('../../public/' + file, import.meta.url), 'utf8');
 const KIT = read('js/table-cards.js');
-const PLAYER = read('player.html');
+const game = file => readFileSync(new URL('../../games/' + file, import.meta.url), 'utf8');
+const PLAYER = read('player.html') + game('shithead/client/phone.js') + game('gin-rummy/client/phone.js');
 const HOST = read('host.html');
+const TV_GAMES = game('shithead/client/tv.js') + '\n' + game('gin-rummy/client/tv.js');
 
 function fn(source, name) {
   const start = source.indexOf('    function ' + name + '(');
@@ -39,10 +41,11 @@ function tvRender(fnName, view) {
     escapeHtml: t => String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'),
     playerAvatarHtml: () => '',
     tcFitTv: () => {},
+    SH: { registerGame() {} },
   };
   runInNewContext(KIT, context);
   const block = HOST.slice(HOST.indexOf('    // ===== Card table on the TV'), HOST.indexOf('    function playerAvatarHtml(playerId) {'));
-  runInNewContext(block + '\n' + fn(HOST, 'shitheadRuleHintText'), context);
+  runInNewContext(block + '\n' + TV_GAMES, context);
   context[fnName]({ ...view, playerNames: context.state.playerNames });
   return content.innerHTML;
 }

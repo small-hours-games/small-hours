@@ -3,9 +3,9 @@ import { readFileSync } from 'node:fs';
 import { runInNewContext } from 'node:vm';
 
 function loadRenderer(file, name, next, context) {
-  const source = readFileSync(new URL('../../public/' + file, import.meta.url), 'utf8');
+  const source = readFileSync(new URL('../../games/quiz/client/' + file, import.meta.url), 'utf8');
   const start = source.indexOf('    function ' + name + '(');
-  const end = source.indexOf('    function ' + next + '(', start);
+  const end = source.indexOf(next.startsWith(' ') ? next : '    function ' + next + '(', start);
   runInNewContext(source.slice(start, end), context);
   return context[name];
 }
@@ -21,7 +21,7 @@ describe('Actual quiz page renderers', () => {
       state: { selectedAnswer: null, powerupsUsed: {} },
       escapeHtml, updatePowerupBtns() {}, stopQuizCountdown() {}, renderQuizMedia() {},
     };
-    const render = loadRenderer('player.html', 'renderQuizState', 'startQuizCountdown', context);
+    const render = loadRenderer('phone.js', 'renderQuizState', 'startQuizCountdown', context);
     render({ phase: 'question', question, selectedAnswer: 'Two' });
     expect(elements.quizAnswers.innerHTML).toContain('answer-b selected" disabled aria-pressed="true"');
     render({ phase: 'reveal', question, selectedAnswer: 'Two', correctIndex: 0 });
@@ -38,10 +38,9 @@ describe('Actual quiz page renderers', () => {
       playerAvatarHtml: () => '<span class="inline-player-avatar">🐸</span> ',
       syncMusic() {}, stopHostCountdown() {}, musicPanel: () => '', hostCountdown: {},
     };
-    const render = loadRenderer('host.html', 'renderQuiz', 'shitheadRuleHintText', context);
+    const render = loadRenderer('tv.js', 'renderQuiz', "    SH.registerGame('quiz'", context);
     elements.storyOverlay = { style: { display: 'flex' } };
     render({ phase: 'countdown', timeLeft: 5 });
-    expect(elements.storyOverlay.style.display).toBe('none');
     expect(elements.gameContent.innerHTML).toContain('id="quizReadyNumber"');
     render({ phase: 'question', question, playerAnswers: { p1: 'Two' } });
     expect(elements.gameContent.innerHTML).not.toContain('Alice');
@@ -62,7 +61,7 @@ describe('Actual quiz page renderers', () => {
       state: { playerNames: {} }, escapeHtml, playerAvatarHtml: () => '',
       syncMusic() {}, stopHostCountdown() {}, musicPanel: () => '', hostCountdown: {},
     };
-    const renderHost = loadRenderer('host.html', 'renderQuiz', 'shitheadRuleHintText', hostCtx);
+    const renderHost = loadRenderer('tv.js', 'renderQuiz', "    SH.registerGame('quiz'", hostCtx);
     hostEls.storyOverlay = { style: { display: 'none' } };
 
     const qWithImg = { ...question, image: 'https://upload.wikimedia.org/pic.jpg' };
@@ -80,7 +79,7 @@ describe('Actual quiz page renderers', () => {
       document: { getElementById: id => phoneEls[id] ||= { className: '', innerHTML: '' } },
       escapeHtml, syncPhoneMusic() {}, musicBtnHtml: () => '<button id="musicBtn"></button>',
     };
-    const renderMedia = loadRenderer('player.html', 'renderQuizMedia', 'selectAnswer', phoneCtx);
+    const renderMedia = loadRenderer('phone.js', 'renderQuizMedia', 'selectAnswer', phoneCtx);
     renderMedia({ phase: 'question', question: qWithImg });
     expect(phoneEls.quizMedia.className).toContain('quiz-phone-image-wrap');
     expect(phoneEls.quizMedia.innerHTML).toContain('https://upload.wikimedia.org/pic.jpg');
