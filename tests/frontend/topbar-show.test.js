@@ -222,3 +222,21 @@ describe('the show lowers its detail on a slow TV', () => {
     expect(run(kit.tbsGovernor('lite'), 16.7, 300)).toBe(2);
   });
 });
+
+describe('the AI characters join the show', () => {
+  const at = t => kit.tbsLocate(map, t, -1);
+  it('wander in one by one after the drop, a little lost, then dance their own way', () => {
+    const drop = map.dropTime;
+    expect(kit.tbsBotPose(at(drop - 2), 0, 'boot', false).show).toBe(false);
+    expect(kit.tbsBotPose(at(drop + 2), 0, 'boot', false)).toMatchObject({ show: true, lost: true });
+    expect(kit.tbsBotPose(at(drop + 2), 3, 'zoom', false).show).toBe(false);   // the last one is not here yet
+    const kinds = ['boot', 'glitch', 'dizzy', 'zoom'];
+    const t = drop + 12;
+    const poses = kinds.map((k, i) => kit.tbsBotPose(at(t), i, k, false));
+    poses.forEach(p => expect(p.show).toBe(true));
+    expect(new Set(poses.map(p => JSON.stringify([p.x, p.y, p.rot]))).size).toBeGreaterThan(2);
+  });
+  it('stay small and out of the singer’s way: they stand at the edges of the bar', () => {
+    expect(kit.TBS_BOT_SPOTS || [0.05, 0.17, 0.83, 0.95]).toEqual([0.05, 0.17, 0.83, 0.95]);
+  });
+});

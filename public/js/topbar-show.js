@@ -254,6 +254,64 @@ function tbsDancerPose(loc, side, reduced) {
   return out;
 }
 
+/**
+ * The AI characters (SH_AI) as small backup dancers along the bar: they wander in one by one
+ * after the drop, a little lost, and each dances its own way: Nova-7 ('boot') stiff and on the
+ * beat like a robot, Glitch ('glitch') jittery and flickering, Prof. Byte ('dizzy') swaying half
+ * a beat late, Turbo ('zoom') hopping double time. Now and then one stops, looks around and
+ * shows a question mark. Small, at the edges and behind her, so the singer stays the show.
+ * idx: 0-3; returns { show, x, y, rot, sx, sy, flip, lost, op }. Pure; for tests.
+ */
+var TBS_BOT_SPOTS = [0.05, 0.17, 0.83, 0.95];
+function tbsBotPose(loc, idx, kind, reduced) {
+  var out = { show: false, x: 0, y: 0, rot: 0, sx: 1, sy: 1, flip: idx < 2 ? 1 : -1, lost: false, op: 0 };
+  if (loc.stage !== 'dance') return out;
+  var since = loc.sinceDrop - (1.6 + idx * 1.9);       // they arrive one after the other
+  if (since < 0) return out;
+  out.show = true;
+  out.op = Math.min(1, since / 0.5);
+  var p = loc.phase, x2 = loc.beatInBar + p, hit = Math.pow(1 - p, 3);
+  var level = loc.kind === 'd' ? 1 : loc.kind === 'g' ? 0.7 : 0.4;
+  // Just arrived, or one of their lost moments (one bar in eight, each at its own time).
+  var arriving = since < 2.4;
+  var lostBar = ((loc.bar + idx * 3) % 8) === 5 && loc.kind !== 'd';
+  if (arriving || lostBar) {
+    out.lost = true;
+    out.flip = (Math.floor((arriving ? since : loc.t) * 2.2 + idx) % 2) ? 1 : -1;   // looking left, right
+    out.y = arriving ? -4 * Math.abs(Math.sin(since * 7)) * (1 - since / 2.4) : 0;
+    out.rot = arriving ? 10 * Math.sin(since * 5) * (1 - since / 2.4) : 4 * Math.sin(loc.t * 3 + idx);
+    out.x = arriving ? -18 * (1 - Math.min(1, since / 0.8)) * (idx < 2 ? 1 : -1) : 0; // stumbling in
+    return out;
+  }
+  if (reduced) { out.rot = 3 * Math.sin(Math.PI * x2 / 2); return out; }
+  if (kind === 'boot') {
+    // Robot: snaps between poses on each beat, a stiff nod on the kick.
+    out.rot = (loc.beatInBar % 2 ? -7 : 7) * level;
+    out.y = 3 * hit * level;
+    out.sy = 1 - 0.05 * hit;
+  } else if (kind === 'glitch') {
+    // Twitches on the hi-hats and skips about; flickers now and then.
+    var r = tbsRand(Math.max(0, loc.i) * 2 + (p >= 0.5 ? 1 : 0), idx + 11);
+    out.x = (r - 0.5) * 14 * level;
+    out.rot = (tbsRand(loc.i, idx + 31) - 0.5) * 24 * level;
+    out.y = -6 * level * (r > 0.7 ? 1 : 0);
+    out.op = tbsRand(loc.i, idx + 47) > 0.88 && p < 0.25 ? 0.35 : out.op;
+    out.flip = r > 0.5 ? 1 : -1;
+  } else if (kind === 'dizzy') {
+    // Sways half a beat behind everyone, wobbly.
+    var late = x2 - 0.5;
+    out.rot = 12 * level * Math.sin(Math.PI * late / 2);
+    out.x = 5 * level * Math.sin(Math.PI * late / 2);
+    out.y = -3 * level * Math.abs(Math.sin(Math.PI * late));
+  } else {
+    // Turbo: double-time hops, and a big one on the kick in the drops.
+    out.y = -(8 + (loc.kind === 'd' ? 8 * loc.kick : 0)) * level * Math.abs(Math.sin(2 * Math.PI * p));
+    out.rot = 8 * level * Math.sin(2 * Math.PI * p);
+    out.sx = 1 + 0.08 * hit; out.sy = 1 - 0.08 * hit;
+  }
+  return out;
+}
+
 // ---- 2D affine helpers (SVG matrix order: a b c d e f) ----
 function tbsMul(m, n) {
   return [m[0] * n[0] + m[2] * n[1], m[1] * n[0] + m[3] * n[1], m[0] * n[2] + m[2] * n[3],
@@ -570,6 +628,17 @@ function createTopbarShow(opts) {
       '<span class="tbs-chip-dots"><i></i><i></i><i></i><i></i></span></div>' +
     '<div class="tbs-singer"><div class="tbs-singer-glow"></div>' + TBS_SINGER_SVG + '</div>' +
     '<div class="tbs-flash"></div>';
+  // The AI characters as backup dancers, behind the singer (tbsBotPose).
+  var bots = [];
+  var cast = typeof SH_AI !== 'undefined' && SH_AI ? SH_AI.slice(0, TBS_BOT_SPOTS.length) : [];
+  cast.forEach(function (persona) {
+    var b = document.createElement('span');
+    b.className = 'tbs-bot';
+    b.innerHTML = '<span class="tbs-bot-face"></span><span class="tbs-bot-lost">?</span>';
+    b.firstChild.textContent = persona.avatar;
+    stage.insertBefore(b, stage.querySelector('.tbs-singer'));
+    bots.push({ el: b, face: b.firstChild, kind: persona.entrance || 'boot' });
+  });
   header.insertBefore(stage, header.firstChild);
   var q = function (sel) { return stage.querySelector(sel); };
   var el = {
@@ -938,6 +1007,17 @@ function createTopbarShow(opts) {
     css(el.logoGlow, 'opacity', (heat * (0.35 + 0.65 * hit)).toFixed(2));
     css(el.logoGlow, 'transform', 'translate(-50%, -50%) scale(' + (0.9 + 0.25 * hit * heat).toFixed(3) + ')');
 
+    // The AI characters dance along the edges of the bar, each its own way.
+    for (var bi = 0; bi < bots.length; bi++) {
+      var bp = tier >= 2 || exiting ? { show: false, op: 0 } : tbsBotPose(loc, bi, bots[bi].kind, reduced);
+      css(bots[bi].el, 'opacity', bp.show ? bp.op.toFixed(2) : '0');
+      if (!bp.show) continue;
+      var bx = bounds.left + w * TBS_BOT_SPOTS[bi] + bp.x;
+      css(bots[bi].el, 'transform', 'translate(' + bx.toFixed(1) + 'px,' + bp.y.toFixed(1) + 'px)');
+      css(bots[bi].face, 'transform', 'rotate(' + bp.rot.toFixed(1) + 'deg) scale(' + (bp.flip * bp.sx).toFixed(3) + ',' + bp.sy.toFixed(3) + ')');
+      if (bots[bi].lost !== bp.lost) { bots[bi].lost = bp.lost; bots[bi].el.classList.toggle('tbs-bot-is-lost', bp.lost); }
+    }
+
     // The lion and the frog dance under the QR code.
     for (var dn = 0; tier < 2 && dn < dancers.length; dn++) {
       var dp = exiting ? { y: 0, rot: 0, sx: 1, sy: 1, px: 0, py: 0 } : tbsDancerPose(loc, dn, reduced);
@@ -1081,6 +1161,7 @@ function createTopbarShow(opts) {
     stage.classList.remove('tbs-stage-on');
     el.singer.style.opacity = '0';
     el.singer._x = null;
+    bots.forEach(function (b) { b.el.style.opacity = '0'; if (b.el._tbs) b.el._tbs.opacity = '0'; });
     fire.parts.n = 0; fire.embers.n = 0; fire.lastBeat = -1;
     if (fire.ctx) { fire.ctx.setTransform(1, 0, 0, 1, 0, 0); fire.ctx.clearRect(0, 0, el.fire.width, el.fire.height); }
     hair.pony.pts = hair.lockL.pts = hair.lockR.pts = null;
@@ -1108,7 +1189,7 @@ function createTopbarShow(opts) {
 
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
-    tbsBeatIndex: tbsBeatIndex, tbsLocate: tbsLocate, tbsPose: tbsPose, tbsShake: tbsShake, tbsDancerPose: tbsDancerPose, tbsRand: tbsRand, tbsKnee: tbsKnee,
+    tbsBeatIndex: tbsBeatIndex, tbsLocate: tbsLocate, tbsPose: tbsPose, tbsShake: tbsShake, tbsDancerPose: tbsDancerPose, tbsBotPose: tbsBotPose, tbsRand: tbsRand, tbsKnee: tbsKnee,
     tbsGovernor: tbsGovernor, tbsGovern: tbsGovern, tbsHair: tbsHair, tbsHairStep: tbsHairStep, tbsPool: tbsPool, tbsPoolTake: tbsPoolTake, tbsPoolKill: tbsPoolKill, createTopbarShow: createTopbarShow, TBS_SHOWS: TBS_SHOWS,
   };
 }
