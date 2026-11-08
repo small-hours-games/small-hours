@@ -1241,6 +1241,10 @@
       content.innerHTML = html;
       tcFitTv();
       if (freshEvent) tvAnimateShEvent(ev, msg);
+      else if (ev && ev.seq === state.tvFlightSeq) {
+        const flyingTop = content.querySelector('#tvPileWell .tc-pile-top');
+        if (flyingTop) flyingTop.classList.add('tc-in-flight');
+      }
     }
 
     /** Play the move on the TV: the card flies in from the player's seat, or the pile slides to them. */
@@ -1261,11 +1265,19 @@
       }
       if (!card) return;
       const topEl = pile.querySelector('.tc-pile-top');
-      if (ev.kind === 'play' && topEl) topEl.classList.add('tc-in-flight');
+      if (ev.kind === 'play' && topEl) {
+        topEl.classList.add('tc-in-flight');
+        state.tvFlightSeq = ev.seq;
+      }
       tcFlyIn(card, fromRect, pile, ev, {
         burn: ev.kind === 'burn',
         onDone: () => {
-          if (topEl) topEl.classList.remove('tc-in-flight');
+          // The table may have been redrawn during the flight, and only the latest card is hidden.
+          if (state.tvFlightSeq === ev.seq) {
+            state.tvFlightSeq = null;
+            const landed = document.querySelector('#tvPileWell .tc-pile-top');
+            if (landed) landed.classList.remove('tc-in-flight');
+          }
           if (ev.kind === 'blind-miss') tcSweepTo(pile, fromRect, ev.count);
           audio.play(ev.kind === 'play' ? 'place' : ev.kind === 'burn' ? 'deck_redraw' : 'draw');
         },

@@ -29,6 +29,8 @@ const DISCONNECT_GRACE_MS = 30_000;
 const BOT_MOVE_DELAY_MS = 1_100;    // AI pause per move, so the table can be followed
 const BOT_SWAP_DELAY_MS = 400;
 const BOT_FAST_DELAY_MS = 450;      // every person is out; bots finish the game
+const BOT_AFTER_FLIGHT_MS = 2_000;  // Palace: let a card finish its flight to the pile on the TV (tcFlightMs)
+const FLIGHT_EVENTS = new Set(['play', 'burn', 'blind-miss']);
 
 /**
  * Set up WebSocket handling on the given HTTP server.
@@ -234,7 +236,11 @@ export function setupWebSocket(server, manager) {
     const humansLeft = room.game.state.finishOrder
       ? room.game.state.players.some(id => !botIds.includes(id) && !room.game.state.finishOrder.includes(id))
       : true;
-    const delay = room.game.state.phase === 'swap' ? BOT_SWAP_DELAY_MS : humansLeft ? BOT_MOVE_DELAY_MS : BOT_FAST_DELAY_MS;
+    const cardInFlight = gameType === 'shithead' && FLIGHT_EVENTS.has(room.game.state.lastEvent?.kind);
+    const delay = room.game.state.phase === 'swap' ? BOT_SWAP_DELAY_MS
+      : !humansLeft ? BOT_FAST_DELAY_MS
+      : cardInFlight ? BOT_AFTER_FLIGHT_MS
+      : BOT_MOVE_DELAY_MS;
 
     const timer = setTimeout(() => {
       botTimers.delete(room.code);

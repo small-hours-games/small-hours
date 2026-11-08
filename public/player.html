@@ -1378,6 +1378,45 @@
       document.documentElement.style.setProperty('--tc-screen-top', Math.round(el.getBoundingClientRect().top + window.scrollY + pad) + 'px');
     }
 
+    // Cards that reach the hand fly in from the table and glow until a card leaves the hand.
+    const tcArrivals = {};
+    const TC_MAX_ARRIVAL_FLIGHTS = 4;
+
+    /** Compare with the last update of this round; round null means no hand is in play. */
+    function tcTrackArrivals(key, hand, round) {
+      const t = tcArrivals[key] || (tcArrivals[key] = { ids: null, round: null, fresh: new Set(), flying: new Set() });
+      const ids = hand.map(c => c.id);
+      const sameRound = round != null && t.round === round && !!t.ids;
+      const arrived = sameRound ? tcNewCardIds(t.ids, hand) : [];
+      if (arrived.length) t.fresh = new Set(arrived);
+      else if (!sameRound || t.ids.some(id => !ids.includes(id))) t.fresh.clear();
+      t.ids = ids;
+      t.round = round;
+      arrived.slice(0, TC_MAX_ARRIVAL_FLIGHTS).forEach(id => t.flying.add(id));
+      return { t, arrived };
+    }
+
+    function tcArrivalOpts(track, c, group) {
+      const cards = group || [c];
+      return {
+        isNew: cards.some(g => track.t.fresh.has(g.id)),
+        className: track.t.flying.has(c.id) ? 'tc-in-flight' : '',
+      };
+    }
+
+    function tcLaunchArrivals(track, hand, fromEl, handEl) {
+      track.arrived.slice(0, TC_MAX_ARRIVAL_FLIGHTS).forEach((id, i) => {
+        tcFlyToHand(hand.find(c => c.id === id), fromEl, handEl, {
+          delay: i * 200,
+          onDone: () => {
+            track.t.flying.delete(id);
+            const el = tcHandCard(handEl, id);
+            if (el) el.classList.remove('tc-in-flight');
+          },
+        });
+      });
+    }
+
     function tcLayout() {
       if (!state.tcLayout) {
         try { state.tcLayout = localStorage.getItem('sh_card_layout') || 'rack'; } catch { state.tcLayout = 'rack'; }
@@ -1601,6 +1640,8 @@
       const stackable = msg.phase === 'play' && zone === 'hand' && shHasStacks(rackCards);
       const stacked = stackable && !state.shSplitStacks;
       state.shStacked = stacked;
+      const myHand = msg.myHand || [];
+      const arrivals = tcTrackArrivals('sh', myHand, msg.phase === 'play' ? 'play' : null);
       let rackOpts;
       if (msg.phase === 'swap') {
         rackOpts = c => ({ selected: state.shSwapSelected.hand === c.id });
@@ -1608,6 +1649,7 @@
         rackOpts = (c, group) => ({
           selected: (group || [c]).some(g => state.shSelectedCards.includes(g.id)),
           dim: myTurn && !canPlayCard(c.rank, msg.pileTopRank, pileCount),
+          ...tcArrivalOpts(arrivals, c, group),
         });
       }
       if (msg.phase === 'play' && zone === 'faceDown') {
@@ -1645,6 +1687,8 @@
       pickUp.textContent = 'Pick up' + (pileCount ? ' (' + pileCount + ')' : '');
       updateShSelectionAssistUI();
       shFitLog();
+      const fromPile = ev && (ev.kind === 'pickup' || ev.kind === 'blind-miss');
+      tcLaunchArrivals(arrivals, myHand, fromPile ? pileStack : document.getElementById('shDrawStack'), handEl);
     }
 
     /** The hand is pinned to the bottom: drop the oldest log lines until none sit under it. */
@@ -1666,8 +1710,7 @@
       if (msg.phase !== 'play') return;
       const handEl = document.getElementById('shHand');
       if (shZone(msg) === 'faceDown') {
-        if (msg.isMyTurn && state.shSelectedCards.includes(id)) { shPlayFaceDown(id); return; }
-        state.shSelectedCards = [id];
+        state.shSelectedCards = state.shSelectedCards.includes(id) ? [] : [id];
         renderShitheadState(msg);
         return;
       }
@@ -1679,17 +1722,15 @@
         return;
       }
       if (state.shStacked) {
-        // One tap takes the whole stack; a second tap plays it.
+        // One tap takes the whole stack; a second tap puts it back.
         const group = shActiveZoneCards(msg).filter(c => c.rank === card.rank).map(c => c.id);
         const all = group.every(g => state.shSelectedCards.includes(g));
-        if (all && msg.isMyTurn) { playSelectedCards(); return; }
         state.shSelectedCards = all ? [] : group;
         renderShitheadState(msg);
         return;
       }
       if (state.shSelectedCards.includes(id)) {
-        // Second tap on a selected card plays the selection
-        if (msg.isMyTurn) { playSelectedCards(); return; }
+        // A second tap only deselects: a quick double tap must never play a card by accident.
         state.shSelectedCards = state.shSelectedCards.filter(x => x !== id);
       } else {
         const first = shActiveZoneCards(msg).find(c => c.id === state.shSelectedCards[0]);
@@ -1905,7 +1946,7 @@
       if (msg.phase === 'first_turn') return 'Take the upcard or decline it';
       if (msg.turnPhase === 'draw') return 'Tap Stock or Discard to draw';
       if (msg.canKnock) return msg.myDeadwoodValue === 0 ? 'Gin! Declare it or discard' : 'You can knock, or discard a card';
-      return 'Discard: tap a card twice or swipe it up';
+      return 'Pick a card to discard, or swipe it up';
     }
 
     function renderGinRummyState(msg) {
@@ -1960,9 +2001,15 @@
       const ordered = orderHand(hand, sortMode, state.grOrder, melds);
       const handEl = document.getElementById('grHand');
       handEl.hidden = !playing;
+      const arrivals = tcTrackArrivals('gr', hand, playing ? (msg.handNumber || 1) : null);
+      const fromStock = state.grPrevStock != null && stockCount < state.grPrevStock;
+      state.grPrevStock = stockCount;
       handEl.innerHTML = renderHandRack(ordered, {
         layout: tcLayout(), width: tcHandWidth('grHand'), cardW: tcHandCardW('grHand'),
-        cardOpts: c => ({ selected: state.grSelectedCard === c.id, meld: meldOf[c.id], isNew: msg.lastDrawnCardId === c.id }),
+        cardOpts: c => {
+          const arrival = tcArrivalOpts(arrivals, c);
+          return { selected: state.grSelectedCard === c.id, meld: meldOf[c.id], ...arrival, isNew: arrival.isNew || msg.lastDrawnCardId === c.id };
+        },
       });
       attachHandGestures(handEl, {
         peek: true,
@@ -2001,13 +2048,12 @@
       const sheet = document.getElementById('grSheet');
       sheet.hidden = playing;
       if (!playing) renderGrScoring(msg);
+      tcLaunchArrivals(arrivals, hand, document.getElementById(fromStock ? 'grStockStack' : 'grDiscardStack'), handEl);
     }
 
     function grSelectCard(id) {
       const msg = state.grLastMsg;
       if (!msg) return;
-      const discardPhase = msg.isMyTurn && msg.phase === 'drawing' && msg.turnPhase === 'discard';
-      if (state.grSelectedCard === id && discardPhase) { grDiscard(); return; }
       state.grSelectedCard = state.grSelectedCard === id ? null : id;
       renderGinRummyState(msg);
     }

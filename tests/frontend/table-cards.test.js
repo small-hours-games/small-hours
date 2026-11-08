@@ -221,3 +221,27 @@ describe('press-and-slide hand', () => {
     expect(kit.tcCardAt(snap, 60, 300)).toBeNull();
   });
 });
+
+describe('card tempo', () => {
+  it('flies thrown cards at half the original speed (0.35 to 0.9 s)', () => {
+    expect(kit.tcFlightMs(2.4)).toBe(1584);
+    expect(kit.tcFlightMs(100)).toBe(700);
+    expect(kit.tcFlightMs(0.1)).toBe(1800);
+  });
+
+  it('lets a thrown card leave the phone at half the original speed', () => {
+    expect(kit.tcThrowMs(2.4)).toBe(750);
+    expect(kit.tcThrowMs(6)).toBe(440);
+    expect(kit.tcThrowMs(1.2)).toBe(1040);
+  });
+});
+
+describe('tcNewCardIds', () => {
+  it('finds only the cards that were not in the hand before', () => {
+    expect(kit.tcNewCardIds(['a', 'b'], [card(3, 's', 'b'), card(4, 's', 'c')])).toEqual(['c']);
+  });
+
+  it('reports nothing without an earlier hand, so a deal does not count as a draw', () => {
+    expect(kit.tcNewCardIds(null, [card(3, 's', 'a')])).toEqual([]);
+  });
+});

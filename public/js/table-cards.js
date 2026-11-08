@@ -318,6 +318,59 @@ function tcReleaseVelocity(samples, now) {
   return { vx: stx / stt, vy: sty / stt };
 }
 
+/* ---------- Card tempo ----------
+   One place to tune how fast cards move. */
+var TC_FLIGHT_SLOWDOWN = 2;   // thrown cards: phone throw and the TV flight to the pile
+var TC_DRAW_MS = 1040;        // a card travelling to a hand
+var TC_SETTLE_MS = 560;       // a released card easing into its place in the hand
+var TC_SCRUB_STEP_PX = 14;    // finger travel before the lifted card may change
+
+/** Flight time to the pile for a throw speed in viewport heights per second (TV). */
+function tcFlightMs(speed) {
+  return Math.round(Math.max(350, Math.min(900, 1900 / speed))) * TC_FLIGHT_SLOWDOWN;
+}
+
+/** Time for a thrown card to leave the top of the phone. */
+function tcThrowMs(speed) {
+  return Math.round(Math.max(220, Math.min(520, 900 / speed))) * TC_FLIGHT_SLOWDOWN;
+}
+
+function tcHandCard(container, id) {
+  if (!container) return null;
+  return container.querySelector('[data-card-id="' + (window.CSS && CSS.escape ? CSS.escape(id) : id) + '"]');
+}
+
+function tcHandSnapshot(container) {
+  return Array.prototype.map.call(container.querySelectorAll('[data-card-id]'), function (c) {
+    return { el: c, id: c.dataset.cardId, rect: c.getBoundingClientRect() };
+  }).filter(function (c) { return c.id; });
+}
+
+/** The ids in hand that were not in prevIds; nothing when there is no earlier hand to compare. */
+function tcNewCardIds(prevIds, hand) {
+  if (!prevIds) return [];
+  return (hand || []).map(function (c) { return c.id; }).filter(function (id) { return prevIds.indexOf(id) === -1; });
+}
+
+function tcPose(el) {
+  var cs = getComputedStyle(el);
+  return { transform: cs.transform, transformOrigin: cs.transformOrigin };
+}
+
+/** The hand was just redrawn: glide the released card from where it was into its new place. */
+function tcSettle(container, id, from) {
+  if (!from || tcReducedMotion()) return;
+  var el = tcHandCard(container, id);
+  if (!el || el.style.visibility === 'hidden' || !el.animate) return;
+  var to = tcPose(el);
+  if (to.transform === from.transform) return;
+  var slot = el.parentElement;
+  var z = slot ? slot.style.zIndex : '';
+  if (slot) slot.style.zIndex = 400;
+  var anim = el.animate([from, to], { duration: TC_SETTLE_MS, easing: 'cubic-bezier(.33, 0, .2, 1)' });
+  anim.onfinish = anim.oncancel = function () { if (slot) slot.style.zIndex = z; };
+}
+
 /**
  * Which hand card is under a point, from rects measured before anything lifted.
  * Later entries are drawn on top (DOM order), so the last hit wins. A finger
@@ -344,11 +397,35 @@ function tcCardAt(snapshot, x, y) {
 function attachHandGestures(container, handlers) {
   if (!container) return;
   container._tcHandlers = handlers;
-  if (container._tcBound) return;
+  if (container._tcBound) {
+    if (container._tcRedrawn) container._tcRedrawn();
+    return;
+  }
   container._tcBound = true;
   var drag = null;
 
-  function setPeek(d, item) {
+  // Any server update redraws the hand: a card under the finger stays where it is.
+  container._tcRedrawn = function () {
+    if (!drag || drag.el.isConnected) return;
+    var fresh = tcHandCard(container, drag.id);
+    if (!fresh) { drag = null; return; }
+    if (drag.mode === 'throw') {
+      fresh.classList.add('tc-dragging');
+      fresh.style.transform = drag.el.style.transform;
+      drag.el = fresh;
+      return;
+    }
+    if (!drag.snapshot) { drag.el = fresh; return; }
+    drag.snapshot = tcHandSnapshot(container);
+    drag.peek = null;
+    // Measuring has already styled the new card at rest, so without this it would sink and lift again.
+    fresh.style.transition = 'none';
+    setPeek(drag, drag.snapshot.find(function (c) { return c.el === fresh; }) || null, true);
+    void fresh.offsetWidth;
+    fresh.style.transition = '';
+  };
+
+  function setPeek(d, item, quiet) {
     if (d.peek === item) return;
     if (d.peek) {
       d.peek.el.classList.remove('tc-peek');
@@ -362,7 +439,7 @@ function attachHandGestures(container, handlers) {
     item.el.classList.add('tc-peek');
     d.el = item.el;
     d.id = item.id;
-    if (navigator.vibrate && d.moved) navigator.vibrate(8);
+    if (navigator.vibrate && d.moved && !quiet) navigator.vibrate(8);
   }
 
   container.addEventListener('pointerdown', function (e) {
@@ -373,9 +450,7 @@ function attachHandGestures(container, handlers) {
     drag = { el: el, id: el.dataset.cardId, x: e.clientX, y: e.clientY, touch: e.pointerType === 'touch', moved: false, pointerId: e.pointerId,
       samples: [{ x: e.clientX, y: e.clientY, t: e.timeStamp || Date.now() }], mode: null, peek: null };
     if (drag.touch && h.peek) {
-      drag.snapshot = Array.prototype.map.call(container.querySelectorAll('[data-card-id]'), function (c) {
-        return { el: c, id: c.dataset.cardId, rect: c.getBoundingClientRect() };
-      }).filter(function (c) { return c.id; });
+      drag.snapshot = tcHandSnapshot(container);
       setPeek(drag, drag.snapshot.find(function (c) { return c.el === el; }) || null);
     }
     try { container.setPointerCapture(e.pointerId); } catch (_) { /* ignore */ }
@@ -399,8 +474,13 @@ function attachHandGestures(container, handlers) {
       } else {
         drag.mode = 'scrub';
         drag.scrubX = e.clientX;
+        // The finger has to really move on: a trembling thumb on the edge of two cards changes nothing.
+        if (drag.peekX == null) drag.peekX = drag.x;
         var hit = tcCardAt(drag.snapshot, e.clientX, e.clientY);
-        if (hit) setPeek(drag, hit);
+        if (hit && hit !== drag.peek && Math.abs(e.clientX - drag.peekX) >= TC_SCRUB_STEP_PX) {
+          drag.peekX = e.clientX;
+          setPeek(drag, hit);
+        }
         return;
       }
     }
@@ -418,6 +498,7 @@ function attachHandGestures(container, handlers) {
     var d = drag;
     drag = null;
     d.rect = d.el.getBoundingClientRect(); // where the card was let go, for the throw animation
+    var pose = d.mode === 'throw' ? null : tcPose(d.el);
     d.el.classList.remove('tc-dragging');
     d.el.style.transform = '';
     setPeek(d, null);
@@ -426,13 +507,18 @@ function attachHandGestures(container, handlers) {
     if (d.snapshot && d.mode !== 'throw') {
       // Letting go after a peek picks the lifted card, like a tap on it.
       if (h.onTap) h.onTap(d.id);
+      tcSettle(container, d.id, pose);
       return;
     }
     var v = tcReleaseVelocity(d.samples, e.timeStamp || Date.now());
     var vh = window.innerHeight || 800;
     var startX = d.throwX != null ? d.throwX : d.x;
     var kind = classifyHandGesture({ dx: e.clientX - startX, dy: e.clientY - d.y, vx: v.vx, vy: v.vy, releaseRatio: e.clientY / vh });
-    if (kind === 'tap') { if (h.onTap) h.onTap(d.id); return; }
+    if (kind === 'tap') {
+      if (h.onTap) h.onTap(d.id);
+      tcSettle(container, d.id, pose);
+      return;
+    }
     if (kind === 'swipe-up') {
       // Velocity in viewport heights per second, so every screen size sends the same scale.
       if (h.onPlay) h.onPlay(d.id, { vx: v.vx * 1000 / vh, vy: v.vy * 1000 / vh, el: d.el, rect: d.rect });
@@ -467,8 +553,7 @@ function tcMoveId(ids, id, targetId) {
 
 /** Short shake on a card that cannot be played. */
 function tcShake(container, id) {
-  if (!container) return;
-  var el = container.querySelector('[data-card-id="' + (window.CSS && CSS.escape ? CSS.escape(id) : id) + '"]');
+  var el = tcHandCard(container, id);
   if (!el) return;
   el.classList.remove('tc-shake');
   void el.offsetWidth;
@@ -613,20 +698,22 @@ function tcThrowOff(card, rect, flick) {
   var ghost = tcGhost(card, rect);
   var vx = (flick && flick.vx) || 0;
   var speed = Math.max(1.2, Math.min(6, -((flick && flick.vy) || -2.5)));
-  var dur = tcReducedMotion() ? 160 : Math.round(Math.max(220, Math.min(520, 900 / speed)));
+  var dur = tcReducedMotion() ? 160 : tcThrowMs(speed);
   var drift = Math.max(-160, Math.min(160, vx * 60));
   var anim = ghost.animate([
     { transform: 'translate(0, 0) rotate(0deg)', opacity: 1 },
     { transform: 'translate(' + drift.toFixed(0) + 'px, ' + (-(rect.bottom + 60)).toFixed(0) + 'px) rotate(' + (drift / 6).toFixed(1) + 'deg) scale(0.92)', opacity: 0.85 },
-  ], { duration: dur, easing: 'cubic-bezier(.3, .6, .4, 1)', fill: 'forwards' });
+  ], { duration: dur, easing: 'cubic-bezier(.3, .1, .4, 1)', fill: 'forwards' });
   anim.onfinish = function () { ghost.remove(); };
 }
 
 /**
  * TV: fly a card from a seat to the pile and land it at its pile tilt.
  * fromRect: the seat; pileEl: the pile box; ev: the move event (seed, flick).
- * Faster throws fly faster (0.35 to 0.9 s). opts.burn: flare and vanish on landing.
+ * Faster throws fly faster (tcFlightMs). opts.burn: flare and vanish on landing.
+ * A new flight hurries the ones still in the air, so the table never falls behind.
  */
+var tcActiveFlights = [];
 function tcFlyIn(card, fromRect, pileEl, ev, opts) {
   opts = opts || {};
   if (!card || !fromRect || !pileEl || typeof document === 'undefined') return null;
@@ -639,7 +726,7 @@ function tcFlyIn(card, fromRect, pileEl, ev, opts) {
   var rnd = tcRandom((ev && ev.seed) || 7);
   var flick = (ev && ev.flick) || {};
   var speed = Math.hypot(flick.vx || 0, flick.vy || 0) || 2.4;
-  var dur = tcReducedMotion() ? 200 : Math.round(Math.max(350, Math.min(900, 1900 / speed)));
+  var dur = tcReducedMotion() ? 200 : tcFlightMs(speed);
   var side = Math.max(-80, Math.min(80, (flick.vx || 0) * 30));
   var sx = fromRect.left + fromRect.width / 2 + side;
   var sy = fromRect.top + fromRect.height / 2;
@@ -650,15 +737,20 @@ function tcFlyIn(card, fromRect, pileEl, ev, opts) {
   var dx = (sx - cx).toFixed(0);
   var dy = (sy - cy).toFixed(0);
   var land = 'translate(' + tilt.dx.toFixed(1) + 'px, ' + tilt.dy.toFixed(1) + 'px) rotate(' + end.toFixed(1) + 'deg)';
+  // The even easing and the fixed-length squash keep a slow flight readable from start to end.
+  var squash = Math.min(0.4, 320 / dur);
   var frames = [
-    { transform: 'translate(' + dx + 'px, ' + dy + 'px) rotate(' + spin.toFixed(0) + 'deg) scale(1.4)', opacity: 0, offset: 0, easing: 'cubic-bezier(.16, 1, .3, 1)' },
-    { opacity: 1, offset: 0.1 },
-    { transform: land + ' scale(1)', offset: 0.86 },
-    { transform: land + ' scale(1.05, 0.95)', offset: 0.93 },
+    { transform: 'translate(' + dx + 'px, ' + dy + 'px) rotate(' + spin.toFixed(0) + 'deg) scale(1.4)', opacity: 0, offset: 0, easing: 'cubic-bezier(.4, 0, .3, 1)' },
+    { opacity: 1, offset: Math.min(0.1, 120 / dur) },
+    { transform: land + ' scale(1)', offset: 1 - squash },
+    { transform: land + ' scale(1.05, 0.95)', offset: 1 - squash / 2 },
     { transform: land + ' scale(1)', opacity: 1, offset: 1 },
   ];
+  tcActiveFlights.forEach(function (a) { a.playbackRate = 8; });
   var anim = ghost.animate(frames, { duration: dur, fill: 'forwards' });
+  tcActiveFlights.push(anim);
   anim.onfinish = function () {
+    tcActiveFlights.splice(tcActiveFlights.indexOf(anim), 1);
     if (opts.burn && !tcReducedMotion()) {
       ghost.classList.add('tc-flight-burn');
       var burn = ghost.animate([
@@ -687,7 +779,37 @@ function tcSweepTo(fromEl, toRect, count) {
     var a = ghost.animate([
       { transform: 'translate(0, 0) rotate(' + (i * 7 - 10) + 'deg)', opacity: 1 },
       { transform: 'translate(' + dx.toFixed(0) + 'px, ' + dy.toFixed(0) + 'px) rotate(' + (i * 4) + 'deg) scale(0.6)', opacity: 0 },
-    ], { duration: 520, delay: i * 70, easing: 'cubic-bezier(.5, 0, .2, 1)', fill: 'forwards' });
+    ], { duration: TC_DRAW_MS, delay: i * 140, easing: 'cubic-bezier(.5, 0, .2, 1)', fill: 'both' });
     a.onfinish = (function (g) { return function () { g.remove(); }; })(ghost);
   }
+}
+
+/**
+ * Phone: a card travels from the deck (or pile) into its place in the hand, grows a little
+ * as it arrives and settles. opts.onDone always runs, also when nothing could fly.
+ */
+function tcFlyToHand(card, fromEl, container, opts) {
+  opts = opts || {};
+  var done = opts.onDone || function () {};
+  if (!card || !fromEl || !container || typeof document === 'undefined' || tcReducedMotion()) { done(); return null; }
+  var target = tcHandCard(container, card.id);
+  var source = fromEl.querySelector('.tc-top, .tc-pile-top, .tc-card') || fromEl;
+  if (!target) { done(); return null; }
+  var to = target.getBoundingClientRect();
+  var from = source.getBoundingClientRect();
+  if (!to.width || !from.width) { done(); return null; }
+  var w = target.offsetWidth;
+  var cx = to.left + to.width / 2;
+  var cy = to.top + to.height / 2;
+  var ghost = tcGhost(card, { left: cx - w / 2, top: cy - w * 0.71, width: w });
+  var dx = (from.left + from.width / 2 - cx).toFixed(0);
+  var dy = (from.top + from.height / 2 - cy).toFixed(0);
+  var anim = ghost.animate([
+    { transform: 'translate(' + dx + 'px, ' + dy + 'px) rotate(-8deg) scale(' + (from.width / w).toFixed(2) + ')', opacity: 0, offset: 0, easing: 'cubic-bezier(.4, 0, .3, 1)' },
+    { opacity: 1, offset: 0.06 },
+    { transform: 'translate(0, 0) rotate(0deg) scale(1.28)', offset: 0.84, easing: 'ease-in-out' },
+    { transform: 'translate(0, 0) rotate(0deg) scale(1)', opacity: 1, offset: 1 },
+  ], { duration: TC_DRAW_MS, delay: opts.delay || 0, fill: 'both' });
+  anim.onfinish = function () { ghost.remove(); done(); };
+  return anim;
 }
