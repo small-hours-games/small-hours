@@ -78,11 +78,10 @@ function renderTableCard(card, opts) {
   var suit = TC_SUITS[card.suit];
   if (suit.red) classes.push('tc-red');
   var label = tcRankLabel(card.rank);
-  var court = TC_COURT_NAMES[card.rank];
+  // The face is the classic deck in /cards/faces (pip layouts, drawn court figures);
+  // a bold corner index sits on top so the rank reads at any size, even fanned.
   var index = '<span class="tc-rank">' + tcEscape(label) + '</span>' + tcSuitSvg(card.suit, 'tc-idx-suit');
-  var center = court
-    ? '<div class="tc-court"><span class="tc-court-name">' + court + '</span>' + tcSuitSvg(card.suit, 'tc-court-suit') + '</div>'
-    : tcSuitSvg(card.suit, 'tc-pip');
+  var ten = label === '10' ? ' tc-cidx-ten' : '';
   var badge = '';
   if (opts.isNew) badge = '<span class="tc-badge tc-badge-new">NEW</span>';
   else if (opts.badge) badge = '<span class="tc-badge">' + tcEscape(opts.badge) + '</span>';
@@ -91,11 +90,22 @@ function renderTableCard(card, opts) {
 
   return '<div class="' + classes.join(' ') + '"' + attrs + ' aria-label="' + tcEscape(label + ' of ' + suit.name) + '">' +
     '<div class="tc-face">' +
-      '<div class="tc-idx tc-idx-tl">' + index + '</div>' +
+      '<div class="tc-art" style="background-image:url(' + tcFaceUrl(card) + ')"></div>' +
+      '<div class="tc-cidx tc-cidx-tl' + ten + '">' + index + '</div>' +
       badge +
-      '<div class="tc-center">' + center + '</div>' +
-      '<div class="tc-idx tc-idx-br">' + index + '</div>' +
+      '<div class="tc-cidx tc-cidx-br' + ten + '">' + index + '</div>' +
     '</div></div>';
+}
+
+var TC_FACE_SUITS = { h: 'HEART', d: 'DIAMOND', c: 'CLUB', s: 'SPADE' };
+var TC_FACE_COURTS = { 11: '11-JACK', 12: '12-QUEEN', 13: '13-KING' };
+
+/** Path of a card's face art in the classic deck (Chris Aguilar's Vector Playing Cards, LGPL-3.0). */
+function tcFaceUrl(card) {
+  // Built only from a known suit and a whole number, so nothing from the message reaches the URL.
+  var rank = Math.round(tcNum(card.rank));
+  if (rank === 14) rank = 1;
+  return '/cards/faces/' + TC_FACE_SUITS[card.suit] + '-' + (TC_FACE_COURTS[rank] || rank) + '.svg';
 }
 
 /**

@@ -19,7 +19,7 @@
   position: relative;
   width: var(--tc-w);
   height: calc(var(--tc-w) * 1.42);
-  border-radius: calc(var(--tc-w) * 0.14);
+  border-radius: calc(var(--tc-w) * 0.08);
   font-size: calc(var(--tc-w) * 0.2);
   flex: 0 0 auto;
   box-shadow: var(--tc-elev-1);
@@ -528,3 +528,28 @@
 .tc-log-phone .tc-log { margin: 6px 0 0; gap: 3px; }
 .tc-log-phone .tc-log-item { padding: 3px 8px; font-size: 12px; border-radius: 10px; background: rgba(11, 21, 48, 0.55); }
 .tc-log-phone .tc-chip { height: 19px; min-width: 22px; font-size: 11.5px; padding: 0 4px; }
+
+/* ---------- Classic card faces ----------
+   Face art from /cards/faces (pips + court figures). The deck's own corner
+   index is thin, so a bold one is laid over it on a white patch. */
+.tc-face .tc-art {
+  position: absolute; inset: 0;
+  background: #fff center / 100% 100% no-repeat;
+  pointer-events: none;
+}
+.tc-cidx {
+  position: absolute; z-index: 1;
+  display: flex; flex-direction: column; align-items: center;
+  min-width: calc(var(--tc-w) * 0.15);
+  padding: calc(var(--tc-w) * 0.035) calc(var(--tc-w) * 0.012) calc(var(--tc-w) * 0.015);
+  background: #fff; line-height: 0.92;
+  font: 800 calc(var(--tc-w) * 0.2) / 0.92 'Plus Jakarta Sans', system-ui, sans-serif;
+  letter-spacing: -0.05em;
+}
+.tc-cidx .tc-rank { font-size: 1em; letter-spacing: inherit; }
+.tc-cidx .tc-idx-suit { width: 0.72em; height: 0.72em; margin-top: 0.06em; }
+.tc-cidx-tl { top: 0; left: 0; border-radius: 0 0 calc(var(--tc-w) * 0.04) 0; }
+.tc-cidx-br { bottom: 0; right: 0; transform: rotate(180deg); border-radius: 0 0 calc(var(--tc-w) * 0.04) 0; }
+.tc-cidx-ten .tc-rank { letter-spacing: -0.12em; transform: scaleX(0.82); margin-left: -0.06em; }
+.tc-face { background: #fff; }
+.tc-red .tc-cidx { color: #c8102e; fill: #c8102e; }
