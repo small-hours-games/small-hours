@@ -334,7 +334,7 @@ var TBS_SINGER_SVG =
     '<radialGradient id="tbs-g-skin" cx="38%" cy="32%" r="75%"><stop offset="0" stop-color="#ffe6d0"/><stop offset=".55" stop-color="#f6cfac"/><stop offset="1" stop-color="#d99a74"/></radialGradient>' +
     '<linearGradient id="tbs-g-hair" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#a78bfa"/><stop offset=".45" stop-color="#7c3aed"/><stop offset="1" stop-color="#3b1680"/></linearGradient>' +
     '<radialGradient id="tbs-g-cap" cx="35%" cy="25%" r="80%"><stop offset="0" stop-color="#c4b5fd"/><stop offset=".35" stop-color="#8b5cf6"/><stop offset="1" stop-color="#3b1680"/></radialGradient>' +
-    '<linearGradient id="tbs-g-top" x1="0" x2="1"><stop offset="0" stop-color="#b98a06"/><stop offset=".35" stop-color="#fde68a"/><stop offset=".6" stop-color="#facc15"/><stop offset="1" stop-color="#a16207"/></linearGradient>' +
+    '<linearGradient id="tbs-g-top" x1="0" x2="1"><stop offset="0" stop-color="#0b1220"/><stop offset=".35" stop-color="#334155"/><stop offset=".6" stop-color="#1e293b"/><stop offset="1" stop-color="#0b1220"/></linearGradient>' +
     '<linearGradient id="tbs-g-skirt" x1="0" x2="1"><stop offset="0" stop-color="#be123c"/><stop offset=".35" stop-color="#fda4af"/><stop offset=".6" stop-color="#fb7185"/><stop offset="1" stop-color="#9f1239"/></linearGradient>' +
     '<radialGradient id="tbs-g-mic" cx="35%" cy="30%" r="70%"><stop offset="0" stop-color="#ffffff"/><stop offset=".4" stop-color="#cbd5e1"/><stop offset="1" stop-color="#475569"/></radialGradient>' +
     '<radialGradient id="tbs-g-eye" cx="40%" cy="35%" r="70%"><stop offset="0" stop-color="#60a5fa"/><stop offset=".6" stop-color="#1e3a8a"/><stop offset="1" stop-color="#0b1530"/></radialGradient>' +
@@ -355,8 +355,15 @@ var TBS_SINGER_SVG =
         '<path d="M52 95 L48 119 M60 95 V121 M68 95 L72 119" stroke="#9f1239" stroke-width="1.1" opacity=".55"/>' +
         '<path d="M37 115 Q60 122 83 115" fill="none" stroke="#ffe4e6" stroke-width="1.2" opacity=".6"/></g>' +
       '<path d="M45 66 Q60 60 75 66 L77 94 L43 94 Z" fill="url(#tbs-g-top)" stroke="#0b1530" stroke-width="2.2" stroke-linejoin="round"/>' +
-      '<path d="M48 70 Q50 82 47 92" stroke="#fff7d1" stroke-width="2" fill="none" opacity=".7" stroke-linecap="round"/>' +
-      '<path class="tbs-star" d="M60 72 l2.2 4.6 5 .6 -3.7 3.4 1 5 -4.5 -2.5 -4.5 2.5 1 -5 -3.7 -3.4 5 -.6 z" fill="#0b1530"/>' +
+      '<path d="M48 70 Q50 82 47 92" stroke="#94a3b8" stroke-width="1.6" fill="none" opacity=".55" stroke-linecap="round"/>' +
+      // The Smallhours mark on her chest: four fanned cards, the front one with the moon.
+      '<g class="tbs-mark"><g transform="translate(58.5 95) scale(0.52) translate(-32 -62)">' +
+        '<g transform="rotate(-24 32 62)"><rect x="21" y="10" width="22" height="36" rx="5" fill="#38bdf8" stroke="#0b1530" stroke-width="3"/></g>' +
+        '<g transform="rotate(-8 32 62)"><rect x="21" y="10" width="22" height="36" rx="5" fill="#a78bfa" stroke="#0b1530" stroke-width="3"/></g>' +
+        '<g transform="rotate(8 32 62)"><rect x="21" y="10" width="22" height="36" rx="5" fill="#fb7185" stroke="#0b1530" stroke-width="3"/></g>' +
+        '<g transform="rotate(24 32 62)"><rect x="21" y="10" width="22" height="36" rx="5" fill="#facc15" stroke="#0b1530" stroke-width="3"/>' +
+          '<circle cx="31" cy="26" r="7" fill="#0b1530"/><circle cx="34.3" cy="23.2" r="5.9" fill="#facc15"/></g>' +
+      '</g></g>' +
       // free arm (drawn per frame)
       '<path class="tbs-arm-o" fill="none" stroke="#0b1530" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>' +
       '<path class="tbs-arm" fill="none" stroke="' + TBS_SKIN + '" stroke-width="5.6" stroke-linecap="round" stroke-linejoin="round"/>' +
@@ -403,23 +410,66 @@ var TBS_SINGER_SVG =
 var TBS_EQ_BARS = 44;
 var TBS_NOTES = 6;
 
-/** Soft round sprites for the fire: hot core, flame, ember glow. Drawn once, reused per particle. */
+/**
+ * Everything the fire draws, rendered once into small offscreen canvases: hot core, flame,
+ * ember glow, smoke, and the glowing rim along the logo (warm and hot). The frame loop only
+ * calls drawImage with a globalAlpha, never creates a gradient.
+ */
 function tbsFireSprites() {
-  var make = function (stops) {
+  var dot = function (stops) {
     var c = document.createElement('canvas');
-    c.width = c.height = 64;
+    c.width = c.height = 32;
     var g = c.getContext('2d');
-    var grad = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+    var grad = g.createRadialGradient(16, 16, 0, 16, 16, 16);
     stops.forEach(function (s) { grad.addColorStop(s[0], s[1]); });
     g.fillStyle = grad;
-    g.fillRect(0, 0, 64, 64);
+    g.fillRect(0, 0, 32, 32);
     return c;
   };
-  return [
-    make([[0, 'rgba(255,255,225,1)'], [0.45, 'rgba(255,205,60,.8)'], [1, 'rgba(255,90,0,0)']]),
-    make([[0, 'rgba(255,170,30,.9)'], [0.55, 'rgba(240,60,15,.55)'], [1, 'rgba(170,10,0,0)']]),
-    make([[0, 'rgba(225,45,35,.5)'], [1, 'rgba(60,10,10,0)']]),
-  ];
+  var rim = function (mid) {
+    var c = document.createElement('canvas');
+    c.width = 8; c.height = 16;
+    var g = c.getContext('2d');
+    var grad = g.createLinearGradient(0, 0, 0, 16);
+    grad.addColorStop(0, 'rgba(255,120,0,0)');
+    grad.addColorStop(0.6, mid);
+    grad.addColorStop(1, 'rgba(255,60,0,0)');
+    g.fillStyle = grad;
+    g.fillRect(0, 0, 8, 16);
+    return c;
+  };
+  return {
+    core: dot([[0, 'rgba(255,255,225,1)'], [0.45, 'rgba(255,205,60,.8)'], [1, 'rgba(255,90,0,0)']]),
+    flame: dot([[0, 'rgba(255,170,30,.9)'], [0.55, 'rgba(240,60,15,.55)'], [1, 'rgba(170,10,0,0)']]),
+    glow: dot([[0, 'rgba(225,45,35,.5)'], [1, 'rgba(60,10,10,0)']]),
+    smoke: dot([[0, 'rgba(90,60,70,.25)'], [1, 'rgba(30,20,30,0)']]),
+    rimWarm: rim('rgba(255,130,40,1)'),
+    rimHot: rim('rgba(255,220,40,1)'),
+  };
+}
+
+/** A 2D context that may skip the compositor's frame sync where the browser supports it. */
+function tbsCanvas2d(canvas) {
+  try { return canvas.getContext('2d', { alpha: true, desynchronized: true }) || canvas.getContext('2d'); } catch (_) { return canvas.getContext('2d'); }
+}
+
+// Fixed pools for the fire: no allocation and no array shuffling while it burns, so the
+// garbage collector never interrupts a frame. Dead particles swap with the last live one.
+var TBS_MAX_FLAMES = 260;
+var TBS_MAX_EMBERS = 100;
+function tbsPool(size) {
+  var items = [];
+  for (var i = 0; i < size; i++) items.push({ x: 0, y: 0, vx: 0, vy: 0, r: 0, life: 0, max: 1 });
+  return { items: items, n: 0 };
+}
+function tbsPoolTake(pool) {
+  return pool.n < pool.items.length ? pool.items[pool.n++] : null;
+}
+function tbsPoolKill(pool, i) {
+  var last = pool.n - 1, dead = pool.items[i];
+  pool.items[i] = pool.items[last];
+  pool.items[last] = dead;
+  pool.n = last;
 }
 
 /**
@@ -451,7 +501,7 @@ function createTopbarShow(opts) {
   var lastNow = 0;
   var frameNo = 0;
   var bounds = { left: 0, right: 0, width: 0 };
-  var fire = { parts: [], embers: [], lastBeat: -1, lastHalf: -1, box: null, sprites: null, w: 0, h: 0, dpr: 1, burst: false };
+  var fire = { parts: tbsPool(TBS_MAX_FLAMES), embers: tbsPool(TBS_MAX_EMBERS), ctx: null, lastBeat: -1, lastHalf: -1, box: null, sprites: null, w: 0, h: 0, dpr: 1, burst: false };
   var hair = {
     pony: tbsHair([80, 30], [[0.95, 0.1], [0.75, 0.6], [0.4, 0.9], [0.15, 1], [0, 1], [-0.1, 1]], 6.2, 0.16),
     lockL: tbsHair([42, 36], [[-0.25, 1], [-0.1, 1], [0, 1], [0.05, 1]], 5, 0.3),
@@ -488,7 +538,7 @@ function createTopbarShow(opts) {
     ring: q('.tbs-ring'), notes: Array.prototype.slice.call(stage.querySelectorAll('.tbs-note')),
     chip: q('.tbs-chip'), chipTitle: q('.tbs-chip-title'), dots: Array.prototype.slice.call(stage.querySelectorAll('.tbs-chip-dots i')),
     singer: q('.tbs-singer'), svg: q('.tbs-singer-svg'), root: q('.tbs-root'), upper: q('.tbs-upper'), head: q('.tbs-head'),
-    face: q('.tbs-face'), ears: q('.tbs-ears'), skirt: q('.tbs-skirt'), star: q('.tbs-star'),
+    face: q('.tbs-face'), ears: q('.tbs-ears'), skirt: q('.tbs-skirt'), star: q('.tbs-mark'),
     legO: q('.tbs-leg-o'), leg: q('.tbs-leg'), legHi: q('.tbs-leg-hi'), bootL: q('.tbs-boot-l'), bootR: q('.tbs-boot-r'),
     armO: q('.tbs-arm-o'), arm: q('.tbs-arm'), armHi: q('.tbs-arm-hi'), hand: q('.tbs-hand'), armMic: q('.tbs-arm-mic'),
     hairBack: q('.tbs-hair-back'), hairBackHi: q('.tbs-hair-back-hi'), lockL: q('.tbs-lock-l'), lockR: q('.tbs-lock-r'),
@@ -545,11 +595,12 @@ function createTopbarShow(opts) {
     if (r - l < 140) { l = hr.width * 0.35; r = hr.width * 0.65; }
     bounds = { left: l, right: r, width: hr.width };
     svgScale = (el.singer.offsetHeight || 102) / 152;
-    eqDpr = Math.min(2, window.devicePixelRatio || 1);
+    // Canvas pixels cost fill rate: on 4K TVs and retina screens cap the density.
+    eqDpr = Math.min(1.25, window.devicePixelRatio || 1);
     eqW = hr.width;
     var ew = Math.round(eqW * eqDpr), eh = Math.round(eqH * eqDpr);
     if (el.eq.width !== ew || el.eq.height !== eh) { el.eq.width = ew; el.eq.height = eh; }
-    eqCtx = el.eq.getContext('2d');
+    eqCtx = eqCtx || tbsCanvas2d(el.eq);
     eqGrad = eqCtx.createLinearGradient(0, eqH, 0, 0);
     [[0, '#38bdf8'], [0.55, '#a78bfa'], [0.85, '#fb7185'], [1, '#facc15']].forEach(function (c) { eqGrad.addColorStop(c[0], c[1]); });
     measureFire(hr);
@@ -561,7 +612,7 @@ function createTopbarShow(opts) {
     hr = hr || header.getBoundingClientRect();
     var lr = logo.getBoundingClientRect();
     var box = { left: lr.left - hr.left - 30, width: lr.width + 60, height: hr.height, logoTop: lr.top - hr.top, logoH: lr.height };
-    var dpr = Math.min(2, window.devicePixelRatio || 1);
+    var dpr = Math.min(1.25, window.devicePixelRatio || 1);
     el.fire.style.left = box.left.toFixed(0) + 'px';
     el.fire.style.width = box.width.toFixed(0) + 'px';
     el.fire.style.height = box.height.toFixed(0) + 'px';
@@ -573,6 +624,7 @@ function createTopbarShow(opts) {
       el.logoGlow.style.top = (lr.top - hr.top + lr.height / 2).toFixed(0) + 'px';
     }
     if (!fire.sprites) fire.sprites = tbsFireSprites();
+    if (!fire.ctx) fire.ctx = tbsCanvas2d(el.fire);
   }
 
   // Song time: the audio clock, run forward smoothly between its updates.
@@ -596,27 +648,27 @@ function createTopbarShow(opts) {
     if (!b) return;
     // Flames start on the top edge of the logo and rise to the top of the bar.
     var base = b.logoTop + b.logoH * 0.2;
-    for (var i = 0; i < n && fire.parts.length < 340; i++) {
-      fire.parts.push({
-        x: 34 + Math.random() * (b.width - 68), y: base - Math.random() * 4,
-        vx: (Math.random() - 0.5) * 30 * (spread || 1), vy: -(55 + Math.random() * 90) * power,
-        r: (7 + Math.random() * 10) * (0.7 + 0.5 * power), life: 0, max: 0.32 + Math.random() * 0.35,
-      });
+    for (var i = 0; i < n; i++) {
+      var f = tbsPoolTake(fire.parts);
+      if (!f) return;
+      f.x = 34 + Math.random() * (b.width - 68); f.y = base - Math.random() * 4;
+      f.vx = (Math.random() - 0.5) * 30 * (spread || 1); f.vy = -(55 + Math.random() * 90) * power;
+      f.r = (7 + Math.random() * 10) * (0.7 + 0.5 * power); f.life = 0; f.max = 0.32 + Math.random() * 0.35;
     }
   }
   function spawnEmbers(n, power) {
     var b = fire.box;
     if (!b) return;
-    for (var i = 0; i < n && fire.embers.length < 120; i++) {
-      fire.embers.push({
-        x: 34 + Math.random() * (b.width - 68), y: b.logoTop + b.logoH * 0.15,
-        vx: (Math.random() - 0.5) * 120, vy: -(90 + Math.random() * 160) * power,
-        r: 1.2 + Math.random() * 2, life: 0, max: 0.6 + Math.random() * 0.6, hue: 25 + Math.random() * 30,
-      });
+    for (var i = 0; i < n; i++) {
+      var e = tbsPoolTake(fire.embers);
+      if (!e) return;
+      e.x = 34 + Math.random() * (b.width - 68); e.y = b.logoTop + b.logoH * 0.15;
+      e.vx = (Math.random() - 0.5) * 120; e.vy = -(90 + Math.random() * 160) * power;
+      e.r = 1.2 + Math.random() * 2; e.life = 0; e.max = 0.6 + Math.random() * 0.6;
     }
   }
   function drawFire(dt, loc, hit, exiting) {
-    var b = fire.box, ctx = el.fire && el.fire.getContext('2d');
+    var b = fire.box, ctx = fire.ctx;
     if (!b || !ctx) return;
     var t = loc.t;
     // How hard the fire burns: from a pilot light in the build-up to a blaze in the drops.
@@ -653,35 +705,38 @@ function createTopbarShow(opts) {
     ctx.clearRect(0, 0, el.fire.width, el.fire.height);
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.globalCompositeOperation = 'lighter';
-    for (var i = fire.parts.length - 1; i >= 0; i--) {
-      var p = fire.parts[i];
+    var flames = fire.parts.items;
+    for (var i = fire.parts.n - 1; i >= 0; i--) {
+      var p = flames[i];
       p.life += dt;
-      if (p.life >= p.max) { fire.parts.splice(i, 1); continue; }
+      if (p.life >= p.max) { tbsPoolKill(fire.parts, i); continue; }
       var k = p.life / p.max;
       p.x += p.vx * dt + Math.sin(p.life * 18 + p.x * 0.05) * 0.8;
       p.y += p.vy * dt;
       var rad = Math.max(1, p.r * (0.55 + 0.45 * Math.min(1, k * 4)) * (1 - k * 0.6));
       ctx.globalAlpha = k < 0.15 ? k / 0.15 : 1 - Math.max(0, k - 0.5) * 2 * 0.9;
       // Tall, narrow tongues rather than round puffs.
-      ctx.drawImage(sp[k < 0.28 ? 0 : k < 0.65 ? 1 : 2], p.x - rad * 0.7, p.y - rad * 1.7, rad * 1.4, rad * 2.6);
+      ctx.drawImage(k < 0.28 ? sp.core : k < 0.65 ? sp.flame : k < 0.85 ? sp.glow : sp.smoke, p.x - rad * 0.7, p.y - rad * 1.7, rad * 1.4, rad * 2.6);
     }
-    for (var j = fire.embers.length - 1; j >= 0; j--) {
-      var em = fire.embers[j];
+    var embers = fire.embers.items;
+    for (var j = fire.embers.n - 1; j >= 0; j--) {
+      var em = embers[j];
       em.life += dt;
-      if (em.life >= em.max) { fire.embers.splice(j, 1); continue; }
+      if (em.life >= em.max) { tbsPoolKill(fire.embers, j); continue; }
       em.x += em.vx * dt; em.y += em.vy * dt; em.vy += 140 * dt; em.vx *= 0.98;
       ctx.globalAlpha = 1 - em.life / em.max;
-      ctx.drawImage(sp[0], em.x - em.r * 2, em.y - em.r * 2, em.r * 4, em.r * 4);
+      ctx.drawImage(sp.core, em.x - em.r * 2, em.y - em.r * 2, em.r * 4, em.r * 4);
     }
-    // A glowing rim along the top of the logo that flares on the beat.
+    // A glowing rim along the top of the logo that flares, warm to hot, on the beat.
     var rimY = b.logoTop + b.logoH * 0.2;
-    var glow = ctx.createLinearGradient(0, rimY - 10, 0, rimY + 6);
-    glow.addColorStop(0, 'rgba(255,120,0,0)');
-    glow.addColorStop(0.6, 'rgba(255,' + Math.round(130 + 90 * hit) + ',40,' + (exiting ? 0 : (0.2 + 0.6 * hit) * Math.min(1, rate / 120)).toFixed(3) + ')');
-    glow.addColorStop(1, 'rgba(255,60,0,0)');
+    var rimA = exiting ? 0 : (0.2 + 0.6 * hit) * Math.min(1, rate / 120);
+    if (rimA > 0.01) {
+      ctx.globalAlpha = rimA * (1 - hit);
+      ctx.drawImage(sp.rimWarm, 30, rimY - 10, b.width - 60, 16);
+      ctx.globalAlpha = rimA * hit;
+      ctx.drawImage(sp.rimHot, 30, rimY - 10, b.width - 60, 16);
+    }
     ctx.globalAlpha = 1;
-    ctx.fillStyle = glow;
-    ctx.fillRect(30, rimY - 10, b.width - 60, 16);
     ctx.globalCompositeOperation = 'source-over';
     return rate;
   }
@@ -702,7 +757,8 @@ function createTopbarShow(opts) {
     // ear hides behind the head. Light stays where it is, so she reads as round.
     setT(el.face, 'translate(' + (60 + yaw * 5).toFixed(2) + ' 40) scale(' + (1 - 0.18 * Math.abs(yaw)).toFixed(3) + ' 1) translate(-60 -40)');
     setT(el.ears, 'translate(' + (-yaw * 3).toFixed(2) + ' 0)');
-    setT(el.star, 'translate(' + (60 + yaw * 4).toFixed(2) + ' 79) scale(' + (1 - 0.3 * Math.abs(yaw)).toFixed(3) + ' 1) translate(-60 -79)');
+    // The mark on her top turns with her body: it slides toward the side she faces and narrows.
+    setT(el.star, 'translate(' + (60 + yaw * 4).toFixed(2) + ' 82) scale(' + (1 - 0.3 * Math.abs(yaw)).toFixed(3) + ' 1) translate(-60 -82)');
     setT(el.eyes, 'translate(0 40) scale(1 ' + Math.max(0.1, pose.eyes).toFixed(2) + ') translate(0 -40)');
     setT(el.mouth, 'translate(60 50) scale(1 ' + (0.35 + pose.mouth * 0.95).toFixed(2) + ') translate(-60 -50)');
     setT(el.skirt, 'translate(60 92) scale(' + (1 + 0.12 * pose.skirt).toFixed(3) + ' ' + (1 - 0.06 * pose.skirt).toFixed(3) + ') translate(-60 -92)');
@@ -775,7 +831,7 @@ function createTopbarShow(opts) {
     if (exiting) {
       var ex = Math.min(1, (now - exitAt) / 650);
       exitLift = -170 * ex * ex;
-      if (ex >= 1 && !fire.parts.length && !fire.embers.length) { finish(); return; }
+      if (ex >= 1 && !fire.parts.n && !fire.embers.n) { finish(); return; }
     }
     var w = bounds.right - bounds.left;
     // She travels in the drops and stays where she is otherwise.
@@ -963,9 +1019,8 @@ function createTopbarShow(opts) {
     stage.classList.remove('tbs-stage-on');
     el.singer.style.opacity = '0';
     el.singer._x = null;
-    fire.parts.length = 0; fire.embers.length = 0; fire.lastBeat = -1;
-    var ctx = el.fire && el.fire.getContext('2d');
-    if (ctx) { ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, el.fire.width, el.fire.height); }
+    fire.parts.n = 0; fire.embers.n = 0; fire.lastBeat = -1;
+    if (fire.ctx) { fire.ctx.setTransform(1, 0, 0, 1, 0, 0); fire.ctx.clearRect(0, 0, el.fire.width, el.fire.height); }
     hair.pony.pts = hair.lockL.pts = hair.lockR.pts = null;
   }
 
@@ -992,6 +1047,6 @@ function createTopbarShow(opts) {
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     tbsBeatIndex: tbsBeatIndex, tbsLocate: tbsLocate, tbsPose: tbsPose, tbsShake: tbsShake, tbsDancerPose: tbsDancerPose, tbsRand: tbsRand, tbsKnee: tbsKnee,
-    tbsHair: tbsHair, tbsHairStep: tbsHairStep, createTopbarShow: createTopbarShow, TBS_SHOWS: TBS_SHOWS,
+    tbsHair: tbsHair, tbsHairStep: tbsHairStep, tbsPool: tbsPool, tbsPoolTake: tbsPoolTake, tbsPoolKill: tbsPoolKill, createTopbarShow: createTopbarShow, TBS_SHOWS: TBS_SHOWS,
   };
 }

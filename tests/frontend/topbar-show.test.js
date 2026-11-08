@@ -146,3 +146,16 @@ describe('the lion and the frog dance under the QR code', () => {
     expect(kit.tbsDancerPose(at(t), 0, true).y).toBe(0);
   });
 });
+
+describe('the fire pool', () => {
+  it('hands out a fixed number of particles and reuses dead ones in place', () => {
+    const pool = kit.tbsPool(3);
+    const a = kit.tbsPoolTake(pool), b = kit.tbsPoolTake(pool), c = kit.tbsPoolTake(pool);
+    expect(kit.tbsPoolTake(pool)).toBeNull();          // full: no new objects
+    a.id = 'a'; b.id = 'b'; c.id = 'c';
+    kit.tbsPoolKill(pool, 0);                          // 'a' dies, the last live one takes its place
+    expect(pool.n).toBe(2);
+    expect(pool.items.slice(0, 2).map(x => x.id)).toEqual(['c', 'b']);
+    expect(kit.tbsPoolTake(pool)).toBe(a);             // the dead one is reused, not reallocated
+  });
+});
