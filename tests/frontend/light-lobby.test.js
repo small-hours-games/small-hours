@@ -9,6 +9,7 @@ describe('Light lobby uses the multiplayer state', () => {
     const context = {
       state: { playerId: 'p1', gameSuggestions: { p1: 'quiz', p2: 'quiz' }, leadingGame: 'quiz' },
       gameBlocker: game => game.type === 'shithead' ? '2+ players' : null,
+      gameBlurb: game => game.blurb,
       escapeHtml,
     };
     const list = {};
@@ -23,6 +24,20 @@ describe('Light lobby uses the multiplayer state', () => {
     expect(list.innerHTML).toContain('data-game="shithead" aria-pressed="false" disabled');
     expect(list.innerHTML).toContain('2+ players');
   });
+  it('lets a lone player pick the card games against AI, and only then', () => {
+    const context = { state: { players: [{ playerId: 'p1', connected: true }] } };
+    runInNewContext(read('js/games.js'), context);
+    const source = read('player.html');
+    runInNewContext(source.slice(source.indexOf('    function connectedCount('), source.indexOf('    function renderLobby(')), context);
+    const gin = context.shGame('gin-rummy');
+    const palace = context.shGame('shithead');
+    expect(context.gameBlocker(gin)).toBeNull();
+    expect(context.gameBlurb(palace)).toMatch(/Solo vs AI/);
+    context.state.players.push({ playerId: 'p2', connected: true }, { playerId: 'p3', connected: true });
+    expect(context.gameBlocker(gin)).toBe('Max 2');
+    expect(context.gameBlurb(palace)).toBe(palace.blurb);
+  });
+
   it('uses live TV tallies and moves the same chat panel between lobby and gameplay', () => {
     const elements = {};
     const document = {

@@ -38,6 +38,7 @@ function tvRender(fnName, view) {
     document: { getElementById: () => content },
     escapeHtml: t => String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'),
     playerAvatarHtml: () => '',
+    tcFitTv: () => {},
   };
   runInNewContext(KIT, context);
   const block = HOST.slice(HOST.indexOf('    // ===== Card table on the TV'), HOST.indexOf('    function playerAvatarHtml(playerId) {'));

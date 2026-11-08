@@ -12,6 +12,7 @@ import * as gameHandlers from './handlers/game.js';
 import * as chatHandlers from './handlers/chat.js';
 import * as voteHandlers from './handlers/vote.js';
 import { getHostView } from './host-view.js';
+import { nextBotAction } from '../engine/bots/index.js';
 
 const GAME_PHASE_DURATIONS = {
   quiz: QUIZ_DURATIONS,
@@ -25,6 +26,9 @@ const RATE_LIMIT_WINDOW_MS = 1_000;
 const CHAT_RATE_MAX = 3;            // chat messages per window
 const CHAT_RATE_WINDOW_MS = 5_000;
 const DISCONNECT_GRACE_MS = 30_000;
+const BOT_MOVE_DELAY_MS = 1_100;    // AI pause per move, so the table can be followed
+const BOT_SWAP_DELAY_MS = 400;
+const BOT_FAST_DELAY_MS = 450;      // every person is out; bots finish the game
 
 /**
  * Set up WebSocket handling on the given HTTP server.
@@ -49,6 +53,8 @@ export function setupWebSocket(server, manager) {
   const phaseTimers = new Map();
   // roomCode -> active gameType string (for timer duration lookups)
   const roomGameTypes = new Map();
+  // roomCode -> pending AI move timer
+  const botTimers = new Map();
 
   // --- Helpers ---
 
@@ -80,6 +86,9 @@ export function setupWebSocket(server, manager) {
     const names = {};
     for (const [id, p] of room.players) {
       names[id] = p.username;
+    }
+    for (const bot of room.bots || []) {
+      names[bot.playerId] = bot.username;
     }
     return names;
   }
@@ -201,6 +210,52 @@ export function setupWebSocket(server, manager) {
     if (endResult) gameHandlers.finishGame(room, endResult, ctx);
   }
 
+  // --- AI seats ---
+  // After every state change, if an AI seat has a move, play it after a short
+  // pause so people can follow it on the TV. One pending move per room.
+
+  function cancelBotTurn(roomCode) {
+    const existing = botTimers.get(roomCode);
+    if (existing) {
+      clearTimeout(existing);
+      botTimers.delete(roomCode);
+    }
+  }
+
+  function scheduleBotTurn(room) {
+    cancelBotTurn(room.code);
+    if (!room.game || !room.bots?.length) return;
+    const gameType = room.gameType;
+    const botIds = room.bots.map(b => b.playerId);
+    if (!nextBotAction(gameType, room.game.state, botIds)) return;
+
+    const gameId = room.game.id;
+    // Swaps are quick; once every person is out (Palace), the bots finish fast.
+    const humansLeft = room.game.state.finishOrder
+      ? room.game.state.players.some(id => !botIds.includes(id) && !room.game.state.finishOrder.includes(id))
+      : true;
+    const delay = room.game.state.phase === 'swap' ? BOT_SWAP_DELAY_MS : humansLeft ? BOT_MOVE_DELAY_MS : BOT_FAST_DELAY_MS;
+
+    const timer = setTimeout(() => {
+      botTimers.delete(room.code);
+      if (!room.game || room.game.id !== gameId || manager.getRoom(room.code) !== room) return;
+      const action = nextBotAction(gameType, room.game.state, botIds);
+      if (!action) return;
+      try {
+        const before = room.game.state;
+        const events = gameHandlers.applyGameAction(room, action, ctx);
+        if (room.game && room.game.state === before && events.some(e => e.type === 'error')) {
+          // An illegal bot move would otherwise retry forever.
+          cancelBotTurn(room.code);
+          console.error(`[bot] ${gameType} ${action.playerId} made an illegal move:`, events.find(e => e.type === 'error').message);
+        }
+      } catch (err) {
+        console.error('[bot] move failed:', err.message);
+      }
+    }, delay);
+    botTimers.set(room.code, timer);
+  }
+
   // --- Rate limiting ---
 
   function checkRateLimit(meta) {
@@ -241,6 +296,8 @@ export function setupWebSocket(server, manager) {
 
   wss.on('close', () => {
     clearInterval(heartbeat);
+    for (const timer of botTimers.values()) clearTimeout(timer);
+    botTimers.clear();
   });
 
   // --- Connection handling ---
@@ -363,6 +420,8 @@ export function setupWebSocket(server, manager) {
       schedulePhaseTimer,
       cancelPhaseTimer,
       timing,
+      scheduleBotTurn,
+      cancelBotTurn,
       getPlayerNames,
       checkChatRateLimit,
     };

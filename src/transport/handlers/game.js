@@ -108,6 +108,7 @@ export async function handleStartMiniGame(ws, meta, room, msg, ctx) {
     // Host displays get the shared table straight away (same view as every later update)
     const hostView = getHostView(room.game, room.players.keys().next().value);
     broadcastToRoom(room.code, { type: 'GAME_STATE', ...hostView, gameType: msg.gameType, phase: room.game.state.phase, ...clock, playerNames: pNames }, { hostsOnly: true });
+    ctx.scheduleBotTurn?.(room);
   } catch (err) {
     send(ws, { type: 'ERROR', message: err.message });
   }
@@ -123,7 +124,7 @@ export async function handleStartMiniGame(ws, meta, room, msg, ctx) {
  * @param {object} ctx
  */
 export function handleGameAction(ws, meta, room, msg, ctx) {
-  const { send, broadcastToRoom, sendToPlayer, roomGameTypes, schedulePhaseTimer, cancelPhaseTimer, getPlayerNames } = ctx;
+  const { send } = ctx;
 
   if (!meta.playerId) {
     send(ws, { type: 'ERROR', message: 'Not joined yet' });
@@ -140,7 +141,19 @@ export function handleGameAction(ws, meta, room, msg, ctx) {
     return;
   }
 
-  const action = { ...msg.action, playerId: meta.playerId };
+  applyGameAction(room, { ...msg.action, playerId: meta.playerId }, ctx);
+}
+
+/**
+ * Apply one action (a player's or an AI seat's), broadcast the new views and end
+ * the game if it is over. Returns the engine events.
+ *
+ * @param {object} room
+ * @param {object} action - { type, playerId, ...payload }; playerId is trusted here
+ * @param {object} ctx
+ */
+export function applyGameAction(room, action, ctx) {
+  const { broadcastToRoom, sendToPlayer, roomGameTypes, schedulePhaseTimer, getPlayerNames } = ctx;
   const { game: updatedGame, events } = processAction(room.game, action);
   room.game = updatedGame;
   room.lastActivity = Date.now();
@@ -170,6 +183,8 @@ export function handleGameAction(ws, meta, room, msg, ctx) {
   // Check for game end
   const endResult = checkEnd(room.game);
   if (endResult) finishGame(room, endResult, ctx);
+  else ctx.scheduleBotTurn?.(room);
+  return events;
 }
 
 /**
@@ -220,6 +235,7 @@ export function finishGame(room, endResult, ctx) {
 
   room.endGame();
   cancelPhaseTimer(room.code);
+  ctx.cancelBotTurn?.(room.code);
   roomGameTypes.delete(room.code);
   broadcastToRoom(room.code, { type: 'LOBBY_UPDATE', state: room.getState() });
 }

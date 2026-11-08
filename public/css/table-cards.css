@@ -408,3 +408,44 @@
   .tc-dot-live { animation: none; }
   .tc-shake { animation: none; }
 }
+
+/* ---------- Phone: fit the card table to the screen ----------
+   The hand is what you use, so it gets the space: piles shrink on short phones,
+   the face-up/face-down row fits a 360px screen, and the hand zone sits at the
+   bottom of the screen (thumb area) instead of floating mid-page. */
+.tc-screen.active { min-height: calc(100dvh - var(--tc-screen-top, 100px)); }
+.tc-screen .tc-hand-zone { margin-top: auto; }
+.tc-screen .tc-wells .tc-card { --tc-w: clamp(50px, 8.2vh, 76px); }
+.tc-screen .tc-table-cards { gap: 10px; }
+.tc-screen .tc-table-cards .tc-md { --tc-w: min(68px, calc((100vw - 64px) / 5)); }
+.tc-screen .tc-table-cards .tc-sm { --tc-w: min(44px, calc((100vw - 64px) / 7.7)); }
+@media (max-height: 760px) {
+  .tc-screen .tc-table { padding: 8px 8px 6px; }
+  .tc-screen .tc-well { padding: 6px 8px 8px; gap: 4px; }
+  .tc-screen .tc-well-hint { display: none; }
+  .tc-screen .tc-wells .tc-card { --tc-w: clamp(46px, 7.4vh, 76px); }
+  .tc-screen .tc-table-cards { margin: 0 0 2px; }
+  .tc-screen .tc-table-cards .tc-md { --tc-w: min(68px, calc((100vw - 64px) / 5), 7vh); }
+  .tc-screen .tc-table-cards .tc-sm { --tc-w: min(44px, calc((100vw - 64px) / 7.7), 4.6vh); }
+  .tc-screen .tc-hand-area { padding-top: 14px; min-height: 0; }
+  .tc-screen .tc-rule { margin-top: 6px; padding: 4px 10px; font-size: 11px; }
+  .tc-screen .tc-last { margin-top: 3px; }
+}
+
+/* ---------- TV: seats left and right of the piles ----------
+   A 16:9 screen has width to spare, so seats sit beside the table instead of
+   stacked above and below it; tcFitTv() then zooms the whole table to fit. */
+.tc-tv-row {
+  display: grid; grid-template-columns: max-content max-content max-content;
+  justify-content: center; align-items: center; gap: 28px; flex: 1;
+}
+.tc-tv-col { display: flex; flex-direction: column; align-items: stretch; gap: 16px; }
+.tc-tv-col .tc-seat { max-width: none; }
+.tc-tv-col .tc-seat-cards { flex-wrap: nowrap; flex-direction: column; align-items: flex-start; gap: 8px; }
+.tc-tv-mid { display: flex; flex-direction: column; align-items: center; gap: 14px; }
+.tc-tv-mid .tc-tv-side { align-items: center; max-width: 520px; }
+.tc-tv-mid .tc-tv-side .tc-rule, .tc-tv-mid .tc-tv-side .tc-tv-banner { align-self: center; text-align: center; }
+.tc-tv-mid .tc-tv-banner { text-align: center; max-width: 520px; }
+.tc-tv-fit { min-height: 0; justify-content: center; flex: 0 0 auto; } /* natural height: tcFitTv measures it */
+.tc-tv-many .tc-tv-row { gap: 18px; }
+.tc-tv-many .tc-tv-col { gap: 10px; }

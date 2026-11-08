@@ -1558,3 +1558,7 @@ body.light-lobby {
 .phone-screen .lobby-chat .chat-messages { background: var(--night); }
 .phone-screen .lobby-chat .chat-msg { background: var(--night-panel); border-color: var(--night-line); color: #dce3f2; }
 .phone-screen .lobby-chat .chat-msg .author { color: var(--night-sun); }
+
+/* Solo vs AI: how many AI opponents (phone admin controls) */
+.ai-seat-picker { display: grid; gap: 6px; margin-bottom: 8px; }
+.ai-seat-label { font-size: .7rem; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--lobby-muted); }

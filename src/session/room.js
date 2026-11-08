@@ -17,6 +17,7 @@ import yatzy from '../engine/games/yatzy.js';
 import labyrint from '../engine/games/labyrint.js';
 import musicQuiz from '../engine/games/music-quiz.js';
 import { saveAnswers } from '../fetcher/question-file.js';
+import { BOT_NAMES } from '../engine/bots/index.js';
 import { randomBytes } from 'node:crypto';
 
 const AVATAR_POOL = [
@@ -32,13 +33,13 @@ const CODE_CHARS = 'ABCDEFGHJKLMNPQRTUVWXYZ0123456789';
 const GAME_REGISTRY = {
   'number-guess': { definition: numberGuess,  label: 'Number Guess', minPlayers: 2, maxPlayers: 10, complexity: 1 },
   'skogai': 	  { definition: skogai,       label: 'SkogAI',       minPlayers: 1, maxPlayers: 10, complexity: 1 },
-  'shithead':     { definition: shithead,     label: 'Palace',       minPlayers: 2, maxPlayers: 6,  complexity: 3 },
+  'shithead':     { definition: shithead,     label: 'Palace',       minPlayers: 2, maxPlayers: 6,  complexity: 3, ai: { default: 2, max: 4, cardsPerSeat: 9 } },
   'quiz':         { definition: quiz,         label: 'Quiz',         minPlayers: 1, maxPlayers: 20, complexity: 1 },
   'music-quiz':   { definition: musicQuiz,    label: 'Music Quiz',   minPlayers: 1, maxPlayers: 20, complexity: 1 },
   'spy':          { definition: spy,          label: 'Spy',          minPlayers: 3, maxPlayers: 10, complexity: 2 },
   'question-form':{ definition: questionForm, label: 'Question Form',minPlayers: 2, maxPlayers: 20, complexity: 1 },
   'template':     { definition: template,     label: 'Template',     minPlayers: 1, maxPlayers: 20, complexity: 1 },
-  'gin-rummy':    { definition: ginRummy,     label: 'Gin Rummy',    minPlayers: 2, maxPlayers: 2,  complexity: 4 },
+  'gin-rummy':    { definition: ginRummy,     label: 'Gin Rummy',    minPlayers: 2, maxPlayers: 2,  complexity: 4, ai: { default: 1, max: 1 } },
   'hilow':        { definition: hilow,        label: 'Högt/Lågt',    minPlayers: 2, maxPlayers: 8,  complexity: 1 },
   'sjuan':       { definition: sjuan,       label: 'Sjuan',        minPlayers: 2, maxPlayers: 8,  complexity: 2 },
   'uno':         { definition: uno,         label: 'Uno',          minPlayers: 2, maxPlayers: 8,  complexity: 2 },
@@ -120,6 +121,7 @@ export class Room {
     this.availableCategories = [];       // [{id, name}]
     this.votingActive = false;
     this.stateVersion = 0;
+    this.bots = [];                      // AI seats of the running game: [{ playerId, username, avatar }]
   }
 
   /**
@@ -305,8 +307,27 @@ export class Room {
   availableGames() {
     const count = [...this.players.values()].filter(p => p.connected).length;
     return Object.entries(GAME_REGISTRY)
-      .filter(([, m]) => count >= m.minPlayers && count <= m.maxPlayers)
-      .map(([type, m]) => ({ type, label: m.label, minPlayers: m.minPlayers, maxPlayers: m.maxPlayers, complexity: m.complexity }));
+      .filter(([, m]) => (count >= m.minPlayers && count <= m.maxPlayers) || (count === 1 && m.ai))
+      .map(([type, m]) => ({
+        type, label: m.label, minPlayers: m.minPlayers, maxPlayers: m.maxPlayers, complexity: m.complexity,
+        ...(count === 1 && m.ai && count < m.minPlayers ? { vsAi: true } : {}),
+      }));
+  }
+
+  /**
+   * How many AI seats a game gets: only a lone player plays against bots
+   * (solo while waiting for friends). Palace is also capped by the cards:
+   * every seat takes 9 cards from 52 per deck.
+   */
+  aiSeatCount(entry, humans, config = {}) {
+    if (!entry.ai || humans !== 1) return 0;
+    let max = Math.min(entry.ai.max, entry.maxPlayers - humans);
+    if (entry.ai.cardsPerSeat) {
+      const decks = Number(config.decks) || 1;
+      max = Math.min(max, Math.floor((52 * decks) / entry.ai.cardsPerSeat) - humans);
+    }
+    const wanted = Number.isInteger(config.bots) ? config.bots : entry.ai.default;
+    return Math.max(Math.max(1, entry.minPlayers - humans), Math.min(wanted, max));
   }
 
   /**
@@ -363,7 +384,8 @@ export class Room {
     const entry = GAME_REGISTRY[gameType];
     if (!entry) throw new Error(`Unknown game type: ${gameType}`);
     const connectedCount = [...this.players.values()].filter(p => p.connected).length;
-    if (connectedCount < entry.minPlayers) throw new Error(`${entry.label} requires at least ${entry.minPlayers} players`);
+    const botCount = this.aiSeatCount(entry, connectedCount, config);
+    if (connectedCount + botCount < entry.minPlayers) throw new Error(`${entry.label} requires at least ${entry.minPlayers} players`);
     if (connectedCount > entry.maxPlayers) throw new Error(`${entry.label} supports at most ${entry.maxPlayers} players`);
 
     const { definition } = entry;
@@ -372,6 +394,8 @@ export class Room {
     for (const [id, p] of this.players) {
       if (p.connected) playerIds.push(id);
     }
+    const bots = BOT_NAMES.slice(0, botCount).map((name, i) => ({ playerId: `bot_${i + 1}`, username: name, avatar: '\u{1F916}' }));
+    playerIds.push(...bots.map(b => b.playerId));
 
     let gameConfig = { ...config };
 
@@ -388,6 +412,7 @@ export class Room {
     this.lastActivity = Date.now();
     this.game = createGame(definition, { players: playerIds, config: gameConfig });
     this.gameType = gameType;
+    this.bots = bots;
     this.gameSuggestions.clear();
     this.categoryVotes.clear();
     this.availableCategories = [];
@@ -418,6 +443,7 @@ export class Room {
     this.stateVersion += 1;
     this.lastActivity = Date.now();
     this.game = null;
+    this.bots = [];
     // Reset ready states
     for (const [, player] of this.players) {
       player.ready = false;
