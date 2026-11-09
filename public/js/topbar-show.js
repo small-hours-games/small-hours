@@ -12,6 +12,103 @@ var TBS_SHOWS = {
   'Looks-good-to-me-remix.mp3': '/shows/looks-good-to-me.json',
 };
 
+// Songs with a "Board Crash" in them: the song second it starts (the last big drop).
+var TBS_CRASH_AT = {
+  'Looks-good-to-me-remix.mp3': 207.0,
+};
+
+/**
+ * Board Crash, an event in one song: Turbo overshoots into the vote board and knocks the
+ * game cards off the screen; Nova-7 walks up and frets on the board's edge; Glitch and
+ * Prof. Byte roll in and put the cards back, one per beat. u: seconds since it began.
+ * Robot positions are fractions of the vote board (x across, y down; the robot's feet).
+ * Lines are the robots' own. Pure; for tests.
+ */
+var TBS_CRASH_LEN = 16;
+var TBS_CRASH_LINES = [
+  { who: 'turbo', at: 2.0, len: 2.2, text: 'Brakes are a premium feature!' },
+  { who: 'nova', at: 3.0, len: 1.9, text: 'Uh… where did all the games go?' },
+  { who: 'nova', at: 5.0, len: 1.9, text: 'Okay. Stay calm. Robots are always calm.' },
+  { who: 'nova', at: 7.0, len: 1.0, text: 'I am c-c-calm. Very calm.' },
+  { who: 'nova', at: 8.0, len: 1.9, text: '…They are under the TV, aren’t they?' },
+  { who: 'nova', at: 10.0, len: 1.6, text: 'Turbo. TURBO!' },
+  { who: 'glitch', at: 10.8, len: 1.8, text: 'R-r-rebuilding… 40%!' },
+  { who: 'byte', at: 12.4, len: 2.0, text: 'Ah, a fascinating stacking problem.' },
+];
+var TBS_CRASH_HIT = 0.85;
+function tbsCrashCardBack(j) { return 9.2 + j * 1.0; }
+function tbsEase(x) { x = Math.max(0, Math.min(1, x)); return x * x * (3 - 2 * x); }
+function tbsLerp(a, b, x) { return a + (b - a) * x; }
+function tbsCrashState(u) {
+  var out = { on: u >= 0 && u < TBS_CRASH_LEN, turbo: null, nova: null, glitch: null, byte: null, lines: [] };
+  if (!out.on) return out;
+  // Turbo: in from the top left, through the board, spins out, sulks, leaves.
+  if (u < 1.0) {
+    var e = u / 1.0; e = e * e;
+    out.turbo = { x: tbsLerp(-0.55, 0.5, e), y: tbsLerp(-0.6, 0.45, e), tilt: tbsLerp(55, 110, e), boost: 1, mood: 'calm' };
+  } else if (u < 2.0) {
+    var f = tbsEase(u - 1.0);
+    out.turbo = { x: tbsLerp(0.5, 0.97, f), y: tbsLerp(0.45, 0.62, f), tilt: tbsLerp(110, 520, f), boost: 0.3, mood: 'worried' };
+  } else if (u < 5.0) {
+    out.turbo = { x: 0.97, y: 0.62, tilt: 160 + 5 * Math.sin(u * 6), boost: 0, mood: 'worried', smoke: true };
+  } else if (u < 6.2) {
+    var g = tbsEase((u - 5.0) / 1.2);
+    out.turbo = { x: tbsLerp(0.97, 1.25, g), y: tbsLerp(0.62, -0.9, g), tilt: tbsLerp(160, 20, Math.min(1, g * 2)), boost: 1, mood: 'calm' };
+  }
+  // Nova-7: walks in, stands on the board's top edge looking down, frets, walks off.
+  if (u >= 2.0 && u < 16) {
+    var walkIn = Math.min(1, (u - 2.0) / 1.0), walkOut = Math.max(0, (u - 14.4) / 1.4);
+    var x = walkOut > 0 ? tbsLerp(0.5, -0.3, tbsEase(walkOut)) : tbsLerp(-0.25, 0.5, tbsEase(walkIn));
+    var walking = walkIn < 1 || walkOut > 0;
+    var peer = u >= 8.0 && u < 9.8;
+    out.nova = {
+      x: x, y: 0, step: walking ? u * 1.8 : 0, mood: u >= 3.0 ? 'worried' : 'calm',
+      tilt: peer ? 12 : 0, look: walking ? 0 : (u >= 10 && u < 11.6 ? -14 : 16),
+      flip: walkOut > 0 ? -1 : (u >= 10 && u < 11.6 ? 1 : 1), arm: u >= 7.0 && u < 8.0 ? 0.6 * Math.abs(Math.sin(u * 14)) : 0,
+    };
+  }
+  // The repair crew: Glitch from the left, Prof. Byte from the right, carrying the cards back.
+  if (u >= 8.6 && u < 15.4) {
+    var gin = tbsEase((u - 8.6) / 0.6), gout = tbsEase((u - 14.5) / 0.8);
+    out.glitch = { x: gout > 0 ? tbsLerp(0.08, -0.35, gout) : tbsLerp(-0.35, 0.08, gin), y: 1.02, wheel: u * (gin < 1 || gout > 0 ? 540 : 90),
+      tilt: 4 * Math.sin(u * 9), jitter: Math.sin(u * 23) > 0.6 ? 1 : 0, arm: 0, mood: 'calm' };
+    out.byte = { x: gout > 0 ? tbsLerp(0.92, 1.35, gout) : tbsLerp(1.35, 0.92, gin), y: 1.02, wheel: -u * 200,
+      tilt: 10 * Math.sin(u * 2.6), step: u * 0.7, arm: 0, mood: 'calm' };
+    for (var j = 0; j < 5; j++) {
+      var since = u - tbsCrashCardBack(j);
+      if (since > -0.3 && since < 0.4) {
+        var a = Math.sin(Math.PI * Math.max(0, Math.min(1, (since + 0.3) / 0.7)));
+        if (j % 2) out.byte.arm = Math.max(out.byte.arm, a); else out.glitch.arm = Math.max(out.glitch.arm, a);
+      }
+    }
+  }
+  TBS_CRASH_LINES.forEach(function (l) { if (u >= l.at && u < l.at + l.len) out.lines.push(l); });
+  return out;
+}
+
+/**
+ * Where game card j is during the crash, in screen px from its own place: knocked off at the
+ * hit and falling out of the screen with real gravity, then thrown back up from the robot that
+ * carries it, landing with a bounce. fall: px to clear the screen; from: { dx, dy } of the robot.
+ */
+function tbsCrashCard(u, j, fall, from) {
+  var dir = j % 2 ? 1 : -1;
+  var t = u - (TBS_CRASH_HIT + j * 0.07);
+  var back = u - tbsCrashCardBack(j);
+  if (t < 0) return { x: 0, y: 0, rot: 0, op: 1 };
+  if (back < 0) {
+    var y = -260 * t + 0.5 * 2600 * t * t;
+    if (y > fall) return { x: 0, y: fall, rot: 0, op: 0 };
+    return { x: dir * (90 + 40 * j) * t, y: y, rot: dir * (160 + 50 * j) * t, op: 1 };
+  }
+  if (back < 0.55) {
+    var k = back / 0.55;
+    var c1 = 1.70158, eb = 1 + (c1 + 1) * Math.pow(k - 1, 3) + c1 * Math.pow(k - 1, 2);   // ease-out back
+    return { x: from.dx * (1 - eb), y: from.dy * (1 - eb) - 60 * Math.sin(Math.PI * k), rot: dir * 25 * (1 - k), op: Math.min(1, k * 4) };
+  }
+  return { x: 0, y: 0, rot: 0, op: 1 };
+}
+
 /** Index of the beat at or before t (−1 before the first beat). Pure; for tests. */
 function tbsBeatIndex(beats, t, hint) {
   var n = beats.length;
@@ -635,9 +732,13 @@ function createTopbarShow(opts) {
     var b = document.createElement('span');
     b.className = 'tbs-bot';
     b.innerHTML = '<span class="tbs-bot-face"></span><span class="tbs-bot-lost">?</span>';
-    b.firstChild.textContent = persona.avatar;
+    var kind = persona.entrance || 'boot';
+    // A drawn robot (ai-robots.js) when the page has the rigs, else the persona's emoji.
+    var rig = typeof createAiRobot === 'function' ? createAiRobot(kind) : null;
+    if (rig) { b.classList.add('tbs-bot-rig'); b.firstChild.appendChild(rig.el); }
+    else b.firstChild.textContent = persona.avatar;
     stage.insertBefore(b, stage.querySelector('.tbs-singer'));
-    bots.push({ el: b, face: b.firstChild, kind: persona.entrance || 'boot' });
+    bots.push({ el: b, face: b.firstChild, kind: kind, rig: rig });
   });
   header.insertBefore(stage, header.firstChild);
   var q = function (sel) { return stage.querySelector(sel); };
@@ -1017,6 +1118,15 @@ function createTopbarShow(opts) {
       var bx = bounds.left + w * TBS_BOT_SPOTS[bi] + bp.x;
       css(bots[bi].el, 'transform', 'translate(' + bx.toFixed(1) + 'px,' + bp.y.toFixed(1) + 'px)');
       css(bots[bi].face, 'transform', 'rotate(' + bp.rot.toFixed(1) + 'deg) scale(' + (bp.flip * bp.sx).toFixed(3) + ',' + bp.sy.toFixed(3) + ')');
+      if (bots[bi].rig) {
+        // Nova-7's legs step on the beat, the wheels roll with the groove, Turbo's flame kicks.
+        var beatPos = Math.max(0, loc.i) + loc.phase;
+        bots[bi].rig.pose({
+          step: bp.lost ? 0 : beatPos / 2, wheel: beatPos * 90 * (bi < 2 ? 1 : -1),
+          boost: 0.3 + 0.7 * Math.pow(1 - loc.phase, 3) * loc.kick, mood: bp.lost ? 'worried' : 'calm',
+          arm: bp.lost ? 0 : 0.5 + 0.5 * Math.sin(Math.PI * beatPos), jitter: bots[bi].kind === 'glitch' && loc.phase < 0.2 ? 1 : 0,
+        });
+      }
       if (bots[bi].lost !== bp.lost) { bots[bi].lost = bp.lost; bots[bi].el.classList.toggle('tbs-bot-is-lost', bp.lost); }
     }
 
@@ -1028,8 +1138,11 @@ function createTopbarShow(opts) {
     }
 
     // The lobby boxes (vote options and panels) shake on the beat with her.
-    var shake = exiting || tier >= 2 ? { vx: 0, vy: 0, kick: 0 } : tbsShake(loc, reduced);
-    applyShake(shake, now);
+    // During the Board Crash the vote board belongs to the robots; otherwise it shakes along.
+    if (!crashFrame(t)) {
+      var shake = exiting || tier >= 2 ? { vx: 0, vy: 0, kick: 0 } : tbsShake(loc, reduced);
+      applyShake(shake, now);
+    }
 
     // The flash and shockwave: the landing, and every drop after a quieter bar.
     var flashBeat = loc.stage !== 'intro' && loc.stage !== 'fall' && (loc.sectionStart || (loc.i === map.dropBeat));
@@ -1062,6 +1175,97 @@ function createTopbarShow(opts) {
     }
     document.body.classList.toggle('tbs-lite', tier >= 2);
   }
+
+  // ---- Board Crash (TBS_CRASH_AT): robots and the vote board ----
+  var crash = { layer: null, robots: null, bubbles: {}, active: false, cards: [] };
+  function crashBuild() {
+    if (crash.layer || typeof createAiRobot !== 'function') return !!crash.layer;
+    var layer = document.createElement('div');
+    layer.className = 'tbs-crash';
+    layer.setAttribute('aria-hidden', 'true');
+    crash.robots = {};
+    [['turbo', 'zoom'], ['nova', 'boot'], ['glitch', 'glitch'], ['byte', 'dizzy']].forEach(function (r) {
+      var bot = createAiRobot(r[1]);
+      var wrap = document.createElement('div');
+      wrap.className = 'tbs-crash-bot tbs-crash-' + r[0];
+      wrap.appendChild(bot.el);
+      var smoke = document.createElement('span');
+      smoke.className = 'tbs-crash-smoke';
+      wrap.appendChild(smoke);
+      layer.appendChild(wrap);
+      var bubble = document.createElement('div');
+      bubble.className = 'tbs-crash-bubble';
+      layer.appendChild(bubble);
+      crash.robots[r[0]] = { bot: bot, wrap: wrap, smoke: smoke, bubble: bubble };
+    });
+    document.body.appendChild(layer);
+    crash.layer = layer;
+    return true;
+  }
+  function hostScale() {
+    var v = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--host-scale'));
+    return v > 0 ? v : 1;
+  }
+  function crashFrame(t) {
+    var at = TBS_CRASH_AT[trackName()];
+    var board = document.getElementById('hostVotes');
+    var u = at == null ? -1 : t - at;
+    var st = at == null || reduced || exiting() || !board || !board.offsetParent ? { on: false } : tbsCrashState(u);
+    if (!st.on) { if (crash.active) crashReset(); return false; }
+    if (!crashBuild()) return false;
+    crash.active = true;
+    crash.layer.classList.add('tbs-crash-on');
+    var r = board.getBoundingClientRect();
+    var size = Math.max(110, Math.min(200, r.width * 0.2));
+    ['turbo', 'nova', 'glitch', 'byte'].forEach(function (name) {
+      var R = crash.robots[name], p = st[name];
+      css(R.wrap, 'opacity', p ? '1' : '0');
+      if (!p) { R.bubble.classList.remove('on'); return; }
+      var x = r.left + p.x * r.width, y = r.top + p.y * r.height;
+      var w = name === 'turbo' ? size * 0.85 : size;
+      var flip = p.flip === -1 ? -1 : 1;
+      css(R.wrap, 'width', w.toFixed(0) + 'px');
+      css(R.wrap, 'height', (w * 1.2).toFixed(0) + 'px');
+      css(R.wrap, 'transform', 'translate(' + (x - w / 2).toFixed(1) + 'px,' + (y - w * 1.2).toFixed(1) + 'px)' +
+        (name === 'turbo' ? ' rotate(' + p.tilt.toFixed(1) + 'deg)' : '') + ' scale(' + flip + ',1)');
+      R.bot.pose({ step: p.step, mood: p.mood, wheel: p.wheel, boost: p.boost, tilt: name === 'turbo' ? 0 : p.tilt, arm: p.arm, look: p.look, jitter: p.jitter });
+      css(R.smoke, 'opacity', p.smoke ? '1' : '0');
+      var line = st.lines.filter(function (l) { return l.who === name; })[0];
+      if (line) {
+        if (R.bubble.textContent !== line.text) R.bubble.textContent = line.text;
+        css(R.bubble, 'transform', 'translate(' + x.toFixed(0) + 'px,' + (y - w * 1.25).toFixed(0) + 'px) translate(-50%, -100%)');
+      }
+      R.bubble.classList.toggle('on', !!line);
+    });
+    // The game cards: off the board and out of the screen, then back from the repair crew.
+    var scale = hostScale();
+    var opts = Array.prototype.slice.call(board.querySelectorAll('.lobby-game-option'));
+    opts.forEach(function (o, j) {
+      if (!o._crashHome || o._crashHome.w !== r.width) {
+        var prev = o.style.transform; o.style.transform = '';
+        var h = o.getBoundingClientRect();
+        o.style.transform = prev;
+        o._crashHome = { cx: h.left + h.width / 2, cy: h.top + h.height / 2, w: r.width };
+      }
+      var carrier = j % 2 ? st.byte : st.glitch;
+      var from = carrier ? { dx: (r.left + carrier.x * r.width) - o._crashHome.cx, dy: (r.top + carrier.y * r.height - size * 0.6) - o._crashHome.cy } : { dx: 0, dy: 400 };
+      var c = tbsCrashCard(u, j, window.innerHeight - o._crashHome.cy + 200, from);
+      css(o, 'transform', 'translate(' + (c.x / scale).toFixed(1) + 'px,' + (c.y / scale).toFixed(1) + 'px) rotate(' + c.rot.toFixed(1) + 'deg)');
+      css(o, 'opacity', c.op.toFixed(2));
+    });
+    crash.cards = opts;
+    return true;
+  }
+  function crashReset() {
+    crash.active = false;
+    if (crash.layer) {
+      crash.layer.classList.remove('tbs-crash-on');
+      Object.keys(crash.robots).forEach(function (k) { crash.robots[k].bubble.classList.remove('on'); css(crash.robots[k].wrap, 'opacity', '0'); });
+    }
+    (crash.cards || []).forEach(function (o) { css(o, 'transform', ''); css(o, 'opacity', ''); o._crashHome = null; });
+    crash.cards = [];
+  }
+  function exiting() { return exitAt > 0; }
 
   // Shake the lobby: transforms written straight onto the few boxes, so no style
   // inheritance runs through the page. The vote list re-renders, so look it up again now and then.
@@ -1150,6 +1354,7 @@ function createTopbarShow(opts) {
     if (!raf) raf = requestAnimationFrame(frame);
   }
   function finish() {
+    crashReset();
     running = false;
     exitAt = 0;
     map = null;
@@ -1191,7 +1396,7 @@ function createTopbarShow(opts) {
 
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
-    tbsBeatIndex: tbsBeatIndex, tbsLocate: tbsLocate, tbsPose: tbsPose, tbsShake: tbsShake, tbsDancerPose: tbsDancerPose, tbsBotPose: tbsBotPose, tbsRand: tbsRand, tbsKnee: tbsKnee,
+    tbsBeatIndex: tbsBeatIndex, tbsLocate: tbsLocate, tbsPose: tbsPose, tbsShake: tbsShake, tbsDancerPose: tbsDancerPose, tbsBotPose: tbsBotPose, tbsCrashState: tbsCrashState, tbsCrashCard: tbsCrashCard, TBS_CRASH_AT: TBS_CRASH_AT, TBS_CRASH_LINES: TBS_CRASH_LINES, tbsRand: tbsRand, tbsKnee: tbsKnee,
     tbsGovernor: tbsGovernor, tbsGovern: tbsGovern, tbsHair: tbsHair, tbsHairStep: tbsHairStep, tbsPool: tbsPool, tbsPoolTake: tbsPoolTake, tbsPoolKill: tbsPoolKill, createTopbarShow: createTopbarShow, TBS_SHOWS: TBS_SHOWS,
   };
 }

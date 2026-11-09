@@ -57,6 +57,15 @@
       el.setAttribute('aria-hidden', 'true');
       el.innerHTML = '<div class="ai-intro-face">' + escapeHtml(p.avatar) + '<span class="ai-intro-lost">' +
         (p.entrance === 'dizzy' ? '💫' : '❓') + '</span></div><div class="ai-intro-name">' + escapeHtml(p.name) + '</div>';
+      // The drawn robot (ai-robots.js) instead of the emoji, when the page has the rigs.
+      if (typeof createAiRobot === 'function') {
+        const face = el.querySelector('.ai-intro-face');
+        const lost = face.querySelector('.ai-intro-lost');
+        face.textContent = '';
+        face.classList.add('ai-intro-rig');
+        face.appendChild(createAiRobot(p.entrance || 'boot').el);
+        face.appendChild(lost);
+      }
       document.body.appendChild(el);
       setTimeout(() => shAiSay(id, p.hello[i % p.hello.length], 3200), 900);
       setTimeout(() => el.remove(), 4300);

@@ -240,3 +240,55 @@ describe('the AI characters join the show', () => {
     expect(kit.TBS_BOT_SPOTS || [0.05, 0.17, 0.83, 0.95]).toEqual([0.05, 0.17, 0.83, 0.95]);
   });
 });
+
+describe('Board Crash', () => {
+  it('happens once, at 03:27 in Looks Good To Me only', () => {
+    expect(kit.TBS_CRASH_AT['Looks-good-to-me-remix.mp3']).toBeCloseTo(207, 0);
+    expect(Object.keys(kit.TBS_CRASH_AT)).toHaveLength(1);
+    expect(kit.tbsCrashState(-0.1).on).toBe(false);
+    expect(kit.tbsCrashState(16.1).on).toBe(false);
+  });
+  it('runs the cast in order: Turbo crashes, Nova-7 frets, the crew rebuilds', () => {
+    expect(kit.tbsCrashState(0.5).turbo).toBeTruthy();
+    expect(kit.tbsCrashState(0.5).nova).toBeNull();
+    expect(kit.tbsCrashState(3.5).nova.mood).toBe('worried');
+    expect(kit.tbsCrashState(7).turbo).toBeNull();          // Turbo has left
+    expect(kit.tbsCrashState(8).glitch).toBeNull();
+    const s = kit.tbsCrashState(11);
+    expect(s.glitch && s.byte && s.nova).toBeTruthy();
+  });
+  it('speaks its own lines at the cue times, never two Nova-7 lines at once', () => {
+    const at = u => kit.tbsCrashState(u).lines.map(l => l.who);
+    expect(at(2.5)).toEqual(['turbo']);
+    expect(at(3.2)).toEqual(['turbo', 'nova']);
+    for (let u = 0; u < 16; u += 0.1) expect(at(u).filter(w => w === 'nova').length).toBeLessThanOrEqual(1);
+    expect(kit.TBS_CRASH_LINES.every(l => l.at + l.len <= 16)).toBe(true);
+  });
+  it('drops every card out of the screen, then lands it back in place', () => {
+    const from = { dx: -200, dy: 300 };
+    for (let j = 0; j < 5; j++) {
+      expect(kit.tbsCrashCard(0.2, j, 900, from)).toMatchObject({ x: 0, y: 0, op: 1 });
+      expect(kit.tbsCrashCard(5, j, 900, from)).toMatchObject({ y: 900, op: 0 });
+      expect(kit.tbsCrashCard(15.9, j, 900, from)).toMatchObject({ x: 0, y: 0, rot: 0, op: 1 });
+    }
+    // falling, the card speeds up
+    const a = kit.tbsCrashCard(1.2, 0, 5000, from).y, b = kit.tbsCrashCard(1.4, 0, 5000, from).y, c = kit.tbsCrashCard(1.6, 0, 5000, from).y;
+    expect(c - b).toBeGreaterThan(b - a);
+  });
+});
+
+describe('AI robot rigs', () => {
+  const rk = {};
+  runInNewContext(readFileSync(new URL('../../public/js/ai-robots.js', import.meta.url), 'utf8'), rk);
+  it('has a rig for every entrance style, with the parts that move', () => {
+    const svg = rk.AI_ROBOT_SVG;
+    expect(Object.keys(svg).sort()).toEqual(['boot', 'dizzy', 'glitch', 'zoom']);
+    expect(svg.boot).toContain('data-part="legL"');
+    expect(svg.zoom).toContain('data-part="flame"');
+    expect(svg.dizzy).toContain('data-part="brain"');
+    for (const k of Object.keys(svg)) {
+      expect(svg[k]).toContain('data-part="calm"');
+      expect(svg[k]).toContain('data-part="worried"');
+    }
+  });
+});
