@@ -63,6 +63,15 @@
     .gather { background: #f5f1e6; color: var(--night); }
     .gather-chip { background: #fff; border: 1.5px solid #e4dcc7; }
     .gather-muted { color: #3b4256; }
+    /* Phones are controllers: joining is the main action there, creating a room belongs on the TV. */
+    @media (max-width: 1023px) {
+      .create-cta { background: transparent; border: 1.5px solid var(--line-strong); color: #fff; }
+      .create-cta:hover { background: var(--panel); }
+    }
+    .scan-overlay { position: fixed; inset: 0; z-index: 100; background: rgba(5,11,28,.96); display: none; flex-direction: column; align-items: center; justify-content: center; gap: 18px; padding: max(16px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom)); }
+    .scan-overlay.open { display: flex; }
+    .scan-box { position: relative; width: min(84vw, 380px); aspect-ratio: 1; border-radius: 24px; overflow: hidden; background: #000; border: 3px solid var(--sun); }
+    .scan-box video { width: 100%; height: 100%; object-fit: cover; }
     @media (prefers-reduced-motion: reduce) { .night * { transition: none !important; animation: none !important; } }
   </style>
   <link rel="icon" type="image/svg+xml" href="/images/smallhours-icon.svg">
@@ -89,9 +98,9 @@
         <a href="#games" class="text-[#dce3f2] hover:text-white">Games</a>
         <a href="#gatherings" class="text-[#dce3f2] hover:text-white">For your group</a>
       </nav>
-      <button onclick="openTvScreen()" id="tvBtn" class="btn-ghost flex text-xs sm:text-sm font-semibold px-3 sm:px-4 min-h-[44px] rounded-full transition items-center gap-2">
-        <i class="fa-solid fa-tv"></i> <span class="hidden sm:inline">TV screen only</span><span class="sm:hidden">TV</span>
-      </button>
+      <a href="/tv" id="tvBtn" class="btn-ghost flex text-xs sm:text-sm font-semibold px-3 sm:px-4 min-h-[44px] rounded-full transition items-center gap-2">
+        <i class="fa-solid fa-tv"></i> <span class="hidden sm:inline">TV screen</span><span class="sm:hidden">TV</span>
+      </a>
     </div>
   </header>
 
@@ -118,65 +127,29 @@
         <div class="w-full max-w-lg">
 
           <!-- ================= 1. LANDING ================= -->
+          <!-- Phones join (scan or type the code); the TV/laptop creates the room. -->
           <section id="screen-landing" class="screen-view active">
             <div class="flex flex-col gap-3.5">
-              <button onclick="showScreen('screen-create-profile')" class="btn-sun w-full min-h-[58px] px-6 rounded-2xl font-extrabold text-lg flex items-center justify-center gap-2.5 transition active:scale-[0.98]">
-                <i class="fa-solid fa-plus"></i> Create a room
-              </button>
-
-              <form id="codeForm" class="night-card p-3.5 rounded-2xl">
+              <form id="codeForm" class="night-card p-3.5 rounded-2xl order-1 lg:order-2">
                 <label for="room-code-input" class="block text-xs font-bold uppercase tracking-wider text-[#a9b6d3] mb-2">
-                  Got a room code?
+                  Joining from your phone?
                 </label>
                 <div class="flex gap-2.5">
-                  <input id="room-code-input" type="text" placeholder="e.g. AB12" autocomplete="off" spellcheck="false" class="night-input w-full uppercase font-display text-xl tracking-[0.25em] text-center px-4 min-h-[50px] rounded-xl font-semibold" />
+                  <input id="room-code-input" type="text" placeholder="Room code" autocomplete="off" spellcheck="false" autocapitalize="characters" enterkeyhint="go" class="night-input w-full min-w-0 uppercase font-display text-xl tracking-[0.25em] text-center px-4 min-h-[50px] rounded-xl font-semibold" />
                   <button type="submit" class="btn-sky px-6 min-h-[50px] font-bold rounded-xl active:scale-95 transition">
                     Join
                   </button>
                 </div>
-                <p id="codeError" class="hidden mt-2 text-sm font-semibold text-[#fda4af]"></p>
-              </form>
-              <p class="text-sm text-[#a9b6d3]">One shared screen, everyone plays from their phone.</p>
-            </div>
-          </section>
-
-          <!-- ================= 2. CREATE ROOM - SET NICKNAME ================= -->
-          <section id="screen-create-profile" class="screen-view">
-            <div class="night-card rounded-3xl p-5 sm:p-6 flex flex-col gap-5">
-              <div class="flex items-center gap-3">
-                <button onclick="showScreen('screen-landing')" aria-label="Back" class="w-11 h-11 rounded-full bg-[#0b1530] hover:bg-[#1b2e5c] text-white flex items-center justify-center shrink-0">
-                  <i class="fa-solid fa-arrow-left text-sm"></i>
+                <button type="button" id="scanBtn" class="btn-ghost w-full mt-2.5 min-h-[50px] px-4 rounded-xl font-bold flex items-center justify-center gap-2.5 transition active:scale-[0.98]">
+                  <i class="fa-solid fa-qrcode"></i> Scan the QR code on the TV
                 </button>
-                <div class="w-12 h-12 rounded-2xl btn-sun flex items-center justify-center shrink-0">
-                  <i class="fa-solid fa-crown text-xl"></i>
-                </div>
-                <div class="min-w-0">
-                  <h2 class="font-display font-bold text-2xl leading-tight">Host a new room</h2>
-                  <p class="text-sm text-[#a9b6d3]">Pick a name so friends know it’s you</p>
-                </div>
-              </div>
-
-              <form id="createForm" class="flex flex-col gap-4">
-                <div>
-                  <label for="create-username" class="block text-xs font-bold text-[#a9b6d3] mb-1.5 uppercase tracking-wider">Nickname</label>
-                  <div class="relative">
-                    <span class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-[#7f8db0]">
-                      <i class="fa-regular fa-user"></i>
-                    </span>
-                    <input id="create-username" type="text" maxlength="20" autocomplete="off" spellcheck="false" class="nickname-input night-input w-full pl-11 pr-4 min-h-[50px] rounded-xl font-semibold" placeholder="Username" />
-                  </div>
-                </div>
-                <p id="createError" class="hidden text-sm font-semibold text-[#fda4af]"></p>
-                <div class="grid grid-cols-2 gap-3">
-                  <button type="button" onclick="showScreen('screen-landing')" class="btn-ghost w-full min-h-[50px] px-4 font-bold rounded-xl transition">
-                    Back
-                  </button>
-                  <button type="submit" id="createBtn" class="btn-sun w-full min-h-[50px] px-4 font-extrabold rounded-xl transition disabled:opacity-60">
-                    Create
-                  </button>
-                </div>
+                <p id="codeError" class="hidden mt-2 text-sm font-semibold text-[#fda4af]" role="alert"></p>
               </form>
-              <p class="text-sm text-[#a9b6d3]">You’ll be the room admin and can open the TV screen from the dashboard.</p>
+
+              <a href="/tv" class="create-cta btn-sun order-2 lg:order-1 w-full min-h-[58px] px-6 rounded-2xl font-extrabold text-lg flex items-center justify-center gap-2.5 transition active:scale-[0.98]">
+                <i class="fa-solid fa-tv"></i> Create a room
+              </a>
+              <p class="order-3 text-sm text-[#a9b6d3]">Create the room on the TV or laptop everyone can see. Then everyone scans the code with their phone.</p>
             </div>
           </section>
 
@@ -273,7 +246,7 @@
           <li class="night-card rounded-3xl p-7 flex flex-col gap-3.5">
             <span class="font-display font-bold text-sm text-[#0b1530] bg-[#38bdf8] rounded-full px-3 py-1 self-start">Step 1</span>
             <h3 class="font-display font-semibold text-2xl">Open the TV screen</h3>
-            <p class="leading-relaxed text-[#c3cde3]">Create a room and put it on the big screen. A room code and QR code show up straight away.</p>
+            <p class="leading-relaxed text-[#c3cde3]">Open Smallhours on the big screen and press Create a room. A room code and QR code show up straight away.</p>
           </li>
           <li class="night-card rounded-3xl p-7 flex flex-col gap-3.5">
             <span class="font-display font-bold text-sm text-[#0b1530] bg-[#a78bfa] rounded-full px-3 py-1 self-start">Step 2</span>
@@ -370,7 +343,7 @@
         <h2 class="relative font-display font-bold text-4xl sm:text-6xl leading-none max-w-3xl">Lights low. TV on. Let’s play.</h2>
         <p class="relative text-lg sm:text-xl max-w-xl text-[#2b3350]">Start a room now and send the code to the group.</p>
         <div class="relative flex flex-wrap gap-3 justify-center">
-          <a href="#" onclick="startFromCta(event, 'screen-create-profile')" class="bg-[#0b1530] text-white font-extrabold text-lg px-8 min-h-[56px] rounded-2xl inline-flex items-center">Create a room</a>
+          <a href="/tv" class="bg-[#0b1530] text-white font-extrabold text-lg px-8 min-h-[56px] rounded-2xl inline-flex items-center">Create a room</a>
           <a href="#" onclick="startFromCta(event, 'screen-landing')" class="border-2 border-[#0b1530] font-bold text-lg px-7 min-h-[56px] rounded-2xl inline-flex items-center">Join with a code</a>
         </div>
       </div>
@@ -382,6 +355,13 @@
     <span>Party games best played in the small hours</span>
     <span id="buildInfo" class="w-full text-xs opacity-80" title="Running version"></span>
   </footer>
+
+  <div id="scanOverlay" class="scan-overlay" role="dialog" aria-modal="true" aria-labelledby="scanTitle">
+    <h2 id="scanTitle" class="font-display font-bold text-2xl text-center">Point at the QR code on the TV</h2>
+    <div class="scan-box"><video id="scanVideo" playsinline muted></video></div>
+    <p id="scanStatus" class="text-sm text-[#c3cde3] text-center max-w-xs" aria-live="polite">Starting the camera…</p>
+    <button type="button" id="scanClose" class="btn-ghost min-h-[50px] px-8 rounded-xl font-bold">Cancel</button>
+  </div>
 
   <script>
     let joinCode = null;
@@ -425,14 +405,6 @@
       return name;
     }
 
-    async function createRoom() {
-      const res = await fetch('/api/rooms', { method: 'POST' });
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || 'Could not create a room');
-      }
-      return (await res.json()).code;
-    }
 
     // Landing: room code (accepts a pasted /player/XXXX link too)
     const codeInput = document.getElementById('room-code-input');
@@ -440,20 +412,125 @@
       const v = e.target.value.trim();
       if (!v.includes('/')) e.target.value = v.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 4);
     });
+    // A room code, or a link containing /player/XXXX or ?code=XXXX
+    function parseRoomCode(raw) {
+      raw = String(raw || '').trim();
+      const m = raw.match(/\/player\/([A-Z0-9]{4})(?![A-Z0-9])/i) || raw.match(/[?&]code=([A-Z0-9]{4})(?![A-Z0-9])/i);
+      const code = (m ? m[1] : raw).toUpperCase();
+      return /^[A-Z0-9]{4}$/.test(code) ? code : null;
+    }
+
+    function goToJoin(code) {
+      showError('codeError', '');
+      joinCode = code;
+      codeInput.value = code;
+      document.querySelectorAll('.join-code-label').forEach(el => { el.textContent = '#' + code; });
+      showScreen('screen-join-profile');
+    }
+
     document.getElementById('codeForm').addEventListener('submit', (e) => {
       e.preventDefault();
-      const raw = codeInput.value.trim();
-      const linkMatch = raw.match(/\/player\/([A-Z0-9]{4})/i);
-      const code = (linkMatch ? linkMatch[1] : raw).toUpperCase();
-      if (!/^[A-Z0-9]{4}$/.test(code)) {
+      const code = parseRoomCode(codeInput.value);
+      if (!code) {
         showError('codeError', 'Enter a valid 4-character room code');
         return;
       }
-      showError('codeError', '');
-      joinCode = code;
-      document.querySelectorAll('.join-code-label').forEach(el => { el.textContent = '#' + code; });
-      showScreen('screen-join-profile');
+      goToJoin(code);
     });
+
+    // QR scanner: BarcodeDetector where the browser has it, jsQR otherwise (iPhone Safari).
+    const scan = { stream: null, timer: null, detector: null, canvas: null };
+    const scanOverlay = document.getElementById('scanOverlay');
+    const scanVideo = document.getElementById('scanVideo');
+    const scanStatus = document.getElementById('scanStatus');
+
+    function loadJsQR() {
+      if (window.jsQR) return Promise.resolve();
+      return new Promise((resolve, reject) => {
+        const el = document.createElement('script');
+        el.src = 'https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js';
+        el.onload = resolve;
+        el.onerror = () => reject(new Error('Could not load the scanner'));
+        document.head.appendChild(el);
+      });
+    }
+
+    function stopScan() {
+      clearTimeout(scan.timer);
+      if (scan.stream) scan.stream.getTracks().forEach(t => t.stop());
+      scan.stream = null;
+      scanVideo.srcObject = null;
+      scanOverlay.classList.remove('open');
+    }
+
+    async function readFrame() {
+      if (scanVideo.readyState < 2) return null;
+      if (scan.detector) {
+        const found = await scan.detector.detect(scanVideo);
+        return found.length ? found[0].rawValue : null;
+      }
+      const w = scanVideo.videoWidth, h = scanVideo.videoHeight;
+      if (!w || !h) return null;
+      const scale = Math.min(1, 640 / Math.max(w, h));
+      const c = scan.canvas || (scan.canvas = document.createElement('canvas'));
+      c.width = Math.round(w * scale); c.height = Math.round(h * scale);
+      const ctx = c.getContext('2d', { willReadFrequently: true });
+      ctx.drawImage(scanVideo, 0, 0, c.width, c.height);
+      const img = ctx.getImageData(0, 0, c.width, c.height);
+      const hit = window.jsQR(img.data, img.width, img.height, { inversionAttempts: 'dontInvert' });
+      return hit ? hit.data : null;
+    }
+
+    async function scanLoop() {
+      if (!scan.stream) return;
+      try {
+        const text = await readFrame();
+        if (text) {
+          const code = parseRoomCode(text);
+          if (code) { stopScan(); goToJoin(code); return; }
+          scanStatus.textContent = 'That QR code isn’t a Smallhours room. Try the one on the TV.';
+        }
+      } catch { /* keep trying */ }
+      scan.timer = setTimeout(scanLoop, 200);
+    }
+
+    async function startScan() {
+      showError('codeError', '');
+      const noCamera = 'Couldn’t open the camera. Use your phone’s camera app on the QR code, or type the code shown on the TV.';
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        showError('codeError', noCamera);
+        return;
+      }
+      scanStatus.textContent = 'Starting the camera…';
+      scanOverlay.classList.add('open');
+      try {
+        scan.detector = null;
+        if ('BarcodeDetector' in window) {
+          try {
+            const formats = await window.BarcodeDetector.getSupportedFormats();
+            if (formats.includes('qr_code')) scan.detector = new window.BarcodeDetector({ formats: ['qr_code'] });
+          } catch { /* fall back to jsQR */ }
+        }
+        const [stream] = await Promise.all([
+          navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false }),
+          scan.detector ? null : loadJsQR(),
+        ]);
+        if (!scanOverlay.classList.contains('open')) { stream.getTracks().forEach(t => t.stop()); return; }
+        scan.stream = stream;
+        scanVideo.srcObject = stream;
+        await scanVideo.play();
+        scanStatus.textContent = 'Hold the code inside the yellow frame.';
+        scanLoop();
+      } catch {
+        stopScan();
+        showError('codeError', noCamera);
+      }
+    }
+
+    document.getElementById('scanBtn').addEventListener('click', startScan);
+    document.getElementById('scanClose').addEventListener('click', stopScan);
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && scanOverlay.classList.contains('open')) stopScan(); });
+    document.addEventListener('visibilitychange', () => { if (document.hidden && scan.stream) stopScan(); });
 
     // Join: nickname -> player page
     document.getElementById('joinForm').addEventListener('submit', (e) => {
@@ -464,34 +541,7 @@
       window.location.href = '/player/' + joinCode + '?name=' + encodeURIComponent(name);
     });
 
-    // Create: nickname -> new room -> player page as admin
-    document.getElementById('createForm').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const name = validName('create-username', 'createError');
-      if (!name) return;
-      const btn = document.getElementById('createBtn');
-      btn.disabled = true;
-      try {
-        const code = await createRoom();
-        rememberName(name);
-        window.location.href = '/player/' + code + '?name=' + encodeURIComponent(name);
-      } catch (err) {
-        showError('createError', err.message);
-        btn.disabled = false;
-      }
-    });
 
-    // Header: shared display without joining as a player
-    async function openTvScreen() {
-      const btn = document.getElementById('tvBtn');
-      btn.disabled = true;
-      try {
-        window.location.href = '/host/' + await createRoom();
-      } catch (err) {
-        showError('codeError', err.message);
-        btn.disabled = false;
-      }
-    }
 
     // Footer: which build is running, e.g. "v2.1.0 · 2dbdd0b · built 7 Nov 2026, 14:02"
     function renderBuildInfo(info) {
