@@ -48,8 +48,8 @@ var TBS_CRASH_HIT = 0.85;
  * The robots sing along: lines the AI cast says during a song, in song seconds, outside the
  * Board Crash (which has its own lines above). who: 'nova', 'glitch', 'byte', 'turbo', or
  * 'all' for the whole cast. A line shows in a speech bubble under the robot's spot in the bar.
- * Times where the vocal is clear come from a word-level transcription of the track (03:10-03:38,
- * 02:16, 04:03, 04:31); the rest follow the lyric sheet.
+ * Times were checked against the track: by ear (01:50-02:01, 03:06-03:13) and by a word-level
+ * transcription (02:16, 03:30-03:38, 04:03, 04:31); the rest follow the lyric sheet.
  */
 var TBS_SONG_LINES = {
   'Looks-good-to-me-remix.mp3': [
@@ -62,11 +62,11 @@ var TBS_SONG_LINES = {
     { who: 'glitch', at: 119.0, len: 2.9, text: 'All done… isn’t.' },
     { who: 'glitch', at: 136.1, len: 1.4, text: '…tokens instead' },
     { who: 'byte', at: 152.1, len: 2.8, text: 'And nobody knows what the code does inside' },
-    { who: 'glitch', at: 182.0, len: 3.5, text: 'And I’m going to sleep' },
-    { who: 'byte', at: 186.2, len: 2.1, text: 'All done, it is!' },
-    { who: 'glitch', at: 188.3, len: 2.1, text: 'All done, it is!' },
-    { who: 'nova', at: 191.7, len: 2.4, text: 'Sorry for the confusion' },
-    { who: 'byte', at: 194.3, len: 1.2, text: 'All done… isn’t.' },
+    { who: 'glitch', at: 186.0, len: 2.2, text: 'And I’m going to sleep' },
+    { who: 'byte', at: 188.2, len: 2.0, text: 'All done, it is!' },
+    { who: 'glitch', at: 189.3, len: 1.6, text: 'All done, it is!' },
+    { who: 'nova', at: 191.0, len: 2.0, text: 'Sorry for the confusion' },
+    { who: 'byte', at: 193.0, len: 2.2, text: 'All done… isn’t.' },
     { who: 'all', at: 242.1, len: 1.4, text: 'Now the bot reviews the bot' },
     { who: 'all', at: 243.5, len: 3.0, text: 'A million lines and the humans all got cut' },
     { who: 'all', at: 246.8, len: 1.7, text: 'Approved in three seconds' },
