@@ -873,8 +873,9 @@ function tbsPoolKill(pool, i) {
  * whole show at 60 fps, and a show that stutters looks worse than a simpler one that
  * flows. Feed it the time between frames; it steps down a tier after 1.5 s of slow
  * frames (under ~42 fps) and back up after 8 s of fast ones, at most once, so it never
- * flaps. Tier 0 is the full show, 1 drops the panel shake and halves the fire,
- * 2 also sends the dancers home and draws the equalizer at half rate. Pure; for tests.
+ * flaps. Tier 0 is the full show, 1 drops the shine and halves the fire, 2 thins the fire
+ * more and moves the lion, the frog, the shake and the equalizer every other frame.
+ * Nothing of the Easter egg ever disappears or freezes. Pure; for tests.
  */
 function tbsGovernor(mode) {
   var fixed = mode === 'full' ? 0 : mode === 'lite' ? 2 : -1;
@@ -1404,7 +1405,8 @@ function createTopbarShow(opts) {
     crashBubbles(cs, said);
 
     // The lion and the frog dance under the QR code.
-    for (var dn = 0; tier < 2 && dn < dancers.length; dn++) {
+    // A weak TV moves them every other frame; they never leave.
+    for (var dn = 0; (tier < 2 || frameNo % 2 === 0) && dn < dancers.length; dn++) {
       var dp = exiting ? { y: 0, rot: 0, sx: 1, sy: 1, px: 0, py: 0 } : tbsDancerPose(loc, dn, reduced);
       if (dancers[dn].rig) css(dancers[dn].rig, 'transform', 'translate3d(0,' + dp.y.toFixed(1) + 'px,0) rotateZ(' + dp.rot.toFixed(1) + 'deg) scale(' + dp.sx.toFixed(3) + ',' + dp.sy.toFixed(3) + ')');
       if (dancers[dn].paw) css(dancers[dn].paw, 'transform', 'translate3d(' + (dp.px * 1.6).toFixed(1) + 'px,' + (dp.py * 1.6).toFixed(1) + 'px,26px)');
@@ -1412,8 +1414,9 @@ function createTopbarShow(opts) {
 
     // The lobby boxes (vote options and panels) shake on the beat with her.
     // During the Board Crash the vote board belongs to the robots; otherwise it shakes along.
-    if (!crashCards(cs, t)) {
-      var shake = exiting || tier >= 2 ? { vx: 0, vy: 0, kick: 0 } : tbsShake(loc, reduced);
+    // A weak TV shakes them every other frame, but they keep shaking.
+    if (!crashCards(cs, t) && (tier < 2 || frameNo % 2 === 0)) {
+      var shake = exiting ? { vx: 0, vy: 0, kick: 0 } : tbsShake(loc, reduced);
       applyShake(shake, now);
     }
 
@@ -1443,7 +1446,6 @@ function createTopbarShow(opts) {
   function setTier(next) {
     tier = next;
     if (tier >= 1) {
-      shakeEls.panels.concat(shakeEls.invite ? [shakeEls.invite] : []).forEach(function (n) { css(n, 'transform', ''); });
       shakeEls.options.forEach(function (o) { if (o._tbsShine) css(o._tbsShine, 'opacity', '0'); });
     }
     document.body.classList.toggle('tbs-lite', tier >= 2);
@@ -1600,7 +1602,6 @@ function createTopbarShow(opts) {
       if (!o._tbsShine) { o._tbsShine = document.createElement('span'); o._tbsShine.className = 'tbs-shine'; o.appendChild(o._tbsShine); }
       css(o._tbsShine, 'opacity', shine);
     }
-    if (tier) return;
     for (var j = 0; j < shakeEls.panels.length; j++) {
       css(shakeEls.panels[j], 'transform', 'translate(' + (sh.vx * 0.5).toFixed(1) + 'px,' + (-sh.vy * 0.5).toFixed(1) + 'px) scale(' + (1 + sh.kick * 0.006).toFixed(4) + ')');
     }
