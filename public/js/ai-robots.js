@@ -1,6 +1,7 @@
 // The AI characters as drawn robots (vector rigs) for the TV: Nova-7 walks on two legs,
 // Glitch rolls on tank tracks, Prof. Byte balances on one wheel and Turbo is a rocket.
-// Plain browser script exposing globals. createAiRobot(kind) returns { el, pose(p) }:
+// Plain browser script exposing globals. aiRobot(name, kind) gives a character's one body;
+// createAiRobot(kind) returns { el, pose(p) }:
 // pose({ step, mood, wheel, boost, tilt }) moves the parts (legs, wheels, flame, eyes) by
 // attribute, so the robot animates without repainting the page around it.
 // kind: 'boot' (Nova-7), 'glitch', 'dizzy' (Prof. Byte), 'zoom' (Turbo): the personas' entrance.
@@ -148,6 +149,22 @@ function createAiRobot(kind) {
   };
 }
 
+/**
+ * The one body of a character: made the first time it is asked for, then the same element
+ * wherever the character appears (topbar dancer, Board Crash, game intro), so a robot can
+ * never be on screen twice. key: the persona's name; kind: its rig.
+ */
+var AI_ROBOT_CAST = {};
+function aiRobot(key, kind) {
+  var r = AI_ROBOT_CAST[key];
+  if (!r) {
+    r = AI_ROBOT_CAST[key] = createAiRobot(kind || key);
+    r.key = key;
+    r.el.setAttribute('data-actor', key);
+  }
+  return r;
+}
+
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { AI_ROBOT_SVG: AI_ROBOT_SVG };
+  module.exports = { AI_ROBOT_SVG: AI_ROBOT_SVG, aiRobot: aiRobot };
 }

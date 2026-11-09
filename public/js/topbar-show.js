@@ -18,13 +18,19 @@ var TBS_CRASH_AT = {
 };
 
 /**
- * Board Crash, an event in one song: Turbo overshoots into the vote board and knocks the
- * game cards off the screen; Nova-7 walks up and frets on the board's edge; Glitch and
- * Prof. Byte roll in and put the cards back, one per beat. u: seconds since it began.
- * Robot positions are fractions of the vote board (x across, y down; the robot's feet).
- * Lines are the robots' own. Pure; for tests.
+ * Board Crash, an event in one song. The cast is the four AI dancers from the topbar
+ * themselves: each one leaves its own spot in the bar, plays its part over the vote board and
+ * goes back. Turbo winds up and rockets into the board, knocking every game card off the
+ * screen; Nova-7 jumps down into the empty board and frets; Glitch teleports and Prof. Byte
+ * rolls down, carefully and late, and they put the cards back one per beat.
+ * u: seconds since the hit cue (it starts a second earlier with Turbo's wind-up).
+ * homes: where each robot stands in the bar, in vote-board fractions (x across, y down; feet).
+ * Each robot: { x, y } its spot on the board, away 0..1 how far it has left home for it
+ * (0: dancing in the bar), lift extra height while it travels, and pose values; a robot that
+ * is still home gets react: { emote, mood, face, jump, slump } instead. Pure; for tests.
  */
-var TBS_CRASH_LEN = 16;
+var TBS_CRASH_LEN = 16.4;
+var TBS_CRASH_PRE = 1.0;        // Turbo's wind-up before the cue
 var TBS_CRASH_LINES = [
   { who: 'turbo', at: 2.0, len: 2.2, text: 'Brakes are a premium feature!' },
   { who: 'nova', at: 3.0, len: 1.9, text: 'Uh… where did all the games go?' },
@@ -36,51 +42,102 @@ var TBS_CRASH_LINES = [
   { who: 'byte', at: 12.4, len: 2.0, text: 'Ah, a fascinating stacking problem.' },
 ];
 var TBS_CRASH_HIT = 0.85;
+var TBS_CRASH_HOMES = { nova: { x: -0.35, y: -0.3 }, glitch: { x: -0.2, y: -0.3 }, byte: { x: 1.2, y: -0.3 }, turbo: { x: 1.35, y: -0.3 } };
 function tbsCrashCardBack(j) { return 9.2 + j * 1.0; }
 function tbsEase(x) { x = Math.max(0, Math.min(1, x)); return x * x * (3 - 2 * x); }
 function tbsLerp(a, b, x) { return a + (b - a) * x; }
-function tbsCrashState(u) {
-  var out = { on: u >= 0 && u < TBS_CRASH_LEN, turbo: null, nova: null, glitch: null, byte: null, lines: [] };
+function tbsSpan(u, a, b) { return Math.max(0, Math.min(1, (u - a) / (b - a))); }
+/** Nose-first heading (degrees, 0 = up) for a flight from a to b in board fractions. */
+function tbsHeading(a, b) { return Math.atan2(b.x - a.x, -(b.y - a.y)) * 180 / Math.PI; }
+function tbsCrashState(u, homes) {
+  var H = homes || TBS_CRASH_HOMES;
+  var hT = H.turbo || TBS_CRASH_HOMES.turbo, hN = H.nova || TBS_CRASH_HOMES.nova;
+  var hG = H.glitch || TBS_CRASH_HOMES.glitch, hB = H.byte || TBS_CRASH_HOMES.byte;
+  var out = { on: u >= -TBS_CRASH_PRE && u < TBS_CRASH_LEN, turbo: null, nova: null, glitch: null, byte: null, lines: [] };
   if (!out.on) return out;
-  // Turbo: in from the top left, through the board, spins out, sulks, leaves.
-  if (u < 1.0) {
-    var e = u / 1.0; e = e * e;
-    out.turbo = { x: tbsLerp(-0.55, 0.5, e), y: tbsLerp(-0.6, 0.45, e), tilt: tbsLerp(55, 110, e), boost: 1, mood: 'calm' };
+  var shock = u >= TBS_CRASH_HIT && u < TBS_CRASH_HIT + 1.1;     // everyone left in the bar jumps
+  var home = function (react) { return { away: 0, x: 0, y: 0, lift: 0, react: react }; };
+
+  // Turbo: winds up in the bar, rockets nose first into the board, spins out against the right
+  // edge, sulks there smoking, flies home and sulks in the bar (until Nova-7 yells at it).
+  var impact = { x: 0.5, y: 0.45 }, wall = { x: 0.97, y: 0.62 };
+  if (u < 0) {
+    var wind = u + TBS_CRASH_PRE;
+    out.turbo = home({ emote: wind > 0.5 ? '!' : '', mood: 'calm', face: 'board', windup: wind, boost: 0.4 + 0.6 * wind });
+  } else if (u < 1.0) {
+    out.turbo = { away: u * u, x: impact.x, y: impact.y, lift: 0, tilt: tbsHeading(hT, impact), boost: 1, mood: 'calm' };
   } else if (u < 2.0) {
     var f = tbsEase(u - 1.0);
-    out.turbo = { x: tbsLerp(0.5, 0.97, f), y: tbsLerp(0.45, 0.62, f), tilt: tbsLerp(110, 520, f), boost: 0.3, mood: 'worried' };
+    out.turbo = { away: 1, x: tbsLerp(impact.x, wall.x, f), y: tbsLerp(impact.y, wall.y, f), lift: 0, tilt: tbsLerp(tbsHeading(hT, impact), 520, f), boost: 0.3, mood: 'worried' };
   } else if (u < 5.0) {
-    out.turbo = { x: 0.97, y: 0.62, tilt: 160 + 5 * Math.sin(u * 6), boost: 0, mood: 'worried', smoke: true };
-  } else if (u < 6.2) {
-    var g = tbsEase((u - 5.0) / 1.2);
-    out.turbo = { x: tbsLerp(0.97, 1.25, g), y: tbsLerp(0.62, -0.9, g), tilt: tbsLerp(160, 20, Math.min(1, g * 2)), boost: 1, mood: 'calm' };
+    out.turbo = { away: 1, x: wall.x, y: wall.y, lift: 0, tilt: 160 + 5 * Math.sin(u * 6), boost: 0, mood: 'worried', smoke: true };
+  } else if (u < 6.4) {
+    var g = tbsSpan(u, 5.0, 6.4);
+    out.turbo = { away: 1 - tbsEase(g), x: wall.x, y: wall.y, lift: 0, tilt: tbsLerp(160, tbsHeading(wall, hT), Math.min(1, g * 3)) * (1 - tbsEase(g)), boost: 1, mood: 'calm' };
+  } else {
+    var yelled = u >= 10.0 && u < 10.9;
+    out.turbo = home(yelled ? { emote: '!', mood: 'worried', face: 'nova', jump: Math.sin(Math.PI * tbsSpan(u, 10.0, 10.5)) }
+      : { emote: '…', mood: 'worried', face: 'away', slump: 1 });
   }
-  // Nova-7: walks in, stands on the board's top edge looking down, frets, walks off.
-  if (u >= 2.0 && u < 16) {
-    var walkIn = Math.min(1, (u - 2.0) / 1.0), walkOut = Math.max(0, (u - 14.4) / 1.4);
-    var x = walkOut > 0 ? tbsLerp(0.5, -0.3, tbsEase(walkOut)) : tbsLerp(-0.25, 0.5, tbsEase(walkIn));
-    var walking = walkIn < 1 || walkOut > 0;
-    var peer = u >= 8.0 && u < 9.8;
+
+  // Nova-7: startled in the bar, jumps down into the empty board, frets on the spot,
+  // walks to the bottom edge to peer down after the cards, yells at Turbo, then jumps home.
+  var land = { x: 0.24, y: 0.42 }, fret = { x: 0.36, y: 0.42 }, edge = { x: 0.5, y: 0.97 };
+  if (u < 1.9) {
+    out.nova = home(shock ? { emote: '!', mood: 'worried', face: 'board', jump: Math.sin(Math.PI * tbsSpan(u, TBS_CRASH_HIT, TBS_CRASH_HIT + 0.45)) }
+      : u >= TBS_CRASH_HIT ? { emote: '?', mood: 'worried', face: 'board' } : null);
+  } else if (u < 14.4) {
+    var hop = tbsSpan(u, 1.9, 2.7);
+    var walkA = tbsSpan(u, 2.7, 3.3), walkB = tbsSpan(u, 7.7, 8.5);
+    var x = hop < 1 ? land.x : walkB > 0 ? tbsLerp(fret.x, edge.x, tbsEase(walkB)) : tbsLerp(land.x, fret.x, tbsEase(walkA));
+    var y = hop < 1 ? land.y : walkB > 0 ? tbsLerp(fret.y, edge.y, tbsEase(walkB)) : fret.y;
+    var walking = (walkA > 0 && walkA < 1) || (walkB > 0 && walkB < 1);
+    var peer = u >= 8.5 && u < 9.9, yell = u >= 10.0 && u < 11.6, wring = u >= 11.6;
     out.nova = {
-      x: x, y: 0, step: walking ? u * 1.8 : 0, mood: u >= 3.0 ? 'worried' : 'calm',
-      tilt: peer ? 12 : 0, look: walking ? 0 : (u >= 10 && u < 11.6 ? -14 : 16),
-      flip: walkOut > 0 ? -1 : (u >= 10 && u < 11.6 ? 1 : 1), arm: u >= 7.0 && u < 8.0 ? 0.6 * Math.abs(Math.sin(u * 14)) : 0,
+      away: tbsEase(hop), x: x, y: y, lift: -0.18 * Math.sin(Math.PI * hop),
+      step: walking ? u * 1.8 : 0, mood: u >= 2.7 ? 'worried' : 'calm',
+      tilt: peer ? 14 : yell ? -6 : 0,
+      look: hop < 1 ? 0 : peer ? 18 : yell ? -16 : u < 7.7 ? 14 * Math.sin(u * 1.3) : 10,   // looking around, then down
+      flip: yell ? 1 : 1,
+      arm: u >= 7.0 && u < 7.9 ? 0.6 * Math.abs(Math.sin(u * 14)) : yell ? 0.9 : wring ? 0.35 + 0.25 * Math.sin(u * 9) : hop < 1 ? 0.8 : 0,
     };
+  } else {
+    var back = tbsSpan(u, 14.4, 15.4);
+    out.nova = back < 1 ? { away: 1 - tbsEase(back), x: edge.x, y: edge.y, lift: -0.25 * Math.sin(Math.PI * back), step: 0, mood: 'calm', tilt: 0, look: 0, arm: 0.8 }
+      : home({ emote: '', mood: 'calm', face: 'board' });
   }
-  // The repair crew: Glitch from the left, Prof. Byte from the right, carrying the cards back.
-  if (u >= 8.6 && u < 15.4) {
-    var gin = tbsEase((u - 8.6) / 0.6), gout = tbsEase((u - 14.5) / 0.8);
-    out.glitch = { x: gout > 0 ? tbsLerp(0.08, -0.35, gout) : tbsLerp(-0.35, 0.08, gin), y: 1.02, wheel: u * (gin < 1 || gout > 0 ? 540 : 90),
-      tilt: 4 * Math.sin(u * 9), jitter: Math.sin(u * 23) > 0.6 ? 1 : 0, arm: 0, mood: 'calm' };
-    out.byte = { x: gout > 0 ? tbsLerp(0.92, 1.35, gout) : tbsLerp(1.35, 0.92, gin), y: 1.02, wheel: -u * 200,
-      tilt: 10 * Math.sin(u * 2.6), step: u * 0.7, arm: 0, mood: 'calm' };
-    for (var j = 0; j < 5; j++) {
+
+  // The repair crew. Glitch teleports down (flickering out of the bar and into the board);
+  // Prof. Byte rolls the long way down, wobbling, and arrives a bit late.
+  var gSpot = { x: 0.08, y: 1.02 }, bSpot = { x: 0.92, y: 1.02 };
+  var crewArm = function (who) {
+    var a = 0;
+    for (var j = who; j < 5; j += 2) {
       var since = u - tbsCrashCardBack(j);
-      if (since > -0.3 && since < 0.4) {
-        var a = Math.sin(Math.PI * Math.max(0, Math.min(1, (since + 0.3) / 0.7)));
-        if (j % 2) out.byte.arm = Math.max(out.byte.arm, a); else out.glitch.arm = Math.max(out.glitch.arm, a);
-      }
+      if (since > -0.3 && since < 0.4) a = Math.max(a, Math.sin(Math.PI * Math.max(0, Math.min(1, (since + 0.3) / 0.7))));
     }
+    return a;
+  };
+  var gOut = u >= 8.2 && u < 8.6, gBack = u >= 14.5 && u < 14.9;
+  if ((u >= 8.4 && u < 14.7)) {
+    out.glitch = { away: 1, x: gSpot.x, y: gSpot.y, lift: 0, wheel: u * 90, tilt: 4 * Math.sin(u * 9),
+      jitter: Math.sin(u * 23) > 0.6 ? 1 : 0, arm: crewArm(0), mood: 'calm',
+      flicker: (u < 8.6 || u >= 14.5) ? (Math.floor(u * 24) % 2 ? 0.25 : 1) : 1 };
+  } else {
+    out.glitch = home(gOut || gBack ? { emote: '', mood: 'calm', face: 'board', flicker: Math.floor(u * 24) % 2 ? 0.2 : 1 }
+      : shock ? { emote: '!', mood: 'worried', face: 'board', jump: Math.sin(Math.PI * tbsSpan(u, TBS_CRASH_HIT + 0.1, TBS_CRASH_HIT + 0.5)), jitter: 1 }
+      : u >= TBS_CRASH_HIT && u < 8.2 ? { emote: u % 2 < 1 ? '?' : '', mood: 'worried', face: 'board', jitter: Math.sin(u * 17) > 0.7 ? 1 : 0 } : null);
+  }
+  var bDown = tbsSpan(u, 7.4, 8.9), bUp = tbsSpan(u, 14.6, 16.0);
+  if (u >= 7.4 && u < 16.0) {
+    var travel = u < 8.9 ? bDown : bUp;
+    var moving = (u < 8.9) || (u >= 14.6);
+    out.byte = { away: u < 8.9 ? tbsEase(bDown) : 1 - tbsEase(bUp), x: bSpot.x, y: bSpot.y,
+      lift: moving ? -0.12 * Math.sin(Math.PI * travel) : 0,
+      wheel: -u * (moving ? 420 : 200), tilt: (moving ? 16 : 10) * Math.sin(u * 2.6), step: u * 0.7, arm: moving ? 0.5 : crewArm(1), mood: 'calm' };
+  } else {
+    out.byte = home(shock ? { emote: '!', mood: 'worried', face: 'board', wobble: 1 - tbsSpan(u, TBS_CRASH_HIT, TBS_CRASH_HIT + 1.1) }
+      : u >= 2.5 && u < 7.4 ? { emote: '✎', mood: 'calm', face: 'board', notes: 1 } : null);
   }
   TBS_CRASH_LINES.forEach(function (l) { if (u >= l.at && u < l.at + l.len) out.lines.push(l); });
   return out;
@@ -352,59 +409,181 @@ function tbsDancerPose(loc, side, reduced) {
 }
 
 /**
- * The AI characters (SH_AI) as small backup dancers along the bar: they wander in one by one
- * after the drop, a little lost, and each dances its own way: Nova-7 ('boot') stiff and on the
- * beat like a robot, Glitch ('glitch') jittery and flickering, Prof. Byte ('dizzy') swaying half
- * a beat late, Turbo ('zoom') hopping double time. Now and then one stops, looks around and
- * shows a question mark. Small, at the edges and behind her, so the singer stays the show.
- * idx: 0-3; returns { show, x, y, rot, sx, sy, flip, lost, op }. Pure; for tests.
+ * The AI characters (SH_AI) as small backup dancers along the bar. Each has its own
+ * personality, timing and set of moves, and picks a new move every bar (seeded, so every
+ * TV shows the same show, and never the same move twice in a row):
+ *   Nova-7 ('boot')   calculating and stiff: exactly on every beat, straight lines, keeps
+ *                     checking the singer; marches, does the robot, scans, computes.
+ *   Glitch ('glitch') chaotic: twitches on 8ths with skipped hits, skids, freezes, teleports.
+ *   Prof. Byte ('dizzy') cautious and always half a beat late: sways in arcs, pedals,
+ *                     takes notes, nearly falls off its wheel.
+ *   Turbo ('zoom')    a show-off on beats 1 and 3: hops, boosts, struts at the singer,
+ *                     flies a loop, always overshooting.
+ * Only one robot does a big gag in a bar (TBS_BOT_GAGS); the others turn and watch it.
+ * Small and at the edges of the bar, they step aside when the singer comes close, so she
+ * stays the show. ctx: { singer: her place in the bar 0..1, w: bar width in px } (optional).
+ * Returns { show, op, x, y, rot, sx, sy, flip, lost, emote, mood, move, step, arm, wheel,
+ * boost, look, jitter }. Pure; for tests.
  */
 var TBS_BOT_SPOTS = [0.05, 0.17, 0.83, 0.95];
-function tbsBotPose(loc, idx, kind, reduced) {
-  var out = { show: false, x: 0, y: 0, rot: 0, sx: 1, sy: 1, flip: idx < 2 ? 1 : -1, lost: false, op: 0 };
+var TBS_BOT_MOVES = {
+  boot: { moves: ['robot', 'march', 'scan', 'robot', 'wave'], gag: 'compute', wander: 26 },
+  glitch: { moves: ['twitch', 'skid', 'freeze', 'twitch'], gag: 'teleport', wander: 34 },
+  dizzy: { moves: ['sway', 'pedal', 'notes', 'sway'], gag: 'wobble', wander: 18 },
+  zoom: { moves: ['hop', 'boost', 'strut', 'hop'], gag: 'loop', wander: 30 },
+};
+/** Which robot (0-3) gets the bar's gag, or -1. About every other bar in the busy parts. */
+function tbsBotGagOwner(bar, kind) {
+  if (kind === 'v' || bar < 0) return -1;
+  if (tbsRand(bar, 7771) > (kind === 'd' ? 0.55 : 0.4)) return -1;
+  var owner = Math.floor(tbsRand(bar, 7772) * 4);
+  return owner === tbsBotGagOwner(bar - 1, kind) ? -1 : owner;   // no one hogs the stage
+}
+/** The move robot idx dances in a bar: weighted by personality, never twice in a row. */
+var tbsBotMoveMemo = {};
+function tbsBotMove(bar, idx, kind) {
+  var set = (TBS_BOT_MOVES[kind] || TBS_BOT_MOVES.boot).moves;
+  var key = kind + idx, list = tbsBotMoveMemo[key] || (tbsBotMoveMemo[key] = []);
+  bar = Math.max(0, bar);
+  for (var b = list.length; b <= bar; b++) {
+    var m = set[Math.floor(tbsRand(b, idx * 13 + 5) * set.length)];
+    for (var n = 1; b > 0 && m === list[b - 1]; n++) m = set[(set.indexOf(m) + n) % set.length];
+    list.push(m);
+  }
+  return list[bar];
+}
+/** Where robot idx wanders to in a bar, px from its spot. */
+function tbsBotWander(bar, idx, kind) {
+  var r = (TBS_BOT_MOVES[kind] || TBS_BOT_MOVES.boot).wander;
+  return (tbsRand(Math.max(0, bar), idx * 7 + 3) - 0.5) * 2 * r;
+}
+function tbsBotPose(loc, idx, kind, reduced, ctx) {
+  var out = { show: false, x: 0, y: 0, rot: 0, sx: 1, sy: 1, flip: idx < 2 ? 1 : -1, lost: false, op: 0,
+    emote: '', mood: 'calm', move: '', step: 0, arm: 0, wheel: 0, boost: 0.35, look: 0, jitter: 0 };
   if (loc.stage !== 'dance') return out;
   var since = loc.sinceDrop - (1.6 + idx * 1.9);       // they arrive one after the other
   if (since < 0) return out;
   out.show = true;
   out.op = Math.min(1, since / 0.5);
   var p = loc.phase, x2 = loc.beatInBar + p, hit = Math.pow(1 - p, 3);
-  var level = loc.kind === 'd' ? 1 : loc.kind === 'g' ? 0.7 : 0.4;
+  var beatPos = Math.max(0, loc.i) + p;
+  var level = loc.kind === 'd' ? 1 : loc.kind === 'g' ? 0.7 : 0.45;
+  var inward = idx < 2 ? 1 : -1;
+  out.wheel = beatPos * 90 * inward;
+  out.step = beatPos / 2;
+  // Wandering: each bar it heads for a new place near its spot, the way it moves.
+  var from = tbsBotWander(loc.bar - 1, idx, kind), to = tbsBotWander(loc.bar, idx, kind);
+  var k = x2 / 4;
+  var travel = kind === 'boot' ? Math.min(1, Math.floor(x2) / 3)                      // one step per beat
+    : kind === 'glitch' ? (x2 >= 1 + Math.floor(tbsRand(loc.bar, idx + 61) * 2) ? 1 : 0) // snaps there
+    : kind === 'dizzy' ? tbsEase((k - 0.4) / 0.6)                                       // sets off late
+    : Math.min(1.08, tbsEase(k / 0.45) * 1.08 - Math.max(0, k - 0.45) * 0.15);          // overshoots
+  out.x = tbsLerp(from, to, travel);
+  var walking = travel > 0 && travel < 1 && Math.abs(to - from) > 6;
+
   // Just arrived, or one of their lost moments (one bar in eight, each at its own time).
   var arriving = since < 2.4;
   var lostBar = ((loc.bar + idx * 3) % 8) === 5 && loc.kind !== 'd';
   if (arriving || lostBar) {
-    out.lost = true;
+    out.lost = true; out.emote = '?'; out.mood = 'worried'; out.move = 'lost';
     out.flip = (Math.floor((arriving ? since : loc.t) * 2.2 + idx) % 2) ? 1 : -1;   // looking left, right
+    out.look = out.flip * 14;
     out.y = arriving ? -4 * Math.abs(Math.sin(since * 7)) * (1 - since / 2.4) : 0;
     out.rot = arriving ? 10 * Math.sin(since * 5) * (1 - since / 2.4) : 4 * Math.sin(loc.t * 3 + idx);
-    out.x = arriving ? -18 * (1 - Math.min(1, since / 0.8)) * (idx < 2 ? 1 : -1) : 0; // stumbling in
+    out.x = arriving ? -18 * (1 - Math.min(1, since / 0.8)) * inward : out.x;      // stumbling in
+    out.step = 0;
     return out;
   }
-  if (reduced) { out.rot = 3 * Math.sin(Math.PI * x2 / 2); return out; }
+  if (reduced) { out.rot = 3 * Math.sin(Math.PI * x2 / 2); out.x = 0; return out; }
+
+  var gagOwner = tbsBotGagOwner(loc.bar, loc.kind);
+  var move = gagOwner === idx ? (TBS_BOT_MOVES[kind] || TBS_BOT_MOVES.boot).gag : tbsBotMove(loc.bar, idx, kind);
+  out.move = move;
+  if (!walking) out.step = 0;
+
   if (kind === 'boot') {
-    // Robot: snaps between poses on each beat, a stiff nod on the kick.
-    out.rot = (loc.beatInBar % 2 ? -7 : 7) * level;
-    out.y = 3 * hit * level;
-    out.sy = 1 - 0.05 * hit;
+    // Nova-7: snaps between poses exactly on the beat.
+    var side = loc.beatInBar % 2 ? -1 : 1;
+    if (move === 'robot') { out.rot = side * 7 * level; out.arm = loc.beatInBar % 2; out.y = 3 * hit * level; out.sy = 1 - 0.05 * hit; }
+    else if (move === 'march') { out.step = beatPos / 2; out.y = -3 * hit * level; out.arm = 0.3; out.rot = side * 2; }
+    else if (move === 'scan') { out.look = [-16, 0, 16, 0][loc.beatInBar]; out.flip = loc.beatInBar === 0 ? -inward : inward; out.emote = loc.beatInBar === 3 ? '…' : ''; out.y = 2 * hit; }
+    else if (move === 'wave') { out.arm = loc.beatInBar % 2 ? 1 : 0.2; out.rot = side * 3; out.y = 2 * hit; }
+    else if (move === 'compute') {
+      // Freezes, thinks, then gets it: a jump and an exclamation on beat 4.
+      out.look = x2 < 3 ? 10 : 0; out.rot = x2 < 3 ? 6 : 0; out.arm = x2 < 3 ? 0.5 : 1;
+      out.emote = x2 < 3 ? '?' : '!';
+      out.y = x2 >= 3 ? -14 * Math.sin(Math.PI * (x2 - 3)) : 0;
+    }
   } else if (kind === 'glitch') {
-    // Twitches on the hi-hats and skips about; flickers now and then.
+    // Glitch: on the eighths, but it skips some, and flickers.
+    var eighth = Math.floor(x2 * 2), skip = tbsRand(loc.bar * 8 + eighth, idx + 19) > 0.7;
     var r = tbsRand(Math.max(0, loc.i) * 2 + (p >= 0.5 ? 1 : 0), idx + 11);
-    out.x = (r - 0.5) * 14 * level;
-    out.rot = (tbsRand(loc.i, idx + 31) - 0.5) * 24 * level;
-    out.y = -6 * level * (r > 0.7 ? 1 : 0);
-    out.op = tbsRand(loc.i, idx + 47) > 0.88 && p < 0.25 ? 0.35 : out.op;
-    out.flip = r > 0.5 ? 1 : -1;
+    out.jitter = p % 0.5 < 0.1 && !skip ? 1 : 0;
+    if (move === 'twitch') { out.x += skip ? 0 : (r - 0.5) * 10 * level; out.rot = skip ? out.rot : (tbsRand(loc.i, idx + 31) - 0.5) * 22 * level; out.y = -6 * level * (r > 0.7 ? 1 : 0); out.flip = r > 0.5 ? 1 : -1; out.arm = r; }
+    else if (move === 'skid') { out.rot = -inward * 14 * level * (1 - p); out.wheel = beatPos * 400 * inward; out.arm = 0.8; }
+    else if (move === 'freeze') {
+      var frozen = x2 < 2;
+      out.emote = frozen ? '…' : ''; out.rot = frozen ? 0 : (r - 0.5) * 30 * level; out.jitter = frozen ? 0 : 1;
+      out.y = frozen ? 0 : -8 * level * (r > 0.5 ? 1 : 0);
+    } else if (move === 'teleport') {
+      // Flickers out on beat 2 and back in on beat 3, somewhere else.
+      var gone = x2 >= 1.5 && x2 < 2.5;
+      out.op = gone ? (Math.floor(x2 * 16) % 2 ? 0.1 : 0.5) : 1;
+      out.x += x2 >= 2 ? -inward * 36 : 0; out.jitter = 1; out.emote = x2 >= 2.5 && x2 < 3.5 ? '!' : '';
+    }
+    if (move !== 'teleport' && tbsRand(loc.i, idx + 47) > 0.9 && p < 0.25) out.op = 0.4;
   } else if (kind === 'dizzy') {
-    // Sways half a beat behind everyone, wobbly.
+    // Prof. Byte: everything half a beat late, in arcs, wobbling on its one wheel.
     var late = x2 - 0.5;
-    out.rot = 12 * level * Math.sin(Math.PI * late / 2);
-    out.x = 5 * level * Math.sin(Math.PI * late / 2);
-    out.y = -3 * level * Math.abs(Math.sin(Math.PI * late));
+    if (move === 'sway') { out.rot = 12 * level * Math.sin(Math.PI * late / 2); out.x += 5 * level * Math.sin(Math.PI * late / 2); out.y = -3 * level * Math.abs(Math.sin(Math.PI * late)); }
+    else if (move === 'pedal') { out.x += 16 * Math.sin(Math.PI * late / 2); out.wheel = -16 * Math.cos(Math.PI * late / 2) * 8; out.rot = 8 * Math.cos(Math.PI * late / 2); }
+    else if (move === 'notes') {
+      // Stops to take notes on the singer, arm up on the off-beats.
+      out.flip = inward; out.arm = p > 0.5 ? 0.9 : 0.5; out.rot = 4 * Math.sin(loc.t * 2); out.emote = x2 >= 1 && x2 < 3 ? '✎' : '';
+    } else if (move === 'wobble') {
+      // Nearly falls off: leans further every beat, flails, and catches itself on beat 4.
+      var lean = x2 < 3 ? Math.pow(x2 / 3, 2) : Math.max(0, 1 - (x2 - 3) * 2.2);
+      out.rot = inward * 34 * lean + (x2 >= 3 ? -inward * 8 * Math.sin(Math.PI * (x2 - 3) * 2) : 0);
+      out.arm = 0.5 + 0.5 * Math.sin(loc.t * 22) * lean; out.emote = x2 >= 2 && x2 < 3.4 ? '!' : '';
+      out.mood = lean > 0.5 ? 'worried' : 'calm';
+    }
+    out.step = beatPos;
   } else {
-    // Turbo: double-time hops, and a big one on the kick in the drops.
-    out.y = -(8 + (loc.kind === 'd' ? 8 * loc.kick : 0)) * level * Math.abs(Math.sin(2 * Math.PI * p));
-    out.rot = 8 * level * Math.sin(2 * Math.PI * p);
-    out.sx = 1 + 0.08 * hit; out.sy = 1 - 0.08 * hit;
+    // Turbo: big on beats 1 and 3, always overshooting the landing.
+    var half = (x2 % 2) / 2;
+    out.boost = 0.3 + 0.7 * Math.pow(1 - half, 3) * (loc.kind === 'd' ? 1 : 0.6);
+    if (move === 'hop') { out.y = -(8 + (loc.kind === 'd' ? 8 * loc.kick : 0)) * level * Math.abs(Math.sin(2 * Math.PI * p)); out.rot = 8 * level * Math.sin(2 * Math.PI * p); out.sx = 1 + 0.08 * hit; out.sy = 1 - 0.08 * hit; }
+    else if (move === 'boost') {
+      var air = x2 < 2 ? Math.sin(Math.PI * x2 / 2) : 0, land2 = x2 >= 2 && x2 < 2.6 ? Math.sin(Math.PI * (x2 - 2) / 0.6) : 0;
+      out.y = -26 * level * air + 3 * land2; out.sy = 1 - 0.12 * land2; out.sx = 1 + 0.1 * land2; out.boost = air > 0 ? 1 : out.boost; out.arm = air;
+    } else if (move === 'strut') {
+      // Shows off at the singer: leans in, arms up on 1 and 3.
+      out.flip = inward; out.rot = inward * 10 * level; out.arm = half < 0.25 ? 1 : 0.3; out.y = -4 * Math.abs(Math.sin(Math.PI * half * 2));
+    } else if (move === 'loop') {
+      // A loop-the-loop over three beats, landing hard on 4.
+      var lp = Math.min(1, x2 / 3);
+      out.x += -inward * 18 * Math.sin(2 * Math.PI * lp); out.y = -22 * (1 - Math.cos(2 * Math.PI * lp)) / 2 - 10 * Math.sin(Math.PI * lp);
+      out.rot = -inward * 360 * tbsEase(lp); out.boost = lp < 1 ? 1 : out.boost; out.emote = x2 >= 3 ? '★' : '';
+      if (x2 >= 3) { var sq = Math.sin(Math.PI * Math.min(1, (x2 - 3) / 0.5)); out.sy = 1 - 0.14 * sq; out.sx = 1 + 0.12 * sq; }
+    }
+  }
+
+  // Watching: when another robot does its gag, the rest turn to look (beats 2-4).
+  if (gagOwner >= 0 && gagOwner !== idx && x2 >= 1) {
+    out.flip = gagOwner > idx ? 1 : -1;
+    out.look = out.flip * 12;
+    out.rot = out.rot * 0.5 + out.flip * 4; out.y *= 0.5;
+  }
+  // Make room for the star: step back when she lands nearby, and look at her.
+  if (ctx && ctx.singer != null && ctx.w > 0) {
+    var dist = ctx.singer - (TBS_BOT_SPOTS[idx] + out.x / ctx.w);
+    if (Math.abs(dist) < 0.1) {
+      var push = (0.1 - Math.abs(dist)) * ctx.w * 0.9;
+      out.x -= (dist > 0 ? 1 : -1) * push;
+      out.flip = dist > 0 ? 1 : -1;
+      out.look = out.flip * 10;
+      if (kind === 'zoom' && move === 'strut') out.emote = '♥';
+    }
   }
   return out;
 }
@@ -698,6 +877,7 @@ function createTopbarShow(opts) {
   var gov = tbsGovernor(opts.quality);
   var tier = gov.tier;
   var bounds = { left: 0, right: 0, width: 0 };
+  var hdr = { left: 0, top: 0, h: 0 };
   var fire = { parts: tbsPool(TBS_MAX_FLAMES), embers: tbsPool(TBS_MAX_EMBERS), ctx: null, lastBeat: -1, lastHalf: -1, box: null, sprites: null, w: 0, h: 0, dpr: 1, burst: false };
   var hair = {
     pony: tbsHair([80, 30], [[0.95, 0.1], [0.75, 0.6], [0.4, 0.9], [0.15, 1], [0, 1], [-0.1, 1]], 6.2, 0.16),
@@ -725,21 +905,53 @@ function createTopbarShow(opts) {
       '<span class="tbs-chip-dots"><i></i><i></i><i></i><i></i></span></div>' +
     '<div class="tbs-singer"><div class="tbs-singer-glow"></div>' + TBS_SINGER_SVG + '</div>' +
     '<div class="tbs-flash"></div>';
-  // The AI characters as backup dancers, behind the singer (tbsBotPose).
+  // The AI cast: one body per character, never a copy (aiRobot in ai-robots.js). Each robot
+  // dances in the bar, behind the singer, and moves to the cast layer over the page (above the
+  // topbar, which would clip it) while it is away from its spot, as in the Board Crash.
+  var TBS_ROLE = { boot: 'nova', glitch: 'glitch', dizzy: 'byte', zoom: 'turbo' };
+  var TBS_BAR_H = 64;                       // a robot's height in the bar, px
   var bots = [];
+  var castLayer = null;
   var cast = typeof SH_AI !== 'undefined' && SH_AI ? SH_AI.slice(0, TBS_BOT_SPOTS.length) : [];
-  cast.forEach(function (persona) {
-    var b = document.createElement('span');
-    b.className = 'tbs-bot';
-    b.innerHTML = '<span class="tbs-bot-face"></span><span class="tbs-bot-lost">?</span>';
+  cast.forEach(function (persona, i) {
     var kind = persona.entrance || 'boot';
-    // A drawn robot (ai-robots.js) when the page has the rigs, else the persona's emoji.
-    var rig = typeof createAiRobot === 'function' ? createAiRobot(kind) : null;
-    if (rig) { b.classList.add('tbs-bot-rig'); b.firstChild.appendChild(rig.el); }
-    else b.firstChild.textContent = persona.avatar;
-    stage.insertBefore(b, stage.querySelector('.tbs-singer'));
-    bots.push({ el: b, face: b.firstChild, kind: kind, rig: rig });
+    var wrap = document.createElement('div');
+    wrap.className = 'tbs-actor tbs-actor-' + kind;
+    var rig = typeof aiRobot === 'function' ? aiRobot(persona.name, kind) : typeof createAiRobot === 'function' ? createAiRobot(kind) : null;
+    if (!rig) { var face = document.createElement('span'); face.className = 'tbs-actor-face'; face.textContent = persona.avatar; wrap.appendChild(face); }
+    var emote = document.createElement('span');
+    emote.className = 'tbs-actor-emote';
+    wrap.appendChild(emote);
+    var smoke = null;
+    if (kind === 'zoom') { smoke = document.createElement('span'); smoke.className = 'tbs-crash-smoke'; wrap.appendChild(smoke); }
+    stage.insertBefore(wrap, stage.querySelector('.tbs-singer'));
+    bots.push({ wrap: wrap, rig: rig, kind: kind, role: TBS_ROLE[kind] || 'nova', idx: i, emote: emote, smoke: smoke, host: 'bar', emoteText: '' });
   });
+  function castRoot() {
+    if (!castLayer) { castLayer = document.createElement('div'); castLayer.className = 'tbs-cast'; castLayer.setAttribute('aria-hidden', 'true'); document.body.appendChild(castLayer); }
+    return castLayer;
+  }
+  function botHost(b, where) {
+    if (b.host === where) return;
+    b.host = where;
+    if (where === 'cast') {
+      castRoot().appendChild(b.wrap);
+    } else stage.insertBefore(b.wrap, el.singer);
+  }
+  /** Feet at (X, Y) in the host's px; rot turns it around its middle (rocket nose first). */
+  function botPlace(b, X, Y, rot, s, flip, sy) {
+    var c = 120 * s;
+    css(b.wrap, 'transform', 'translate(' + (X - 100).toFixed(1) + 'px,' + (Y - 240).toFixed(1) + 'px)' +
+      (rot ? ' translate(0,' + (-c).toFixed(1) + 'px) rotate(' + rot.toFixed(1) + 'deg) translate(0,' + c.toFixed(1) + 'px)' : '') +
+      ' scale(' + (s * flip).toFixed(3) + ',' + (s * (sy || 1)).toFixed(3) + ')');
+    css(b.emote, 'transform', flip < 0 ? 'scaleX(-1)' : 'none');
+  }
+  function botEmote(b, text) {
+    if (b.emoteText === text) return;
+    b.emoteText = text;
+    if (text) b.emote.textContent = text;
+    b.emote.classList.toggle('on', !!text);
+  }
   header.insertBefore(stage, header.firstChild);
   var q = function (sel) { return stage.querySelector(sel); };
   var el = {
@@ -806,6 +1018,7 @@ function createTopbarShow(opts) {
     var r = right ? right.getBoundingClientRect().left - hr.left - 28 : hr.width * 0.7;
     if (r - l < 140) { l = hr.width * 0.35; r = hr.width * 0.65; }
     bounds = { left: l, right: r, width: hr.width };
+    hdr = { left: hr.left, top: hr.top, h: hr.height };
     svgScale = (el.singer.offsetHeight || 102) / 152;
     // Canvas pixels cost fill rate: on 4K TVs and retina screens cap the density.
     eqDpr = Math.min(1.25, window.devicePixelRatio || 1);
@@ -1108,27 +1321,43 @@ function createTopbarShow(opts) {
     css(el.logoGlow, 'opacity', (heat * (0.35 + 0.65 * hit)).toFixed(2));
     css(el.logoGlow, 'transform', 'translate(-50%, -50%) scale(' + (0.9 + 0.25 * hit * heat).toFixed(3) + ')');
 
-    // The AI characters dance along the edges of the bar, each its own way.
+    // The AI characters: dancing their own way along the bar, or away on the Board Crash.
+    var cs = crashState(t);
     for (var bi = 0; bi < bots.length; bi++) {
+      var B = bots[bi], role = cs && cs[B.role];
+      if (B.rig && B.rig.el.parentNode !== B.wrap) B.wrap.insertBefore(B.rig.el, B.wrap.firstChild);  // back from a game intro
+      if (role && role.away > 0.001) { botAway(B, role, cs); continue; }
+      botHost(B, 'bar');
       // Four small transforms are cheap, so they stay on a slow TV too (only less often there).
-      if (tier >= 2 && frameNo % 2) continue;
-      var bp = exiting ? { show: false, op: 0 } : tbsBotPose(loc, bi, bots[bi].kind, reduced);
-      css(bots[bi].el, 'opacity', bp.show ? bp.op.toFixed(2) : '0');
+      if (tier >= 2 && frameNo % 2 && !cs) continue;
+      var bp = exiting ? { show: false, op: 0 } : tbsBotPose(loc, bi, B.kind, reduced, { singer: el.singer._x, w: w });
+      var re = role && role.react;
+      if (re) { bp.show = true; bp.op = Math.max(bp.op, 1); }
+      css(B.wrap, 'opacity', bp.show ? ((re && re.flicker != null ? re.flicker : 1) * bp.op).toFixed(2) : '0');
       if (!bp.show) continue;
-      var bx = bounds.left + w * TBS_BOT_SPOTS[bi] + bp.x;
-      css(bots[bi].el, 'transform', 'translate(' + bx.toFixed(1) + 'px,' + bp.y.toFixed(1) + 'px)');
-      css(bots[bi].face, 'transform', 'rotate(' + bp.rot.toFixed(1) + 'deg) scale(' + (bp.flip * bp.sx).toFixed(3) + ',' + bp.sy.toFixed(3) + ')');
-      if (bots[bi].rig) {
-        // Nova-7's legs step on the beat, the wheels roll with the groove, Turbo's flame kicks.
-        var beatPos = Math.max(0, loc.i) + loc.phase;
-        bots[bi].rig.pose({
-          step: bp.lost ? 0 : beatPos / 2, wheel: beatPos * 90 * (bi < 2 ? 1 : -1),
-          boost: 0.3 + 0.7 * Math.pow(1 - loc.phase, 3) * loc.kick, mood: bp.lost ? 'worried' : 'calm',
-          arm: bp.lost ? 0 : 0.5 + 0.5 * Math.sin(Math.PI * beatPos), jitter: bots[bi].kind === 'glitch' && loc.phase < 0.2 ? 1 : 0,
-        });
+      var pose = {
+        step: bp.step, wheel: bp.wheel, boost: bp.boost, mood: bp.mood, arm: bp.arm, look: bp.look, jitter: bp.jitter,
+      };
+      var emote = bp.emote, by = bp.y, brot = bp.rot, bflip = bp.flip, bsy = bp.sy, bx = bounds.left + w * TBS_BOT_SPOTS[bi] + bp.x;
+      if (re) {
+        // Reacting to the crash from its spot: startled, watching, sulking.
+        var boardX = cs.board.left + cs.board.width / 2 - hdr.left;
+        emote = re.emote || ''; pose.mood = re.mood || pose.mood; pose.step = 0;
+        bflip = re.face === 'away' ? (boardX > bx ? -1 : 1) : re.face === 'nova' ? -1 : (boardX > bx ? 1 : -1);
+        pose.look = bflip * 14;
+        brot = bflip * 5; by = 0; bsy = 1;
+        if (re.jump) by = -16 * re.jump;
+        if (re.slump) { brot = -bflip * 8; bsy = 0.94; pose.arm = 0; }
+        if (re.windup != null) { bx += (Math.random() - 0.5) * 3 * re.windup; bsy = 1 - 0.1 * re.windup; brot = -6 * re.windup; pose.boost = re.boost; }
+        if (re.wobble) brot = 26 * re.wobble * Math.sin(t * 14);
+        if (re.notes) { pose.arm = 0.6 + 0.3 * Math.sin(t * 8); brot = 3 * Math.sin(t * 2); }
+        if (re.jitter) pose.jitter = re.jitter;
       }
-      if (bots[bi].lost !== bp.lost) { bots[bi].lost = bp.lost; bots[bi].el.classList.toggle('tbs-bot-is-lost', bp.lost); }
+      botPlace(B, bx, hdr.h - 4 + by, brot, TBS_BAR_H / 240, bflip * (re ? 1 : bp.sx || 1), bsy);
+      if (B.rig) B.rig.pose(pose);
+      botEmote(B, emote);
     }
+    crashBubbles(cs);
 
     // The lion and the frog dance under the QR code.
     for (var dn = 0; tier < 2 && dn < dancers.length; dn++) {
@@ -1139,7 +1368,7 @@ function createTopbarShow(opts) {
 
     // The lobby boxes (vote options and panels) shake on the beat with her.
     // During the Board Crash the vote board belongs to the robots; otherwise it shakes along.
-    if (!crashFrame(t)) {
+    if (!crashCards(cs, t)) {
       var shake = exiting || tier >= 2 ? { vx: 0, vy: 0, kick: 0 } : tbsShake(loc, reduced);
       applyShake(shake, now);
     }
@@ -1176,79 +1405,96 @@ function createTopbarShow(opts) {
     document.body.classList.toggle('tbs-lite', tier >= 2);
   }
 
-  // ---- Board Crash (TBS_CRASH_AT): robots and the vote board ----
-  var crash = { layer: null, robots: null, bubbles: {}, active: false, cards: [] };
-  function crashBuild() {
-    if (crash.layer || typeof createAiRobot !== 'function') return !!crash.layer;
-    var layer = document.createElement('div');
-    layer.className = 'tbs-crash';
-    layer.setAttribute('aria-hidden', 'true');
-    crash.robots = {};
-    [['turbo', 'zoom'], ['nova', 'boot'], ['glitch', 'glitch'], ['byte', 'dizzy']].forEach(function (r) {
-      var bot = createAiRobot(r[1]);
-      var wrap = document.createElement('div');
-      wrap.className = 'tbs-crash-bot tbs-crash-' + r[0];
-      wrap.appendChild(bot.el);
-      var smoke = document.createElement('span');
-      smoke.className = 'tbs-crash-smoke';
-      wrap.appendChild(smoke);
-      layer.appendChild(wrap);
-      var bubble = document.createElement('div');
-      bubble.className = 'tbs-crash-bubble';
-      layer.appendChild(bubble);
-      crash.robots[r[0]] = { bot: bot, wrap: wrap, smoke: smoke, bubble: bubble };
-    });
-    document.body.appendChild(layer);
-    crash.layer = layer;
-    return true;
-  }
+  // ---- Board Crash (TBS_CRASH_AT): the cast and the vote board ----
+  var crash = { active: false, cards: [], bubbles: {}, board: null, boardAt: -99 };
   function hostScale() {
     var v = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--host-scale'));
     return v > 0 ? v : 1;
   }
-  function crashFrame(t) {
+  /** The crash state this frame (tbsCrashState with each robot's real spot), or null. */
+  function crashState(t) {
     var at = TBS_CRASH_AT[trackName()];
+    var u = at == null ? -99 : t - at;
+    if (at == null || reduced || exiting() || u < -TBS_CRASH_PRE || u >= TBS_CRASH_LEN || !bots.length) {
+      if (crash.active) crashReset();
+      return null;
+    }
     var board = document.getElementById('hostVotes');
-    var u = at == null ? -1 : t - at;
-    var st = at == null || reduced || exiting() || !board || !board.offsetParent ? { on: false } : tbsCrashState(u);
-    if (!st.on) { if (crash.active) crashReset(); return false; }
-    if (!crashBuild()) return false;
+    if (!board || !board.offsetParent) { if (crash.active) crashReset(); return null; }
+    // Measure once a second, not every frame: the lobby does not move during the song.
+    if (!crash.active || frameNo - crash.boardAt > 60) {
+      var br = board.getBoundingClientRect();
+      crash.board = { left: br.left, top: br.top, width: br.width, height: br.height };
+      crash.boardAt = frameNo;
+      if (!crash.active) measure();
+    }
     crash.active = true;
-    crash.layer.classList.add('tbs-crash-on');
-    var r = board.getBoundingClientRect();
-    var size = Math.max(110, Math.min(200, r.width * 0.2));
-    ['turbo', 'nova', 'glitch', 'byte'].forEach(function (name) {
-      var R = crash.robots[name], p = st[name];
-      css(R.wrap, 'opacity', p ? '1' : '0');
-      if (!p) { R.bubble.classList.remove('on'); return; }
-      var x = r.left + p.x * r.width, y = r.top + p.y * r.height;
-      var w = name === 'turbo' ? size * 0.85 : size;
-      var flip = p.flip === -1 ? -1 : 1;
-      css(R.wrap, 'width', w.toFixed(0) + 'px');
-      css(R.wrap, 'height', (w * 1.2).toFixed(0) + 'px');
-      css(R.wrap, 'transform', 'translate(' + (x - w / 2).toFixed(1) + 'px,' + (y - w * 1.2).toFixed(1) + 'px)' +
-        (name === 'turbo' ? ' rotate(' + p.tilt.toFixed(1) + 'deg)' : '') + ' scale(' + flip + ',1)');
-      R.bot.pose({ step: p.step, mood: p.mood, wheel: p.wheel, boost: p.boost, tilt: name === 'turbo' ? 0 : p.tilt, arm: p.arm, look: p.look, jitter: p.jitter });
-      css(R.smoke, 'opacity', p.smoke ? '1' : '0');
-      var line = st.lines.filter(function (l) { return l.who === name; })[0];
-      if (line) {
-        if (R.bubble.textContent !== line.text) R.bubble.textContent = line.text;
-        css(R.bubble, 'transform', 'translate(' + x.toFixed(0) + 'px,' + (y - w * 1.25).toFixed(0) + 'px) translate(-50%, -100%)');
-      }
-      R.bubble.classList.toggle('on', !!line);
+    var r = crash.board, wbar = bounds.right - bounds.left, homes = {};
+    bots.forEach(function (b) {
+      homes[b.role] = { x: (hdr.left + bounds.left + wbar * TBS_BOT_SPOTS[b.idx] - r.left) / r.width, y: (hdr.top + hdr.h - 4 - r.top) / r.height };
     });
-    // The game cards: off the board and out of the screen, then back from the repair crew.
+    var st = tbsCrashState(u, homes);
+    st.u = u; st.board = r; st.homes = homes;
+    st.size = Math.max(110, Math.min(200, r.width * 0.2));
+    st.screen = {};
+    return st;
+  }
+  /** A robot away from its spot: in the cast layer over the page, at full size. */
+  function botAway(b, p, st) {
+    botHost(b, 'cast');
+    var r = st.board, h = st.homes[b.role], a = p.away;
+    var X = r.left + tbsLerp(h.x, p.x, a) * r.width;
+    var Y = r.top + (tbsLerp(h.y, p.y, a) + (p.lift || 0)) * r.height;
+    var big = st.size * 1.2 / 240 * (b.kind === 'zoom' ? 0.85 : 1);
+    var s = tbsLerp(TBS_BAR_H / 240, big, tbsEase(a));
+    Y = Math.max(Y, 240 * s + 10);          // the head always stays on the screen
+    var flip = p.flip === -1 ? -1 : 1;
+    css(b.wrap, 'opacity', (p.flicker != null ? p.flicker : 1).toFixed(2));
+    botPlace(b, X, Y, b.kind === 'zoom' ? (p.tilt || 0) : 0, s, flip, 1);
+    if (b.rig) b.rig.pose({ step: p.step, mood: p.mood, wheel: p.wheel, boost: p.boost, tilt: b.kind === 'zoom' ? 0 : p.tilt, arm: p.arm, look: p.look, jitter: p.jitter });
+    if (b.smoke) css(b.smoke, 'opacity', p.smoke ? '1' : '0');
+    botEmote(b, '');
+    st.screen[b.role] = { x: X, y: Y - 240 * s };
+  }
+  /** Speech bubbles over the heads of the robots that are talking. */
+  function crashBubbles(st) {
+    var lines = st ? st.lines : [];
+    ['turbo', 'nova', 'glitch', 'byte'].forEach(function (who) {
+      var line = lines.filter(function (l) { return l.who === who; })[0];
+      var bub = crash.bubbles[who];
+      if (!line) { if (bub) bub.classList.remove('on'); return; }
+      if (!bub) {
+        bub = crash.bubbles[who] = document.createElement('div');
+        bub.className = 'tbs-crash-bubble';
+        castRoot().appendChild(bub);
+      }
+      var at = st.screen[who];
+      if (!at) {
+        // Talking from its spot in the bar: the bubble hangs just under the bar.
+        var b = bots.filter(function (x) { return x.role === who; })[0];
+        if (!b) return;
+        at = { x: hdr.left + bounds.left + (bounds.right - bounds.left) * TBS_BOT_SPOTS[b.idx], y: hdr.top + hdr.h + 70, below: true };
+      }
+      if (bub.textContent !== line.text) bub.textContent = line.text;
+      css(bub, 'transform', 'translate(' + at.x.toFixed(0) + 'px,' + (at.y - 8).toFixed(0) + 'px) translate(-50%, ' + (at.below ? '0' : '-100%') + ')');
+      bub.classList.add('on');
+    });
+  }
+  /** The game cards: off the board and out of the screen, then back from the repair crew. */
+  function crashCards(st, t) {
+    if (!st) return false;
+    var r = st.board, u = st.u;
     var scale = hostScale();
-    var opts = Array.prototype.slice.call(board.querySelectorAll('.lobby-game-option'));
+    var opts = Array.prototype.slice.call(document.querySelectorAll('#hostVotes .lobby-game-option'));
     opts.forEach(function (o, j) {
       if (!o._crashHome || o._crashHome.w !== r.width) {
         var prev = o.style.transform; o.style.transform = '';
-        var h = o.getBoundingClientRect();
+        var hb = o.getBoundingClientRect();
         o.style.transform = prev;
-        o._crashHome = { cx: h.left + h.width / 2, cy: h.top + h.height / 2, w: r.width };
+        o._crashHome = { cx: hb.left + hb.width / 2, cy: hb.top + hb.height / 2, w: r.width };
       }
       var carrier = j % 2 ? st.byte : st.glitch;
-      var from = carrier ? { dx: (r.left + carrier.x * r.width) - o._crashHome.cx, dy: (r.top + carrier.y * r.height - size * 0.6) - o._crashHome.cy } : { dx: 0, dy: 400 };
+      var from = carrier && carrier.away > 0.5 ? { dx: (r.left + carrier.x * r.width) - o._crashHome.cx, dy: (r.top + carrier.y * r.height - st.size * 0.6) - o._crashHome.cy } : { dx: 0, dy: 400 };
       var c = tbsCrashCard(u, j, window.innerHeight - o._crashHome.cy + 200, from);
       css(o, 'transform', 'translate(' + (c.x / scale).toFixed(1) + 'px,' + (c.y / scale).toFixed(1) + 'px) rotate(' + c.rot.toFixed(1) + 'deg)');
       css(o, 'opacity', c.op.toFixed(2));
@@ -1258,10 +1504,8 @@ function createTopbarShow(opts) {
   }
   function crashReset() {
     crash.active = false;
-    if (crash.layer) {
-      crash.layer.classList.remove('tbs-crash-on');
-      Object.keys(crash.robots).forEach(function (k) { crash.robots[k].bubble.classList.remove('on'); css(crash.robots[k].wrap, 'opacity', '0'); });
-    }
+    bots.forEach(function (b) { botHost(b, 'bar'); if (b.smoke) css(b.smoke, 'opacity', '0'); botEmote(b, ''); });
+    Object.keys(crash.bubbles).forEach(function (k) { crash.bubbles[k].classList.remove('on'); });
     (crash.cards || []).forEach(function (o) { css(o, 'transform', ''); css(o, 'opacity', ''); o._crashHome = null; });
     crash.cards = [];
   }
@@ -1368,7 +1612,7 @@ function createTopbarShow(opts) {
     stage.classList.remove('tbs-stage-on');
     el.singer.style.opacity = '0';
     el.singer._x = null;
-    bots.forEach(function (b) { b.el.style.opacity = '0'; if (b.el._tbs) b.el._tbs.opacity = '0'; });
+    bots.forEach(function (b) { b.wrap.style.opacity = '0'; if (b.wrap._tbs) b.wrap._tbs.opacity = '0'; botEmote(b, ''); });
     fire.parts.n = 0; fire.embers.n = 0; fire.lastBeat = -1;
     if (fire.ctx) { fire.ctx.setTransform(1, 0, 0, 1, 0, 0); fire.ctx.clearRect(0, 0, el.fire.width, el.fire.height); }
     hair.pony.pts = hair.lockL.pts = hair.lockR.pts = null;
@@ -1397,6 +1641,6 @@ function createTopbarShow(opts) {
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     tbsBeatIndex: tbsBeatIndex, tbsLocate: tbsLocate, tbsPose: tbsPose, tbsShake: tbsShake, tbsDancerPose: tbsDancerPose, tbsBotPose: tbsBotPose, tbsCrashState: tbsCrashState, tbsCrashCard: tbsCrashCard, TBS_CRASH_AT: TBS_CRASH_AT, TBS_CRASH_LINES: TBS_CRASH_LINES, tbsRand: tbsRand, tbsKnee: tbsKnee,
-    tbsGovernor: tbsGovernor, tbsGovern: tbsGovern, tbsHair: tbsHair, tbsHairStep: tbsHairStep, tbsPool: tbsPool, tbsPoolTake: tbsPoolTake, tbsPoolKill: tbsPoolKill, createTopbarShow: createTopbarShow, TBS_SHOWS: TBS_SHOWS,
+    tbsGovernor: tbsGovernor, tbsGovern: tbsGovern, tbsHair: tbsHair, tbsHairStep: tbsHairStep, tbsPool: tbsPool, tbsPoolTake: tbsPoolTake, tbsPoolKill: tbsPoolKill, createTopbarShow: createTopbarShow, TBS_SHOWS: TBS_SHOWS, tbsBotMove: tbsBotMove, tbsBotGagOwner: tbsBotGagOwner, TBS_BOT_SPOTS: TBS_BOT_SPOTS,
   };
 }

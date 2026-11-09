@@ -242,23 +242,48 @@ describe('the AI characters join the show', () => {
 });
 
 describe('Board Crash', () => {
-  it('happens once, at 03:27 in Looks Good To Me only', () => {
+  const homes = { nova: { x: -0.3, y: -0.2 }, glitch: { x: -0.1, y: -0.2 }, byte: { x: 1.1, y: -0.2 }, turbo: { x: 1.3, y: -0.2 } };
+  const st = u => kit.tbsCrashState(u, homes);
+  it('happens once, at 03:27 in Looks Good To Me only, with Turbo winding up just before', () => {
     expect(kit.TBS_CRASH_AT['Looks-good-to-me-remix.mp3']).toBeCloseTo(207, 0);
     expect(Object.keys(kit.TBS_CRASH_AT)).toHaveLength(1);
-    expect(kit.tbsCrashState(-0.1).on).toBe(false);
-    expect(kit.tbsCrashState(16.1).on).toBe(false);
+    expect(st(-1.1).on).toBe(false);
+    expect(st(-0.5).turbo).toMatchObject({ away: 0 });
+    expect(st(-0.5).turbo.react.windup).toBeGreaterThan(0);
+    expect(st(16.5).on).toBe(false);
+  });
+  it('is played by the dancers themselves: every robot leaves its own spot and comes back to it', () => {
+    for (const who of ['turbo', 'nova', 'glitch', 'byte']) {
+      expect(st(-0.9)[who].away).toBe(0);                 // all at home at the start
+      expect(st(16.3)[who].away).toBe(0);                 // and at the end
+      let left = false;
+      for (let u = -1; u < 16.4; u += 0.05) if (st(u)[who].away > 0.99) left = true;
+      expect(left).toBe(true);
+    }
+    // Leaving and coming back is gradual (a flight, a jump, a roll), except Glitch, who teleports.
+    for (const who of ['turbo', 'nova', 'byte']) {
+      let prev = 0;
+      for (let u = -1; u < 16.4; u += 0.02) { const a = st(u)[who].away; expect(Math.abs(a - prev)).toBeLessThan(0.12); prev = a; }
+    }
   });
   it('runs the cast in order: Turbo crashes, Nova-7 frets, the crew rebuilds', () => {
-    expect(kit.tbsCrashState(0.5).turbo).toBeTruthy();
-    expect(kit.tbsCrashState(0.5).nova).toBeNull();
-    expect(kit.tbsCrashState(3.5).nova.mood).toBe('worried');
-    expect(kit.tbsCrashState(7).turbo).toBeNull();          // Turbo has left
-    expect(kit.tbsCrashState(8).glitch).toBeNull();
-    const s = kit.tbsCrashState(11);
-    expect(s.glitch && s.byte && s.nova).toBeTruthy();
+    expect(st(0.5).turbo.away).toBeGreaterThan(0);
+    expect(st(0.5).nova.away).toBe(0);
+    expect(st(1.0).nova.react.emote).toBe('!');          // the others jump at the hit
+    expect(st(3.5).nova).toMatchObject({ away: 1, mood: 'worried' });
+    expect(st(7).turbo.away).toBe(0);                    // Turbo has gone home to sulk
+    expect(st(7).turbo.react.slump).toBe(1);
+    expect(st(8).glitch.away).toBe(0);
+    const s = st(11);
+    expect(s.glitch.away + s.byte.away + s.nova.away).toBe(3);
+  });
+  it('flies Turbo nose first at the board from wherever it was dancing', () => {
+    const right = st(0.3).turbo.tilt, left = kit.tbsCrashState(0.3, { ...homes, turbo: { x: -0.3, y: -0.2 } }).turbo.tilt;
+    expect(right).toBeLessThan(-90);   // from the top right: nose down and to the left
+    expect(left).toBeGreaterThan(90);
   });
   it('speaks its own lines at the cue times, never two Nova-7 lines at once', () => {
-    const at = u => kit.tbsCrashState(u).lines.map(l => l.who);
+    const at = u => st(u).lines.map(l => l.who);
     expect(at(2.5)).toEqual(['turbo']);
     expect(at(3.2)).toEqual(['turbo', 'nova']);
     for (let u = 0; u < 16; u += 0.1) expect(at(u).filter(w => w === 'nova').length).toBeLessThanOrEqual(1);
@@ -271,9 +296,47 @@ describe('Board Crash', () => {
       expect(kit.tbsCrashCard(5, j, 900, from)).toMatchObject({ y: 900, op: 0 });
       expect(kit.tbsCrashCard(15.9, j, 900, from)).toMatchObject({ x: 0, y: 0, rot: 0, op: 1 });
     }
-    // falling, the card speeds up
     const a = kit.tbsCrashCard(1.2, 0, 5000, from).y, b = kit.tbsCrashCard(1.4, 0, 5000, from).y, c = kit.tbsCrashCard(1.6, 0, 5000, from).y;
     expect(c - b).toBeGreaterThan(b - a);
+  });
+});
+
+describe('the AI dancers each have a personality', () => {
+  const at = t => kit.tbsLocate(map, t, -1);
+  const kinds = ['boot', 'glitch', 'dizzy', 'zoom'];
+  const t0 = map.dropTime + 14;
+  it('change moves from bar to bar, never the same move twice in a row', () => {
+    kinds.forEach((k, i) => {
+      const moves = [];
+      for (let bar = 10; bar < 60; bar++) {
+        const m = kit.tbsBotMove(bar, i, k);
+        if (moves.length) expect(m).not.toBe(moves[moves.length - 1]);
+        moves.push(m);
+      }
+      expect(new Set(moves).size).toBeGreaterThanOrEqual(3);
+    });
+  });
+  it('wander around their spot instead of standing still', () => {
+    kinds.forEach((k, i) => {
+      const xs = new Set();
+      for (let t = t0; t < t0 + 40; t += 1) { const p = kit.tbsBotPose(at(t), i, k, false); if (!p.lost) xs.add(Math.round(p.x / 4)); }
+      expect(xs.size).toBeGreaterThan(4);
+    });
+  });
+  it('take turns doing a gag, one at a time, while the others watch', () => {
+    let gags = 0;
+    for (let bar = 0; bar < 120; bar++) {
+      const o = kit.tbsBotGagOwner(bar, 'd');
+      if (o >= 0) { gags++; expect(o).not.toBe(kit.tbsBotGagOwner(bar - 1, 'd')); }
+    }
+    expect(gags).toBeGreaterThan(20);
+    expect(gags).toBeLessThan(90);
+  });
+  it('step aside for the singer when she comes close', () => {
+    const w = 900, loc = at(t0);
+    const free = kit.tbsBotPose(loc, 1, 'boot', false, { singer: 0.6, w });
+    const near = kit.tbsBotPose(loc, 1, 'boot', false, { singer: kit.TBS_BOT_SPOTS[1] + free.x / w + 0.02, w });
+    if (!free.lost) expect(near.x).toBeLessThan(free.x);
   });
 });
 
@@ -283,6 +346,7 @@ describe('AI robot rigs', () => {
   it('has a rig for every entrance style, with the parts that move', () => {
     const svg = rk.AI_ROBOT_SVG;
     expect(Object.keys(svg).sort()).toEqual(['boot', 'dizzy', 'glitch', 'zoom']);
+    expect(typeof rk.aiRobot).toBe('function');
     expect(svg.boot).toContain('data-part="legL"');
     expect(svg.zoom).toContain('data-part="flame"');
     expect(svg.dizzy).toContain('data-part="brain"');

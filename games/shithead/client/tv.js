@@ -63,7 +63,10 @@
         const lost = face.querySelector('.ai-intro-lost');
         face.textContent = '';
         face.classList.add('ai-intro-rig');
-        face.appendChild(createAiRobot(p.entrance || 'boot').el);
+        // The character's own body (the same one that dances in the lobby show), not a copy.
+        const rig = typeof aiRobot === 'function' ? aiRobot(p.name, p.entrance || 'boot') : createAiRobot(p.entrance || 'boot');
+        rig.pose({ mood: 'calm' });
+        face.appendChild(rig.el);
         face.appendChild(lost);
       }
       document.body.appendChild(el);
