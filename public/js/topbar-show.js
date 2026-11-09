@@ -33,11 +33,11 @@ var TBS_CRASH_LEN = 16.4;
 var TBS_CRASH_PRE = 1.0;        // Turbo's wind-up before the cue
 var TBS_CRASH_LINES = [
   { who: 'turbo', at: 2.0, len: 2.2, text: 'Brakes are a premium feature!' },
-  { who: 'nova', at: 3.0, len: 1.9, text: 'Uh… where did all the games go?' },
-  { who: 'nova', at: 5.0, len: 1.9, text: 'Okay. Stay calm. Robots are always calm.' },
-  { who: 'nova', at: 7.0, len: 1.0, text: 'I am c-c-calm. Very calm.' },
-  { who: 'nova', at: 8.0, len: 1.9, text: '…They are under the TV, aren’t they?' },
-  { who: 'nova', at: 10.0, len: 1.6, text: 'Turbo. TURBO!' },
+  { who: 'nova', at: 3.0, len: 1.9, text: 'Great catch!' },
+  { who: 'nova', at: 5.0, len: 1.9, text: 'Ah, restore from backup!' },
+  { who: 'nova', at: 7.0, len: 0.9, text: 'We-we don’t have a backup!' },
+  { who: 'nova', at: 8.0, len: 1.9, text: 'Oh, restore from backup?' },
+  { who: 'nova', at: 10.0, len: 1.6, text: 'We don’t have a backup!' },
   { who: 'glitch', at: 10.8, len: 1.8, text: 'R-r-rebuilding… 40%!' },
   { who: 'byte', at: 12.4, len: 2.0, text: 'Ah, a fascinating stacking problem.' },
 ];
