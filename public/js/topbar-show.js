@@ -32,16 +32,54 @@ var TBS_CRASH_AT = {
 var TBS_CRASH_LEN = 16.4;
 var TBS_CRASH_PRE = 1.0;        // Turbo's wind-up before the cue
 var TBS_CRASH_LINES = [
-  { who: 'turbo', at: 2.0, len: 2.2, text: 'Brakes are a premium feature!' },
-  { who: 'nova', at: 3.0, len: 1.9, text: 'Great catch!' },
-  { who: 'nova', at: 5.0, len: 1.9, text: 'Ah, restore from backup!' },
-  { who: 'nova', at: 7.0, len: 0.9, text: 'We-we don’t have a backup!' },
-  { who: 'nova', at: 8.0, len: 1.9, text: 'Oh, restore from backup?' },
-  { who: 'nova', at: 10.0, len: 1.6, text: 'We don’t have a backup!' },
+  // On the song's own words: the crash starts at 03:27, so u 3.0 is 03:30.
+  { who: 'turbo', at: 3.0, len: 2.2, text: 'Great catch!' },
+  { who: 'nova', at: 5.2, len: 1.6, text: 'Oh, restore from backup!' },
+  { who: 'nova', at: 6.8, len: 1.7, text: 'Oh, we don’t have a backup?' },
+  { who: 'nova', at: 8.5, len: 2.2, text: 'Oh, restore from backup?' },
+  { who: 'nova', at: 10.7, len: 1.3, text: 'Oh, we don’t have a backup!' },
   { who: 'glitch', at: 10.8, len: 1.8, text: 'R-r-rebuilding… 40%!' },
   { who: 'byte', at: 12.4, len: 2.0, text: 'Ah, a fascinating stacking problem.' },
 ];
 var TBS_CRASH_HIT = 0.85;
+
+/**
+ * The robots sing along: lines the AI cast says during a song, in song seconds, outside the
+ * Board Crash (which has its own lines above). who: 'nova', 'glitch', 'byte', 'turbo', or
+ * 'all' for the whole cast. A line shows in a speech bubble under the robot's spot in the bar.
+ */
+var TBS_SONG_LINES = {
+  'Looks-good-to-me-remix.mp3': [
+    { who: 'byte', at: 46.0, len: 3.5, text: 'I guess that makes me second or worse' },
+    { who: 'byte', at: 71.1, len: 2.3, text: 'But the tests are all mocked' },
+    { who: 'glitch', at: 106.9, len: 1.7, text: 'And I’m going to sleep' },
+    { who: 'byte', at: 108.6, len: 3.3, text: 'All done, it is' },
+    { who: 'glitch', at: 111.9, len: 3.5, text: 'All done, it is' },
+    { who: 'nova', at: 116.7, len: 2.3, text: 'Sorry for the confusion' },
+    { who: 'glitch', at: 119.0, len: 2.9, text: 'All done, it is' },
+    { who: 'glitch', at: 135.6, len: 1.5, text: '…tokens instead' },
+    { who: 'byte', at: 152.1, len: 2.8, text: 'And nobody knows what the code does inside' },
+    { who: 'glitch', at: 182.0, len: 3.5, text: 'And I’m going to sleep' },
+    { who: 'byte', at: 186.2, len: 2.1, text: 'All done, it is!' },
+    { who: 'glitch', at: 188.3, len: 2.7, text: 'All done, it is!' },
+    { who: 'nova', at: 191.0, len: 2.0, text: 'Sorry for the confusion' },
+    { who: 'byte', at: 193.0, len: 2.2, text: 'All done… isn’t.' },
+    { who: 'all', at: 242.1, len: 1.8, text: 'Now the bot reviews the bot' },
+    { who: 'all', at: 243.9, len: 2.9, text: 'A million lines and the humans all got cut' },
+    { who: 'all', at: 246.8, len: 1.7, text: 'Approved in three seconds' },
+    { who: 'all', at: 256.1, len: 1.2, text: 'Let’s ship it to prod' },
+    { who: 'all', at: 257.3, len: 2.5, text: 'It’s Friday at five' },
+    { who: 'all', at: 259.8, len: 2.4, text: 'So I’ll leave it with God' },
+    { who: 'byte', at: 266.4, len: 3.5, text: 'And I’m going to sleep' },
+  ],
+};
+/** The song lines being said at song second t (the Board Crash lines included). Pure; for tests. */
+function tbsSongLines(name, t) {
+  var out = (TBS_SONG_LINES[name] || []).filter(function (l) { return t >= l.at && t < l.at + l.len; });
+  var at = TBS_CRASH_AT[name];
+  if (at != null) TBS_CRASH_LINES.forEach(function (l) { if (t - at >= l.at && t - at < l.at + l.len) out.push(l); });
+  return out;
+}
 var TBS_CRASH_HOMES = { nova: { x: -0.35, y: -0.3 }, glitch: { x: -0.2, y: -0.3 }, byte: { x: 1.2, y: -0.3 }, turbo: { x: 1.35, y: -0.3 } };
 function tbsCrashCardBack(j) { return 9.2 + j * 1.0; }
 function tbsEase(x) { x = Math.max(0, Math.min(1, x)); return x * x * (3 - 2 * x); }
@@ -1323,6 +1361,8 @@ function createTopbarShow(opts) {
 
     // The AI characters: dancing their own way along the bar, or away on the Board Crash.
     var cs = crashState(t);
+    var said = exiting ? [] : cs ? cs.lines.concat((TBS_SONG_LINES[trackName()] || []).filter(function (l) { return t >= l.at && t < l.at + l.len; }))
+      : tbsSongLines(trackName(), t);
     for (var bi = 0; bi < bots.length; bi++) {
       var B = bots[bi], role = cs && cs[B.role];
       if (B.rig && B.rig.el.parentNode !== B.wrap) B.wrap.insertBefore(B.rig.el, B.wrap.firstChild);  // back from a game intro
@@ -1332,7 +1372,7 @@ function createTopbarShow(opts) {
       if (tier >= 2 && frameNo % 2 && !cs) continue;
       var bp = exiting ? { show: false, op: 0 } : tbsBotPose(loc, bi, B.kind, reduced, { singer: el.singer._x, w: w });
       var re = role && role.react;
-      if (re) { bp.show = true; bp.op = Math.max(bp.op, 1); }
+      if (re || (!exiting && talking(said, B.role))) { bp.show = true; bp.op = Math.max(bp.op, 1); }
       css(B.wrap, 'opacity', bp.show ? ((re && re.flicker != null ? re.flicker : 1) * bp.op).toFixed(2) : '0');
       if (!bp.show) continue;
       var pose = {
@@ -1353,11 +1393,12 @@ function createTopbarShow(opts) {
         if (re.notes) { pose.arm = 0.6 + 0.3 * Math.sin(t * 8); brot = 3 * Math.sin(t * 2); }
         if (re.jitter) pose.jitter = re.jitter;
       }
+      B.barX = bx;
       botPlace(B, bx, hdr.h - 4 + by, brot, TBS_BAR_H / 240, bflip * (re ? 1 : bp.sx || 1), bsy);
       if (B.rig) B.rig.pose(pose);
       botEmote(B, emote);
     }
-    crashBubbles(cs);
+    crashBubbles(cs, said);
 
     // The lion and the frog dance under the QR code.
     for (var dn = 0; tier < 2 && dn < dancers.length; dn++) {
@@ -1456,29 +1497,56 @@ function createTopbarShow(opts) {
     botEmote(b, '');
     st.screen[b.role] = { x: X, y: Y - 240 * s };
   }
-  /** Speech bubbles over the heads of the robots that are talking. */
-  function crashBubbles(st) {
-    var lines = st ? st.lines : [];
-    ['turbo', 'nova', 'glitch', 'byte'].forEach(function (who) {
-      var line = lines.filter(function (l) { return l.who === who; })[0];
-      var bub = crash.bubbles[who];
-      if (!line) { if (bub) bub.classList.remove('on'); return; }
+  function talking(lines, who) {
+    for (var k = 0; k < lines.length; k++) if (lines[k].who === who || lines[k].who === 'all') return true;
+    return false;
+  }
+  /**
+   * Speech bubbles for the robots that are talking: over the head of a robot that is away on the
+   * board, or hanging just under the bar from a robot at its spot. 'all' lines get one bubble
+   * under each pair of robots (left and right of the singer).
+   */
+  function crashBubbles(st, lines) {
+    lines = lines || [];
+    var wbar = bounds.right - bounds.left, used = {};
+    var barAt = function (idxs) {
+      var xs = idxs.map(function (i) { var b = bots[i]; return b ? (b.barX != null ? b.barX : bounds.left + wbar * TBS_BOT_SPOTS[i]) : null; })
+        .filter(function (x) { return x != null; });
+      if (!xs.length) return null;
+      return { x: hdr.left + xs.reduce(function (a, x) { return a + x; }, 0) / xs.length, y: hdr.top + hdr.h + 14, below: true };
+    };
+    var show = function (key, line, at) {
+      if (!at) return;
+      used[key] = true;
+      var bub = crash.bubbles[key];
       if (!bub) {
-        bub = crash.bubbles[who] = document.createElement('div');
+        bub = crash.bubbles[key] = document.createElement('div');
         bub.className = 'tbs-crash-bubble';
         castRoot().appendChild(bub);
       }
-      var at = st.screen[who];
-      if (!at) {
-        // Talking from its spot in the bar: the bubble hangs just under the bar.
-        var b = bots.filter(function (x) { return x.role === who; })[0];
-        if (!b) return;
-        at = { x: hdr.left + bounds.left + (bounds.right - bounds.left) * TBS_BOT_SPOTS[b.idx], y: hdr.top + hdr.h + 70, below: true };
-      }
-      if (bub.textContent !== line.text) bub.textContent = line.text;
-      css(bub, 'transform', 'translate(' + at.x.toFixed(0) + 'px,' + (at.y - 8).toFixed(0) + 'px) translate(-50%, ' + (at.below ? '0' : '-100%') + ')');
+      if (bub.textContent !== line.text) { bub.textContent = line.text; bub._w = 0; }
+      bub.classList.toggle('below', !!at.below);
+      if (!bub._w) bub._w = bub.offsetWidth || 300;
+      // Keep the whole bubble on the screen; the tail still points at the robot.
+      var half = bub._w / 2, vw = window.innerWidth || 1920;
+      var x = Math.max(half + 24, Math.min(vw - half - 24, at.x));
+      bub.style.setProperty('--tail', (half + at.x - x).toFixed(0) + 'px');
+      css(bub, 'transform', 'translate(' + x.toFixed(0) + 'px,' + (at.below ? at.y : at.y - 8).toFixed(0) + 'px) translate(-50%, ' + (at.below ? '0' : '-100%') + ')');
       bub.classList.add('on');
+    };
+    lines.forEach(function (line) {
+      if (line.who === 'all') {
+        var half = Math.ceil(bots.length / 2), left = [], right = [];
+        bots.forEach(function (b, i) { (i < half ? left : right).push(i); });
+        show('allL', line, barAt(left));
+        show('allR', line, barAt(right));
+        return;
+      }
+      var b = bots.filter(function (x) { return x.role === line.who; })[0];
+      if (!b || used[line.who]) return;
+      show(line.who, line, (st && st.screen && st.screen[line.who]) || barAt([b.idx]));
     });
+    Object.keys(crash.bubbles).forEach(function (k) { if (!used[k]) crash.bubbles[k].classList.remove('on'); });
   }
   /** The game cards: off the board and out of the screen, then back from the repair crew. */
   function crashCards(st, t) {
@@ -1640,7 +1708,7 @@ function createTopbarShow(opts) {
 
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
-    tbsBeatIndex: tbsBeatIndex, tbsLocate: tbsLocate, tbsPose: tbsPose, tbsShake: tbsShake, tbsDancerPose: tbsDancerPose, tbsBotPose: tbsBotPose, tbsCrashState: tbsCrashState, tbsCrashCard: tbsCrashCard, TBS_CRASH_AT: TBS_CRASH_AT, TBS_CRASH_LINES: TBS_CRASH_LINES, tbsRand: tbsRand, tbsKnee: tbsKnee,
+    tbsBeatIndex: tbsBeatIndex, tbsLocate: tbsLocate, tbsPose: tbsPose, tbsShake: tbsShake, tbsDancerPose: tbsDancerPose, tbsBotPose: tbsBotPose, tbsCrashState: tbsCrashState, tbsSongLines: tbsSongLines, TBS_SONG_LINES: TBS_SONG_LINES, tbsCrashCard: tbsCrashCard, TBS_CRASH_AT: TBS_CRASH_AT, TBS_CRASH_LINES: TBS_CRASH_LINES, tbsRand: tbsRand, tbsKnee: tbsKnee,
     tbsGovernor: tbsGovernor, tbsGovern: tbsGovern, tbsHair: tbsHair, tbsHairStep: tbsHairStep, tbsPool: tbsPool, tbsPoolTake: tbsPoolTake, tbsPoolKill: tbsPoolKill, createTopbarShow: createTopbarShow, TBS_SHOWS: TBS_SHOWS, tbsBotMove: tbsBotMove, tbsBotGagOwner: tbsBotGagOwner, TBS_BOT_SPOTS: TBS_BOT_SPOTS,
   };
 }

@@ -284,8 +284,9 @@ describe('Board Crash', () => {
   });
   it('speaks its own lines at the cue times, never two Nova-7 lines at once', () => {
     const at = u => st(u).lines.map(l => l.who);
-    expect(at(2.5)).toEqual(['turbo']);
-    expect(at(3.2)).toEqual(['turbo', 'nova']);
+    expect(at(2.5)).toEqual([]);
+    expect(at(3.2)).toEqual(['turbo']);
+    expect(at(5.5)).toEqual(['nova']);
     for (let u = 0; u < 16; u += 0.1) expect(at(u).filter(w => w === 'nova').length).toBeLessThanOrEqual(1);
     expect(kit.TBS_CRASH_LINES.every(l => l.at + l.len <= 16)).toBe(true);
   });
@@ -354,5 +355,27 @@ describe('AI robot rigs', () => {
       expect(svg[k]).toContain('data-part="calm"');
       expect(svg[k]).toContain('data-part="worried"');
     }
+  });
+});
+
+describe('The robots sing along', () => {
+  const song = 'Looks-good-to-me-remix.mp3';
+  const said = t => kit.tbsSongLines(song, t).map(l => l.who + ': ' + l.text);
+  it('gives each line to its robot at its time in the song', () => {
+    expect(said(47)).toEqual(['byte: I guess that makes me second or worse']);
+    expect(said(117)).toEqual(['nova: Sorry for the confusion']);
+    expect(said(243)).toEqual(['all: Now the bot reviews the bot']);
+    expect(said(30)).toEqual([]);
+    expect(said(kit.TBS_CRASH_AT[song] + 3.5)).toEqual(['turbo: Great catch!']);
+    expect(kit.tbsSongLines('other.mp3', 47)).toEqual([]);
+  });
+  it('never has one robot saying two lines at once, and stays out of the Board Crash', () => {
+    const lines = kit.TBS_SONG_LINES[song], crash = kit.TBS_CRASH_AT[song];
+    for (let t = 0; t < 290; t += 0.1) {
+      const who = kit.tbsSongLines(song, t).map(l => l.who);
+      expect(new Set(who).size).toBe(who.length);
+    }
+    expect(lines.every(l => l.at + l.len <= crash || l.at >= crash + 16.4)).toBe(true);
+    expect(lines.every(l => ['nova', 'glitch', 'byte', 'turbo', 'all'].includes(l.who))).toBe(true);
   });
 });

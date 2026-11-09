@@ -230,8 +230,14 @@
 .tbs-crash-bubble {
   position: absolute; left: 0; top: 0; max-width: 340px;
   padding: 12px 18px; border-radius: 20px; background: #fff; color: #0b1530;
-  font: 800 22px/1.25 'Plus Jakarta Sans', system-ui, sans-serif; text-align: center;
+  font: 800 28px/1.25 'Plus Jakarta Sans', system-ui, sans-serif; text-align: center;
   box-shadow: 0 14px 30px -10px rgba(0, 0, 0, 0.6);
   opacity: 0; transition: opacity 0.18s ease; white-space: normal;
 }
 .tbs-crash-bubble.on { opacity: 1; }
+/* The tail points at the robot that is talking (--tail: its x inside the bubble). */
+.tbs-crash-bubble::after {
+  content: ''; position: absolute; left: var(--tail, 50%); bottom: -10px; width: 20px; height: 20px;
+  margin-left: -10px; background: #fff; transform: rotate(45deg); border-radius: 3px;
+}
+.tbs-crash-bubble.below::after { bottom: auto; top: -8px; }
