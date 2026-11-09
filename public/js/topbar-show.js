@@ -32,12 +32,13 @@ var TBS_CRASH_AT = {
 var TBS_CRASH_LEN = 16.4;
 var TBS_CRASH_PRE = 1.0;        // Turbo's wind-up before the cue
 var TBS_CRASH_LINES = [
-  // On the song's own words: the crash starts at 03:27, so u 3.0 is 03:30.
-  { who: 'turbo', at: 3.0, len: 2.2, text: 'Great catch!' },
-  { who: 'nova', at: 5.2, len: 1.6, text: 'Oh, restore from backup!' },
-  { who: 'nova', at: 6.8, len: 1.7, text: 'Oh, we don’t have a backup?' },
-  { who: 'nova', at: 8.5, len: 2.2, text: 'Oh, restore from backup?' },
-  { who: 'nova', at: 10.7, len: 1.3, text: 'Oh, we don’t have a backup!' },
+  // On the song's own words (timed from a word-level transcription of the track): the crash
+  // starts at 03:27, so u 3.0 is 03:30.
+  { who: 'turbo', at: 3.0, len: 2.3, text: 'Great catch!' },
+  { who: 'nova', at: 5.3, len: 1.9, text: 'Oh, restore from backup!' },
+  { who: 'nova', at: 7.2, len: 1.4, text: 'Oh, we don’t have a backup?' },
+  { who: 'nova', at: 9.25, len: 1.6, text: 'Oh, restore from backup?' },
+  { who: 'nova', at: 10.95, len: 1.5, text: 'Oh, we don’t have a backup!' },
   { who: 'glitch', at: 10.8, len: 1.8, text: 'R-r-rebuilding… 40%!' },
   { who: 'byte', at: 12.4, len: 2.0, text: 'Ah, a fascinating stacking problem.' },
 ];
@@ -47,6 +48,8 @@ var TBS_CRASH_HIT = 0.85;
  * The robots sing along: lines the AI cast says during a song, in song seconds, outside the
  * Board Crash (which has its own lines above). who: 'nova', 'glitch', 'byte', 'turbo', or
  * 'all' for the whole cast. A line shows in a speech bubble under the robot's spot in the bar.
+ * Times where the vocal is clear come from a word-level transcription of the track (03:10-03:38,
+ * 02:16, 04:03, 04:31); the rest follow the lyric sheet.
  */
 var TBS_SONG_LINES = {
   'Looks-good-to-me-remix.mp3': [
@@ -57,20 +60,20 @@ var TBS_SONG_LINES = {
     { who: 'glitch', at: 111.9, len: 3.5, text: 'All done, it is' },
     { who: 'nova', at: 116.7, len: 2.3, text: 'Sorry for the confusion' },
     { who: 'glitch', at: 119.0, len: 2.9, text: 'All done, it is' },
-    { who: 'glitch', at: 135.6, len: 1.5, text: '…tokens instead' },
+    { who: 'glitch', at: 136.1, len: 1.4, text: '…tokens instead' },
     { who: 'byte', at: 152.1, len: 2.8, text: 'And nobody knows what the code does inside' },
     { who: 'glitch', at: 182.0, len: 3.5, text: 'And I’m going to sleep' },
     { who: 'byte', at: 186.2, len: 2.1, text: 'All done, it is!' },
-    { who: 'glitch', at: 188.3, len: 2.7, text: 'All done, it is!' },
-    { who: 'nova', at: 191.0, len: 2.0, text: 'Sorry for the confusion' },
-    { who: 'byte', at: 193.0, len: 2.2, text: 'All done… isn’t.' },
-    { who: 'all', at: 242.1, len: 1.8, text: 'Now the bot reviews the bot' },
-    { who: 'all', at: 243.9, len: 2.9, text: 'A million lines and the humans all got cut' },
+    { who: 'glitch', at: 188.3, len: 2.1, text: 'All done, it is!' },
+    { who: 'nova', at: 191.7, len: 2.4, text: 'Sorry for the confusion' },
+    { who: 'byte', at: 194.3, len: 1.2, text: 'All done… isn’t.' },
+    { who: 'all', at: 242.1, len: 1.4, text: 'Now the bot reviews the bot' },
+    { who: 'all', at: 243.5, len: 3.0, text: 'A million lines and the humans all got cut' },
     { who: 'all', at: 246.8, len: 1.7, text: 'Approved in three seconds' },
     { who: 'all', at: 256.1, len: 1.2, text: 'Let’s ship it to prod' },
     { who: 'all', at: 257.3, len: 2.5, text: 'It’s Friday at five' },
     { who: 'all', at: 259.8, len: 2.4, text: 'So I’ll leave it with God' },
-    { who: 'byte', at: 266.4, len: 3.5, text: 'And I’m going to sleep' },
+    { who: 'byte', at: 271.8, len: 1.6, text: 'And I’m going to sleep' },
   ],
 };
 /** The song lines being said at song second t (the Board Crash lines included). Pure; for tests. */
