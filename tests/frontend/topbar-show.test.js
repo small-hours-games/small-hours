@@ -363,7 +363,8 @@ describe('The robots sing along', () => {
   const said = t => kit.tbsSongLines(song, t).map(l => l.who + ': ' + l.text);
   it('gives each line to its robot at its time in the song', () => {
     expect(said(47)).toEqual(['byte: I guess that makes me second or worse']);
-    expect(said(117)).toEqual(['nova: Sorry for the confusion']);
+    expect(said(118)).toEqual(['nova: Sorry for the confusion']);
+    expect(said(111)).toEqual(['glitch: And I’m going to sleep']);
     expect(said(243)).toEqual(['all: Now the bot reviews the bot']);
     expect(said(30)).toEqual([]);
     expect(said(kit.TBS_CRASH_AT[song] + 3.5)).toEqual(['turbo: Great catch!']);
