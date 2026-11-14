@@ -33,7 +33,7 @@
         ? 'Dealer (' + (d.hiddenHole ? d.total + ' + ?' : d.isBusted ? d.total + ' BUST' : d.total) + ')'
         : 'Dealer';
 
-      const seatsHtml = (msg.players || []).map(id => {
+      const seatHtml = id => {
         const seat = msg.seats[id];
         const isTurn = msg.phase === 'playing' && msg.turn === id;
         const handsHtml = seat.hands && seat.hands.length
@@ -46,16 +46,43 @@
             }).join('')
           : '<div class="bj-tv-bet-wait">' + (seat.betPlaced ? 'Bet: ' + tcNum(seat.pendingBet) : 'Betting…') + '</div>';
 
+        const av = (state.playerAvatars || {})[id] || '';
         return '<div class="bj-tv-seat' + (isTurn ? ' bj-tv-seat-turn' : '') + '">' +
-          '<div class="bj-tv-seat-head"><b>' + escapeHtml(names[id] || id) + '</b><span class="tc-mono">' + tcNum(seat.chips) + '</span></div>' +
+          '<div class="bj-tv-seat-head"><div class="bj-tv-seat-who">' + (av ? '<span class="bj-tv-avatar">' + av + '</span>' : '') + '<b>' + escapeHtml(names[id] || id) + '</b></div><span class="tc-mono text-amber-300 font-bold">' + tcNum(seat.chips) + '</span></div>' +
           handsHtml +
         '</div>';
-      }).join('');
+      };
+
+      const plist = msg.players || [];
+      const topSeats = [];
+      const rightSeats = [];
+      const bottomSeats = [];
+      const leftSeats = [];
+      plist.forEach((id, i) => {
+        if (plist.length <= 2) {
+          (i === 0 ? bottomSeats : topSeats).push(seatHtml(id));
+        } else if (plist.length <= 4) {
+          [bottomSeats, leftSeats, topSeats, rightSeats][i % 4].push(seatHtml(id));
+        } else {
+          const zone = i === 0 ? bottomSeats : i === 1 ? leftSeats : i <= Math.ceil(plist.length / 2) ? topSeats : i === plist.length - 1 ? rightSeats : topSeats;
+          zone.push(seatHtml(id));
+        }
+      });
 
       document.getElementById('gameContent').innerHTML = '<div class="tc-tv tc-felt bj-tv">' +
         '<div class="tc-tv-status"><span class="tc-dot' + (msg.phase === 'playing' || msg.phase === 'betting' ? ' tc-dot-live' : '') + '"></span>' + escapeHtml(status) + '</div>' +
-        '<div class="bj-tv-dealer"><div class="tc-well-label">' + escapeHtml(dealerLabel) + '</div><div class="bj-cards">' + dealerCards + '</div></div>' +
-        '<div class="bj-tv-seats">' + seatsHtml + '</div>' +
+        '<div class="bj-tv-arena">' +
+          '<div class="bj-tv-row-top">' + topSeats.join('') + '</div>' +
+          '<div class="bj-tv-col-left">' + leftSeats.join('') + '</div>' +
+          '<div class="bj-tv-oval">' +
+            '<div class="bj-tv-dealer">' +
+              '<div class="bj-tv-dealer-pill">' + escapeHtml(dealerLabel) + '</div>' +
+              '<div class="bj-cards">' + dealerCards + '</div>' +
+            '</div>' +
+          '</div>' +
+          '<div class="bj-tv-col-right">' + rightSeats.join('') + '</div>' +
+          '<div class="bj-tv-row-bottom">' + bottomSeats.join('') + '</div>' +
+        '</div>' +
       '</div>';
       tcFitTv();
     }
