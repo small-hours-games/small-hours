@@ -87,26 +87,6 @@ export function setupWebSocket(server, manager) {
     return names;
   }
 
-  /**
-   * Award session scores based on a game's endResult.
-   * - If endResult.scores is a { [playerId]: number } map, pass it directly.
-   * - If only endResult.winner exists, award 3 points to the winner and 1 to all other connected players.
-   * - If neither exists, skip scoring.
-   */
-  function applyEndResultScores(room, endResult) {
-    if (endResult.scores && typeof endResult.scores === 'object') {
-      room.awardScores(endResult.scores);
-    } else if (typeof endResult.winner === 'string') {
-      const scoresMap = {};
-      for (const [id, p] of room.players) {
-        if (p.connected) {
-          scoresMap[id] = id === endResult.winner ? 3 : 1;
-        }
-      }
-      room.awardScores(scoresMap);
-    }
-  }
-
   // --- Phase timers ---
 
   function cancelPhaseTimer(roomCode) {
@@ -569,15 +549,31 @@ export function setupWebSocket(server, manager) {
       broadcastToRoom(room.code, { type: 'LOBBY_UPDATE', state: room.getState() });
     }
 
-    // Start grace period - remove player after timeout
+    const noConnectedHumans = [...room.players.values()].every(p => !p.connected);
+    const graceMs = room.game && noConnectedHumans ? Math.min(DISCONNECT_GRACE_MS, 5_000) : DISCONNECT_GRACE_MS;
+
+    // Start grace period - remove player after timeout, and return TV to lobby if no humans remain
     const timer = setTimeout(() => {
       graceTimers.delete(playerId);
       const currentPlayer = room.players.get(playerId);
       if (currentPlayer && !currentPlayer.connected) {
+        const leftName = currentPlayer.username;
         room.removePlayer(playerId);
+        if (room.game && [...room.players.values()].every(p => !p.connected)) {
+          cancelPhaseTimer(room.code);
+          cancelRoundCountdown(room.code);
+          cancelBotTurn(room.code);
+          roomGameTypes.delete(room.code);
+          room.endGame();
+          broadcastToRoom(room.code, {
+            type: 'SURRENDER_LOBBY',
+            playerId,
+            username: leftName,
+          });
+        }
         broadcastToRoom(room.code, { type: 'LOBBY_UPDATE', state: room.getState() });
       }
-    }, DISCONNECT_GRACE_MS);
+    }, graceMs);
 
     if (timer.unref) timer.unref();
     graceTimers.set(playerId, timer);
