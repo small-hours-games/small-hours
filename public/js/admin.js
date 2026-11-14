@@ -106,13 +106,13 @@ async function loadGames() {
       ...(custom || []).filter(g => g.enabled).map(g => ({ ...g, typeLabel: 'Custom · ' + g.kind })),
     ];
     visList.innerHTML = all.map(g => `
-      <div class="bg-slate-950 border border-slate-800 rounded-xl p-3 flex items-center justify-between gap-2">
+      <div class="rounded-xl p-3 flex items-center justify-between gap-2 border transition ${g.visibleInLobby ? 'bg-slate-800/80 border-emerald-500/40' : 'bg-slate-950/60 border-slate-800 opacity-55'}">
         <div class="min-w-0">
-          <div class="text-sm font-semibold truncate">${esc(g.icon || '🎮')} ${esc(g.label)}</div>
+          <div class="text-sm font-semibold truncate ${g.visibleInLobby ? 'text-white' : 'text-slate-400'}">${esc(g.icon || '🎮')} ${esc(g.label)}</div>
           <div class="text-[11px] text-slate-400 truncate">${esc(g.id)} • ${esc(g.typeLabel)}</div>
         </div>
         <button data-vis-id="${esc(g.id)}" data-vis="${g.visibleInLobby ? '1' : '0'}"
-          class="shrink-0 px-2.5 py-1 rounded-lg text-xs font-semibold ${g.visibleInLobby ? 'bg-emerald-900/60 hover:bg-emerald-800 text-emerald-200' : 'bg-slate-800 hover:bg-slate-700 text-slate-300'}">
+          class="shrink-0 px-2.5 py-1 rounded-lg text-xs font-semibold ${g.visibleInLobby ? 'bg-emerald-600 hover:bg-emerald-500 text-white' : 'bg-slate-800 hover:bg-slate-700 text-slate-400'}">
           ${g.visibleInLobby ? 'Shown' : 'Hidden'}
         </button>
       </div>
