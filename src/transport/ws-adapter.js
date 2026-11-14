@@ -132,7 +132,7 @@ export function setupWebSocket(server, manager) {
 
     if (!room.game) return;
 
-    const durations = getGame(gameType)?.phases;
+    const durations = room.game.state?.phaseDurations || getGame(gameType)?.phases;
     if (!durations) return;
 
     const phase = room.game.state.phase;
@@ -202,6 +202,7 @@ export function setupWebSocket(server, manager) {
     broadcastToRoom(room.code, sharedState, { hostsOnly: true });
 
     if (endResult) gameHandlers.finishGame(room, endResult, ctx);
+    else ctx.scheduleBotTurn?.(room);
   }
 
   // --- AI seats ---

@@ -373,3 +373,25 @@ describe('Palace visibility on TV', () => {
     expect(finishHtml).toContain('Bo keeps the palace!');
   });
 });
+
+describe('Card selection visuals, turn glow, and Gin Rummy hand timer policy', () => {
+  it('styles selected cards raised with a red border and turn glow with light green', () => {
+    const css = readFileSync(new URL('../../public/css/table-cards.css', import.meta.url), 'utf8');
+    expect(css).toContain('translateY(-14px)');
+    expect(css).toContain('#ef4444');
+    expect(css).toContain('.tc-screen.tc-my-turn-glow');
+    expect(css).toContain('#4ade80');
+  });
+
+  it('supports No limit, 20s, and 10s between-hands timer in Gin Rummy', () => {
+    let game = createTestGame(ginRummy, ['p1', 'p2'], { handTimeLimitSec: 20 });
+    expect(game.state.phaseDurations).toEqual({ scoring: 20000 });
+    game = { ...game, state: { ...game.state, phase: 'scoring' } };
+    game = act(game, 'timerExpired', 'p1', { phase: 'scoring' }).game;
+    expect(game.state.handNumber).toBe(2);
+    expect(game.state.phase).toBe('first_turn');
+
+    const noLimit = createTestGame(ginRummy, ['p1', 'p2'], { handTimeLimitSec: 0 });
+    expect(noLimit.state.phaseDurations).toBeNull();
+  });
+});

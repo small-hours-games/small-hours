@@ -47,6 +47,7 @@
       const oppId = grOpponentId(msg);
       const playing = msg.phase !== 'scoring' && msg.phase !== 'finished';
       const myTurn = playing && !!msg.isMyTurn;
+      document.getElementById('ginRummySection')?.classList.toggle('tc-my-turn-glow', myTurn);
       const discardPhase = myTurn && msg.phase === 'drawing' && msg.turnPhase === 'discard';
       const drawPhase = myTurn && (msg.phase === 'drawing' || msg.phase === 'first_turn_draw') && msg.turnPhase === 'draw';
       const hand = msg.myHand || [];
@@ -159,7 +160,11 @@
         '<span>DW <b class="tc-dw' + (dw != null && dw <= 10 ? ' tc-dw-ok' : '') + '">' + (dw == null ? '–' : tcNum(dw)) + '</b></span>';
 
       // Thumb button, knock / decline, sort bar
-      tcSetCta('grCta', grCtaState(msg, state.grSelectedCard));
+      const cta = grCtaState(msg, state.grSelectedCard);
+      if (msg.phase === 'scoring' && msg.timeLeft != null) {
+        cta.label = 'Next hand (' + Math.ceil(msg.timeLeft) + 's)';
+      }
+      tcSetCta('grCta', cta);
       const knock = document.getElementById('grKnockBtn');
       knock.hidden = !(discardPhase && msg.canKnock);
       knock.textContent = dw === 0 ? 'GIN!' : 'Knock (' + dw + ')';
@@ -305,9 +310,33 @@
       document.getElementById('grSheet').innerHTML = html;
     }
 
+    function setGrHandTimer(sec) {
+      state.grHandTimeLimitSec = sec;
+      renderAdminControls();
+    }
+
     SH.registerGame('gin-rummy', {
       section: 'ginRummySection',
       render: renderGinRummyState,
       redraw() { if (state.grLastMsg) renderGinRummyState(state.grLastMsg); },
-      reset() { state.grSelectedCard = null; state.grLog = []; state.grSeenSeq = null; },
+      reset() {
+        state.grSelectedCard = null;
+        state.grLog = [];
+        state.grSeenSeq = null;
+        document.getElementById('ginRummySection')?.classList.remove('tc-my-turn-glow');
+      },
+      lobbyOptions() {
+        const cur = state.grHandTimeLimitSec || 0;
+        const opts = [
+          { sec: 0, label: 'No limit', sub: 'Manual next hand' },
+          { sec: 20, label: '20 sec', sub: 'Between hands' },
+          { sec: 10, label: '10 sec', sub: 'Between hands' },
+        ];
+        return '<div class="text-[11px] font-bold text-slate-600 mb-1">Time limit between hands</div><div class="grid grid-cols-3 gap-2">' + opts.map(o =>
+          '<button onclick="setGrHandTimer(' + o.sec + ')" class="p-2 rounded-xl border-2 text-xs font-extrabold transition ' +
+          (cur === o.sec ? 'bg-sky-50 border-sky-500 text-sky-900 shadow-sm' : 'bg-white/90 border-sky-200 text-slate-700') + '">' +
+          o.label + '<br><span class="font-normal text-[10px] opacity-75">' + o.sub + '</span></button>'
+        ).join('') + '</div>';
+      },
+      startConfig() { return { handTimeLimitSec: state.grHandTimeLimitSec || 0 }; },
     });

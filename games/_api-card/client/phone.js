@@ -50,6 +50,7 @@
       const validIds = new Set(myHand.map(c => c.id));
       state.acSelectedCards = state.acSelectedCards.filter(id => validIds.has(id));
       const myTurn = msg.phase === 'play' && !!msg.isMyTurn;
+      document.getElementById('apiCardSection')?.classList.toggle('tc-my-turn-glow', myTurn);
 
       const status = msg.phase === 'finished'
         ? (msg.winner === state.playerId ? 'You won!' : tcName(msg.winner, msg) + ' won')

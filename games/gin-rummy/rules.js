@@ -329,9 +329,11 @@ function setup({ players, config = {} }) {
   const [p1, p2] = players;
   const targetScore = config.targetScore || 100;
   const bigGinBonus = config.bigGinBonus || 31;
+  const handTimeLimitSec = [10, 20].includes(Number(config.handTimeLimitSec)) ? Number(config.handTimeLimitSec) : 0;
 
   const initialState = {
     phase: 'first_turn',
+    phaseDurations: handTimeLimitSec > 0 ? { scoring: handTimeLimitSec * 1000 } : null,
     players,
     dealerIndex: 0,
     currentPlayerIndex: 1,
@@ -714,6 +716,13 @@ function nextHand(state, { playerId }) {
   return dealNewHand(newState);
 }
 
+function timerExpired(state, { phase }) {
+  if (state.phase === 'scoring' && phase === 'scoring') {
+    return nextHand(state, { playerId: state.players[0] });
+  }
+  return state;
+}
+
 // --- view function ---
 
 function view(state, playerId) {
@@ -806,6 +815,7 @@ export default {
     discard: wrapAction(discard),
     knock: wrapAction(knock),
     nextHand: wrapAction(nextHand),
+    timerExpired: wrapAction(timerExpired),
   },
   view,
   endIf,

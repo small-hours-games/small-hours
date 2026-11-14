@@ -144,6 +144,7 @@
       const zone = shZone(msg);
       const pileCount = msg.pileCount || 0;
       const myTurn = msg.phase === 'play' && !!msg.isMyTurn;
+      document.getElementById('shitheadSection')?.classList.toggle('tc-my-turn-glow', myTurn);
 
       // Keep only selections that are still in my active zone
       const validIds = new Set(zone === 'faceDown' ? (msg.myFaceDownIds || []) : shActiveZoneCards(msg).map(c => c.id));
