@@ -278,3 +278,57 @@ describe('TV card tables escape hostile values', () => {
     expect(html).not.toContain('<img');
   });
 });
+
+describe('Gin Rummy move log formatting and TV rendering', () => {
+  it('formats Gin Rummy events in renderMoveLog with card chips or card backs', () => {
+    const ctx = phoneContext('p1');
+    const card = { id: '7h_0', rank: 7, suit: 'h' };
+    const log = [
+      { seq: 1, kind: 'gr-decline-upcard', by: 'p1', cards: [] },
+      { seq: 2, kind: 'gr-draw-stock', by: 'p2', cards: [] },
+      { seq: 3, kind: 'gr-discard', by: 'p2', cards: [card] },
+      { seq: 4, kind: 'gr-draw-discard', by: 'p1', cards: [card] },
+    ];
+    const html = ctx.renderMoveLog(log, { name: id => (id === 'p1' ? 'Anna' : 'Bo'), max: 4 });
+    expect(html).toContain('Bo discarded 7♥');
+    expect(html).toContain('Anna took 7♥ from discard');
+    expect(html).toContain('Bo drew from stock');
+    expect(html).toContain('tc-chip-back');
+    expect(html).toContain('Anna declined the upcard');
+  });
+
+  it('renders the move log on the Gin Rummy TV table', () => {
+    let game = createTestGame(ginRummy, ['p1', 'p2']);
+    const first = game.state.players[game.state.currentPlayerIndex];
+    game = act(game, 'takeUpcard', first).game;
+    const html = tvRender('renderGinRummy', getHostView(game, 'p1'));
+    expect(html).toContain('tc-log');
+    expect(html).toContain('took the upcard');
+    expect(html).toContain('tc-well-drawn');
+  });
+
+  it('shows opponent draw source in phone status text and knock banner on TV', () => {
+    const ctx = phoneContext('p1');
+    const card = { id: '12h_0', rank: 12, suit: 'h' };
+    expect(ctx.grStatusText({
+      phase: 'drawing', turnPhase: 'discard', isMyTurn: false,
+      cumulative: { p1: 0, p2: 0 },
+      lastEvent: { seq: 4, kind: 'gr-draw-stock', by: 'p2', cards: [] },
+    })).toBe('Bo drew from stock — discarding');
+    expect(ctx.grStatusText({
+      phase: 'drawing', turnPhase: 'discard', isMyTurn: false,
+      cumulative: { p1: 0, p2: 0 },
+      lastEvent: { seq: 5, kind: 'gr-draw-discard', by: 'p2', cards: [card] },
+    })).toBe('Bo took Q♥ from discard — discarding');
+
+    const knockHtml = tvRender('renderGinRummy', {
+      phase: 'scoring', knocker: 'p2', handNumber: 1,
+      cumulative: { p1: 0, p2: 20 }, boxes: { p1: 0, p2: 1 },
+      playerCardCounts: { p1: 10, p2: 10 },
+      handResult: { type: 'knock', winner: 'p2', points: 20 },
+      knockerMelds: [], knockerDeadwood: [], opponentMelds: [], opponentDeadwood: [], opponentLayoffs: [],
+    });
+    expect(knockHtml).toContain('tc-knock-banner');
+    expect(knockHtml).toContain('Bo knocked!');
+  });
+});

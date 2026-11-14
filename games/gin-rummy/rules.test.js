@@ -1430,3 +1430,31 @@ describe('knock reveal keeps the opponent\'s own melds', () => {
     expect(s.handResult).toMatchObject({ winner: knocker, type: 'knock', points: 24 - 4 });
   });
 });
+
+describe('lastEvent move log tracking', () => {
+  it('emits monotonic lastEvent for upcard, draw, discard, and knock without leaking stock cards', () => {
+    let game = createTestGame(ginRummy, ['p1', 'p2']);
+    const p1 = game.state.players[game.state.currentPlayerIndex];
+    const p2 = game.state.players.find(id => id !== p1);
+    const upcard = game.state.discard[game.state.discard.length - 1];
+
+    game = act(game, 'declineUpcard', p1).game;
+    expect(viewFor(game, p2).lastEvent).toMatchObject({ seq: 1, kind: 'gr-decline-upcard', by: p1, cards: [] });
+
+    game = act(game, 'takeUpcard', p2).game;
+    expect(viewFor(game, p1).lastEvent).toMatchObject({ seq: 2, kind: 'gr-take-upcard', by: p2, cards: [upcard] });
+
+    const disc = game.state.hands[p2].find(c => c.id !== upcard.id);
+    game = act(game, 'discard', p2, { cardId: disc.id }).game;
+    expect(viewFor(game, p1).lastEvent).toMatchObject({ seq: 3, kind: 'gr-discard', by: p2, cards: [disc] });
+
+    game = act(game, 'draw', p1, { source: 'stock' }).game;
+    const stockEv = viewFor(game, p2).lastEvent;
+    expect(stockEv).toMatchObject({ seq: 4, kind: 'gr-draw-stock', by: p1, cards: [] });
+
+    const disc2 = game.state.hands[p1][0];
+    game = act(game, 'discard', p1, { cardId: disc2.id }).game;
+    game = act(game, 'draw', p2, { source: 'discard' }).game;
+    expect(viewFor(game, p1).lastEvent).toMatchObject({ seq: 6, kind: 'gr-draw-discard', by: p2, cards: [disc2] });
+  });
+});

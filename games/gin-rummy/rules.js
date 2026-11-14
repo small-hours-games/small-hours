@@ -20,6 +20,17 @@ function wrapAction(fn) {
   };
 }
 
+const fxSeed = () => Math.floor(Math.random() * 1e9);
+
+function withEvent(prev, next, kind, by, cards, extra) {
+  const seq = (prev.eventSeq || 0) + 1;
+  return {
+    ...next,
+    eventSeq: seq,
+    lastEvent: { seq, kind, by, cards: cards || [], seed: fxSeed(), ...(extra || {}) },
+  };
+}
+
 // --- Core Utility Functions ---
 
 /**
@@ -303,6 +314,8 @@ function dealNewHand(state) {
     turnPhase: 'draw',
     upcardDeclined: [],
     events: [],
+    eventSeq: state.eventSeq || 0,
+    lastEvent: null,
   };
 }
 
@@ -343,6 +356,8 @@ function setup({ players, config = {} }) {
     turnPhase: 'draw',
     upcardDeclined: [],
     events: [],
+    eventSeq: 0,
+    lastEvent: null,
     config: { targetScore, bigGinBonus },
   };
 
@@ -365,7 +380,7 @@ function takeUpcard(state, { playerId }) {
   const newDiscard = state.discard.slice(0, -1);
   const newHand = [...state.hands[playerId], upcard];
 
-  return {
+  return withEvent(state, {
     ...state,
     phase: 'drawing',
     hands: {
@@ -377,7 +392,7 @@ function takeUpcard(state, { playerId }) {
     lastDrawFrom: 'discard',
     lastDrawnCardId: upcard.id,
     events: [...state.events, { type: 'takeUpcard', playerId }],
-  };
+  }, 'gr-take-upcard', playerId, [upcard]);
 }
 
 // --- Action: declineUpcard ---
@@ -398,7 +413,7 @@ function declineUpcard(state, { playerId }) {
     // Both declined — non-dealer (opposite of dealer) now draws from stock
     const nonDealerIndex = 1 - state.dealerIndex;
     const nonDealer = state.players[nonDealerIndex];
-    return {
+    return withEvent(state, {
       ...state,
       upcardDeclined: newDeclined,
       currentPlayerIndex: nonDealerIndex,
@@ -406,17 +421,17 @@ function declineUpcard(state, { playerId }) {
       // We transition to drawing phase where the non-dealer must draw from stock
       phase: 'first_turn_draw', // special sub-phase: non-dealer must draw from stock
       events: [...state.events, { type: 'declineUpcard', playerId }],
-    };
+    }, 'gr-decline-upcard', playerId, []);
   }
 
   // First player declined (non-dealer) — switch to dealer
   const dealerIndex = state.dealerIndex;
-  return {
+  return withEvent(state, {
     ...state,
     upcardDeclined: newDeclined,
     currentPlayerIndex: dealerIndex,
     events: [...state.events, { type: 'declineUpcard', playerId }],
-  };
+  }, 'gr-decline-upcard', playerId, []);
 }
 
 // --- Action: draw ---
@@ -475,14 +490,20 @@ function draw(state, { playerId, source }) {
 
   // Stock exhaustion check: if stock <= 2 after drawing from stock, cancel hand
   if (source === 'stock' && newStock.length <= 2) {
-    return {
+    return withEvent(state, {
       ...newState,
       phase: 'scoring',
       handResult: { type: 'cancelled' },
-    };
+    }, 'gr-cancelled', playerId, []);
   }
 
-  return newState;
+  return withEvent(
+    state,
+    newState,
+    source === 'discard' ? 'gr-draw-discard' : 'gr-draw-stock',
+    playerId,
+    source === 'discard' ? [drawnCard] : []
+  );
 }
 
 // --- Action: discard ---
@@ -533,14 +554,14 @@ function discard(state, { playerId, cardId }) {
 
   // Stock exhaustion check after discard: if stock <= 2, cancel hand
   if (newState.stock.length <= 2) {
-    return {
+    return withEvent(state, {
       ...newState,
       phase: 'scoring',
       handResult: { type: 'cancelled' },
-    };
+    }, 'gr-cancelled', playerId, [card]);
   }
 
-  return newState;
+  return withEvent(state, newState, 'gr-discard', playerId, [card]);
 }
 
 // --- Action: knock ---
@@ -616,7 +637,10 @@ function knock(state, { playerId }) {
     [winner]: state.boxes[winner] + 1,
   };
 
-  return {
+  const knockKinds = { knock: 'gr-knock', gin: 'gr-gin', bigGin: 'gr-big-gin', undercut: 'gr-undercut' };
+  const knockKind = knockKinds[handResult.type] || 'gr-knock';
+
+  return withEvent(state, {
     ...state,
     phase: 'scoring',
     knocker: playerId,
@@ -634,7 +658,7 @@ function knock(state, { playerId }) {
       { type: 'knock', playerId, ginType },
       { type: 'hand_result', ...handResult },
     ],
-  };
+  }, knockKind, playerId, [], { points: handResult.points, winner: handResult.winner });
 }
 
 // --- Action: nextHand ---
@@ -717,6 +741,7 @@ function view(state, playerId) {
     winner: state.winner,
     turnPhase: state.turnPhase,
     events: (state.events || []).slice(-10),
+    lastEvent: state.lastEvent || null,
   };
 
   // Play phases: hide opponent cards

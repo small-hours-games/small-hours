@@ -163,6 +163,18 @@
   cursor: pointer;
 }
 .tc-well.tc-well-active:active { transform: scale(0.97); }
+.tc-well.tc-well-drawn {
+  border-color: #facc15;
+  background: rgba(250, 204, 21, 0.16);
+  box-shadow: 0 0 0 3px rgba(250, 204, 21, 0.45), 0 12px 26px -8px rgba(250, 204, 21, 0.55);
+  animation: tc-well-pulse 0.9s ease-out;
+}
+.tc-well.tc-well-drawn .tc-well-hint { display: block; color: #fde68a; }
+@keyframes tc-well-pulse {
+  0% { transform: scale(1.06); }
+  50% { transform: scale(0.99); }
+  100% { transform: scale(1); }
+}
 .tc-well-label {
   font-size: 10px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase;
   color: var(--night-muted, #a9b6d3);
@@ -386,6 +398,23 @@
 .tc-tv-result .tc-sheet-title { font-size: 2.2rem; margin-bottom: 16px; }
 .tc-tv-result .tc-reveal-head { font-size: 1.05rem; }
 .tc-tv-result .tc-meld-group .tc-card + .tc-card { margin-left: -22px; }
+.tc-knock-banner {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  margin: 0 auto 10px; width: fit-content; max-width: 100%;
+  padding: 8px 18px; border-radius: 999px;
+  font: 800 1rem/1.15 'Fredoka', 'Plus Jakarta Sans', sans-serif;
+  letter-spacing: 0.02em; text-align: center;
+  background: rgba(250, 204, 21, 0.18); border: 2px solid #facc15; color: #fef08a;
+  box-shadow: 0 10px 28px -8px rgba(250, 204, 21, 0.45);
+}
+.tc-knock-banner-gin { background: rgba(251, 146, 60, 0.22); border-color: #fb923c; color: #ffedd5; box-shadow: 0 10px 28px -8px rgba(251, 146, 60, 0.55); }
+.tc-knock-banner-undercut { background: rgba(251, 113, 133, 0.22); border-color: #fb7185; color: #ffe4e6; box-shadow: 0 10px 28px -8px rgba(251, 113, 133, 0.5); }
+.tc-tv-result .tc-knock-banner { font-size: 1.55rem; padding: 10px 28px; margin-bottom: 14px; }
+.tc-sheet-knock, .tc-tv-result.tc-result-pop { animation: tc-knock-pop 0.42s cubic-bezier(0.2, 1.3, 0.4, 1) both; }
+@keyframes tc-knock-pop {
+  from { opacity: 0; transform: scale(0.92) translateY(10px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
 .tc-standings { display: flex; flex-direction: column; gap: 8px; align-items: center; }
 .tc-standing { display: flex; align-items: center; gap: 12px; font-size: 1.3rem; font-weight: 800; }
 .tc-standing .tc-place { width: 2.2em; text-align: right; color: var(--night-muted, #a9b6d3); }
@@ -399,7 +428,7 @@
 @media (prefers-reduced-motion: reduce) {
   .tc-card, .tc-seat, .tc-well, .tc-cta, .tc-btn { transition: none; }
   .tc-dot-live { animation: none; }
-  .tc-shake { animation: none; }
+  .tc-shake, .tc-well.tc-well-drawn, .tc-sheet-knock, .tc-tv-result.tc-result-pop { animation: none; }
 }
 
 /* ---------- Phone: fit the card table to the screen ----------
@@ -478,7 +507,7 @@
 .tc-pile > .tc-card { grid-area: 1 / 1; }
 .tc-pile-card:not(.tc-pile-top) { filter: brightness(0.94); }
 .tc-pile-hot .tc-pile-top { box-shadow: 0 0 0 3px var(--tc-accent), var(--tc-elev-2); }
-.tc-pile-top.tc-land { animation: tc-land 0.36s cubic-bezier(0, 0, 0.2, 1) both; }
+.tc-pile-top.tc-land, .tc-top.tc-land { animation: tc-land 0.36s cubic-bezier(0, 0, 0.2, 1) both; }
 /* My own thrown card already flew here (tcThrowToPile): it only settles. */
 .tc-pile-top.tc-thud { animation: tc-thud 0.16s ease-out both; }
 @keyframes tc-thud { from { scale: 1.03 0.96; } to { scale: 1; } }
@@ -514,8 +543,10 @@
 }
 .tc-log-item + .tc-log-item { opacity: 0.72; }
 .tc-log-new { color: #fff; border-color: rgba(56, 189, 248, 0.5); animation: tc-log-in 0.3s ease both; }
-.tc-log-burn.tc-log-new { border-color: rgba(251, 146, 60, 0.7); }
-.tc-log-pickup .tc-log-text, .tc-log-blind-miss .tc-log-text { color: #fecdd3; }
+.tc-log-burn.tc-log-new, .tc-log-gr-gin.tc-log-new, .tc-log-gr-big-gin.tc-log-new { border-color: rgba(251, 146, 60, 0.7); }
+.tc-log-gr-draw-discard.tc-log-new, .tc-log-gr-take-upcard.tc-log-new { border-color: rgba(250, 204, 21, 0.65); }
+.tc-log-gr-knock.tc-log-new, .tc-log-gr-undercut.tc-log-new { border-color: rgba(52, 211, 153, 0.7); }
+.tc-log-pickup .tc-log-text, .tc-log-blind-miss .tc-log-text, .tc-log-gr-undercut .tc-log-text { color: #fecdd3; }
 .tc-log-cards { display: inline-flex; gap: 3px; flex: 0 0 auto; }
 .tc-log-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 @keyframes tc-log-in { from { opacity: 0; translate: 0 -6px; } }
@@ -549,7 +580,7 @@
 .tc-tv-seat-chips { display: flex; gap: 4px; }
 
 @media (prefers-reduced-motion: reduce) {
-  .tc-pile-top.tc-land, .tc-pile-top.tc-thud, .tc-log-new { animation: none; }
+  .tc-pile-top.tc-land, .tc-top.tc-land, .tc-pile-top.tc-thud, .tc-log-new { animation: none; }
 }
 
 /* Phone: the log sits in the table, under the rule line */

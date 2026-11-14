@@ -26,6 +26,12 @@
       if (msg.phase === 'finished') return 'Game over';
       if (!msg.isMyTurn) {
         if (msg.phase === 'first_turn') return opp + ' is deciding on the upcard';
+        if (msg.turnPhase === 'discard' && msg.lastEvent && msg.lastEvent.by !== state.playerId) {
+          const ev = msg.lastEvent;
+          if (ev.kind === 'gr-draw-stock') return opp + ' drew from stock — discarding';
+          if (ev.kind === 'gr-draw-discard' && ev.cards && ev.cards[0]) return opp + ' took ' + tcCardShort(ev.cards[0]) + ' from discard — discarding';
+          if (ev.kind === 'gr-take-upcard' && ev.cards && ev.cards[0]) return opp + ' took upcard ' + tcCardShort(ev.cards[0]) + ' — discarding';
+        }
         return opp + (msg.turnPhase === 'draw' ? ' is drawing' : ' is discarding');
       }
       if (msg.phase === 'first_turn') return 'Take the upcard or decline it';
@@ -69,15 +75,48 @@
       const canStock = drawPhase && stockCount > 0;
       const canTakeDiscard = myTurn && !!msg.discardTop && (msg.phase === 'first_turn' || drawPhase);
       const canDropDiscard = discardPhase && !!state.grSelectedCard && state.grSelectedCard !== msg.lastDrawnCardId;
+      const ev = msg.lastEvent;
+      const freshEvent = !!ev && ev.seq !== state.grSeenSeq;
+      const oppDrewStock = !myTurn && msg.turnPhase === 'discard' && ev && ev.by === oppId && ev.kind === 'gr-draw-stock';
+      const oppDrewDiscard = !myTurn && msg.turnPhase === 'discard' && ev && ev.by === oppId && (ev.kind === 'gr-draw-discard' || ev.kind === 'gr-take-upcard');
+      const oppName = tcName(oppId, msg);
+      const stockWell = document.getElementById('grStockWell');
+      const discardWell = document.getElementById('grDiscardWell');
       document.getElementById('grStockStack').innerHTML = renderTableStack(null, stockCount, { size: 'md', facedown: true, emptyLabel: 'Empty', highlight: canStock });
       document.getElementById('grStockCount').textContent = stockCount + ' left';
-      document.getElementById('grStockHint').textContent = canStock ? 'Tap to draw' : '';
-      document.getElementById('grStockWell').classList.toggle('tc-well-active', canStock);
+      document.getElementById('grStockHint').textContent = canStock ? 'Tap to draw' : oppDrewStock ? '← ' + oppName + ' drew' : '';
+      stockWell.classList.toggle('tc-well-active', canStock);
+      stockWell.classList.toggle('tc-well-drawn', oppDrewStock);
       document.getElementById('grDiscardStack').innerHTML = renderTableStack(preview, discardCount, { size: 'md', emptyLabel: 'Empty', highlight: canTakeDiscard || canDropDiscard });
       document.getElementById('grDiscardCount').textContent = discardCount + (discardCount === 1 ? ' card' : ' cards');
-      document.getElementById('grDiscardHint').textContent = canDropDiscard ? 'Tap to discard' : canTakeDiscard ? (msg.phase === 'first_turn' ? 'Tap to take upcard' : 'Tap to take') : '';
-      document.getElementById('grDiscardWell').classList.toggle('tc-well-active', canTakeDiscard || canDropDiscard);
+      document.getElementById('grDiscardHint').textContent = canDropDiscard ? 'Tap to discard'
+        : canTakeDiscard ? (msg.phase === 'first_turn' ? 'Tap to take upcard' : 'Tap to take')
+        : oppDrewDiscard ? '← ' + oppName + ' took' + (ev.cards && ev.cards[0] ? ' ' + tcCardShort(ev.cards[0]) : '') : '';
+      discardWell.classList.toggle('tc-well-active', canTakeDiscard || canDropDiscard);
+      discardWell.classList.toggle('tc-well-drawn', oppDrewDiscard);
       document.getElementById('grTable').hidden = !playing;
+
+      // Move log + landing bounce on opponent discard + haptics & toast on notable opponent moves
+      state.grLog = tcLogPush(state.grLog, ev, 6);
+      state.grSeenSeq = ev ? ev.seq : null;
+      if (freshEvent && ev.kind === 'gr-discard' && ev.by !== me) {
+        const top = document.querySelector('#grDiscardStack .tc-top');
+        if (top) top.classList.add('tc-land');
+      }
+      if (freshEvent && ev.by !== me) {
+        if (ev.kind === 'gr-knock' || ev.kind === 'gr-gin' || ev.kind === 'gr-big-gin' || ev.kind === 'gr-undercut') {
+          if (navigator.vibrate) navigator.vibrate([40, 50, 80]);
+          const knockMsg = (ev.kind === 'gr-gin') ? '🔥 ' + oppName + ' got Gin!'
+            : (ev.kind === 'gr-big-gin') ? '🌟 ' + oppName + ' got Big Gin!'
+            : '🔔 ' + oppName + ' knocked!';
+          if (typeof showToast === 'function') showToast(knockMsg, 'info');
+        } else if (ev.kind === 'gr-draw-discard' || ev.kind === 'gr-take-upcard') {
+          if (navigator.vibrate) navigator.vibrate(25);
+        }
+      }
+      document.getElementById('grLog').innerHTML = playing
+        ? renderMoveLog(state.grLog, { name: id => (id === me ? 'You' : tcName(id, msg)), avatar: id => tcAvatar(id), max: 3 })
+        : '';
 
       // Hand rack with meld glows
       const melds = msg.myMelds || [];
@@ -134,6 +173,7 @@
       // Result sheet
       const sheet = document.getElementById('grSheet');
       sheet.hidden = playing;
+      sheet.classList.toggle('tc-sheet-knock', !playing && !!msg.knocker);
       if (!playing) renderGrScoring(msg);
       tcSqueeze('ginRummySection');
       tcLaunchArrivals(arrivals, hand, document.getElementById(fromStock ? 'grStockStack' : 'grDiscardStack'), handEl);
@@ -234,7 +274,17 @@
       const hr = msg.handResult || {};
       const me = state.playerId;
       const typeLabels = { knock: 'Knock', undercut: 'Undercut!', gin: 'Gin!', bigGin: 'Big Gin!', cancelled: 'Stock ran out' };
-      let html = '<div class="tc-sheet-kicker">' + escapeHtml(msg.phase === 'finished' ? 'Game over' : (typeLabels[hr.type] || 'Hand over')) + '</div>';
+      let html = '';
+      if (msg.knocker) {
+        const knockerName = msg.knocker === me ? 'You' : tcName(msg.knocker, msg);
+        const bannerCls = hr.type === 'undercut' ? ' tc-knock-banner-undercut' : (hr.type === 'gin' || hr.type === 'bigGin') ? ' tc-knock-banner-gin' : '';
+        const bannerText = hr.type === 'gin' ? '🔥 ' + knockerName + ' got Gin!'
+          : hr.type === 'bigGin' ? '🌟 ' + knockerName + ' got Big Gin!'
+          : hr.type === 'undercut' ? '💥 ' + knockerName + ' knocked — Undercut!'
+          : '🔔 ' + knockerName + ' knocked!';
+        html += '<div class="tc-knock-banner' + bannerCls + '">' + escapeHtml(bannerText) + '</div>';
+      }
+      html += '<div class="tc-sheet-kicker">' + escapeHtml(msg.phase === 'finished' ? 'Game over' : (typeLabels[hr.type] || 'Hand over')) + '</div>';
       if (hr.type === 'cancelled') {
         html += '<div class="tc-sheet-title">No points this hand</div>';
       } else if (hr.winner) {
@@ -259,5 +309,5 @@
       section: 'ginRummySection',
       render: renderGinRummyState,
       redraw() { if (state.grLastMsg) renderGinRummyState(state.grLastMsg); },
-      reset() { state.grSelectedCard = null; },
+      reset() { state.grSelectedCard = null; state.grLog = []; state.grSeenSeq = null; },
     });

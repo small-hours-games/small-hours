@@ -665,11 +665,22 @@ function tcCardsShort(cards) {
 function tcEventText(ev, name) {
   var who = name(ev.by);
   var n = tcNum(ev.count);
+  var pts = ev.points != null ? ' (+' + tcNum(ev.points) + ')' : '';
   switch (ev.kind) {
     case 'play': return who + ' played ' + tcCardsShort(ev.cards);
     case 'burn': return who + ' burned the pile with ' + tcCardsShort(ev.cards);
     case 'pickup': return who + ' picked up ' + n + (n === 1 ? ' card' : ' cards');
     case 'blind-miss': return who + ' flipped ' + tcCardsShort(ev.cards) + ' blind and picked up ' + n;
+    case 'gr-take-upcard': return who + ' took the upcard ' + tcCardsShort(ev.cards);
+    case 'gr-decline-upcard': return who + ' declined the upcard';
+    case 'gr-draw-stock': return who + ' drew from stock';
+    case 'gr-draw-discard': return who + ' took ' + tcCardsShort(ev.cards) + ' from discard';
+    case 'gr-discard': return who + ' discarded ' + tcCardsShort(ev.cards);
+    case 'gr-knock': return who + ' knocked' + pts;
+    case 'gr-gin': return who + ' got Gin!' + pts;
+    case 'gr-big-gin': return who + ' got Big Gin!' + pts;
+    case 'gr-undercut': return who + ' knocked — undercut!' + pts;
+    case 'gr-cancelled': return 'Stock ran out — hand cancelled';
     default: return who + ' moved';
   }
 }
@@ -680,11 +691,11 @@ function renderMoveLog(log, opts) {
   var items = (log || []).slice(-(opts.max || 3)).reverse();
   if (!items.length) return '';
   return '<ol class="tc-log" aria-label="Recent moves">' + items.map(function (ev, i) {
-    var cards = ev.kind === 'pickup'
+    var cards = (ev.kind === 'pickup' || ev.kind === 'gr-draw-stock')
       ? renderCardChip(null)
       : (ev.cards || []).slice(0, 4).map(renderCardChip).join('');
     return '<li class="tc-log-item tc-log-' + tcEscape(ev.kind) + (i === 0 ? ' tc-log-new' : '') + '">' +
-      '<span class="tc-log-cards">' + cards + '</span>' +
+      (cards ? '<span class="tc-log-cards">' + cards + '</span>' : '') +
       '<span class="tc-log-text">' + (opts.avatar ? tcEscape(opts.avatar(ev.by)) + ' ' : '') +
         tcEscape(tcEventText(ev, opts.name || String)) + '</span></li>';
   }).join('') + '</ol>';
@@ -886,6 +897,25 @@ function tcSweepTo(fromEl, toRect, count) {
     ], { duration: TC_DRAW_MS, delay: i * 140, easing: 'cubic-bezier(.5, 0, .2, 1)', fill: 'both' });
     a.onfinish = (function (g) { return function () { g.remove(); }; })(ghost);
   }
+}
+
+/** TV: a single drawn card flies from a pile/stock to a player's seat. */
+function tcFlyFromPile(card, fromEl, toRect, opts) {
+  opts = opts || {};
+  if (!fromEl || !toRect || typeof document === 'undefined' || tcReducedMotion()) return null;
+  var source = fromEl.querySelector('.tc-top, .tc-pile-top, .tc-card') || fromEl;
+  var from = source.getBoundingClientRect();
+  if (!from.width) return null;
+  var w = from.width;
+  var ghost = tcGhost(opts.facedown || !card ? null : card, { left: from.left, top: from.top, width: w }, !!(opts.facedown || !card));
+  var dx = (toRect.left + toRect.width / 2) - (from.left + from.width / 2);
+  var dy = (toRect.top + toRect.height / 2) - (from.top + from.height / 2);
+  var anim = ghost.animate([
+    { transform: 'translate(0, 0) rotate(0deg) scale(1)', opacity: 1 },
+    { transform: 'translate(' + dx.toFixed(0) + 'px, ' + dy.toFixed(0) + 'px) rotate(' + (dx >= 0 ? 10 : -10) + 'deg) scale(0.68)', opacity: 0 },
+  ], { duration: TC_DRAW_MS, easing: 'cubic-bezier(.4, 0, .2, 1)', fill: 'both' });
+  anim.onfinish = function () { ghost.remove(); if (opts.onDone) opts.onDone(); };
+  return anim;
 }
 
 /**
