@@ -727,22 +727,23 @@
           break;
 
         case 'SURRENDER_LOBBY':
-          closeSurrenderModal();
-          hideRoundCountdownUI();
-          SH.game(state.gameType)?.reset?.();
-          state.gameType = null;
-          state.gamePhase = null;
-          state.ready = false;
-          showSection('lobbySection');
-          showToast((msg.username || 'Player') + ' surrendered — returned to lobby', 'info');
+          returnToLobby((msg.username || 'Player') + ' surrendered — returned to lobby');
           break;
 
         case 'PLAYER_SURRENDERED':
-          showToast((msg.username || 'Player') + ' surrendered', 'info');
+          if (msg.playerId === state.playerId) {
+            returnToLobby('You surrendered — returned to lobby');
+          } else {
+            showToast((msg.username || 'Player') + ' surrendered', 'info');
+          }
           break;
 
         case 'GAME_STATE':
           if (msg.ack) clearOutbox(msg.ack);
+          if (msg.phase === 'finished' && msg.surrenderedBy === state.playerId) {
+            returnToLobby('You surrendered — returned to lobby');
+            break;
+          }
           handleGameState(msg);
           break;
 
@@ -831,6 +832,17 @@
       if (!modal) return;
       modal.classList.remove('is-open');
       modal.hidden = true;
+    }
+
+    function returnToLobby(toastMsg) {
+      closeSurrenderModal();
+      hideRoundCountdownUI();
+      SH.game(state.gameType)?.reset?.();
+      state.gameType = null;
+      state.gamePhase = null;
+      state.ready = false;
+      showSection('lobbySection');
+      if (toastMsg) showToast(toastMsg, 'info');
     }
 
     function confirmSurrender() {
