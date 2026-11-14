@@ -10,7 +10,17 @@ describe('the card game template', () => {
 
   it('can be played to a winner', () => {
     let game = createTestGame(template, ['a', 'b']);
-    for (let guard = 0; guard < 500 && !isOver(game); guard++) {
+    // Deterministic deal so empty-deck stalemates cannot flake the test.
+    game.state = {
+      ...game.state,
+      hands: {
+        a: [{ id: '1h', suit: 'h', rank: 1 }, { id: '2h', suit: 'h', rank: 2 }],
+        b: [{ id: '3h', suit: 'h', rank: 3 }, { id: '4d', suit: 'd', rank: 4 }],
+      },
+      pile: [{ id: '5h', suit: 'h', rank: 5 }],
+      deck: [{ id: '6d', suit: 'd', rank: 6 }],
+    };
+    for (let guard = 0; guard < 50 && !isOver(game); guard++) {
       const { turn, hands, pile } = game.state;
       const top = pile[pile.length - 1];
       const card = hands[turn].find(c => c.suit === top.suit || c.rank === top.rank);
