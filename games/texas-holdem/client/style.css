@@ -24,7 +24,8 @@
 .th-tv-seat { background: rgba(0, 0, 0, 0.28); border: 1px solid rgba(255, 255, 255, 0.14); border-radius: 14px; padding: 10px 12px; min-width: 155px; display: flex; flex-direction: column; gap: 6px; align-items: center; }
 .th-tv-seat-turn { border-color: #facc15; box-shadow: 0 0 0 2px rgba(250, 204, 21, 0.35); }
 .th-tv-seat-fold { opacity: 0.55; }
-.th-tv-seat-head { display: flex; justify-content: space-between; width: 100%; gap: 8px; font-size: 0.92rem; }
+.th-tv-seat-head { display: flex; justify-content: space-between; align-items: center; width: 100%; gap: 8px; font-size: 0.92rem; }
+.th-tv-seat-who { display: flex; align-items: center; gap: 6px; min-width: 0; }
 .th-tv-tags { display: flex; gap: 4px; align-items: center; flex-wrap: wrap; justify-content: center; }
 .th-tag { font-size: 0.7rem; font-weight: 700; padding: 1px 6px; border-radius: 999px; background: rgba(255, 255, 255, 0.16); }
 .th-tag-d { background: #facc15; color: #0f172a; }

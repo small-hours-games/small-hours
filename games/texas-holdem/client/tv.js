@@ -2,12 +2,41 @@
 
     var lastThState = {};
 
+    function thAiReact(prev, msg) {
+      if (!SH.aiStage) return;
+      if (msg.phase === 'showdown' && prev.phase !== 'showdown' && msg.showdown?.winners?.length) {
+        msg.showdown.winners.forEach(w => {
+          if (SH.aiPersona(w.playerId)) SH.aiStage.quip(w.playerId, 'holdem', 'win', msg.handNumber);
+        });
+        return;
+      }
+      if (msg.phase === 'showdown' || msg.phase === 'finished') return;
+      (msg.players || []).forEach(id => {
+        if (!SH.aiPersona(id)) return;
+        if (msg.folded?.[id] && !prev.folded?.[id]) {
+          SH.aiStage.quip(id, 'holdem', 'fold', msg.handNumber);
+        } else if (msg.allIn?.[id] && !prev.allIn?.[id]) {
+          SH.aiStage.quip(id, 'holdem', 'allIn', msg.handNumber);
+        } else if ((msg.streetBets?.[id] || 0) > (prev.streetBets?.[id] || 0) && (msg.currentBet || 0) > (prev.currentBet || 0)) {
+          SH.aiStage.quip(id, 'holdem', 'raise', msg.pot);
+        }
+      });
+    }
+
     function renderHoldemTv(msg) {
       const names = state.playerNames || msg.playerNames || {};
       const boardLen = (msg.board || []).length;
       if (lastThState.boardLen != null && boardLen > lastThState.boardLen) audio.play('place');
       if (msg.phase === 'finished' && lastThState.phase !== 'finished') audio.play('win');
-      lastThState = { boardLen, phase: msg.phase };
+      const prev = lastThState;
+      lastThState = {
+        boardLen,
+        phase: msg.phase,
+        folded: { ...(msg.folded || {}) },
+        allIn: { ...(msg.allIn || {}) },
+        streetBets: { ...(msg.streetBets || {}) },
+        currentBet: msg.currentBet || 0,
+      };
 
       let status = 'Hand ' + msg.handNumber + '/' + msg.maxHands + ' · ' + msg.phase.toUpperCase();
       if (msg.phase === 'finished') status = (names[msg.winner] || 'Someone') + ' wins the table!';
@@ -47,15 +76,17 @@
         const streetBet = msg.streetBets?.[id] || 0;
         const handLabel = handNames[id] ? '<div class="th-tv-handname">' + escapeHtml(handNames[id]) + '</div>' : '';
 
-        return '<div class="th-tv-seat' + (isTurn ? ' th-tv-seat-turn' : '') + (isFolded ? ' th-tv-seat-fold' : '') + '">' +
-          '<div class="th-tv-seat-head"><b>' + escapeHtml(names[id] || id) + '</b><span class="tc-mono">' + tcNum(msg.chips?.[id] ?? 0) + '</span></div>' +
+        const av = SH.aiPersona(id)?.avatar || (state.playerAvatars || {})[id] || '';
+        return '<div class="th-tv-seat' + (isTurn ? ' th-tv-seat-turn' : '') + (isFolded ? ' th-tv-seat-fold' : '') + '" data-player-id="' + escapeHtml(id) + '">' +
+          '<div class="th-tv-seat-head"><div class="th-tv-seat-who"><span class="ai-seat-slot">' + av + '</span><b>' + escapeHtml(names[id] || id) + '</b></div><span class="tc-mono">' + tcNum(msg.chips?.[id] ?? 0) + '</span></div>' +
           '<div class="th-tv-tags">' + badges.join('') + (streetBet > 0 ? '<span class="tc-mono th-tv-bet">Bet ' + tcNum(streetBet) + '</span>' : '') + '</div>' +
           (cards ? '<div class="th-tv-cards">' + cards + '</div>' : '') +
           handLabel +
         '</div>';
       }).join('');
 
-      document.getElementById('gameContent').innerHTML = '<div class="tc-tv tc-felt th-tv">' +
+      const root = document.getElementById('gameContent');
+      root.innerHTML = '<div class="tc-tv tc-felt th-tv">' +
         '<div class="tc-tv-status"><span class="tc-dot' + (msg.turn ? ' tc-dot-live' : '') + '"></span>' + escapeHtml(status) + '</div>' +
         '<div class="th-tv-center">' +
           '<div class="th-tv-pot">Pot <b class="tc-mono">' + tcNum(msg.pot || 0) + '</b></div>' +
@@ -64,10 +95,22 @@
         '<div class="th-tv-seats">' + seatsHtml + '</div>' +
       '</div>';
       tcFitTv();
+      if (SH.aiStage) {
+        const winners = new Set((msg.showdown?.winners || []).map(w => w.playerId));
+        SH.aiStage.mountSeats(root, msg.players || [], id => {
+          if (winners.has(id)) return { mood: 'calm', arm: 1, boost: 0.8 };
+          if (msg.folded?.[id]) return { mood: 'worried', arm: 0, boost: 0 };
+          if (msg.allIn?.[id]) return { mood: 'calm', arm: 1, boost: 1 };
+          return { mood: 'calm', arm: msg.turn === id ? 0.4 : 0, boost: 0 };
+        });
+        SH.aiStage.intro(msg.players || []);
+        thAiReact(prev, msg);
+      }
     }
 
     SH.registerGame('texas-holdem', {
       render: renderHoldemTv,
+      reset() { lastThState = {}; SH.aiStage?.reset(); },
       alwaysScoreboard: true,
       scoreboard(msg, { names }) {
         const chips = msg.chips || {};

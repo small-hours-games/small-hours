@@ -32,25 +32,25 @@
   <!-- Top bar -->
   <header class="bg-white/90 backdrop-blur-md border-b border-sky-100 sticky top-0 z-50">
     <div class="max-w-md mx-auto px-4 h-14 flex items-center justify-between gap-2">
-      <a href="/" class="flex items-center gap-2.5 min-w-0">
-        <img class="brand-symbol" src="/images/smallhours-mark.svg" alt="" width="36" height="36">
-        <span class="brand-phone-name">Small<span class="brand-accent">hours</span></span>
+      <a href="/" class="flex items-center gap-2 min-w-0 shrink-0">
+        <img class="brand-symbol" src="/images/smallhours-mark.svg" alt="" width="34" height="34">
+        <span class="brand-phone-name hidden sm:inline">Small<span class="brand-accent">hours</span></span>
       </a>
-      <div class="flex items-center gap-2 min-w-0">
-        <button id="shareBtn" onclick="shareRoom()" aria-label="Share room" class="hidden w-8 h-8 rounded-full bg-sky-50 hover:bg-sky-100 text-sky-700 items-center justify-center">
+      <div class="flex items-center gap-1.5 sm:gap-2 min-w-0">
+        <button id="shareBtn" onclick="shareRoom()" aria-label="Share room" class="hidden w-8 h-8 rounded-full bg-sky-50 hover:bg-sky-100 text-sky-700 items-center justify-center shrink-0">
           <i class="fa-solid fa-share-nodes text-sm"></i>
         </button>
-        <span class="font-mono font-bold text-sky-900 tracking-widest text-xs bg-sky-100 border border-sky-200 px-2 py-0.5 rounded-md" id="roomBadge">----</span>
-        <button type="button" id="surrenderBtn" onclick="openSurrenderModal()" hidden aria-label="Surrender game" class="px-2 py-1 rounded-full bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-700 text-[11px] font-bold items-center gap-1">
+        <span class="font-mono font-bold text-sky-900 tracking-widest text-xs bg-sky-100 border border-sky-200 px-2 py-0.5 rounded-md shrink-0" id="roomBadge">----</span>
+        <button type="button" id="surrenderBtn" onclick="openSurrenderModal()" hidden aria-label="Surrender game" class="px-2 py-1 rounded-full bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-700 text-[11px] font-bold items-center gap-1 shrink-0">
           <i class="fa-solid fa-flag text-[10px]" aria-hidden="true"></i>
-          <span>Surrender</span>
+          <span class="hidden sm:inline">Surrender</span>
         </button>
-        <button type="button" id="fullscreenBtn" onclick="toggleFullscreen()" aria-label="Full screen" aria-pressed="false" hidden class="fullscreen-btn w-8 h-8 rounded-full items-center justify-center">
+        <button type="button" id="fullscreenBtn" onclick="toggleFullscreen()" aria-label="Full screen" aria-pressed="false" hidden class="fullscreen-btn w-8 h-8 rounded-full items-center justify-center shrink-0">
           <i class="fa-solid fa-expand text-sm" aria-hidden="true"></i>
         </button>
         <button type="button" id="myAvatarBtn" onclick="openAvatarPicker()" aria-label="Change your nickname or avatar" class="my-avatar-chip flex items-center gap-1.5 bg-white border border-sky-200 rounded-full pl-1 pr-2.5 py-0.5 min-w-0">
-          <span class="text-lg leading-none" id="myAvatar" aria-hidden="true">&#128056;</span>
-          <span class="text-xs font-bold text-slate-700 truncate max-w-[6rem]" id="myName">Player</span>
+          <span class="text-lg leading-none shrink-0" id="myAvatar" aria-hidden="true">&#128056;</span>
+          <span class="text-xs font-bold text-slate-700 truncate max-w-[7.5rem]" id="myName">Player</span>
         </button>
       </div>
     </div>
@@ -821,12 +821,16 @@
 
     function openSurrenderModal() {
       const modal = document.getElementById('surrenderModal');
-      if (modal) modal.hidden = false;
+      if (!modal) return;
+      modal.hidden = false;
+      requestAnimationFrame(() => modal.classList.add('is-open'));
     }
 
     function closeSurrenderModal() {
       const modal = document.getElementById('surrenderModal');
-      if (modal) modal.hidden = true;
+      if (!modal) return;
+      modal.classList.remove('is-open');
+      modal.hidden = true;
     }
 
     function confirmSurrender() {

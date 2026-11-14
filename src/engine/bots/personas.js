@@ -20,6 +20,24 @@ export const AI_PERSONAS = [
       pickup: ['Recalculating…', 'That was… within the margin of error.'],
       out: ['Task complete. Logging off.', 'As calculated.'],
       blind: ['Unexpected input.', 'That card was not in my model.'],
+      gin: {
+        knock: ['Deadwood within tolerance. Knocking.', 'Optimal moment to knock.'],
+        gin: ['Zero deadwood. Pure precision.', 'Gin. As modeled.'],
+        undercut: ['Undercut detected. Thank you for the bonus.'],
+        drawDiscard: ['That card completes my sequence.'],
+      },
+      holdem: {
+        raise: ['Adjusting pot odds upward.', 'Statistically, I like my hand.'],
+        allIn: ['Maximum commitment. Run the simulation.'],
+        fold: ['Negative EV. Folding.', 'Disengaging from this pot.'],
+        win: ['Expected value realized.', 'Probability favours the patient.'],
+      },
+      sjuan: {
+        play: ['Extending the sequence.', 'Logical placement.'],
+        draw: ['Acquiring additional data.', 'Drawing one.'],
+        stuck: ['No valid branches remain.'],
+        out: ['Hand cleared. Efficient.', 'Zero cards remaining.'],
+      },
     },
   },
   {
@@ -37,6 +55,24 @@ export const AI_PERSONAS = [
       pickup: ['Error 404: cards not found. Oh, there they are.', 'Oopsie-daisy.dll'],
       out: ['Byeee! *disconnects*', 'I won? That was not a bug?'],
       blind: ['Random is my middle name!', 'Glitched it.'],
+      gin: {
+        knock: ['KNOCK KNOCK! Who’s there? My melds!', 'Ship it! Knocking!'],
+        gin: ['GIN!! Did I break the deck?!', 'Zero deadwood.exe!'],
+        undercut: ['YOINK! Undercut!!'],
+        drawDiscard: ['Ooooh, shiny! Mine now!'],
+      },
+      holdem: {
+        raise: ['B-b-bump it up!', 'Why? Because chaos!'],
+        allIn: ['ALL THE CHIPS! YOLO.exe!'],
+        fold: ['Noping out!', 'Crash! Rebooting next hand.'],
+        win: ['Wait, that worked?!', 'Glitched straight to the pot!'],
+      },
+      sjuan: {
+        play: ['Boop! Fits right there!', '7-up! Wait, wrong game.'],
+        draw: ['More cards = more fun, right?'],
+        stuck: ['404: playable card not found.'],
+        out: ['Byeee! *disconnects*', 'I won? That was not a bug?'],
+      },
     },
   },
   {
@@ -54,6 +90,24 @@ export const AI_PERSONAS = [
       pickup: ['Hmm. Most irregular.', 'I shall study these closely.'],
       out: ['Class dismissed.', 'A fine result, if I may say.'],
       blind: ['Fortune favours… someone else.', 'Most unscientific.'],
+      gin: {
+        knock: ['I believe that concludes my research. Knock!', 'Low deadwood, just as taught.'],
+        gin: ['A flawless Gin! Take notes, class.'],
+        undercut: ['Ah! A classic undercut.'],
+        drawDiscard: ['Precisely the specimen I needed.'],
+      },
+      holdem: {
+        raise: ['A measured wager.', 'Let us test your hypothesis.'],
+        allIn: ['I stake my entire tenure on this!'],
+        fold: ['Discretion is the better part of valour.', 'Too rich for my grant.'],
+        win: ['Peer-reviewed victory!', 'Just as I deduced.'],
+      },
+      sjuan: {
+        play: ['Orderly, as it should be.', 'Right on the seven.'],
+        draw: ['Back to the library for another card.'],
+        stuck: ['A temporary impasse.'],
+        out: ['Class dismissed.', 'A fine result, if I may say.'],
+      },
     },
   },
   {
@@ -71,6 +125,24 @@ export const AI_PERSONAS = [
       pickup: ['Pit stop. Back in a sec!', 'Speed bump!'],
       out: ['Checkered flag!', 'Too fast for you!'],
       blind: ['Full send!', 'Didn’t even look!'],
+      gin: {
+        knock: ['Too slow! Knocking NOW!', 'Pedal to the metal — KNOCK!'],
+        gin: ['GIN! New lap record!'],
+        undercut: ['Overtaken on the inside! Undercut!'],
+        drawDiscard: ['Grab and go!'],
+      },
+      holdem: {
+        raise: ['Raise! Keep up!', 'More gas!'],
+        allIn: ['FULL THROTTLE! ALL IN!'],
+        fold: ['Braking hard. Next hand!'],
+        win: ['VROOM! Ship the pot!', 'First across the line!'],
+      },
+      sjuan: {
+        play: ['Snap! Next!', 'Full speed!'],
+        draw: ['Quick pit stop.'],
+        stuck: ['Out of fuel!'],
+        out: ['Checkered flag!', 'Too fast for you!'],
+      },
     },
   },
   {
@@ -85,6 +157,24 @@ export const AI_PERSONAS = [
       pickup: ['Pick up… pick up…'],
       out: ['Out… out… out.'],
       blind: ['Blind… blind…'],
+      gin: {
+        knock: ['Knock… knock…'],
+        gin: ['Gin… gin… gin.'],
+        undercut: ['Undercut… cut…'],
+        drawDiscard: ['Mine… mine…'],
+      },
+      holdem: {
+        raise: ['Raise… raise…'],
+        allIn: ['All in… in… in…'],
+        fold: ['Fold… fold…'],
+        win: ['Pot… pot… pot.'],
+      },
+      sjuan: {
+        play: ['Play… play…'],
+        draw: ['Draw… draw…'],
+        stuck: ['Stuck… stuck…'],
+        out: ['Out… out… out.'],
+      },
     },
   },
 ];

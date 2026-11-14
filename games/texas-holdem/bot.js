@@ -1,4 +1,5 @@
 import { evaluateBestHand } from './hand-eval.js';
+import { personaFor } from '../../src/engine/bots/personas.js';
 
 function preflopScore(hand) {
   if (!hand || hand.length < 2) return 0;
@@ -11,6 +12,14 @@ function preflopScore(hand) {
   return ((hi + lo) / 28) * 0.55 + (suited ? 0.08 : 0) + (hi - lo <= 3 ? 0.05 : 0);
 }
 
+/** Deterministic per-hand roll so each bot's bluffs/quirks stay consistent for the same state. */
+function handRoll(state, botId) {
+  let h = 13;
+  const key = botId + ':' + (state.handNumber || 1) + ':' + state.phase + ':' + (state.pot || 0);
+  for (let i = 0; i < key.length; i++) h = (h * 31 + key.charCodeAt(i)) | 0;
+  return (Math.abs(h) % 100) / 100;
+}
+
 export function chooseHoldemAction(state, botId) {
   if (state.phase === 'showdown') {
     const hasHuman = state.players.some(id => !id.startsWith('bot_'));
@@ -21,6 +30,9 @@ export function chooseHoldemAction(state, botId) {
   }
 
   if (state.phase === 'finished' || state.turn !== botId) return null;
+
+  const style = personaFor(botId)?.style || 'calculating';
+  const roll = handRoll(state, botId);
 
   const chips = state.chips[botId] || 0;
   const streetBet = state.streetBets[botId] || 0;
@@ -35,20 +47,28 @@ export function chooseHoldemAction(state, botId) {
     if (ev) strength = Math.min(1, 0.25 + ev.category * 0.14);
   }
 
+  const raiseThreshold = style === 'aggressive' ? 0.52 : style === 'cautious' ? 0.76 : 0.68;
+  const reraiseThreshold = style === 'aggressive' ? 0.70 : style === 'cautious' ? 0.88 : 0.82;
+  const foldCutoff = style === 'cautious' ? 0.45 : style === 'aggressive' ? 0.28 : 0.38;
+
   if (toCall === 0) {
-    if (strength > 0.68 && maxTo > state.currentBet && chips > state.minRaise) {
-      return { type: 'raise', to: minRaiseTo };
+    if ((strength > raiseThreshold || (style === 'chaotic' && roll < 0.22)) && maxTo > state.currentBet && chips > state.minRaise) {
+      const bump = style === 'aggressive' ? Math.min(maxTo, minRaiseTo + state.minRaise) : minRaiseTo;
+      return { type: 'raise', to: bump };
     }
     return { type: 'check' };
   }
 
-  if (toCall > chips * 0.5 && strength < 0.55) {
+  if (style === 'chaotic' && roll < 0.15 && maxTo > minRaiseTo && chips > toCall + state.minRaise) {
+    return { type: 'raise', to: minRaiseTo };
+  }
+  if (toCall > chips * 0.5 && strength < (style === 'cautious' ? 0.65 : 0.55)) {
     return { type: 'fold' };
   }
-  if (toCall > 40 && strength < 0.38) {
+  if (toCall > 40 && strength < foldCutoff) {
     return { type: 'fold' };
   }
-  if (strength > 0.82 && maxTo > minRaiseTo && chips > toCall + state.minRaise) {
+  if (strength > reraiseThreshold && maxTo > minRaiseTo && chips > toCall + state.minRaise) {
     return { type: 'raise', to: minRaiseTo };
   }
   return { type: 'call' };

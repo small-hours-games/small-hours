@@ -64,6 +64,7 @@
         if (msg.stockCount < lastGrState.stockCount) audio.play('draw');
         if (msg.discardCount > lastGrState.discardCount) audio.play('place');
       }
+      const prevPhase = lastGrState.phase;
       lastGrState = { handNumber: msg.handNumber, phase: msg.phase, stockCount: msg.stockCount, discardCount: msg.discardCount };
 
       const current = msg.currentPlayer;
@@ -148,11 +149,34 @@
       html += '</div>';
       content.innerHTML = html;
       tcFitTv();
+      if (SH.aiStage) {
+        SH.aiStage.mountSeats(content, pids, id => {
+          if (!playing && hr.winner === id) return { mood: 'calm', arm: 1, boost: 0.7 };
+          if (!playing && hr.winner && hr.winner !== id) return { mood: 'worried', arm: 0, boost: 0 };
+          return { mood: 'calm', arm: playing && current === id ? 0.35 : 0, boost: 0 };
+        });
+        SH.aiStage.intro(pids);
+        if (freshEvent && ev && SH.aiPersona(ev.by)) {
+          if (ev.kind === 'gr-draw-discard' || ev.kind === 'gr-take-upcard') {
+            SH.aiStage.quip(ev.by, 'gin', 'drawDiscard', ev.seq);
+          }
+        }
+        if (!playing && prevPhase !== msg.phase) {
+          if (hr.type === 'gin' || hr.type === 'bigGin') {
+            if (SH.aiPersona(msg.knocker)) SH.aiStage.quip(msg.knocker, 'gin', 'gin', msg.handNumber);
+          } else if (hr.type === 'undercut') {
+            if (SH.aiPersona(hr.winner)) SH.aiStage.quip(hr.winner, 'gin', 'undercut', msg.handNumber);
+          } else if (hr.type === 'knock' && SH.aiPersona(msg.knocker)) {
+            SH.aiStage.quip(msg.knocker, 'gin', 'knock', msg.handNumber);
+          }
+        }
+      }
       if (freshEvent && playing) tvAnimateGrEvent(ev);
     }
 
     SH.registerGame('gin-rummy', {
       render: renderGinRummy,
+      reset() { lastGrState = {}; grLog = []; grSeenSeq = null; SH.aiStage?.reset(); },
       scoreboard(msg) {
         return msg.handNumber != null ? { roundLabel: 'Hand ' + msg.handNumber } : {};
       },
