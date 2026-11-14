@@ -851,6 +851,39 @@ describe('ws-adapter - AI opponents for a lone player', () => {
     expect(ws._sent.some(m => m.type === 'ROUND_COUNTDOWN')).toBe(false);
   });
 
+  it('does not emit ROUND_COUNTDOWN for blackjack or texas-holdem on start or new hand', async () => {
+    vi.useFakeTimers();
+    env = makeEnv();
+    const a = connectPlayer(env, 'Alice');
+    const b = connectPlayer(env, 'Bob');
+
+    a.emit('message', JSON.stringify({ type: 'START_MINI_GAME', gameType: 'blackjack' }));
+    await vi.advanceTimersByTimeAsync(50);
+    expect(env.room.game).not.toBeNull();
+    expect(a._sent.some(m => m.type === 'ROUND_COUNTDOWN')).toBe(false);
+
+    // Advance blackjack from settled -> round 2
+    env.room.game.state = { ...env.room.game.state, phase: 'settled', round: 1, maxRounds: 5 };
+    a._sent.length = 0;
+    a.emit('message', JSON.stringify({ type: 'GAME_ACTION', action: { type: 'nextRound' } }));
+    expect(env.room.game.state.round).toBe(2);
+    expect(a._sent.some(m => m.type === 'ROUND_COUNTDOWN')).toBe(false);
+
+    // Switch to texas-holdem and advance from showdown -> hand 2
+    env.room.endGame();
+    a._sent.length = 0;
+    a.emit('message', JSON.stringify({ type: 'START_MINI_GAME', gameType: 'texas-holdem' }));
+    await vi.advanceTimersByTimeAsync(50);
+    expect(env.room.game).not.toBeNull();
+    expect(a._sent.some(m => m.type === 'ROUND_COUNTDOWN')).toBe(false);
+
+    env.room.game.state = { ...env.room.game.state, phase: 'showdown', handNumber: 1, maxHands: 5 };
+    a._sent.length = 0;
+    b.emit('message', JSON.stringify({ type: 'GAME_ACTION', action: { type: 'nextHand' } }));
+    expect(env.room.game.state.handNumber).toBe(2);
+    expect(a._sent.some(m => m.type === 'ROUND_COUNTDOWN')).toBe(false);
+  });
+
   it('emits ROUND_COUNTDOWN when Gin Rummy advances to hand 2', async () => {
     vi.useFakeTimers();
     env = makeEnv();

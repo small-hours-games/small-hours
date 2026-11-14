@@ -12,6 +12,7 @@ export default {
   blurb: '2–8 players • No-Limit Hold’em on the TV, hole cards on your phone!',
   soloBlurb: 'Solo vs AI • Play No-Limit Hold’em against the bots!',
   music: true,
+  roundCountdown: false,
   ai: { default: 3, max: 5, choose: chooseHoldemAction },
   privateKeys: ['myHand', 'myToCall', 'myMinRaiseTo', 'myMaxBetTo', 'myCanCheck'],
 };

@@ -11,5 +11,6 @@ export default {
   blurb: '1–8 players • Beat the dealer to 21 without busting!',
   soloBlurb: 'Solo vs Dealer • Bet chips, hit, stand or double down!',
   music: true,
+  roundCountdown: false,
   privateKeys: ['mySeat', 'myCanDouble', 'myCanSplit'],
 };

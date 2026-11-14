@@ -207,6 +207,7 @@ export function setupWebSocket(server, manager) {
 
   function startRoundCountdown(room, gameType, round = 1) {
     if (!room.game || room.game.state?.phase === 'countdown') return false;
+    if (getGame(gameType)?.roundCountdown === false) return false;
     cancelRoundCountdown(room.code);
     cancelBotTurn(room.code);
     cancelPhaseTimer(room.code);
