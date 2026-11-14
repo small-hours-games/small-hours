@@ -821,4 +821,79 @@ describe('ws-adapter - AI opponents for a lone player', () => {
     expect(env.room.bots).toEqual([]);
     expect(env.room.game.state.players).toHaveLength(2);
   });
+
+  it('emits a 3-second ROUND_COUNTDOWN on start for non-quiz games and pauses bots until it ends', async () => {
+    vi.useFakeTimers();
+    env = makeEnv();
+    const ws = connectPlayer(env, 'Alice');
+    ws.emit('message', JSON.stringify({ type: 'START_MINI_GAME', gameType: 'shithead', config: { bots: 1 } }));
+    await vi.waitFor(() => expect(env.room.game).not.toBeNull());
+
+    const startCd = ws._sent.find(m => m.type === 'ROUND_COUNTDOWN');
+    expect(startCd).toMatchObject({ type: 'ROUND_COUNTDOWN', seconds: 3, round: 1, gameType: 'shithead' });
+
+    // Bot swap must wait until the 3-second countdown finishes.
+    vi.advanceTimersByTime(2500);
+    expect(ws._sent.some(m => m.type === 'ROUND_COUNTDOWN_END')).toBe(false);
+    expect(env.room.game.state.swapConfirmed.bot_1).toBe(false);
+
+    vi.advanceTimersByTime(600);
+    expect(ws._sent.some(m => m.type === 'ROUND_COUNTDOWN_END')).toBe(true);
+    vi.advanceTimersByTime(3000);
+    expect(env.room.game.state.swapConfirmed.bot_1).toBe(true);
+  });
+
+  it('does not emit ROUND_COUNTDOWN for quiz (which has its own countdown phase)', async () => {
+    env = makeEnv();
+    const ws = connectPlayer(env, 'Alice');
+    ws.emit('message', JSON.stringify({ type: 'START_MINI_GAME', gameType: 'quiz', config: { categoryId: 9, questionCount: 1 } }));
+    await vi.waitFor(() => expect(env.room.game).not.toBeNull());
+    expect(ws._sent.some(m => m.type === 'ROUND_COUNTDOWN')).toBe(false);
+  });
+
+  it('emits ROUND_COUNTDOWN when Gin Rummy advances to hand 2', async () => {
+    vi.useFakeTimers();
+    env = makeEnv();
+    const a = connectPlayer(env, 'Alice');
+    const b = connectPlayer(env, 'Bob');
+    const p1 = getPlayerId(a);
+    const p2 = getPlayerId(b);
+    a.emit('message', JSON.stringify({ type: 'START_MINI_GAME', gameType: 'gin-rummy', config: { targetScore: 100 } }));
+    await vi.waitFor(() => expect(env.room.game).not.toBeNull());
+    vi.advanceTimersByTime(3000);
+
+    // Put game into scoring and trigger nextHand
+    env.room.game = {
+      ...env.room.game,
+      state: {
+        ...env.room.game.state,
+        phase: 'scoring',
+        handNumber: 1,
+        handResult: { winner: p1, type: 'knock', points: 10 },
+        cumulative: { [p1]: 10, [p2]: 0 },
+        boxes: { [p1]: 1, [p2]: 0 },
+      },
+    };
+    a._sent.length = 0;
+    a.emit('message', JSON.stringify({ type: 'GAME_ACTION', action: { type: 'nextHand' } }));
+    expect(env.room.game.state.handNumber).toBe(2);
+    expect(a._sent.find(m => m.type === 'ROUND_COUNTDOWN')).toMatchObject({ seconds: 3, round: 2, gameType: 'gin-rummy' });
+  });
+
+  it('allows a joined player to change their nickname via SET_USERNAME', () => {
+    env = makeEnv();
+    const a = connectPlayer(env, 'Alice');
+    const b = connectPlayer(env, 'Bob');
+    a._sent.length = 0;
+    b._sent.length = 0;
+
+    a.emit('message', JSON.stringify({ type: 'SET_USERNAME', username: '  <b>Ali</b>ce2  ' }));
+    expect(a._sent.find(m => m.type === 'USERNAME_OK')).toMatchObject({ type: 'USERNAME_OK', username: 'Alice2' });
+    const lobby = b._sent.find(m => m.type === 'LOBBY_UPDATE');
+    expect(lobby.state.players.find(p => p.username === 'Alice2')).toBeTruthy();
+
+    a._sent.length = 0;
+    a.emit('message', JSON.stringify({ type: 'SET_USERNAME', username: '   ' }));
+    expect(a._sent.find(m => m.type === 'ERROR')).toMatchObject({ type: 'ERROR', message: 'Nickname cannot be empty' });
+  });
 });

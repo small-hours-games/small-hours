@@ -165,6 +165,22 @@ export class Room {
   }
 
   /**
+   * Update a player's display nickname.
+   * Returns { ok: true, username } or { ok: false, error }.
+   */
+  setUsername(playerId, username) {
+    const player = this.players.get(playerId);
+    if (!player) return { ok: false, error: 'Not in this room' };
+    const clean = String(username || '').replace(/<[^>]*>/g, '').trim().slice(0, 20);
+    if (!clean) return { ok: false, error: 'Nickname cannot be empty' };
+    if (player.username === clean) return { ok: true, username: clean };
+    player.username = clean;
+    this.stateVersion += 1;
+    this.lastActivity = Date.now();
+    return { ok: true, username: clean };
+  }
+
+  /**
    * Remove a player from the room.
    * If the removed player was admin, promote the next connected player.
    * NOTE: When a player is removed their sessionScore is lost along with their record.

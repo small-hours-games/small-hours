@@ -179,6 +179,14 @@
   <!-- Toast container -->
   <div class="toast-container" id="toasts"></div>
 
+  <!-- Universal 3-2-1 round countdown -->
+  <div id="roundCountdownOverlay" class="round-countdown-overlay" hidden aria-live="assertive">
+    <div class="round-countdown-card">
+      <div class="round-countdown-label" id="roundCountdownLabel">Get ready</div>
+      <div class="round-countdown-num" id="roundCountdownNum">3</div>
+    </div>
+  </div>
+
   <script src="/js/card-sounds.js"></script>
   <script src="/js/table-cards.js"></script>
   <script src="/js/table-cards-tv.js"></script>
@@ -388,14 +396,20 @@
           break;
 
         case 'LOBBY_UPDATE':
+          hideRoundCountdownUI();
           state.lobby = msg.state || msg;
           lobbyMusic.setActive(!state.lobby.game && !state.gameType);
           if (!state.lobby.game) gameMusic.setActive(false);
           state.players = state.lobby.players || [];
           state.playerAvatars = state.playerAvatars || {};
-          state.players.forEach(p => { state.playerAvatars[p.playerId] = p.avatar; });
+          state.playerNames = state.playerNames || {};
+          state.players.forEach(p => {
+            state.playerAvatars[p.playerId] = p.avatar;
+            state.playerNames[p.playerId] = p.username;
+          });
           renderPlayers();
           renderHostVotes();
+          if (state.gameState && state.gameType) renderGameState({ ...state.gameState, playerNames: state.playerNames });
           break;
 
         case 'PLAYER_JOINED':
@@ -413,6 +427,14 @@
         case 'MINI_GAME_STARTING':
           state.gameType = msg.gameType;
           showGameView(msg);
+          break;
+
+        case 'ROUND_COUNTDOWN':
+          startRoundCountdownUI(msg.seconds, msg.round, msg.gameType);
+          break;
+
+        case 'ROUND_COUNTDOWN_END':
+          endRoundCountdownUI();
           break;
 
         case 'GAME_STATE':
@@ -598,6 +620,53 @@
           storyAudio.play().catch(() => {});
         }
       } catch (e) { /* TTS optional */ }
+    }
+
+    let roundCountdownTimer = null;
+    let roundCountdownHideTimer = null;
+    function hideRoundCountdownUI() {
+      clearInterval(roundCountdownTimer);
+      clearTimeout(roundCountdownHideTimer);
+      roundCountdownTimer = null;
+      roundCountdownHideTimer = null;
+      const ov = document.getElementById('roundCountdownOverlay');
+      if (ov) ov.hidden = true;
+    }
+    function startRoundCountdownUI(seconds, round, gameType) {
+      hideRoundCountdownUI();
+      const ov = document.getElementById('roundCountdownOverlay');
+      const lbl = document.getElementById('roundCountdownLabel');
+      const num = document.getElementById('roundCountdownNum');
+      if (!ov || !lbl || !num) return;
+      const unit = gameType === 'gin-rummy' ? 'Hand ' : 'Round ';
+      lbl.textContent = (round && round > 1 ? unit + round : shGame(gameType).label) + ' — Get Ready';
+      let left = Math.max(1, Number(seconds) || 3);
+      const show = (val, go) => {
+        num.classList.remove('rc-go');
+        void num.offsetWidth;
+        if (go) num.classList.add('rc-go');
+        num.textContent = String(val);
+      };
+      show(left, false);
+      ov.hidden = false;
+      roundCountdownTimer = setInterval(() => {
+        left -= 1;
+        if (left > 0) show(left, false);
+        else { clearInterval(roundCountdownTimer); roundCountdownTimer = null; }
+      }, 1000);
+    }
+    function endRoundCountdownUI() {
+      clearInterval(roundCountdownTimer);
+      roundCountdownTimer = null;
+      const ov = document.getElementById('roundCountdownOverlay');
+      const num = document.getElementById('roundCountdownNum');
+      if (!ov || !num || ov.hidden) return;
+      num.classList.remove('rc-go');
+      void num.offsetWidth;
+      num.classList.add('rc-go');
+      num.textContent = 'GO!';
+      clearTimeout(roundCountdownHideTimer);
+      roundCountdownHideTimer = setTimeout(() => { ov.hidden = true; }, 350);
     }
 
     // The intro gives way as soon as someone makes a move: the table matters more than the story.

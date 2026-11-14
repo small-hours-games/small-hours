@@ -46,6 +46,9 @@ export function setupWebSocket(server, manager) {
   const roomGameTypes = new Map();
   // roomCode -> pending AI move timer
   const botTimers = new Map();
+  // roomCode -> pending 3-2-1 round countdown timer
+  const roundCountdowns = new Map();
+  const ROUND_COUNTDOWN_MS = 3000;
 
   // --- Helpers ---
 
@@ -213,8 +216,41 @@ export function setupWebSocket(server, manager) {
     }
   }
 
+  function cancelRoundCountdown(roomCode) {
+    const existing = roundCountdowns.get(roomCode);
+    if (existing) {
+      clearTimeout(existing);
+      roundCountdowns.delete(roomCode);
+    }
+  }
+
+  function startRoundCountdown(room, gameType, round = 1) {
+    if (!room.game || room.game.state?.phase === 'countdown') return false;
+    cancelRoundCountdown(room.code);
+    cancelBotTurn(room.code);
+    cancelPhaseTimer(room.code);
+    const gameId = room.game.id;
+    broadcastToRoom(room.code, {
+      type: 'ROUND_COUNTDOWN',
+      seconds: Math.ceil(ROUND_COUNTDOWN_MS / 1000),
+      round,
+      gameType,
+    });
+    const timer = setTimeout(() => {
+      roundCountdowns.delete(room.code);
+      if (!room.game || room.game.id !== gameId || manager.getRoom(room.code) !== room) return;
+      broadcastToRoom(room.code, { type: 'ROUND_COUNTDOWN_END', round, gameType });
+      schedulePhaseTimer(room, gameType, { force: true });
+      scheduleBotTurn(room);
+    }, ROUND_COUNTDOWN_MS);
+    if (timer.unref) timer.unref();
+    roundCountdowns.set(room.code, timer);
+    return true;
+  }
+
   function scheduleBotTurn(room) {
     cancelBotTurn(room.code);
+    if (roundCountdowns.has(room.code)) return;
     if (!room.game || !room.bots?.length) return;
     const gameType = room.gameType;
     const botIds = room.bots.map(b => b.playerId);
@@ -292,6 +328,8 @@ export function setupWebSocket(server, manager) {
     clearInterval(heartbeat);
     for (const timer of botTimers.values()) clearTimeout(timer);
     botTimers.clear();
+    for (const timer of roundCountdowns.values()) clearTimeout(timer);
+    roundCountdowns.clear();
   });
 
   // --- Connection handling ---
@@ -416,6 +454,8 @@ export function setupWebSocket(server, manager) {
       timing,
       scheduleBotTurn,
       cancelBotTurn,
+      startRoundCountdown,
+      cancelRoundCountdown,
       getPlayerNames,
       checkChatRateLimit,
     };
@@ -431,6 +471,7 @@ export function setupWebSocket(server, manager) {
     'START_VOTED_GAME',
     'SUGGEST_GAME',
     'SET_AVATAR',
+    'SET_USERNAME',
     'RETURN_TO_LOBBY',
     'START_CATEGORY_VOTE',
     'CATEGORY_VOTE',
@@ -462,6 +503,9 @@ export function setupWebSocket(server, manager) {
         break;
       case 'SET_AVATAR':
         lobbyHandlers.handleSetAvatar(ws, meta, room, msg, ctx);
+        break;
+      case 'SET_USERNAME':
+        lobbyHandlers.handleSetUsername(ws, meta, room, msg, ctx);
         break;
       case 'START_MINI_GAME':
         gameHandlers.handleStartMiniGame(ws, meta, room, msg, ctx).catch(err => {

@@ -101,7 +101,8 @@ export async function handleStartMiniGame(ws, meta, room, msg, ctx) {
 
     // Schedule phase timer for timer-driven games (first, so the views carry the time left)
     roomGameTypes.set(room.code, msg.gameType);
-    schedulePhaseTimer(room, msg.gameType, { force: true });
+    const counting = ctx.startRoundCountdown?.(room, msg.gameType, 1);
+    if (!counting) schedulePhaseTimer(room, msg.gameType, { force: true });
     const clock = ctx.timing ? ctx.timing(room) : {};
 
     // Send initial game state to each player
@@ -114,7 +115,7 @@ export async function handleStartMiniGame(ws, meta, room, msg, ctx) {
     // Host displays get the shared table straight away (same view as every later update)
     const hostView = getHostView(room.game, room.players.keys().next().value);
     broadcastToRoom(room.code, { type: 'GAME_STATE', ...hostView, gameType: msg.gameType, phase: room.game.state.phase, ...clock, playerNames: pNames }, { hostsOnly: true });
-    ctx.scheduleBotTurn?.(room);
+    if (!counting) ctx.scheduleBotTurn?.(room);
   } catch (err) {
     send(ws, { type: 'ERROR', message: err.message });
   } finally {
@@ -175,14 +176,19 @@ export function handleGameAction(ws, meta, room, msg, ctx) {
 export function applyGameAction(room, action, ctx) {
   const { broadcastToRoom, sendToPlayer, roomGameTypes, schedulePhaseTimer, getPlayerNames } = ctx;
   const { moveId: _moveId, ...engineAction } = action;   // the engine never sees transport ids
+  const prevRound = room.game?.state ? (room.game.state.handNumber || room.game.state.round || 0) : 0;
   const { game: updatedGame, events } = processAction(room.game, engineAction);
   room.game = updatedGame;
   room.lastActivity = Date.now();
+  const nextRound = room.game?.state ? (room.game.state.handNumber || room.game.state.round || 0) : 0;
 
   // Reschedule phase timer if phase changed due to player action (before sending,
   // so the views carry the current phase's time left)
   const activeGameType = roomGameTypes.get(room.code);
-  if (activeGameType) {
+  const endResult = checkEnd(room.game);
+  const newRound = !endResult && activeGameType && nextRound > prevRound;
+  const counting = newRound ? ctx.startRoundCountdown?.(room, activeGameType, nextRound) : false;
+  if (activeGameType && !counting) {
     schedulePhaseTimer(room, activeGameType);
   }
   const clock = ctx.timing ? ctx.timing(room) : {};
@@ -207,9 +213,8 @@ export function applyGameAction(room, action, ctx) {
   if (refused && action.playerId) sendToPlayer(action.playerId, { type: 'ERROR', message: refused.message });
 
   // Check for game end
-  const endResult = checkEnd(room.game);
   if (endResult) finishGame(room, endResult, ctx);
-  else ctx.scheduleBotTurn?.(room);
+  else if (!counting) ctx.scheduleBotTurn?.(room);
   return events;
 }
 
@@ -254,6 +259,7 @@ export function finishGame(room, endResult, ctx) {
   }
 
   room.endGame();
+  ctx.cancelRoundCountdown?.(room.code);
   cancelPhaseTimer(room.code);
   ctx.cancelBotTurn?.(room.code);
   roomGameTypes.delete(room.code);
