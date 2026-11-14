@@ -1,6 +1,6 @@
 /* Blackjack layout on phone & TV */
 .bj-pills { display: flex; gap: 6px; align-items: center; }
-.bj-table { display: flex; flex-direction: column; gap: 12px; justify-content: space-between; padding: 12px; }
+.bj-table { flex: 1; display: flex; flex-direction: column; gap: 20px; justify-content: space-between; padding: 14px 12px; }
 .bj-dealer-zone { display: flex; flex-direction: column; align-items: center; gap: 6px; }
 .bj-cards { display: flex; justify-content: center; gap: 6px; flex-wrap: wrap; }
 .bj-my-hands { display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; }
