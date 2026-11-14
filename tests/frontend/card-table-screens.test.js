@@ -41,7 +41,7 @@ function tvRender(fnName, view) {
     escapeHtml: t => String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'),
     playerAvatarHtml: () => '',
     tcFitTv: () => {},
-    SH: { registerGame() {} },
+    SH: { registerGame() {}, aiPersona: () => null },
   };
   runInNewContext(KIT, context);
   const block = TV_KIT.slice(TV_KIT.indexOf('    // ===== Card table on the TV'));
@@ -330,5 +330,46 @@ describe('Gin Rummy move log formatting and TV rendering', () => {
     });
     expect(knockHtml).toContain('tc-knock-banner');
     expect(knockHtml).toContain('Bo knocked!');
+  });
+});
+
+describe('Palace visibility on TV', () => {
+  it('highlights pile well on pickup and burn and shows finished banner', () => {
+    const pickupHtml = tvRender('renderShithead', {
+      phase: 'play', currentPlayer: 'p2', drawPileCount: 10, pileCount: 0, pileTopRank: null,
+      players: [
+        { playerId: 'p1', handCount: 4, faceUp: [], faceDownCount: 3, isOut: false },
+        { playerId: 'p2', handCount: 3, faceUp: [], faceDownCount: 3, isOut: false },
+      ],
+      finishOrder: [],
+      lastEvent: { seq: 11, kind: 'pickup', by: 'p1', count: 4 },
+    });
+    expect(pickupHtml).toContain('tc-well-drawn');
+    expect(pickupHtml).toContain('picked up 4');
+
+    const burnHtml = tvRender('renderShithead', {
+      phase: 'play', currentPlayer: 'p2', drawPileCount: 10, pileCount: 0, pileTopRank: null,
+      players: [
+        { playerId: 'p1', handCount: 3, faceUp: [], faceDownCount: 3, isOut: false },
+        { playerId: 'p2', handCount: 3, faceUp: [], faceDownCount: 3, isOut: false },
+      ],
+      finishOrder: [],
+      lastEvent: { seq: 12, kind: 'burn', by: 'p2', cards: [{ id: '10h_0', rank: 10, suit: 'h' }] },
+    });
+    expect(burnHtml).toContain('sh-burned');
+    expect(burnHtml).toContain('Bo burned!');
+
+    const finishHtml = tvRender('renderShithead', {
+      phase: 'finished', currentPlayer: null, drawPileCount: 0, pileCount: 0, pileTopRank: null,
+      players: [
+        { playerId: 'p1', handCount: 0, faceUp: [], faceDownCount: 0, isOut: true },
+        { playerId: 'p2', handCount: 2, faceUp: [], faceDownCount: 1, isOut: false },
+      ],
+      finishOrder: ['p1'],
+      loser: 'p2',
+    });
+    expect(finishHtml).toContain('tc-result-pop');
+    expect(finishHtml).toContain('tc-knock-banner');
+    expect(finishHtml).toContain('Bo keeps the palace!');
   });
 });

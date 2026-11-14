@@ -43,6 +43,27 @@
       clearTimeout(state.shBurnTimer);
       state.shBurnTimer = setTimeout(() => well.classList.remove('sh-burned'), 900);
       if (ev.by === state.playerId) showToast('🔥 You burned the pile!', 'success');
+      else showToast('🔥 ' + tcName(ev.by, state.shLastMsg) + ' burned the pile!', 'info');
+    }
+
+    function shFlashWell(wellId, hintText, timerKey) {
+      const well = document.getElementById(wellId);
+      if (!well) return;
+      let hint = well.querySelector('.tc-well-hint');
+      if (!hint) {
+        hint = document.createElement('span');
+        hint.className = 'tc-well-hint';
+        well.appendChild(hint);
+      }
+      hint.textContent = hintText || '';
+      well.classList.remove('tc-well-drawn');
+      void well.offsetWidth;
+      well.classList.add('tc-well-drawn');
+      clearTimeout(state[timerKey]);
+      state[timerKey] = setTimeout(() => {
+        well.classList.remove('tc-well-drawn');
+        hint.textContent = '';
+      }, 1200);
     }
 
     // --- Palace (shithead engine) ---
@@ -157,25 +178,81 @@
       // Move log + a landing bounce for each new card on the pile
       const ev = msg.lastEvent;
       const freshEvent = ev && ev.seq !== state.shSeenSeq;
+      const prevDrawCount = state.shPrevDrawCount;
+      const prevFinishCount = state.shPrevFinishCount || 0;
+      const prevPhase = state.shPrevPhase;
+      const finishOrder = msg.finishOrder || [];
       state.shLog = tcLogPush(state.shLog, ev, 6);
       state.shSeenSeq = ev ? ev.seq : null;
       if (freshEvent && ev.kind === 'play' && ev.by !== state.playerId) {
         const top = pileStack.querySelector('.tc-pile-top');
         if (top) top.classList.add('tc-land');
       }
-      if (freshEvent && ev.kind === 'burn') shShowBurn(ev);
-      if (freshEvent && ev.by !== state.playerId && (ev.kind === 'burn' || ev.kind === 'pickup' || ev.kind === 'blind-miss')) {
-        if (navigator.vibrate) navigator.vibrate(30);
+      if (freshEvent && msg.phase === 'play') {
+        const actor = ev.by === state.playerId ? 'You' : tcName(ev.by, msg);
+        if (ev.kind === 'burn') {
+          shShowBurn(ev);
+        } else if (ev.kind === 'pickup') {
+          shFlashWell('shPileWell', '← ' + actor + ' picked up ' + tcNum(ev.count), 'shPileDrawTimer');
+          if (ev.by !== state.playerId) showToast('😬 ' + actor + ' picked up ' + tcNum(ev.count) + ' card' + (ev.count === 1 ? '' : 's') + '!', 'info');
+        } else if (ev.kind === 'blind-miss') {
+          const missCard = (ev.cards || [])[0];
+          const cardTxt = missCard ? tcCardShort(missCard) + ' ' : '';
+          shFlashWell('shPileWell', '🫣 ' + actor + ' missed (' + tcNum(ev.count) + ')', 'shPileDrawTimer');
+          if (ev.by !== state.playerId) showToast('🫣 ' + actor + ' flipped ' + cardTxt + 'blind & picked up ' + tcNum(ev.count) + '!', 'warning');
+          else showToast('🫣 Blind flip ' + cardTxt + 'missed! Picked up ' + tcNum(ev.count), 'warning');
+        }
+        if (prevDrawCount != null && msg.drawPileCount < prevDrawCount) {
+          shFlashWell('shDrawWell', '← ' + actor + ' drew ' + (prevDrawCount - msg.drawPileCount), 'shDeckDrawTimer');
+        }
+        if (ev.by !== state.playerId) {
+          if (ev.kind === 'burn' || ev.kind === 'blind-miss') {
+            if (navigator.vibrate) navigator.vibrate([40, 50, 80]);
+          } else if (ev.kind === 'pickup') {
+            if (navigator.vibrate) navigator.vibrate(30);
+          }
+        }
       }
+      if (msg.phase === 'play' && finishOrder.length > prevFinishCount) {
+        for (const id of finishOrder.slice(prevFinishCount)) {
+          const place = finishOrder.indexOf(id) + 1;
+          if (id === state.playerId) {
+            showToast('🏆 You finished #' + place + '!', 'success');
+            if (navigator.vibrate) navigator.vibrate([40, 50, 80]);
+          } else {
+            showToast('🏆 ' + tcName(id, msg) + ' is out #' + place + '!', 'info');
+          }
+        }
+      }
+      if (msg.phase === 'finished' && prevPhase !== 'finished' && navigator.vibrate) {
+        navigator.vibrate([40, 50, 80]);
+      }
+      state.shPrevDrawCount = msg.phase === 'swap' ? null : msg.drawPileCount;
+      state.shPrevFinishCount = msg.phase === 'swap' ? 0 : finishOrder.length;
+      state.shPrevPhase = msg.phase;
       document.getElementById('shLog').innerHTML = msg.phase === 'play'
         ? renderMoveLog(state.shLog, { name: id => (id === state.playerId ? 'You' : tcName(id, msg)), avatar: id => tcAvatar(id), max: 3 })
         : '';
       document.getElementById('shPileCount').textContent = pileCount + (pileCount === 1 ? ' card' : ' cards');
       document.getElementById('shPileWell').classList.toggle('tc-well-active', myTurn && state.shSelectedCards.length > 0);
-      document.getElementById('shRule').textContent = msg.phase === 'swap'
-        ? 'Tap a hand card, then a face-up card, to swap them. 2, 10 and A are strong face-up.'
-        : msg.phase === 'finished' ? shStandingsText(msg)
-        : shRuleBannerText(msg.pileTopRank, pileCount);
+      const ruleEl = document.getElementById('shRule');
+      if (msg.phase === 'finished') {
+        const winnerId = finishOrder[0];
+        const loserId = msg.loser || (msg.players || []).map(p => p.playerId).find(id => !finishOrder.includes(id));
+        let banner = '';
+        if (state.playerId === loserId) {
+          banner = '<div class="tc-knock-banner tc-knock-banner-undercut">💩 You keep the palace!</div>';
+        } else if (state.playerId === winnerId) {
+          banner = '<div class="tc-knock-banner tc-knock-banner-gin">🏆 You won the game!</div>';
+        } else if (loserId) {
+          banner = '<div class="tc-knock-banner">💩 ' + escapeHtml(tcName(loserId, msg)) + ' keeps the palace!</div>';
+        }
+        ruleEl.innerHTML = banner + '<div>' + escapeHtml(shStandingsText(msg)) + '</div>';
+      } else {
+        ruleEl.textContent = msg.phase === 'swap'
+          ? 'Tap a hand card, then a face-up card, to swap them. 2, 10 and A are strong face-up.'
+          : shRuleBannerText(msg.pileTopRank, pileCount);
+      }
 
       // My table cards (face-up / face-down) above the hand
       const faceUp = msg.myFaceUp || [];

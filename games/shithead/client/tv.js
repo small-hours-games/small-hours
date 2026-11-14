@@ -108,6 +108,9 @@
         else if (lastShState.pileCount != null && msg.pileCount > lastShState.pileCount && !flying) audio.play('place');
         if (msg.phase === 'finished' && lastShState.phase !== 'finished') audio.play('win');
       }
+      const prevDrawCount = lastShState.drawPileCount;
+      const drewCount = (freshEvent && msg.phase === 'play' && prevDrawCount != null && msg.drawPileCount < prevDrawCount)
+        ? (prevDrawCount - msg.drawPileCount) : 0;
       lastShState = { pileCount: msg.pileCount || 0, drawPileCount: msg.drawPileCount, phase: msg.phase };
 
       const players = msg.players || [];
@@ -153,22 +156,44 @@
       if (top.length) html += '<div class="tc-tv-top">' + top.map(seat).join('') + '</div>';
 
       if (msg.phase === 'finished') {
-        html += '<div class="tc-tv-result"><div class="tc-sheet-kicker">Final standings</div><div class="tc-standings">' +
+        let banner = '';
+        if (msg.loser) {
+          banner = '<div class="tc-knock-banner tc-knock-banner-undercut">💩 ' + escapeHtml(names[msg.loser] || 'Player') + ' keeps the palace!</div>';
+        } else if (finish[0]) {
+          banner = '<div class="tc-knock-banner tc-knock-banner-gin">🏆 ' + escapeHtml(names[finish[0]] || 'Player') + ' wins!</div>';
+        }
+        html += '<div class="tc-tv-result tc-result-pop"><div class="tc-sheet-kicker">Final standings</div>' + banner + '<div class="tc-standings">' +
           finish.map((id, i) => '<div class="tc-standing"><span class="tc-place">#' + (i + 1) + '</span>' + playerAvatarHtml(id) + escapeHtml(names[id] || 'Player') + '</div>').join('') +
           (msg.loser ? '<div class="tc-standing"><span class="tc-place">💩</span>' + playerAvatarHtml(msg.loser) + escapeHtml((names[msg.loser] || 'Player') + ' keeps the palace') + '</div>' : '') +
         '</div></div>';
       } else if (msg.phase === 'play') {
         const pilePreview = (msg.pilePreview && msg.pilePreview.length) ? msg.pilePreview : (msg.pileTop ? [msg.pileTop] : []);
         const pileCount = tcNum(msg.pileCount);
+        const actorName = ev ? (names[ev.by] || 'Player') : '';
+        const drawHint = drewCount > 0 ? '<span class="tc-well-hint">← ' + escapeHtml(actorName) + ' drew ' + drewCount + '</span>' : '';
+        let pileClass = '';
+        let pileHint = '';
+        if (freshEvent && ev) {
+          if (ev.kind === 'pickup') {
+            pileClass = ' tc-well-drawn';
+            pileHint = '<span class="tc-well-hint">← ' + escapeHtml(actorName) + ' picked up ' + tcNum(ev.count) + '</span>';
+          } else if (ev.kind === 'blind-miss') {
+            pileClass = ' tc-well-drawn';
+            pileHint = '<span class="tc-well-hint">🫣 ' + escapeHtml(actorName) + ' missed (' + tcNum(ev.count) + ')</span>';
+          } else if (ev.kind === 'burn') {
+            pileClass = ' sh-burned';
+            pileHint = '<span class="tc-well-hint">🔥 ' + escapeHtml(actorName) + ' burned!</span>';
+          }
+        }
         let side = '<div class="tc-rule">' + escapeHtml(shitheadRuleHintText(msg.pileTopRank, msg.pileCount || 0)) + '</div>';
         side += renderMoveLog(shLog, { name: id => names[id] || 'Player', avatar: id => (String(id).startsWith('bot_') ? ((SH.aiPersona(id) || {}).avatar || '🤖') : ((state.playerAvatars || {})[id] || '')), max: 4 });
         html += '<div class="tc-tv-center">' +
-          '<div class="tc-well"><span class="tc-well-label">Draw deck</span>' +
+          '<div class="tc-well' + (drewCount > 0 ? ' tc-well-drawn' : '') + '" id="tvDrawWell"><span class="tc-well-label">Draw deck</span>' +
             renderTableStack(null, msg.drawPileCount || 0, { size: pileSize, facedown: true, emptyLabel: 'Empty' }) +
-            '<span class="tc-count">' + tcNum(msg.drawPileCount) + ' left</span></div>' +
-          '<div class="tc-well" id="tvPileWell"><span class="tc-well-label">Play pile</span>' +
+            '<span class="tc-count">' + tcNum(msg.drawPileCount) + ' left</span>' + drawHint + '</div>' +
+          '<div class="tc-well' + pileClass + '" id="tvPileWell"><span class="tc-well-label">Play pile</span>' +
             renderMessyPile(pilePreview, pileCount || pilePreview.length, { size: pileSize, emptyLabel: 'Empty' }) +
-            '<span class="tc-count">' + pileCount + (pileCount === 1 ? ' card' : ' cards') + '</span></div>' +
+            '<span class="tc-count">' + pileCount + (pileCount === 1 ? ' card' : ' cards') + '</span>' + pileHint + '</div>' +
         '</div>' +
         '<div class="tc-tv-side">' + side + '</div>';
       } else {
@@ -186,7 +211,7 @@
       }
       if (msg.phase === 'finished') shAiIntroDone = false;
       if (freshEvent || (msg.finishOrder || []).length !== shAiFinished.length) shAiReact(freshEvent ? ev : null, msg);
-      if (freshEvent) tvAnimateShEvent(ev, msg);
+      if (freshEvent) tvAnimateShEvent(ev, msg, drewCount);
       else if (ev && ev.seq === state.tvFlightSeq) {
         const flyingTop = content.querySelector('#tvPileWell .tc-pile-top');
         if (flyingTop) flyingTop.classList.add('tc-in-flight');
@@ -194,15 +219,21 @@
     }
 
     /** Play the move on the TV: the card flies in from the player's seat, or the pile slides to them. */
-    function tvAnimateShEvent(ev, msg) {
+    function tvAnimateShEvent(ev, msg, drewCount) {
       // Nothing flies while the story card covers the table: the card would land on top of it.
       const story = document.getElementById('storyOverlay');
-      if (story && story.style.display !== 'none' && getComputedStyle(story).display !== 'none') return;
+      if (story && story.style && story.style.display !== 'none' && getComputedStyle(story).display !== 'none') return;
       const content = document.getElementById('gameContent');
-      const seatEl = content.querySelector('.tc-seat[data-player-id="' + (window.CSS && CSS.escape ? CSS.escape(ev.by) : ev.by) + '"]');
-      const pile = content.querySelector('#tvPileWell .tc-pile');
+      const seatEl = content && typeof content.querySelector === 'function'
+        ? content.querySelector('.tc-seat[data-player-id="' + (window.CSS && CSS.escape ? CSS.escape(ev.by) : ev.by) + '"]')
+        : null;
+      const pile = content && typeof content.querySelector === 'function' ? content.querySelector('#tvPileWell .tc-pile') : null;
       if (!seatEl || !pile) return;
       const fromRect = seatEl.getBoundingClientRect();
+      if (drewCount > 0) {
+        const drawWell = content.querySelector('#tvDrawWell .tc-pile');
+        if (drawWell) tcFlyFromPile(null, drawWell, fromRect, { facedown: true });
+      }
       const card = (ev.cards || [])[ev.cards.length - 1];
       if (ev.kind === 'pickup') {
         tcSweepTo(pile, fromRect, ev.count);
