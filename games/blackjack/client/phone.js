@@ -81,12 +81,12 @@
         if (state.bjBetAmount < minBet) state.bjBetAmount = minBet;
         const presets = [10, 25, 50, 100, 250].filter(v => v <= maxBet);
         const presetBtns = presets.map(v =>
-          '<button type="button" class="tc-btn' + (state.bjBetAmount === v ? ' bj-chip-sel' : '') + '" onclick="bjPickBet(' + v + ')">' + v + '</button>'
-        ).join('') + '<button type="button" class="tc-btn' + (state.bjBetAmount === maxBet ? ' bj-chip-sel' : '') + '" onclick="bjPickBet(' + maxBet + ')">All-In</button>';
+          '<button type="button" class="bj-chip bj-chip-' + v + (state.bjBetAmount === v ? ' bj-chip-sel' : '') + '" onclick="bjPickBet(' + v + ')">' + v + '</button>'
+        ).join('') + '<button type="button" class="bj-chip bj-chip-all' + (state.bjBetAmount === maxBet ? ' bj-chip-sel' : '') + '" onclick="bjPickBet(' + maxBet + ')">All-In</button>';
 
         el.innerHTML =
           '<div class="bj-bet-row">' + presetBtns + '</div>' +
-          '<button type="button" class="tc-cta tc-cta-big" onclick="bjPlaceBet()">Bet ' + tcNum(state.bjBetAmount) + '</button>';
+          '<button type="button" class="tc-cta tc-cta-big" onclick="bjPlaceBet()">Deal Hand · Bet ' + tcNum(state.bjBetAmount) + '</button>';
         return;
       }
 
@@ -96,11 +96,11 @@
           return;
         }
         el.innerHTML =
-          '<div class="tc-actionbar">' +
-            '<button type="button" class="tc-btn tc-btn-gin" onclick="bjSend(\'hit\')">Hit</button>' +
-            '<button type="button" class="tc-btn tc-btn-warn" onclick="bjSend(\'stand\')">Stand</button>' +
-            (msg.myCanDouble ? '<button type="button" class="tc-btn" onclick="bjSend(\'double\')">Double</button>' : '') +
-            (msg.myCanSplit ? '<button type="button" class="tc-btn" onclick="bjSend(\'split\')">Split</button>' : '') +
+          '<div class="tc-btn-grid">' +
+            '<button type="button" class="tc-btn tc-btn-lg tc-btn-gin" onclick="bjSend(\'hit\')">Hit</button>' +
+            '<button type="button" class="tc-btn tc-btn-lg tc-btn-gold" onclick="bjSend(\'stand\')">Stand</button>' +
+            (msg.myCanDouble ? '<button type="button" class="tc-btn tc-btn-lg tc-active" onclick="bjSend(\'double\')">Double 2×</button>' : '') +
+            (msg.myCanSplit ? '<button type="button" class="tc-btn tc-btn-lg" onclick="bjSend(\'split\')">Split</button>' : '') +
           '</div>';
         return;
       }

@@ -83,25 +83,30 @@
 
       const canRaise = msg.myMaxBetTo > msg.currentBet;
       const minTo = msg.myMinRaiseTo;
-      const midTo = Math.min(msg.myMaxBetTo, minTo + 40);
       const allInTo = msg.myMaxBetTo;
+      const halfPotTo = Math.min(allInTo, Math.max(minTo, Math.round(((msg.pot || 0) * 0.5 + msg.currentBet) / 10) * 10));
+      const potTo = Math.min(allInTo, Math.max(minTo, Math.round(((msg.pot || 0) + msg.currentBet) / 10) * 10));
 
       let raiseHtml = '';
       if (canRaise) {
+        const opts = [
+          { label: 'Min ' + tcNum(minTo), to: minTo, cls: '' },
+        ];
+        if (halfPotTo > minTo && halfPotTo < allInTo) opts.push({ label: '½ Pot · ' + tcNum(halfPotTo), to: halfPotTo, cls: '' });
+        if (potTo > halfPotTo && potTo < allInTo) opts.push({ label: 'Pot · ' + tcNum(potTo), to: potTo, cls: 'tc-active' });
+        opts.push({ label: 'All-In ' + tcNum(allInTo), to: allInTo, cls: 'tc-btn-gold' });
         raiseHtml = '<div class="th-raise-row">' +
-          '<button type="button" class="tc-btn" onclick="thSend(\'raise\', { to: ' + minTo + ' })">Raise ' + tcNum(minTo) + '</button>' +
-          (midTo > minTo && midTo < allInTo ? '<button type="button" class="tc-btn" onclick="thSend(\'raise\', { to: ' + midTo + ' })">Raise ' + tcNum(midTo) + '</button>' : '') +
-          '<button type="button" class="tc-btn tc-btn-warn" onclick="thSend(\'raise\', { to: ' + allInTo + ' })">All-In ' + tcNum(allInTo) + '</button>' +
+          opts.map(o => '<button type="button" class="tc-btn ' + o.cls + '" onclick="thSend(\'raise\', { to: ' + o.to + ' })">' + o.label + '</button>').join('') +
         '</div>';
       }
 
       const mainBtn = msg.myCanCheck
-        ? '<button type="button" class="tc-btn tc-btn-gin" onclick="thSend(\'check\')">Check</button>'
-        : '<button type="button" class="tc-btn tc-btn-gin" onclick="thSend(\'call\')">Call ' + tcNum(Math.min(msg.myToCall, msg.chips?.[state.playerId] || 0)) + '</button>';
+        ? '<button type="button" class="tc-btn tc-btn-lg tc-btn-gin" onclick="thSend(\'check\')">Check</button>'
+        : '<button type="button" class="tc-btn tc-btn-lg tc-btn-gin" onclick="thSend(\'call\')">Call ' + tcNum(Math.min(msg.myToCall, msg.chips?.[state.playerId] || 0)) + '</button>';
 
       el.innerHTML =
-        '<div class="tc-actionbar">' +
-          '<button type="button" class="tc-btn th-btn-fold" onclick="thSend(\'fold\')">Fold</button>' +
+        '<div class="tc-btn-grid">' +
+          '<button type="button" class="tc-btn tc-btn-lg tc-btn-warn" onclick="thSend(\'fold\')">Fold</button>' +
           mainBtn +
         '</div>' +
         raiseHtml;
