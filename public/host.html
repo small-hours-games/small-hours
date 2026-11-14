@@ -441,7 +441,7 @@
         case 'SURRENDER_LOBBY':
           hideRoundCountdownUI();
           state.gameState = null;
-          renderGameState({ phase: 'lobby' });
+          returnToLobby({ phase: 'lobby' });
           showToast((msg.username || 'Player') + ' surrendered — returned to lobby', 'info');
           break;
 
@@ -713,17 +713,29 @@
 
     function renderGameState(msg) {
       if (msg.phase !== 'lobby' && msg.phase !== 'finished') lobbyMusic.setActive(false);
+      if (msg.phase === 'lobby') {
+        returnToLobby(msg);
+        return;
+      }
       if (!state.gameType) return;
-      gameMusic.setActive(!!shGame(state.gameType).music && msg.phase !== 'lobby' && msg.phase !== 'finished');
+      gameMusic.setActive(!!shGame(state.gameType).music && msg.phase !== 'finished');
 
       if (msg.lastEvent || (msg.events && msg.events.some(e => e.type !== 'error'))) closeStory();
       const game = SH.game(state.gameType);
-      if (game) game.render(msg);
+      if (game) {
+        try {
+          game.render(msg);
+        } catch (err) {
+          if (msg.phase !== 'finished') throw err;
+        }
+      }
 
       if (msg.scores || game?.alwaysScoreboard) {
-        renderScoreboard(msg, state.gameType);
+        try {
+          renderScoreboard(msg, state.gameType);
+        } catch {}
       }
-      if (msg.phase === 'lobby' || msg.phase === 'finished') returnToLobby(msg);
+      if (msg.phase === 'finished') returnToLobby(msg);
     }
 
     function playerAvatarHtml(playerId) {
@@ -778,7 +790,9 @@
     }
 
     function returnToLobby(msg) {
-      SH.game(state.gameType)?.onLeave?.(msg);
+      try {
+        SH.game(state.gameType)?.onLeave?.(msg);
+      } catch {}
       gameMusic.setActive(false);
       if (msg.phase === 'finished') {
         if (msg.winner) {

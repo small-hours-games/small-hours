@@ -3,6 +3,7 @@
 import { processAction, getView, checkEnd } from '../../engine/engine.js';
 import { handleStartCategoryVote } from './vote.js';
 import { getHostView } from '../host-view.js';
+import { computeSessionPoints } from '../../session/scoring.js';
 
 /**
  * Handle START_VOTED_GAME message — admin starts whichever game the players voted for most.
@@ -230,33 +231,28 @@ export function finishGame(room, endResult, ctx) {
   const { broadcastToRoom, sendToPlayer, roomGameTypes, cancelPhaseTimer, getPlayerNames } = ctx;
   const playerNames = getPlayerNames(room);
 
-  // Send final views with end result
+  // Award standardized session points across all games so every game uses the same scale.
+  let sessionPoints = {};
+  try {
+    sessionPoints = computeSessionPoints(room, endResult);
+    room.awardScores(sessionPoints);
+  } catch (err) {
+    console.error('[score] failed to award session scores:', err.message);
+  }
+  room.surrendered?.clear();
+
+  // Send final views with end result + session points awarded
   for (const [id] of room.players) {
     const view = getView(room.game, id);
-    sendToPlayer(id, { type: 'GAME_STATE', ...view, ...endResult });
+    sendToPlayer(id, { type: 'GAME_STATE', ...view, ...endResult, sessionPoints });
   }
   broadcastToRoom(room.code, {
     type: 'GAME_STATE',
     phase: 'finished',
     ...endResult,
+    sessionPoints,
     playerNames,
   }, { hostsOnly: true });
-
-  // Award session scores (mirrors the timer-driven end path). endResult
-  // carries either a per-player scores map or a single winner.
-  try {
-    if (endResult.scores && typeof endResult.scores === 'object') {
-      room.awardScores(endResult.scores);
-    } else if (typeof endResult.winner === 'string') {
-      const scoresMap = {};
-      for (const [id, p] of room.players) {
-        if (p.connected) scoresMap[id] = id === endResult.winner ? 3 : 1;
-      }
-      room.awardScores(scoresMap);
-    }
-  } catch (err) {
-    console.error('[score] failed to award session scores:', err.message);
-  }
 
   room.endGame();
   ctx.cancelRoundCountdown?.(room.code);
@@ -283,7 +279,17 @@ export function handleSurrender(ws, meta, room, _msg, ctx) {
     return;
   }
   if (!room.game) {
-    send(ws, { type: 'ERROR', message: 'No game is in progress' });
+    cancelPhaseTimer(room.code);
+    ctx.cancelRoundCountdown?.(room.code);
+    ctx.cancelBotTurn?.(room.code);
+    roomGameTypes.delete(room.code);
+    room.surrendered?.clear();
+    broadcastToRoom(room.code, {
+      type: 'SURRENDER_LOBBY',
+      playerId: meta.playerId,
+      username: player.username,
+    });
+    broadcastToRoom(room.code, { type: 'LOBBY_UPDATE', state: room.getState() });
     return;
   }
 
