@@ -65,9 +65,10 @@
 .bj-tv-oval {
   grid-area: oval;
   position: relative;
-  width: min(760px, 100%);
-  min-height: 290px;
-  padding: 28px 36px;
+  width: clamp(540px, 52vw, 760px);
+  max-width: 100%;
+  min-height: 310px;
+  padding: 32px 48px;
   border-radius: 999px;
   background-color: #0b4626;
   background-image:
