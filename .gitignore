@@ -21,5 +21,6 @@ data/
 /.agents/
 /.hermes/
 /.planning/
+/Claude outputs/
 .build-time
 **/.claude/settings.local.json
