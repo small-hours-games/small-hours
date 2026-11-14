@@ -239,7 +239,7 @@ function renderHandRack(cards, opts) {
   var slots = opts.stack ? tcStackHand(cards) : (cards || []).map(function (c) { return { card: c, cards: [c] }; });
   var n = slots.length;
   if (!n) return '<div class="tc-rack tc-rack-empty">' + tcEscape(opts.emptyText || 'No cards') + '</div>';
-  var rowsCount = opts.layout === 'fan' ? 1 : (n <= 6 ? 1 : (n <= 20 ? 2 : 3));
+  var rowsCount = opts.layout === 'fan' ? 1 : (opts.stack ? (n <= 5 ? 1 : (n <= 12 ? 2 : 3)) : (n <= 6 ? 1 : (n <= 20 ? 2 : 3)));
   var perRow = Math.ceil(n / rowsCount);
   var html = '<div class="tc-rack tc-rack-' + (opts.layout === 'fan' ? 'fan' : 'rows') + (opts.stack ? ' tc-rack-stacked' : '') + '">';
   for (var r = 0; r < rowsCount; r++) {
@@ -251,7 +251,7 @@ function renderHandRack(cards, opts) {
     var rowStyle = 'width:' + Math.round(spread) + 'px';
     if (opts.cardW) {
       rowStyle += ';height:' + Math.round(cardH + (opts.layout === 'fan' ? 16 : 0)) + 'px';
-      if (r > 0 && opts.layout !== 'fan') rowStyle += ';margin-top:' + Math.round(-cardH * 0.56) + 'px';
+      if (r > 0 && opts.layout !== 'fan') rowStyle += ';margin-top:' + Math.round(-cardH * (opts.stack ? 0.28 : 0.36)) + 'px';
     }
     html += '<div class="tc-rack-row" style="' + rowStyle + '">';
     row.forEach(function (slot, i) {

@@ -112,8 +112,8 @@
 .tc-meld-run { box-shadow: 0 0 0 2.5px var(--tc-run), 0 8px 18px -4px rgba(245, 158, 11, 0.5); }
 .tc-new { box-shadow: 0 0 0 2.5px var(--tc-accent), 0 8px 18px -4px rgba(56, 189, 248, 0.5); }
 .tc-selected {
-  transform: translateY(-20px) scale(1.06);
-  box-shadow: 0 0 0 3px var(--tc-accent), 0 16px 28px -4px rgba(56, 189, 248, 0.55) !important;
+  transform: translateY(10px) scale(1.02);
+  box-shadow: 0 0 0 3px var(--tc-accent), 0 12px 24px -4px rgba(56, 189, 248, 0.55) !important;
 }
 .tc-dim { opacity: 0.45; filter: saturate(0.6); }
 .tc-dragging {
@@ -651,10 +651,10 @@
 }
 .tc-rack .tc-card.tc-peek .tc-face { filter: none; }
 
-/* Same ranks stacked in a big hand: cards behind peek out, the count sits on the corner. */
+/* Same ranks stacked in a big hand: cards behind peek out neatly, the count sits on the corner. */
 .tc-slot > .tc-stack-under {
   position: absolute; top: 0; left: 0;
-  transform: translate(calc(var(--tc-under) * -4px), calc(var(--tc-under) * -6px));
+  transform: translate(calc(var(--tc-under) * -2px), calc(var(--tc-under) * -2.5px));
   box-shadow: var(--tc-elev-1);
   pointer-events: none;
 }
