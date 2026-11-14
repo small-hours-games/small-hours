@@ -549,17 +549,21 @@ export function setupWebSocket(server, manager) {
       broadcastToRoom(room.code, { type: 'LOBBY_UPDATE', state: room.getState() });
     }
 
-    const noConnectedHumans = [...room.players.values()].every(p => !p.connected);
-    const graceMs = room.game && noConnectedHumans ? Math.min(DISCONNECT_GRACE_MS, 5_000) : DISCONNECT_GRACE_MS;
+    const hasActiveHuman = () => [...room.players.entries()].some(
+      ([id, p]) => p.connected && !room.surrendered?.has(id)
+    );
+    const graceMs = room.game && !hasActiveHuman() ? Math.min(DISCONNECT_GRACE_MS, 5_000) : DISCONNECT_GRACE_MS;
 
-    // Start grace period - remove player after timeout, and return TV to lobby if no humans remain
+    // Start grace period - remove player after timeout, and return TV to lobby if no active humans remain
     const timer = setTimeout(() => {
       graceTimers.delete(playerId);
       const currentPlayer = room.players.get(playerId);
       if (currentPlayer && !currentPlayer.connected) {
         const leftName = currentPlayer.username;
         room.removePlayer(playerId);
-        if (room.game && [...room.players.values()].every(p => !p.connected)) {
+        room.surrendered?.delete(playerId);
+        if (room.game && !hasActiveHuman()) {
+          room.surrendered?.clear();
           cancelPhaseTimer(room.code);
           cancelRoundCountdown(room.code);
           cancelBotTurn(room.code);

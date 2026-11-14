@@ -296,13 +296,13 @@ export function handleSurrender(ws, meta, room, _msg, ctx) {
   if (!room.surrendered) room.surrendered = new Set();
   room.surrendered.add(meta.playerId);
 
-  const remainingHumans = [...room.players.values()].filter(
-    p => p.id !== meta.playerId && p.connected && !room.surrendered.has(p.id)
-  );
+  const remainingHumanIds = [...room.players.entries()]
+    .filter(([id, p]) => id !== meta.playerId && p.connected && !room.surrendered.has(id))
+    .map(([id]) => id);
   const botCount = (room.bots || []).length;
 
   // Solo or only AI bots remain: return straight to the lobby
-  if (remainingHumans.length === 0) {
+  if (remainingHumanIds.length === 0) {
     room.surrendered.clear();
     cancelPhaseTimer(room.code);
     ctx.cancelRoundCountdown?.(room.code);
@@ -319,10 +319,10 @@ export function handleSurrender(ws, meta, room, _msg, ctx) {
   }
 
   // 1v1 human game (no AI bots): award the win to the remaining human
-  if (remainingHumans.length === 1 && botCount === 0) {
+  if (remainingHumanIds.length === 1 && botCount === 0) {
     room.surrendered.clear();
     finishGame(room, {
-      winner: remainingHumans[0].id,
+      winner: remainingHumanIds[0],
       surrenderedBy: meta.playerId,
     }, ctx);
     return;

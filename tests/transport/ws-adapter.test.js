@@ -896,4 +896,64 @@ describe('ws-adapter - AI opponents for a lone player', () => {
     a.emit('message', JSON.stringify({ type: 'SET_USERNAME', username: '   ' }));
     expect(a._sent.find(m => m.type === 'ERROR')).toMatchObject({ type: 'ERROR', message: 'Nickname cannot be empty' });
   });
+
+  it('ends solo + AI game on SURRENDER and lets the player immediately start a new game', async () => {
+    vi.useFakeTimers();
+    env = makeEnv();
+    const host = makeFakeWs();
+    env.wss.emit('connection', host, makeFakeReq(`/ws/host/${env.room.code}`));
+    const a = connectPlayer(env, 'Alice');
+
+    a.emit('message', JSON.stringify({ type: 'START_MINI_GAME', gameType: 'shithead', config: { bots: 2 } }));
+    await vi.advanceTimersByTimeAsync(3500);
+    expect(env.room.game).not.toBeNull();
+    expect(env.room.bots.length).toBe(2);
+
+    a._sent.length = 0;
+    host._sent.length = 0;
+    a.emit('message', JSON.stringify({ type: 'SURRENDER' }));
+
+    expect(env.room.game).toBeNull();
+    expect(env.room.bots).toEqual([]);
+    expect(a._sent.some(m => m.type === 'SURRENDER_LOBBY')).toBe(true);
+    expect(host._sent.some(m => m.type === 'SURRENDER_LOBBY')).toBe(true);
+    expect(a._sent.some(m => m.type === 'LOBBY_UPDATE')).toBe(true);
+
+    // Player can immediately choose and start a new game in the lobby
+    a.emit('message', JSON.stringify({ type: 'SUGGEST_GAME', gameType: 'gin-rummy' }));
+    a.emit('message', JSON.stringify({ type: 'START_VOTED_GAME', config: { bots: 1 } }));
+    await vi.advanceTimersByTimeAsync(50);
+    expect(env.room.game).not.toBeNull();
+    expect(env.room.gameType).toBe('gin-rummy');
+  });
+
+  it('ends the game automatically when the last active human disconnects leaving only AI (even if another surrendered)', async () => {
+    vi.useFakeTimers();
+    env = makeEnv();
+    const host = makeFakeWs();
+    env.wss.emit('connection', host, makeFakeReq(`/ws/host/${env.room.code}`));
+    const a = connectPlayer(env, 'Alice');
+    const b = connectPlayer(env, 'Bob');
+
+    // Start a game with 2 humans; force a bot seat to simulate mixed human+AI field
+    a.emit('message', JSON.stringify({ type: 'START_MINI_GAME', gameType: 'shithead' }));
+    await vi.advanceTimersByTimeAsync(50);
+    env.room.bots = [{ playerId: 'bot_1', username: 'Bot 1', avatar: '🤖' }];
+
+    // Alice surrenders and returns to lobby while Bob is still playing
+    a.emit('message', JSON.stringify({ type: 'SURRENDER' }));
+    expect(env.room.game).not.toBeNull();
+    expect(env.room.surrendered.size).toBe(1);
+
+    // Bob disconnects; after short grace period only AI + surrendered Alice remain -> game ends
+    host._sent.length = 0;
+    a._sent.length = 0;
+    b.emit('close');
+    await vi.advanceTimersByTimeAsync(5500);
+
+    expect(env.room.game).toBeNull();
+    expect(env.room.bots).toEqual([]);
+    expect(host._sent.some(m => m.type === 'SURRENDER_LOBBY')).toBe(true);
+    expect(a._sent.some(m => m.type === 'SURRENDER_LOBBY')).toBe(true);
+  });
 });

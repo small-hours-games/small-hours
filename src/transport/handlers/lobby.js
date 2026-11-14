@@ -59,8 +59,8 @@ export function handleJoinLobby(ws, meta, room, msg, ctx) {
   send(ws, { type: 'JOIN_OK', playerId, avatar, reconnectToken, avatarPool: AVATAR_POOL });
   broadcastToRoom(room.code, { type: 'LOBBY_UPDATE', state: room.getState() });
 
-  // If a game is running, send current game state to the reconnecting player
-  if (room.game) {
+  // If a game is running and this player hasn't surrendered, send current game state
+  if (room.game && !room.surrendered?.has(playerId)) {
     const view = getView(room.game, playerId);
     const playerNames = getPlayerNames(room);
     const clock = ctx.timing ? ctx.timing(room) : {};
