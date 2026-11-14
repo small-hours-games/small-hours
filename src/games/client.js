@@ -6,6 +6,7 @@ import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { listGames, publicGames } from './registry.js';
+import { isGameVisibleInLobby } from './visibility.js';
 import { publicPersonas } from '../engine/bots/personas.js';
 
 export const GAMES_DIR = fileURLToPath(new URL('../../games/', import.meta.url));
@@ -20,7 +21,7 @@ function scriptsFor(id, screen) {
 
 /** Fill in the plugin markers of host.html ('tv') or player.html ('phone'). */
 export function renderGamePage(html, screen) {
-  const games = listGames().filter(g => !g.hidden);
+  const games = listGames().filter(g => isGameVisibleInLobby(g));
   const dynamicAliases = games
     .filter(g => g.isCustom && (g.kind === 'card-rules' || g.kind === 'card-remote' || g.kind === 'quiz'))
     .map(g => ({ id: g.id, base: g.kind === 'quiz' ? 'quiz' : '_api-card' }));

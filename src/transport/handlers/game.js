@@ -265,3 +265,67 @@ export function finishGame(room, endResult, ctx) {
   roomGameTypes.delete(room.code);
   broadcastToRoom(room.code, { type: 'LOBBY_UPDATE', state: room.getState() });
 }
+
+/**
+ * Handle SURRENDER message — player forfeits the active game.
+ * If no other human players remain (only AI bots or solo), returns everyone to lobby.
+ */
+export function handleSurrender(ws, meta, room, _msg, ctx) {
+  const { send, broadcastToRoom, cancelPhaseTimer, roomGameTypes } = ctx;
+
+  if (!meta.playerId) {
+    send(ws, { type: 'ERROR', message: 'Not joined yet' });
+    return;
+  }
+  const player = room.players.get(meta.playerId);
+  if (!player) {
+    send(ws, { type: 'ERROR', message: 'Player not found' });
+    return;
+  }
+  if (!room.game) {
+    send(ws, { type: 'ERROR', message: 'No game is in progress' });
+    return;
+  }
+
+  if (!room.surrendered) room.surrendered = new Set();
+  room.surrendered.add(meta.playerId);
+
+  const remainingHumans = [...room.players.values()].filter(
+    p => p.id !== meta.playerId && p.connected && !room.surrendered.has(p.id)
+  );
+  const botCount = (room.bots || []).length;
+
+  // Solo or only AI bots remain: return straight to the lobby
+  if (remainingHumans.length === 0) {
+    room.surrendered.clear();
+    cancelPhaseTimer(room.code);
+    ctx.cancelRoundCountdown?.(room.code);
+    ctx.cancelBotTurn?.(room.code);
+    roomGameTypes.delete(room.code);
+    room.endGame();
+    broadcastToRoom(room.code, {
+      type: 'SURRENDER_LOBBY',
+      playerId: meta.playerId,
+      username: player.username,
+    });
+    broadcastToRoom(room.code, { type: 'LOBBY_UPDATE', state: room.getState() });
+    return;
+  }
+
+  // 1v1 human game (no AI bots): award the win to the remaining human
+  if (remainingHumans.length === 1 && botCount === 0) {
+    room.surrendered.clear();
+    finishGame(room, {
+      winner: remainingHumans[0].id,
+      surrenderedBy: meta.playerId,
+    }, ctx);
+    return;
+  }
+
+  // 3+ players (or 2+ humans with AI): announce surrender and keep playing
+  broadcastToRoom(room.code, {
+    type: 'PLAYER_SURRENDERED',
+    playerId: meta.playerId,
+    username: player.username,
+  });
+}

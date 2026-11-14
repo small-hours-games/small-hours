@@ -437,6 +437,17 @@
           endRoundCountdownUI();
           break;
 
+        case 'SURRENDER_LOBBY':
+          hideRoundCountdownUI();
+          state.gameState = null;
+          renderGameState({ phase: 'lobby' });
+          showToast((msg.username || 'Player') + ' surrendered — returned to lobby', 'info');
+          break;
+
+        case 'PLAYER_SURRENDERED':
+          showToast((msg.username || 'Player') + ' surrendered', 'info');
+          break;
+
         case 'GAME_STATE':
           if (msg.gameType) state.gameType = msg.gameType;
           if (msg.playerNames) state.playerNames = msg.playerNames;

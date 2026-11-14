@@ -20,10 +20,12 @@ import {
 } from '../games/custom-store.js';
 import {
   isBuiltInGame,
+  getGame,
   registerDynamicGame,
   unregisterDynamicGame,
   listGames,
 } from '../games/registry.js';
+import { isGameVisibleInLobby, setGameLobbyVisibility } from '../games/visibility.js';
 
 const PUBLIC_DIR = fileURLToPath(new URL('../../public', import.meta.url));
 
@@ -111,7 +113,13 @@ export function setupAdminRoutes(app) {
   });
 
   app.get('/admin/api/games', requireAdminSession, async (_req, res) => {
-    const custom = await loadCustomGames();
+    const custom = (await loadCustomGames()).map(spec => {
+      const live = getGame(spec.id);
+      return {
+        ...spec,
+        visibleInLobby: live ? isGameVisibleInLobby(live) : false,
+      };
+    });
     const builtIn = listGames().filter(g => !g.isCustom).map(g => ({
       id: g.id,
       label: g.label,
@@ -119,8 +127,18 @@ export function setupAdminRoutes(app) {
       min: g.min,
       max: g.max,
       builtIn: true,
+      defaultHidden: Boolean(g.hidden),
+      visibleInLobby: isGameVisibleInLobby(g),
     }));
     res.json({ custom, builtIn });
+  });
+
+  app.patch('/admin/api/lobby-visibility/:id', requireAdminSession, express.json(), async (req, res) => {
+    const game = getGame(req.params.id);
+    if (!game) return res.status(404).json({ error: 'Game not found' });
+    const visible = req.body?.visible === null ? null : Boolean(req.body?.visible);
+    await setGameLobbyVisibility(game.id, visible);
+    res.json({ id: game.id, visibleInLobby: isGameVisibleInLobby(game) });
   });
 
   app.post('/admin/api/games', requireAdminSession, express.json(), async (req, res) => {

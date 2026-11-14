@@ -7,6 +7,7 @@ import { readdir } from 'node:fs/promises';
 import { pathToFileURL, fileURLToPath } from 'node:url';
 import { join } from 'node:path';
 import { loadCustomGames, buildCustomGameDefinition } from './custom-store.js';
+import { isGameVisibleInLobby } from './visibility.js';
 
 const GAMES_DIR = fileURLToPath(new URL('../../games/', import.meta.url));
 
@@ -81,7 +82,7 @@ export function listGames() {
 
 /** The games people can pick, in the shape the phone and TV use. */
 export function publicGames(games = listGames()) {
-  return games.filter(g => !g.hidden).map(g => ({
+  return games.filter(g => isGameVisibleInLobby(g)).map(g => ({
     type: g.id,
     label: g.label,
     ...(g.title ? { title: g.title } : {}),

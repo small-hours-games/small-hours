@@ -523,6 +523,9 @@ export function setupWebSocket(server, manager) {
       case 'GAME_ACTION':
         gameHandlers.handleGameAction(ws, meta, room, msg, ctx);
         break;
+      case 'SURRENDER':
+        gameHandlers.handleSurrender(ws, meta, room, msg, ctx);
+        break;
       case 'CHAT_MESSAGE':
         chatHandlers.handleChatMessage(ws, meta, room, msg, ctx);
         break;

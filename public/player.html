@@ -41,6 +41,10 @@
           <i class="fa-solid fa-share-nodes text-sm"></i>
         </button>
         <span class="font-mono font-bold text-sky-900 tracking-widest text-xs bg-sky-100 border border-sky-200 px-2 py-0.5 rounded-md" id="roomBadge">----</span>
+        <button type="button" id="surrenderBtn" onclick="openSurrenderModal()" hidden aria-label="Surrender game" class="px-2 py-1 rounded-full bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-700 text-[11px] font-bold items-center gap-1">
+          <i class="fa-solid fa-flag text-[10px]" aria-hidden="true"></i>
+          <span>Surrender</span>
+        </button>
         <button type="button" id="fullscreenBtn" onclick="toggleFullscreen()" aria-label="Full screen" aria-pressed="false" hidden class="fullscreen-btn w-8 h-8 rounded-full items-center justify-center">
           <i class="fa-solid fa-expand text-sm" aria-hidden="true"></i>
         </button>
@@ -182,6 +186,21 @@
       </form>
       <div class="avatar-grid" id="avatarGrid"></div>
       <button type="button" class="avatar-sheet-done" onclick="closeAvatarPicker()">Looks good</button>
+    </div>
+  </div>
+
+  <!-- Surrender confirmation popup -->
+  <div class="avatar-sheet" id="surrenderModal" hidden>
+    <div class="avatar-sheet-backdrop" onclick="closeSurrenderModal()"></div>
+    <div class="avatar-sheet-panel" role="dialog" aria-modal="true" aria-labelledby="surrenderModalTitle">
+      <div class="avatar-sheet-head">
+        <h2 id="surrenderModalTitle" class="font-display">Surrender game?</h2>
+        <p>You will forfeit this game. If no other human players remain, the game returns to the lobby.</p>
+      </div>
+      <div class="grid grid-cols-2 gap-3 mt-4">
+        <button type="button" onclick="closeSurrenderModal()" class="py-2.5 px-4 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-sm">Cancel</button>
+        <button type="button" onclick="confirmSurrender()" class="py-2.5 px-4 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-sm">Surrender</button>
+      </div>
     </div>
   </div>
 
@@ -707,6 +726,21 @@
           endRoundCountdownUI();
           break;
 
+        case 'SURRENDER_LOBBY':
+          closeSurrenderModal();
+          hideRoundCountdownUI();
+          SH.game(state.gameType)?.reset?.();
+          state.gameType = null;
+          state.gamePhase = null;
+          state.ready = false;
+          showSection('lobbySection');
+          showToast((msg.username || 'Player') + ' surrendered — returned to lobby', 'info');
+          break;
+
+        case 'PLAYER_SURRENDERED':
+          showToast((msg.username || 'Player') + ' surrendered', 'info');
+          break;
+
         case 'GAME_STATE':
           if (msg.ack) clearOutbox(msg.ack);
           handleGameState(msg);
@@ -742,8 +776,11 @@
       // Track game type and player names if provided
       if (msg.gameType) state.gameType = msg.gameType;
       if (msg.playerNames) state.playerNames = msg.playerNames;
+      state.gamePhase = msg.phase || null;
 
       if (msg.phase === 'finished') {
+        closeSurrenderModal();
+        syncSurrenderBtn();
         if (msg.winner) {
           showToast('Game over! Winner decided!', 'success');
         }
@@ -753,6 +790,7 @@
         setTimeout(() => {
           SH.game(state.gameType)?.reset?.();
           state.gameType = null;
+          state.gamePhase = null;
           state.ready = false;
           showSection('lobbySection');
         }, 3000);
@@ -767,8 +805,33 @@
           showSection(sectionId);
         }
       }
+      syncSurrenderBtn();
 
       SH.game(state.gameType)?.render(msg);
+    }
+
+    function syncSurrenderBtn() {
+      const btn = document.getElementById('surrenderBtn');
+      if (!btn) return;
+      const inGame = !!state.gameType && state.gamePhase !== 'finished' &&
+        !isSectionActive('nameSection') && !isSectionActive('lobbySection') && !isSectionActive('categorySection');
+      btn.hidden = !inGame;
+      btn.classList.toggle('flex', inGame);
+    }
+
+    function openSurrenderModal() {
+      const modal = document.getElementById('surrenderModal');
+      if (modal) modal.hidden = false;
+    }
+
+    function closeSurrenderModal() {
+      const modal = document.getElementById('surrenderModal');
+      if (modal) modal.hidden = true;
+    }
+
+    function confirmSurrender() {
+      closeSurrenderModal();
+      send({ type: 'SURRENDER' });
     }
 
     // --- Sections ---
@@ -781,6 +844,7 @@
         el.offsetHeight; // force reflow
         el.style.animation = 'fadeIn 0.3s ease';
       }
+      syncSurrenderBtn();
     }
 
     function getGameSectionId(game) {

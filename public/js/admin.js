@@ -97,7 +97,38 @@ async function loadKeys() {
 }
 
 async function loadGames() {
-  const { custom } = await api('/admin/api/games');
+  const { custom, builtIn } = await api('/admin/api/games');
+
+  const visList = document.getElementById('lobbyVisibilityList');
+  if (visList) {
+    const all = [
+      ...(builtIn || []).map(g => ({ ...g, typeLabel: g.defaultHidden ? 'Built-in · no UI' : 'Built-in' })),
+      ...(custom || []).filter(g => g.enabled).map(g => ({ ...g, typeLabel: 'Custom · ' + g.kind })),
+    ];
+    visList.innerHTML = all.map(g => `
+      <div class="bg-slate-950 border border-slate-800 rounded-xl p-3 flex items-center justify-between gap-2">
+        <div class="min-w-0">
+          <div class="text-sm font-semibold truncate">${esc(g.icon || '🎮')} ${esc(g.label)}</div>
+          <div class="text-[11px] text-slate-400 truncate">${esc(g.id)} • ${esc(g.typeLabel)}</div>
+        </div>
+        <button data-vis-id="${esc(g.id)}" data-vis="${g.visibleInLobby ? '1' : '0'}"
+          class="shrink-0 px-2.5 py-1 rounded-lg text-xs font-semibold ${g.visibleInLobby ? 'bg-emerald-900/60 hover:bg-emerald-800 text-emerald-200' : 'bg-slate-800 hover:bg-slate-700 text-slate-300'}">
+          ${g.visibleInLobby ? 'Shown' : 'Hidden'}
+        </button>
+      </div>
+    `).join('');
+    visList.querySelectorAll('[data-vis-id]').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const nextVisible = btn.dataset.vis !== '1';
+        await api(`/admin/api/lobby-visibility/${encodeURIComponent(btn.dataset.visId)}`, {
+          method: 'PATCH',
+          body: JSON.stringify({ visible: nextVisible }),
+        });
+        loadGames();
+      });
+    });
+  }
+
   const list = document.getElementById('customGamesList');
   if (!custom.length) {
     list.innerHTML = '<div class="col-span-2 text-sm text-slate-500 py-3">No custom games yet. Use a preset or POST to <code>/api/v1/games</code>.</div>';
