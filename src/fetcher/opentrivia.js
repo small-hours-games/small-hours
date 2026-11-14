@@ -1,6 +1,7 @@
 // OpenTrivia DB fetcher module
 // Fetches quiz questions from opentdb.com, decodes HTML entities,
 // and returns structured results matching the quiz engine's expected shape.
+import { decodeHtml } from './html-entities.js';
 
 const RESPONSE_CODES = {
   0: null, // success
@@ -10,34 +11,6 @@ const RESPONSE_CODES = {
   4: { code: 'TOKEN_EXHAUSTED', message: 'All questions exhausted for this token' },
   5: { code: 'RATE_LIMITED', message: 'Too many requests, please wait' },
 };
-
-const ENTITY_MAP = {
-  amp: '&',
-  lt: '<',
-  gt: '>',
-  quot: '"',
-  apos: "'",
-  '#039': "'",
-};
-
-/**
- * Decode HTML entities in a string.
- * Handles named entities (&amp; &lt; &gt; &quot; &apos; &#039;)
- * and numeric entities (&#123;).
- */
-function decodeHtml(str) {
-  if (typeof str !== 'string') return str;
-  return str.replace(/&(amp|lt|gt|quot|apos|#039|#\d+);/g, (match, entity) => {
-    if (ENTITY_MAP[entity] !== undefined) {
-      return ENTITY_MAP[entity];
-    }
-    // Numeric entity: &#123; -> String.fromCharCode(123)
-    if (entity.startsWith('#')) {
-      return String.fromCharCode(parseInt(entity.slice(1), 10));
-    }
-    return match;
-  });
-}
 
 /**
  * Fetch quiz questions from OpenTrivia DB.

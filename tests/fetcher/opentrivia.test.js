@@ -88,6 +88,45 @@ describe('fetchQuestions', () => {
       // &gt;
       expect(q2.question).toBe('Is 2 > 1?');
     });
+
+    it('decodes typographic, accented, Greek, soft-hyphen, and hex entities and normalizes whitespace', async () => {
+      mockFetchResponse({
+        response_code: 0,
+        results: [
+          {
+            type: 'multiple',
+            difficulty: 'easy',
+            category: 'General Knowledge',
+            question: 'What was Assassin&rsquo;s Creed &ldquo;All the News&hellip;&rdquo; at 25&deg;C in Llanfair&shy;pwllgwyngyll? ',
+            correct_answer: ' Per&uacute; &amp; C&ocirc;te d&#x27;Ivoire ',
+            incorrect_answers: ['H&auml;xan', 'Schr&ouml;dinger', 'Omicron (&Omicron;)  '],
+          },
+        ],
+      });
+      const result = await fetchQuestions(9, 1);
+      const [q] = result.questions;
+      expect(q.question).toBe('What was Assassin’s Creed “All the News…” at 25°C in Llanfairpwllgwyngyll?');
+      expect(q.correct_answer).toBe("Perú & Côte d'Ivoire");
+      expect(q.incorrect_answers).toEqual(['Häxan', 'Schrödinger', 'Omicron (Ο)']);
+    });
+
+    it('decodes fraction/punctuation entities and leaves invalid surrogate numeric entities intact', async () => {
+      mockFetchResponse({
+        response_code: 0,
+        results: [
+          {
+            type: 'multiple',
+            difficulty: 'easy',
+            category: 'General Knowledge',
+            question: '&iquest;Qu&eacute; es &frac12; + &#xD800;?',
+            correct_answer: 'Yes',
+            incorrect_answers: ['No', 'Maybe', 'Unknown'],
+          },
+        ],
+      });
+      const result = await fetchQuestions(9, 1);
+      expect(result.questions[0].question).toBe('¿Qué es ½ + &#xD800;?');
+    });
   });
 
   describe('API error codes', () => {

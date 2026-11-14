@@ -5,6 +5,7 @@ import { join } from 'node:path';
 import {
   enrichQuestionsWithImages,
   isSpoilerTopic,
+  isSpoilerImageUrl,
   extractLocalCandidates,
 } from '../../src/fetcher/cached-question-images.js';
 
@@ -131,5 +132,97 @@ describe('Quiz question image resolver', () => {
     const enriched = await enrichQuestionsWithImages(musicQ, { allowInTests: true, cachePath });
     expect(enriched[0].image).toBeUndefined();
     expect(globalThis.fetch).not.toHaveBeenCalled();
+  });
+
+  it('does not attach or fetch flag images for flag questions such as the Japanese flag circle question', async () => {
+    globalThis.fetch = vi.fn();
+    const questions = [{
+      id: 'otdb_0fabb19bd5f8',
+      question: 'What colour is the circle on the Japanese flag?',
+      correct_answer: 'Red',
+      incorrect_answers: ['White', 'Yellow', 'Black'],
+      category: 'Geography',
+    }];
+
+    const enriched = await enrichQuestionsWithImages(questions, { allowInTests: true, cachePath });
+    expect(enriched[0].image).toBeUndefined();
+    expect(globalThis.fetch).not.toHaveBeenCalled();
+  });
+
+  it('does not serve a previously cached flag image for a flag question', async () => {
+    writeFileSync(cachePath, JSON.stringify({
+      otdb_0fabb19bd5f8: 'https://upload.wikimedia.org/Flag_of_Japan.svg.png',
+    }));
+    globalThis.fetch = vi.fn();
+    const questions = [{
+      id: 'otdb_0fabb19bd5f8',
+      question: 'What colour is the circle on the Japanese flag?',
+      correct_answer: 'Red',
+      incorrect_answers: ['White', 'Yellow', 'Black'],
+      category: 'Geography',
+    }];
+
+    const enriched = await enrichQuestionsWithImages(questions, { allowInTests: true, cachePath });
+    expect(enriched[0].image).toBeUndefined();
+    expect(globalThis.fetch).not.toHaveBeenCalled();
+  });
+
+  it('blocks cached flag URLs when an answer mentions flag even if the question text does not', async () => {
+    writeFileSync(cachePath, JSON.stringify({
+      otdb_3b65ea96dc7b: 'https://upload.wikimedia.org/Burgee_flag.png',
+    }));
+    globalThis.fetch = vi.fn();
+    const questions = [{
+      id: 'otdb_3b65ea96dc7b',
+      question: 'What is a Burgee?',
+      correct_answer: 'A flag',
+      incorrect_answers: ['A rope', 'A window', 'A type of food'],
+      category: 'General Knowledge',
+    }];
+
+    const enriched = await enrichQuestionsWithImages(questions, { allowInTests: true, cachePath });
+    expect(enriched[0].image).toBeUndefined();
+    expect(globalThis.fetch).not.toHaveBeenCalled();
+  });
+
+  it('blocks flag topics and Flag_of_Japan.svg for visual feature questions without the word flag', async () => {
+    const q = {
+      id: 'otdb_japan_circle',
+      question: "What color does Japan's circle have in the middle?",
+      correct_answer: 'Red',
+      incorrect_answers: ['White', 'Blue', 'Yellow'],
+      category: 'Geography',
+    };
+
+    expect(isSpoilerTopic('Flag of Japan', q)).toBe(true);
+    expect(isSpoilerImageUrl('https://upload.wikimedia.org/wikipedia/commons/9/9e/Flag_of_Japan.svg', q)).toBe(true);
+    expect(isSpoilerImageUrl('https://upload.wikimedia.org/wikipedia/commons/1/1b/Mount_Fuji.jpg', q)).toBe(false);
+
+    // Cached Flag_of_Japan.svg must not be served
+    writeFileSync(cachePath, JSON.stringify({
+      otdb_japan_circle: 'https://upload.wikimedia.org/wikipedia/commons/9/9e/Flag_of_Japan.svg',
+    }));
+    globalThis.fetch = vi.fn();
+    const cachedEnriched = await enrichQuestionsWithImages([q], { allowInTests: true, cachePath });
+    expect(cachedEnriched[0].image).toBeUndefined();
+    expect(globalThis.fetch).not.toHaveBeenCalled();
+
+    // Fresh Wikipedia fetch returning Flag_of_Japan.svg must also be rejected
+    rmSync(cachePath, { force: true });
+    globalThis.fetch = vi.fn(async () => ({
+      ok: true,
+      json: async () => ({
+        query: {
+          pages: {
+            1: {
+              title: 'Japan',
+              thumbnail: { source: 'https://upload.wikimedia.org/wikipedia/commons/9/9e/Flag_of_Japan.svg' },
+            },
+          },
+        },
+      }),
+    }));
+    const fetchedEnriched = await enrichQuestionsWithImages([q], { allowInTests: true, cachePath });
+    expect(fetchedEnriched[0].image).toBeUndefined();
   });
 });

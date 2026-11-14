@@ -358,25 +358,27 @@ describe('AI robot rigs', () => {
   });
 });
 
-describe('The robots sing along', () => {
+describe('The cast sings along', () => {
   const song = 'Looks-good-to-me-remix.mp3';
   const said = t => kit.tbsSongLines(song, t).map(l => l.who + ': ' + l.text);
-  it('gives each line to its robot at its time in the song', () => {
+  it('gives each line to its speaker at its time in the song', () => {
+    expect(said(26.5)).toEqual(['singer: Hey team']);
     expect(said(47)).toEqual(['byte: I guess that makes me second or worse']);
+    expect(said(81)).toEqual(['singer: L-G-T-M, it looks good to me']);
     expect(said(118)).toEqual(['nova: Sorry for the confusion']);
     expect(said(111)).toEqual(['glitch: And I’m going to sleep']);
     expect(said(243)).toEqual(['all: Now the bot reviews the bot']);
-    expect(said(30)).toEqual([]);
+    expect(said(10)).toEqual([]);
     expect(said(kit.TBS_CRASH_AT[song] + 3.5)).toEqual(['turbo: Great catch!']);
     expect(kit.tbsSongLines('other.mp3', 47)).toEqual([]);
   });
-  it('never has one robot saying two lines at once, and stays out of the Board Crash', () => {
+  it('never has one speaker saying two lines at once, and stays out of the Board Crash', () => {
     const lines = kit.TBS_SONG_LINES[song], crash = kit.TBS_CRASH_AT[song];
     for (let t = 0; t < 290; t += 0.1) {
       const who = kit.tbsSongLines(song, t).map(l => l.who);
       expect(new Set(who).size).toBe(who.length);
     }
     expect(lines.every(l => l.at + l.len <= crash || l.at >= crash + 16.4)).toBe(true);
-    expect(lines.every(l => ['nova', 'glitch', 'byte', 'turbo', 'all'].includes(l.who))).toBe(true);
+    expect(lines.every(l => ['singer', 'nova', 'glitch', 'byte', 'turbo', 'all'].includes(l.who))).toBe(true);
   });
 });

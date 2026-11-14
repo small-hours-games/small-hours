@@ -4,6 +4,7 @@
 // genre. Phases, scoring and views are the regular quiz's.
 import quiz, { PHASE_DURATIONS as QUIZ_DURATIONS } from '../quiz/rules.js';
 import { musicPlaylists, fetchPlaylistTracks, buildMusicQuestions } from '../../src/fetcher/deezer.js';
+import { warmQuizNarration } from '../../src/fetcher/cached-narration.js';
 
 // Songs need longer than trivia to recognise; the 30 s clip runs on through the reveal
 const PHASE_DURATIONS = { ...QUIZ_DURATIONS, question: 20000 };
@@ -90,6 +91,8 @@ const musicQuiz = {
     if (selected.length === 0) {
       throw new Error('No playable songs right now');
     }
+
+    warmQuizNarration(selected).catch(() => {});
 
     return {
       config: { ...config, questions: selected, questionDuration: PHASE_DURATIONS.question },

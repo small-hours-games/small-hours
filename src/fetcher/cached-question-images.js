@@ -2,6 +2,7 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { decodeHtml } from './html-entities.js';
 
 const DEFAULT_CACHE_PATH = fileURLToPath(new URL('../../data/question-images.json', import.meta.url));
 const GEMINI_MODEL = 'gemini-3.5-flash-lite';
@@ -40,22 +41,8 @@ const CATEGORY_FALLBACKS = [
 
 let memoryCache = null;
 
-function decodeText(str = '') {
-  return String(str)
-    .replace(/&shy;/gi, '')
-    .replace(/&ldquo;|&rdquo;|&quot;|&#0*34;/gi, '"')
-    .replace(/&lsquo;|&rsquo;|&#0*39;|&apos;/gi, "'")
-    .replace(/&amp;/gi, '&')
-    .replace(/&lt;/gi, '<')
-    .replace(/&gt;/gi, '>')
-    .replace(/&([a-z])(acute|grave|circ|uml|tilde|ring|slash|cedil);/gi, '$1')
-    .replace(/&[a-z0-9#]+;/gi, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
-}
-
 function norm(str = '') {
-  return decodeText(str)
+  return decodeHtml(str)
     .toLowerCase()
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
@@ -63,10 +50,31 @@ function norm(str = '') {
     .trim();
 }
 
+const VISUAL_FEATURE_RE = /\b(colou?rs?|tricolou?rs?|circles?|stars?|stripes?|striped|cross(?:es)?|crescents?|symbols?|emblems?|crests?|coats?\s+of\s+arms|middle|cent(?:er|re)|background|triangles?|squares?|rectangles?|diagonals?|horizontal|vertical|bands?|bars?|shapes?|designs?|patterns?|maple\s+leaf)\b/i;
+
+export function shouldSkipQuestionImage(question) {
+  const text = decodeHtml(question?.question || '');
+  return /\bflags?\b/i.test(text);
+}
+
+function mightRevealFlagAnswer(question) {
+  const text = decodeHtml(question?.question || '');
+  if (/\bflags?\b/i.test(text) || VISUAL_FEATURE_RE.test(text)) return true;
+  return [question?.correct_answer, ...(question?.incorrect_answers || [])]
+    .some(a => /\bflags?\b/i.test(decodeHtml(a || '')));
+}
+
+export function isSpoilerImageUrl(url, question) {
+  if (!url) return false;
+  if (mightRevealFlagAnswer(question) && /flag/i.test(String(url))) return true;
+  return false;
+}
+
 export function isSpoilerTopic(topic, question) {
   const t = norm(topic);
   if (!t) return true;
-  const answers = [question.correct_answer, ...(question.incorrect_answers || [])]
+  if (mightRevealFlagAnswer(question) && /\bflags?\b/.test(t)) return true;
+  const answers = [question?.correct_answer, ...(question?.incorrect_answers || [])]
     .map(norm)
     .filter(Boolean);
   for (const ans of answers) {
@@ -77,7 +85,7 @@ export function isSpoilerTopic(topic, question) {
 }
 
 export function extractLocalCandidates(question) {
-  const text = decodeText(question.question || '');
+  const text = decodeHtml(question.question || '');
   const candidates = [];
 
   // 1. Quoted phrases inside the question (e.g. "Maid of the Mist", "Jurassic Park")
@@ -128,9 +136,9 @@ async function suggestTopicsWithGemini(questions) {
   if (!apiKey || questions.length === 0) return null;
 
   const payload = questions.map(q => ({
-    question: decodeText(q.question),
+    question: decodeHtml(q.question),
     category: q.category || 'General Knowledge',
-    forbidden: [q.correct_answer, ...(q.incorrect_answers || [])].map(decodeText),
+    forbidden: [q.correct_answer, ...(q.incorrect_answers || [])].map(decodeHtml),
   }));
 
   const prompt = [
@@ -138,7 +146,8 @@ async function suggestTopicsWithGemini(questions) {
     'Rules:',
     '1. Pick concrete subjects mentioned IN the question itself that visually suit the question on a TV quiz show.',
     '2. NEVER output, include, or hint at any of the forbidden answers for that question.',
-    '3. The 3rd title must be a concrete, common physical object or place with a Wikipedia photo (e.g. "Playing card", "Mining", "Flag", "Book", "Compass", "Globe").',
+    '3. The 3rd title must be a concrete, common physical object or place with a Wikipedia photo (e.g. "Playing card", "Mining", "Book", "Compass", "Globe").',
+    '4. NEVER output a topic whose Wikipedia image would visually reveal the answer (for example, never output a country or its flag for a question about a flag or colour).',
     `Questions:\n${JSON.stringify(payload)}`,
   ].join('\n');
 
@@ -213,7 +222,7 @@ async function searchWikiThumbnail(query, question) {
   const data = await res.json();
   const pages = Object.values(data.query?.pages || {}).sort((a, b) => (a.index || 0) - (b.index || 0));
   for (const page of pages) {
-    if (page.thumbnail?.source && !isSpoilerTopic(page.title, question)) {
+    if (page.thumbnail?.source && !isSpoilerTopic(page.title, question) && !isSpoilerImageUrl(page.thumbnail.source, question)) {
       return page.thumbnail.source;
     }
   }
@@ -251,7 +260,7 @@ export async function enrichQuestionsWithImages(questions, options = {}) {
   const cachePath = options.cachePath || DEFAULT_CACHE_PATH;
   const cache = await loadCache(cachePath);
 
-  const missing = questions.filter(q => q && !q.media && !q.image && (!q.id || !cache.has(q.id)));
+  const missing = questions.filter(q => q && !q.media && !q.image && !shouldSkipQuestionImage(q) && (!q.id || !cache.has(q.id)));
   if (missing.length > 0) {
     let geminiLists = null;
     try {
@@ -280,7 +289,7 @@ export async function enrichQuestionsWithImages(questions, options = {}) {
 
         for (const candidate of candidates) {
           const hit = lookup(candidate);
-          if (hit && !isSpoilerTopic(hit.title, q)) {
+          if (hit && !isSpoilerTopic(hit.title, q) && !isSpoilerImageUrl(hit.url, q)) {
             imageUrl = hit.url;
             break;
           }
@@ -288,7 +297,10 @@ export async function enrichQuestionsWithImages(questions, options = {}) {
 
         if (!imageUrl && candidates.length > 0) {
           try {
-            imageUrl = await searchWikiThumbnail(candidates[0], q);
+            const searched = await searchWikiThumbnail(candidates[0], q);
+            if (searched && !isSpoilerImageUrl(searched, q)) {
+              imageUrl = searched;
+            }
           } catch {
             imageUrl = null;
           }
@@ -312,8 +324,9 @@ export async function enrichQuestionsWithImages(questions, options = {}) {
   }
 
   return questions.map(q => {
-    if (!q || q.media) return q;
+    if (!q || q.media || shouldSkipQuestionImage(q)) return q;
     const image = q.image || (q.id && cache.get(q.id)) || undefined;
+    if (image && isSpoilerImageUrl(image, q)) return q;
     return image ? { ...q, image } : q;
   });
 }

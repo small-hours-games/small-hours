@@ -130,9 +130,9 @@ export async function warmQuizNarration(questions, options = {}) {
   }
 
   for (const question of questions) {
-    if (!question || question.media) continue;
+    if (!question) continue;
     const prompts = [
-      question.question,
+      !question.media ? question.question : null,
       question.correct_answer != null ? `The answer is: ${question.correct_answer}` : null,
     ].filter(Boolean);
 

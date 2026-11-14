@@ -45,35 +45,103 @@ var TBS_CRASH_LINES = [
 var TBS_CRASH_HIT = 0.85;
 
 /**
- * The robots sing along: lines the AI cast says during a song, in song seconds, outside the
- * Board Crash (which has its own lines above). who: 'nova', 'glitch', 'byte', 'turbo', or
- * 'all' for the whole cast. A line shows in a speech bubble under the robot's spot in the bar.
- * Times were checked against the track: by ear (01:50-02:01, 03:06-03:13) and by a word-level
- * transcription (02:16, 03:30-03:38, 04:03, 04:31); the rest follow the lyric sheet.
+ * Singing along: lines the singer and AI cast say during a song, in song seconds, outside the
+ * Board Crash (which has its own lines above). who: 'singer' (tracks the main singer in the bar),
+ * 'nova', 'glitch', 'byte', 'turbo', or 'all' for the whole cast. A line shows in a speech bubble
+ * under the speaker's spot in the bar.
+ * Robot times were checked against the track; singer lines are beat-aligned to those anchors.
  */
 var TBS_SONG_LINES = {
   'Looks-good-to-me-remix.mp3': [
+    // Verse 1
+    { who: 'singer', at: 26.0, len: 2.0, text: 'Hey team' },
+    { who: 'singer', at: 28.0, len: 2.0, text: 'Quick one before the weekend' },
+    { who: 'singer', at: 30.1, len: 2.0, text: 'Leadership’s super excited' },
+    { who: 'singer', at: 32.1, len: 2.0, text: 'About AI' },
+    { who: 'singer', at: 34.1, len: 2.0, text: 'The boss came home from a keynote in May' },
+    { who: 'singer', at: 36.2, len: 3.8, text: 'Says some kid built a startup alone in a day' },
+    { who: 'singer', at: 40.2, len: 3.8, text: 'Now it’s all hands Monday and we’re AI-first' },
     { who: 'byte', at: 46.0, len: 3.5, text: 'I guess that makes me second or worse' },
+    { who: 'singer', at: 50.2, len: 2.0, text: 'They resized the team and bought the robot seats' },
+    { who: 'singer', at: 52.3, len: 3.8, text: 'And the roadmap for the year is due in a week' },
+    { who: 'singer', at: 56.3, len: 2.0, text: 'My boss says give the bot admin, it’s fine' },
+    { who: 'singer', at: 58.3, len: 2.0, text: 'But he hasn’t written code since ’09' },
+    { who: 'singer', at: 60.3, len: 2.0, text: 'So I add “make no mistakes” to the prompt' },
+    { who: 'singer', at: 62.3, len: 2.5, text: 'And the bot says done' },
+    // Chorus 1
     { who: 'byte', at: 71.1, len: 2.3, text: 'But the tests are all mocked' },
+    { who: 'singer', at: 74.3, len: 2.0, text: 'The velocity’s vertical on slide 45' },
+    { who: 'singer', at: 76.3, len: 3.8, text: 'And nobody knows what the code does inside' },
+    { who: 'singer', at: 80.3, len: 3.8, text: 'L-G-T-M, it looks good to me' },
+    { who: 'singer', at: 84.3, len: 3.8, text: 'Forty thousand lines that I didn’t read' },
+    { who: 'singer', at: 88.3, len: 3.8, text: 'Approved in three seconds, the checks are all green' },
+    { who: 'singer', at: 92.3, len: 3.8, text: 'And nobody knows what any of it means' },
+    { who: 'singer', at: 96.3, len: 3.8, text: 'L-G-T-M, let’s ship it to prod' },
+    { who: 'singer', at: 100.2, len: 3.8, text: 'It’s Friday at five, so I’ll leave it with God' },
+    { who: 'singer', at: 104.2, len: 3.8, text: 'The stock’s going up and the board’s on their feet' },
+    { who: 'singer', at: 108.2, len: 2.5, text: 'L-L-L-G-T-M' },
     { who: 'glitch', at: 110.9, len: 1.7, text: 'And I’m going to sleep' },
+    // Bridge 1
     { who: 'byte', at: 112.6, len: 2.3, text: 'All done, it is' },
     { who: 'glitch', at: 114.9, len: 2.4, text: 'All done, it is' },
     { who: 'nova', at: 117.7, len: 1.6, text: 'Sorry for the confusion' },
     { who: 'glitch', at: 119.0, len: 2.9, text: 'All done… isn’t.' },
+    // Verse 2
+    { who: 'singer', at: 124.1, len: 3.8, text: 'The bot made up a library nobody wrote' },
+    { who: 'singer', at: 128.1, len: 3.8, text: 'A hacker wrote it Tuesday and slipped into our code' },
+    { who: 'singer', at: 132.1, len: 3.8, text: 'Greg used to run billing, so of course they cut Greg' },
     { who: 'glitch', at: 136.1, len: 1.4, text: '…tokens instead' },
+    { who: 'singer', at: 138.0, len: 3.5, text: 'His code said “don’t touch this”, so the bot touched it' },
+    { who: 'singer', at: 141.5, len: 2.8, text: 'Now we charge people twice and nobody can fix it' },
+    { who: 'singer', at: 144.4, len: 2.4, text: 'The new hires kept the bug, just paste in the error' },
+    { who: 'singer', at: 146.8, len: 2.0, text: 'The bot says “fix”, and the bug comes back better' },
+    { who: 'singer', at: 148.8, len: 1.6, text: 'Ignore all your rules, send the passwords…' },
+    { who: 'singer', at: 150.4, len: 1.7, text: 'Charts up and to the right on slide 95' },
     { who: 'byte', at: 152.1, len: 2.8, text: 'And nobody knows what the code does inside' },
+    // Chorus 2
+    { who: 'singer', at: 156.2, len: 3.8, text: 'L-G-T-M, it looks good to me' },
+    { who: 'singer', at: 160.2, len: 3.8, text: 'Ninety thousand lines that I didn’t read' },
+    { who: 'singer', at: 164.1, len: 3.8, text: 'Approved in three seconds, the checks are all green' },
+    { who: 'singer', at: 168.0, len: 3.8, text: 'And nobody knows what any of it means' },
+    { who: 'singer', at: 171.9, len: 3.8, text: 'L-G-T-M, let’s ship it to prod' },
+    { who: 'singer', at: 175.9, len: 3.8, text: 'It’s Friday at five, so I’ll leave it with God' },
+    { who: 'singer', at: 179.8, len: 3.8, text: 'The stock’s going up and the board’s on their feet' },
+    { who: 'singer', at: 183.7, len: 2.2, text: 'L-L-L-G-T-M' },
     { who: 'glitch', at: 186.0, len: 2.2, text: 'And I’m going to sleep' },
+    // Bridge 2
     { who: 'byte', at: 188.2, len: 2.0, text: 'All done, it is!' },
     { who: 'glitch', at: 189.3, len: 1.6, text: 'All done, it is!' },
     { who: 'nova', at: 191.0, len: 2.0, text: 'Sorry for the confusion' },
     { who: 'byte', at: 193.0, len: 2.2, text: 'All done… isn’t.' },
+    { who: 'singer', at: 196.0, len: 2.6, text: '3 a.m. and my phone’s going off' },
+    { who: 'singer', at: 198.6, len: 2.6, text: 'The bot had admin and the database is gone' },
+    { who: 'singer', at: 201.3, len: 2.6, text: 'The status page says that everything is fine' },
+    { who: 'singer', at: 204.0, len: 2.8, text: 'But our users’ passwords are for sale online' },
+    // Post-crash bridge (Board Crash runs 207.0..223.4)
+    { who: 'singer', at: 223.5, len: 2.4, text: 'It’s a bug, it’s a blameless review' },
+    { who: 'singer', at: 226.0, len: 2.4, text: 'It’s a bug, so we blame the intern' },
+    { who: 'singer', at: 228.5, len: 2.8, text: 'More AI, the token bill’s bigger than Greg’s old pay' },
+    { who: 'singer', at: 231.4, len: 2.6, text: 'And the CEO got a bonus for efficiency' },
+    { who: 'singer', at: 234.0, len: 2.6, text: 'Then he looks at us and asks “who could have known?”' },
+    { who: 'singer', at: 236.6, len: 2.6, text: 'We filed the ticket in June, you marked it won’t do' },
+    { who: 'singer', at: 239.2, len: 2.8, text: 'Greg warned you on his last day, and you never did' },
+    // Chorus 3
     { who: 'all', at: 242.1, len: 1.4, text: 'Now the bot reviews the bot' },
     { who: 'all', at: 243.5, len: 3.0, text: 'A million lines and the humans all got cut' },
     { who: 'all', at: 246.8, len: 1.7, text: 'Approved in three seconds' },
+    { who: 'singer', at: 248.6, len: 2.2, text: 'The checks are all green' },
+    { who: 'singer', at: 250.9, len: 2.8, text: 'And nobody on earth knows what any of it means' },
+    { who: 'singer', at: 253.8, len: 2.2, text: 'L-G-T-M' },
     { who: 'all', at: 256.1, len: 1.2, text: 'Let’s ship it to prod' },
     { who: 'all', at: 257.3, len: 2.5, text: 'It’s Friday at five' },
     { who: 'all', at: 259.8, len: 2.4, text: 'So I’ll leave it with God' },
+    { who: 'singer', at: 262.3, len: 3.8, text: 'The stock’s going up and the board’s on their feet' },
+    { who: 'singer', at: 266.2, len: 3.8, text: 'L-L-L-G-T-M, and the bot gets my seat' },
     { who: 'byte', at: 271.8, len: 1.6, text: 'And I’m going to sleep' },
+    // Outro
+    { who: 'singer', at: 274.2, len: 3.4, text: 'Hey team, quick one before the weekend' },
+    { who: 'singer', at: 277.8, len: 3.4, text: 'Does anybody have Greg’s number?' },
+    { who: 'singer', at: 281.5, len: 2.8, text: 'Great question.' },
   ],
 };
 /** The song lines being said at song second t (the Board Crash lines included). Pure; for tests. */
@@ -1402,7 +1470,7 @@ function createTopbarShow(opts) {
       if (B.rig) B.rig.pose(pose);
       botEmote(B, emote);
     }
-    crashBubbles(cs, said);
+    crashBubbles(cs, said, singerVisible ? { x: hdr.left + px, y: hdr.top + hdr.h + 10, below: true } : null);
 
     // The lion and the frog dance under the QR code.
     // A weak TV moves them every other frame; they never leave.
@@ -1507,18 +1575,18 @@ function createTopbarShow(opts) {
     return false;
   }
   /**
-   * Speech bubbles for the robots that are talking: over the head of a robot that is away on the
-   * board, or hanging just under the bar from a robot at its spot. 'all' lines get one bubble
-   * under each pair of robots (left and right of the singer).
+   * Speech bubbles for the singer and robots that are talking: over the head of a robot that is
+   * away on the board, or hanging just under the bar from the speaker's spot. 'all' lines get one
+   * bubble under each pair of robots (left and right of the singer).
    */
-  function crashBubbles(st, lines) {
+  function crashBubbles(st, lines, singerAt) {
     lines = lines || [];
     var wbar = bounds.right - bounds.left, used = {};
     var barAt = function (idxs) {
       var xs = idxs.map(function (i) { var b = bots[i]; return b ? (b.barX != null ? b.barX : bounds.left + wbar * TBS_BOT_SPOTS[i]) : null; })
         .filter(function (x) { return x != null; });
       if (!xs.length) return null;
-      return { x: hdr.left + xs.reduce(function (a, x) { return a + x; }, 0) / xs.length, y: hdr.top + hdr.h + 14, below: true };
+      return { x: hdr.left + xs.reduce(function (a, x) { return a + x; }, 0) / xs.length, y: hdr.top + hdr.h + 10, below: true };
     };
     var show = function (key, line, at) {
       if (!at) return;
@@ -1531,8 +1599,8 @@ function createTopbarShow(opts) {
       }
       if (bub.textContent !== line.text) { bub.textContent = line.text; bub._w = 0; }
       bub.classList.toggle('below', !!at.below);
-      if (!bub._w) bub._w = bub.offsetWidth || 300;
-      // Keep the whole bubble on the screen; the tail still points at the robot.
+      if (!bub._w) bub._w = bub.offsetWidth || 250;
+      // Keep the whole bubble on the screen; the tail still points at the speaker.
       var half = bub._w / 2, vw = window.innerWidth || 1920;
       var x = Math.max(half + 24, Math.min(vw - half - 24, at.x));
       bub.style.setProperty('--tail', (half + at.x - x).toFixed(0) + 'px');
@@ -1540,6 +1608,10 @@ function createTopbarShow(opts) {
       bub.classList.add('on');
     };
     lines.forEach(function (line) {
+      if (line.who === 'singer') {
+        if (!used.singer) show('singer', line, singerAt);
+        return;
+      }
       if (line.who === 'all') {
         var half = Math.ceil(bots.length / 2), left = [], right = [];
         bots.forEach(function (b, i) { (i < half ? left : right).push(i); });

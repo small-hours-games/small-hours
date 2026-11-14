@@ -92,5 +92,14 @@ describe('Cached host narration', () => {
       await warmQuizNarration(questions, { retryDelayMs: 0 });
       expect(texts()).toHaveLength(2);
     });
+
+    it('warms reveal narration (but skips question prompt and intro) for Music Quiz media questions', async () => {
+      const musicQuestions = [
+        { id: 'dz_1', question: 'Who is the artist?', correct_answer: 'Daft Punk', media: { preview: 'https://cdn.example/1.mp3' } },
+        { id: 'dz_2', question: "What's the song called?", correct_answer: 'Get Lucky', media: { preview: 'https://cdn.example/2.mp3' } },
+      ];
+      await warmQuizNarration(musicQuestions, { retryDelayMs: 0 });
+      expect(texts()).toEqual(['The answer is: Daft Punk', 'The answer is: Get Lucky']);
+    });
   });
 });

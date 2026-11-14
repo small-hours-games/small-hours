@@ -9,6 +9,7 @@ import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { dirname, join, resolve } from 'node:path';
 import { fetchQuestions as fetchFromApi, fetchCategories as fetchCategoriesFromApi } from './opentrivia.js';
+import { decodeHtml } from './html-entities.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const CACHE_DIR = resolve(__dirname, '../../data/questions');
@@ -36,6 +37,17 @@ const API_SPACING_MS = 5500;
 function stableId(question) {
   const key = question.question + '\0' + question.correct_answer;
   return 'otdb_' + createHash('sha1').update(key).digest('hex').slice(0, 12);
+}
+
+function sanitizeQuestion(q) {
+  if (!q || typeof q !== 'object') return q;
+  return {
+    ...q,
+    question: decodeHtml(q.question),
+    correct_answer: decodeHtml(q.correct_answer),
+    incorrect_answers: Array.isArray(q.incorrect_answers) ? q.incorrect_answers.map(decodeHtml) : q.incorrect_answers,
+    category: decodeHtml(q.category),
+  };
 }
 
 /**
@@ -68,7 +80,7 @@ export async function fetchQuestions(categoryId, amount = 10, { difficulty } = {
   try {
     const raw = await readFile(cachePath, 'utf8');
     const cached = JSON.parse(raw);
-    return { ok: true, questions: cached };
+    return { ok: true, questions: Array.isArray(cached) ? cached.map(sanitizeQuestion) : cached };
   } catch (err) {
     if (err.code !== 'ENOENT') {
       // Unexpected read error — log and fall through to API

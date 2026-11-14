@@ -150,6 +150,30 @@ describe('cached-fetcher', () => {
       expect(q).toHaveProperty('difficulty');
       expect(q).toHaveProperty('id');
     });
+
+    it('decodes leftover HTML entities and trims extra whitespace when reading cached questions', async () => {
+      const dirtyCached = [
+        {
+          question: 'Which city in Per&uacute; has  Assassin&rsquo;s Creed? ',
+          correct_answer: ' C&ocirc;te d&rsquo;Ivoire',
+          incorrect_answers: ['H&auml;xan ', 'P&oacute;land'],
+          category: 'Geography',
+          difficulty: 'easy',
+          id: 'otdb_abc123abc123',
+        },
+      ];
+      readFile.mockResolvedValue(JSON.stringify(dirtyCached));
+
+      const result = await fetchQuestions(22, 5);
+      expect(result.questions[0]).toEqual({
+        question: 'Which city in Perú has Assassin’s Creed?',
+        correct_answer: 'Côte d’Ivoire',
+        incorrect_answers: ['Häxan', 'Póland'],
+        category: 'Geography',
+        difficulty: 'easy',
+        id: 'otdb_abc123abc123',
+      });
+    });
   });
 
   describe('null categoryId uses "any" as cache key', () => {
