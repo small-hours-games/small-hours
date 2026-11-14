@@ -218,6 +218,7 @@
       reconnectAttempts: 0,
       maxReconnect: 10,
       reconnectTimer: null,
+      roomNotFound: false,
     };
 
     // Mute toggle
@@ -355,9 +356,11 @@
       };
 
       ws.onclose = (e) => {
-        // TV app: the room is gone (e.g. the server restarted), so start a fresh one
-        if (TV_MODE && e && e.code === 4004) {
-          location.replace('/tv');
+        // The room is gone (e.g. server restarted): stop reconnecting and leave.
+        if (state.roomNotFound || (e && e.code === 4004)) {
+          state.roomNotFound = true;
+          clearTimeout(state.reconnectTimer);
+          location.replace(TV_MODE ? '/tv' : '/');
           return;
         }
         setConnectionStatus('disconnected', 'Disconnected');
@@ -370,6 +373,7 @@
     }
 
     function scheduleReconnect() {
+      if (state.roomNotFound) return;
       // The TV app has nobody to press refresh, so it keeps trying (every 30 s at most)
       if (state.reconnectAttempts >= state.maxReconnect && !TV_MODE) {
         setConnectionStatus('disconnected', 'Connection lost');
@@ -472,6 +476,14 @@
 
         case 'SERVER_RESTARTING':
           showToast('Server restarting, please wait...', 'error');
+          break;
+
+        case 'ERROR':
+          if (/room not found/i.test(msg.message || '')) {
+            state.roomNotFound = true;
+            clearTimeout(state.reconnectTimer);
+            location.replace(TV_MODE ? '/tv' : '/');
+          }
           break;
 
         default:

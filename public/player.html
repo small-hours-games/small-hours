@@ -445,6 +445,7 @@
       reconnectAttempts: 0,
       maxReconnect: 20,
       reconnectTimer: null,
+      roomNotFound: false,
       votedGame: null,
     };
 
@@ -523,7 +524,11 @@
         }
       };
 
-      ws.onclose = () => {
+      ws.onclose = (e) => {
+        if (state.roomNotFound || (e && e.code === 4004)) {
+          leaveDeadRoom();
+          return;
+        }
         setConnectionStatus('disconnected', 'Disconnected');
         scheduleReconnect();
       };
@@ -533,7 +538,18 @@
       };
     }
 
+    function leaveDeadRoom() {
+      state.roomNotFound = true;
+      clearTimeout(state.reconnectTimer);
+      clearTimeout(probeTimer);
+      probeTimer = null;
+      try { localStorage.removeItem('sh_reconnect_' + state.code); } catch { /* ignore */ }
+      setConnectionStatus('disconnected', 'Room not found');
+      window.location.replace('/');
+    }
+
     function scheduleReconnect() {
+      if (state.roomNotFound) return;
       if (state.reconnectAttempts >= state.maxReconnect) {
         setConnectionStatus('disconnected', 'Connection lost');
         showToast('Connection lost. Please refresh.', 'error');
@@ -617,6 +633,7 @@
 
     /** Drop the old socket without waiting for it to admit it is dead, and connect at once. */
     function reconnectNow() {
+      if (state.roomNotFound) return;
       if (state.ws && state.ws.readyState === WebSocket.CONNECTING) return;
       clearTimeout(state.reconnectTimer);
       clearTimeout(probeTimer);
@@ -748,6 +765,10 @@
           break;
 
         case 'ERROR':
+          if (/room not found/i.test(msg.message || '')) {
+            leaveDeadRoom();
+            break;
+          }
           if (state.avatarRestore && /avatar/i.test(msg.message || '')) {
             // Last time's face is taken here: keep the one the server gave, quietly.
             state.avatarRestore = false;
