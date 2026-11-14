@@ -39,9 +39,9 @@
         totalEl.textContent = '';
         return;
       }
-      let html = d.cards.map(c => renderTableCard(c, { size: 'sm', dataId: '' })).join('');
+      let html = d.cards.map(c => renderTableCard(c, { size: 'md', dataId: '' })).join('');
       if (d.hiddenHole) {
-        html += renderTableCard(null, { size: 'sm', facedown: true, dataId: '' });
+        html += renderTableCard(null, { size: 'md', facedown: true, dataId: '' });
       }
       cardsEl.innerHTML = html;
       totalEl.textContent = d.hiddenHole ? d.total + ' + ?' : d.isBusted ? d.total + ' BUST' : String(d.total);
@@ -57,7 +57,7 @@
       }
       wrap.innerHTML = seat.hands.map((hand, idx) => {
         const isActive = msg.isMyTurn && idx === msg.activeHandIndex;
-        const cardsHtml = hand.cards.map(c => renderTableCard(c, { size: 'md', dataId: '' })).join('');
+        const cardsHtml = hand.cards.map(c => renderTableCard(c, { size: 'lg', dataId: '' })).join('');
         const meta = 'Total <b class="tc-mono">' + hand.total + (hand.soft ? ' (soft)' : '') + '</b> · Bet <b class="tc-mono">' + tcNum(hand.bet) + '</b>';
         return '<div class="bj-hand-box' + (isActive ? ' bj-hand-active' : '') + '">' +
           '<div class="bj-cards">' + cardsHtml + '</div>' +

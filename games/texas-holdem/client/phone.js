@@ -28,7 +28,7 @@
       const board = msg.board || [];
       let html = '';
       for (let i = 0; i < 5; i++) {
-        if (board[i]) html += renderTableCard(board[i], { size: 'sm', dataId: '' });
+        if (board[i]) html += renderTableCard(board[i], { size: 'md', dataId: '' });
         else html += '<div class="th-slot"></div>';
       }
       document.getElementById('thBoard').innerHTML = html;
@@ -58,7 +58,7 @@
       labelEl.textContent = state.thHideCards ? 'Hole cards hidden (tap to peek)' : 'Your hole cards (tap to hide)';
       cardsEl.innerHTML = hole.map(c =>
         renderTableCard(state.thHideCards ? null : c, {
-          size: 'md',
+          size: 'lg',
           facedown: state.thHideCards,
           dim: folded,
           dataId: '',

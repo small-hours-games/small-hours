@@ -4,33 +4,100 @@
 .th-pot-row { display: flex; gap: 8px; align-items: center; }
 .th-pot-pill { background: rgba(250, 204, 21, 0.2); border-color: rgba(250, 204, 21, 0.5); color: #fef08a; font-weight: 700; }
 .th-board { display: flex; gap: 6px; justify-content: center; align-items: center; }
-.th-slot { width: 46px; height: 64px; border-radius: 8px; border: 1.5px dashed rgba(255, 255, 255, 0.22); background: rgba(0, 0, 0, 0.14); }
+.th-board .tc-md { --tc-w: min(62px, calc((100vw - 88px) / 5)); }
+.th-slot { width: min(62px, calc((100vw - 88px) / 5)); aspect-ratio: 1 / 1.42; border-radius: 8px; border: 1.5px dashed rgba(255, 255, 255, 0.22); background: rgba(0, 0, 0, 0.14); }
 .th-showdown { text-align: center; }
 .th-win-banner { background: rgba(22, 163, 74, 0.28); border: 1px solid rgba(74, 222, 128, 0.5); border-radius: 10px; padding: 6px 10px; font-size: 0.85rem; }
 
 .th-hole-zone { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 6px 0; cursor: pointer; }
 .th-hole-label { font-size: 0.78rem; color: rgba(255, 255, 255, 0.7); }
-.th-hole-cards { display: flex; gap: 8px; justify-content: center; }
+.th-hole-cards { display: flex; gap: 10px; justify-content: center; }
 .th-controls { display: flex; flex-direction: column; gap: 10px; padding: 8px 0 4px; }
 .th-raise-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
 .th-btn-fold { background: rgba(220, 38, 38, 0.25); border-color: rgba(248, 113, 113, 0.5); }
 
-.th-tv { justify-content: space-between; gap: 16px; }
-.th-tv-center { display: flex; flex-direction: column; align-items: center; gap: 12px; }
-.th-tv-pot { font-size: 1.3rem; background: rgba(0, 0, 0, 0.35); border: 1px solid rgba(250, 204, 21, 0.45); border-radius: 999px; padding: 6px 18px; color: #fef08a; }
-.th-tv-board { display: flex; gap: 12px; justify-content: center; align-items: center; }
-.th-tv-slot { width: 88px; height: 124px; border-radius: 10px; border: 2px dashed rgba(255, 255, 255, 0.2); background: rgba(0, 0, 0, 0.14); }
-.th-tv-seats { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; width: 100%; }
-.th-tv-seat { background: rgba(0, 0, 0, 0.28); border: 1px solid rgba(255, 255, 255, 0.14); border-radius: 14px; padding: 10px 12px; min-width: 155px; display: flex; flex-direction: column; gap: 6px; align-items: center; }
-.th-tv-seat-turn { border-color: #facc15; box-shadow: 0 0 0 2px rgba(250, 204, 21, 0.35); }
-.th-tv-seat-fold { opacity: 0.55; }
-.th-tv-seat-head { display: flex; justify-content: space-between; align-items: center; width: 100%; gap: 8px; font-size: 0.92rem; }
-.th-tv-seat-who { display: flex; align-items: center; gap: 6px; min-width: 0; }
+/* Oval casino poker table on TV */
+.th-tv {
+  background: radial-gradient(ellipse at 50% 45%, #161d2b 0%, #090d16 80%) !important;
+  justify-content: space-between;
+  gap: 14px;
+}
+.th-tv::before { display: none; }
+.th-tv-arena {
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  grid-template-columns: minmax(170px, auto) 1fr minmax(170px, auto);
+  grid-template-areas:
+    "top top top"
+    "left oval right"
+    "bottom bottom bottom";
+  align-items: center;
+  justify-items: center;
+  gap: 14px 18px;
+  flex: 1;
+}
+.th-tv-row-top { grid-area: top; display: flex; justify-content: center; gap: 22px; flex-wrap: wrap; }
+.th-tv-row-bottom { grid-area: bottom; display: flex; justify-content: center; gap: 22px; flex-wrap: wrap; }
+.th-tv-col-left { grid-area: left; display: flex; flex-direction: column; gap: 14px; align-items: flex-end; }
+.th-tv-col-right { grid-area: right; display: flex; flex-direction: column; gap: 14px; align-items: flex-start; }
+
+.th-tv-oval {
+  grid-area: oval;
+  position: relative;
+  width: min(760px, 100%);
+  min-height: 290px;
+  padding: 28px 36px;
+  border-radius: 999px;
+  background-color: #0b4626;
+  background-image:
+    radial-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+    radial-gradient(ellipse at 50% 45%, #166a3b 0%, #0b4626 65%, #062a16 100%);
+  background-size: 20px 20px, 100% 100%;
+  border: 14px solid #1d232e;
+  box-shadow:
+    inset 0 0 0 2px rgba(250, 204, 21, 0.25),
+    inset 0 18px 45px rgba(0, 0, 0, 0.55),
+    0 24px 50px -12px rgba(0, 0, 0, 0.85),
+    0 0 0 2px rgba(255, 255, 255, 0.08);
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px;
+}
+.th-tv-oval::before {
+  content: '';
+  position: absolute; inset: 0; margin: auto;
+  width: 240px; height: 90px;
+  background: url(/images/smallhours-logo.svg) center / contain no-repeat;
+  opacity: 0.08; pointer-events: none;
+}
+.th-tv-center { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; gap: 12px; }
+.th-tv-pot { font-size: 1.25rem; background: rgba(0, 0, 0, 0.52); border: 1px solid rgba(250, 204, 21, 0.55); border-radius: 999px; padding: 6px 20px; color: #fef08a; box-shadow: 0 6px 16px rgba(0, 0, 0, 0.45); }
+.th-tv-board { display: flex; gap: 10px; justify-content: center; align-items: center; }
+.th-tv-slot { width: 88px; height: 124px; border-radius: 12px; border: 2px dashed rgba(255, 255, 255, 0.22); background: rgba(0, 0, 0, 0.18); }
+
+.th-tv-seat {
+  position: relative;
+  background: rgba(16, 22, 34, 0.92);
+  border: 1.5px solid rgba(148, 163, 184, 0.28);
+  border-radius: 18px;
+  padding: 10px 14px;
+  min-width: 170px;
+  display: flex; flex-direction: column; gap: 6px; align-items: center;
+  box-shadow: 0 12px 24px -10px rgba(0, 0, 0, 0.75);
+}
+.th-tv-seat-turn { border-color: #facc15; box-shadow: 0 0 0 2px rgba(250, 204, 21, 0.65), 0 12px 28px -8px rgba(250, 204, 21, 0.35); }
+.th-tv-seat-fold { opacity: 0.52; }
+.th-tv-seat-head { display: flex; justify-content: space-between; align-items: center; width: 100%; gap: 10px; font-size: 0.95rem; }
+.th-tv-seat-who { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.th-tv-seat-who .ai-seat-slot {
+  width: 36px; height: 36px; border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.2);
+  display: inline-flex; align-items: center; justify-content: center; font-size: 1.2rem; overflow: hidden; flex-shrink: 0;
+}
+.th-tv-seat-who .ai-seat-slot.ai-seat-rig { width: 38px; height: 42px; border-radius: 999px; }
 .th-tv-tags { display: flex; gap: 4px; align-items: center; flex-wrap: wrap; justify-content: center; }
-.th-tag { font-size: 0.7rem; font-weight: 700; padding: 1px 6px; border-radius: 999px; background: rgba(255, 255, 255, 0.16); }
+.th-tag { font-size: 0.72rem; font-weight: 800; padding: 2px 7px; border-radius: 999px; background: rgba(255, 255, 255, 0.16); }
 .th-tag-d { background: #facc15; color: #0f172a; }
 .th-tag-fold { background: #dc2626; color: #fff; }
 .th-tag-allin { background: #ea580c; color: #fff; }
-.th-tv-bet { font-size: 0.78rem; color: #fde047; }
+.th-tv-bet { font-size: 0.8rem; color: #fde047; font-weight: 700; }
 .th-tv-cards { display: flex; gap: 6px; justify-content: center; }
-.th-tv-handname { font-size: 0.78rem; color: #86efac; font-weight: 600; }
+.th-tv-handname { font-size: 0.8rem; color: #86efac; font-weight: 700; }
