@@ -21,13 +21,22 @@ function scriptsFor(id, screen) {
 /** Fill in the plugin markers of host.html ('tv') or player.html ('phone'). */
 export function renderGamePage(html, screen) {
   const games = listGames().filter(g => !g.hidden);
+  const dynamicAliases = games
+    .filter(g => g.isCustom && (g.kind === 'card-rules' || g.kind === 'card-remote' || g.kind === 'quiz'))
+    .map(g => ({ id: g.id, base: g.kind === 'quiz' ? 'quiz' : '_api-card' }));
   const catalog = '<script>var SH_GAMES = ' + JSON.stringify(publicGames()).replace(/</g, '\\u003c') + ';' +
-    'var SH_AI = ' + JSON.stringify(publicPersonas()).replace(/</g, '\\u003c') + ';</script>';
+    'var SH_AI = ' + JSON.stringify(publicPersonas()).replace(/</g, '\\u003c') + ';' +
+    'var SH_DYNAMIC_ALIASES = ' + JSON.stringify(dynamicAliases).replace(/</g, '\\u003c') + ';</script>';
   const styles = games.filter(g => existsSync(join(clientDir(g.id), 'style.css')))
     .map(g => `<link rel="stylesheet" href="/games/${g.id}/style.css">`).join('\n  ');
-  const scripts = games.flatMap(g => scriptsFor(g.id, screen)).map(src => `<script src="${src}"></script>`).join('\n  ');
+  const apiCardScripts = scriptsFor('_api-card', screen);
+  const scripts = [...new Set([...games.flatMap(g => scriptsFor(g.id, screen)), ...apiCardScripts])]
+    .map(src => `<script src="${src}"></script>`).join('\n  ');
+  const apiCardSection = screen === 'phone' && existsSync(join(clientDir('_api-card'), 'phone.html'))
+    ? [readFileSync(join(clientDir('_api-card'), 'phone.html'), 'utf8')]
+    : [];
   const sections = screen === 'phone'
-    ? games.map(g => join(clientDir(g.id), 'phone.html')).filter(existsSync).map(f => readFileSync(f, 'utf8')).join('\n')
+    ? [...games.map(g => join(clientDir(g.id), 'phone.html')).filter(existsSync).map(f => readFileSync(f, 'utf8')), ...apiCardSection].join('\n')
     : '';
   return html
     .replace('<!-- game-catalog -->', () => catalog)

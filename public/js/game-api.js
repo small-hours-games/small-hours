@@ -11,6 +11,7 @@
 var SH_PLUGINS = {};
 var SH = {
   registerGame: function (id, plugin) { SH_PLUGINS[id] = plugin; },
+  aliasGame: function (id, baseId) { if (SH_PLUGINS[baseId]) SH_PLUGINS[id] = SH_PLUGINS[baseId]; },
   game: function (id) { return SH_PLUGINS[id] || null; },
   eachGame: function (fn) { Object.keys(SH_PLUGINS).forEach(function (id) { fn(SH_PLUGINS[id], id); }); },
   // Set by the TV page: lower the game music while a voice speaks.

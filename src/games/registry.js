@@ -6,6 +6,7 @@
 import { readdir } from 'node:fs/promises';
 import { pathToFileURL, fileURLToPath } from 'node:url';
 import { join } from 'node:path';
+import { loadCustomGames, buildCustomGameDefinition } from './custom-store.js';
 
 const GAMES_DIR = fileURLToPath(new URL('../../games/', import.meta.url));
 
@@ -46,6 +47,28 @@ export async function loadGames(dir = GAMES_DIR) {
 }
 
 const GAMES = await loadGames();
+const BUILTIN_IDS = new Set(GAMES.keys());
+
+for (const spec of await loadCustomGames()) {
+  if (spec.enabled && !BUILTIN_IDS.has(spec.id)) {
+    GAMES.set(spec.id, { ...buildCustomGameDefinition(spec), isCustom: true });
+  }
+}
+
+export function isBuiltInGame(id) {
+  return BUILTIN_IDS.has(id);
+}
+
+export function registerDynamicGame(game) {
+  if (!game || !game.id || BUILTIN_IDS.has(game.id)) return false;
+  GAMES.set(game.id, { ...game, isCustom: true });
+  return true;
+}
+
+export function unregisterDynamicGame(id) {
+  if (BUILTIN_IDS.has(id)) return false;
+  return GAMES.delete(id);
+}
 
 export function getGame(id) {
   return GAMES.get(id);

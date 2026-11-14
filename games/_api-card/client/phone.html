@@ -1,0 +1,44 @@
+    <!-- API CARD GAME SECTION: shared Phone shell for dynamic card games -->
+    <div class="section tc-screen" id="apiCardSection">
+      <div class="tc-topbar">
+        <div class="tc-status" id="acStatus"><span class="tc-dot" id="acStatusDot"></span><span id="acStatusText">Card Game</span></div>
+        <span class="tc-pill tc-mono" id="acMeta">Cards</span>
+      </div>
+      <div class="tc-opps" id="acOpps"></div>
+      <div class="tc-table tc-felt">
+        <div class="tc-wells">
+          <div class="tc-well" id="acDrawWell" onclick="acDrawCard()">
+            <span class="tc-well-label">Draw deck</span>
+            <div id="acDrawStack"></div>
+            <span class="tc-count" id="acDrawCount">0</span>
+          </div>
+          <div class="tc-well" id="acPileWell">
+            <span class="tc-well-label">Play pile</span>
+            <div id="acPileStack"></div>
+            <span class="tc-count" id="acPileCount">0</span>
+          </div>
+        </div>
+        <div class="tc-rule" id="acRule"></div>
+        <div id="acSuitPicker" class="flex justify-center gap-2 mt-2" hidden>
+          <button type="button" class="tc-btn" onclick="acPickWildSuit('h')">♥ Hearts</button>
+          <button type="button" class="tc-btn" onclick="acPickWildSuit('d')">♦ Diamonds</button>
+          <button type="button" class="tc-btn" onclick="acPickWildSuit('c')">♣ Clubs</button>
+          <button type="button" class="tc-btn" onclick="acPickWildSuit('s')">♠ Spades</button>
+        </div>
+        <div id="acLog" class="tc-log-phone"></div>
+      </div>
+      <div class="tc-hand-zone">
+        <div class="tc-hand-area" id="acHand"></div>
+        <div class="tc-actionbar">
+          <div>
+            <button type="button" class="tc-btn" id="acSortBtn" onclick="acCycleSort()">Sort: rank</button>
+            <button type="button" class="tc-btn" id="acLayoutBtn" onclick="acToggleLayout()">2-Row</button>
+            <button type="button" class="tc-btn tc-btn-colours" id="acColoursBtn" onclick="tcToggleFourColour()" aria-pressed="false" title="Four-colour suits"><span class="tc-dot-c">♣</span><span class="tc-dot-d">♦</span></button>
+          </div>
+          <div>
+            <button type="button" class="tc-btn" id="acPassBtn" onclick="acPassTurn()">Pass</button>
+          </div>
+        </div>
+        <button type="button" class="tc-cta tc-cta-big" id="acCta" onclick="acCtaAction()">Select a card</button>
+      </div>
+    </div>

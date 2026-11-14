@@ -9,6 +9,8 @@ import { notifyRoomCreated } from '../notifications/discord.js';
 import { gameStories, listGames, publicGames } from '../games/registry.js';
 import { GAMES_DIR, renderGamePage } from '../games/client.js';
 import { BUILD_INFO } from '../version.js';
+import { setupAdminRoutes } from './admin-routes.js';
+import { setupApiV1Routes } from './api-v1.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -107,6 +109,10 @@ export function setupRoutes(app, manager) {
   for (const game of listGames()) {
     app.use('/games/' + game.id, express.static(path.join(GAMES_DIR, game.id, 'client'), { index: false }));
   }
+  app.use('/games/_api-card', express.static(path.join(GAMES_DIR, '_api-card', 'client'), { index: false }));
+
+  setupAdminRoutes(app);
+  setupApiV1Routes(app, manager);
 
   app.get('/api/games', (_req, res) => {
     res.json({ games: publicGames() });
