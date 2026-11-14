@@ -85,7 +85,7 @@
 
     function tcLayout() {
       if (!state.tcLayout) {
-        try { state.tcLayout = localStorage.getItem('sh_card_layout') || 'rack'; } catch { state.tcLayout = 'rack'; }
+        try { state.tcLayout = localStorage.getItem('sh_card_layout') || 'fan'; } catch { state.tcLayout = 'fan'; }
       }
       return state.tcLayout;
     }
