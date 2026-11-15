@@ -1,0 +1,11 @@
+{
+  "graftReads": 0,
+  "sourceReads": 0,
+  "savedTokens": 0,
+  "injectedPointers": [],
+  "nudges": 0,
+  "promptAsks": 1,
+  "lastBillingUuid": "3b63e99d-ce21-4fbe-9fd8-6eeaa9fe1489",
+  "inputCostMicros": 466244,
+  "inputTokensBilled": 585528
+}
