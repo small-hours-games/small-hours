@@ -1092,6 +1092,13 @@
     document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') setTimeout(checkPotPayment, 300); });
     setInterval(() => { if (document.visibilityState === 'visible') checkPotPayment(); }, 4000);
 
+    // Swish's official logo, from Swish's own brand page (swish.nu/marketing-toolbox/logotype),
+    // unedited and on white, as their guidelines ask. Plain text if it can't load.
+    const SWISH_LOGO_URL = 'https://images.ctfassets.net/zrqoyh8r449h/5dYSjiUWZq3ITy9acKxDGq/b11b197ae975131489c79311f0f9abeb/Swish_Logo_Secondary_Light_BG_P3.png?w=480';
+    function swishLogoHtml() {
+      return '<img class="swish-logo" src="' + SWISH_LOGO_URL + '" alt="Swish" onerror="this.replaceWith(document.createTextNode(\'Swish\'))">';
+    }
+
     function formatPayee(n) {
       const s = String(n || '');
       return /^123\d{7}$/.test(s) ? s.slice(0, 3) + ' ' + s.slice(3, 6) + ' ' + s.slice(6, 8) + ' ' + s.slice(8) : s;
@@ -1165,9 +1172,10 @@
           '<p class="pot-note">Didn\'t pay? <button class="pot-link" onclick="potClearPaying();renderPotPanel()">Start over</button></p>';
       } else if (!mine.paid) {
         html += '<p class="pot-gate">Pay <b>' + pot.stake + ' kr</b> to join this room.</p>' +
-          '<button class="pot-pay" onclick="startPotPayment()">Pay ' + pot.stake + ' kr with Swish</button>' +
+          '<button class="pot-pay pot-pay-swish" onclick="startPotPayment()" aria-label="Pay ' + pot.stake + ' kr with Swish">' +
+            '<span>Pay ' + pot.stake + ' kr with</span>' + swishLogoHtml() + '</button>' +
           '<p class="pot-note">Swish opens with the amount filled in. When you have paid, you come back here and are let in.</p>' +
-          '<details class="pot-manual"><summary>Paying from another phone?</summary><p class="pot-note">Swish ' + pot.stake + ' kr to <b>' + escapeHtml(formatPayee(pot.payee)) + '</b> with the message <b>' + escapeHtml(potPayMessage()) + '</b>, then tap “I have paid”.</p>' +
+          '<details class="pot-manual"><summary>Paying from another phone?</summary><p class="pot-note">Pay ' + pot.stake + ' kr with Swish to <b>' + escapeHtml(formatPayee(pot.payee)) + '</b> with the message <b>' + escapeHtml(potPayMessage()) + '</b>, then tap “I have paid”.</p>' +
           '<button class="pot-link" onclick="state.potMode=\'manual\';potMarkPaying();checkPotPayment();renderPotPanel()">I have paid</button></details>' +
           '<p class="pot-note">Winnings go to Swish •• ' + escapeHtml(state.potLast2) + ' · <button class="pot-link" onclick="editSwishNumber()">change</button></p>';
       } else {

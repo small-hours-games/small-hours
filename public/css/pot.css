@@ -50,3 +50,12 @@ button.pot-pay { width: 100%; border: 0; cursor: pointer; }
 @media (prefers-reduced-motion: reduce) { .pot-spinner { animation: none; } }
 .pot-manual { margin-top: 8px; font-size: .75rem; }
 .pot-manual summary { cursor: pointer; color: #475569; font-weight: 700; }
+
+/* Swish logo: the official file, unedited, on white (Swish brand guidelines) */
+.pot-pay.pot-pay-swish { display: flex; align-items: center; justify-content: center; gap: 10px; background: #fff; color: #0b1530;
+  border: 2px solid #0b1530; min-height: 56px; }
+.pot-pay-swish:active { background: #f1f5f9; }
+.pot-pay-swish span { white-space: nowrap; }
+.swish-logo { height: 28px; width: auto; display: block; }
+.pot-tv-swish { display: flex; align-items: center; background: #fff; border-radius: 12px; padding: 8px 14px; }
+.pot-tv-swish img { height: 34px; width: auto; display: block; }

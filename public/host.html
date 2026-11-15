@@ -973,7 +973,9 @@
       } else {
         const paid = Object.values(pot.players || {}).filter(p => p.paid).length;
         html = '<span class="pot-tv-size">💰 ' + pot.potSize + ' kr</span><span class="pot-tv-text">' +
-          ('<b>' + pot.stake + ' kr</b> to play · ' + paid + ' paid in<br>Swish to <b>' + escapeHtml(payee) + '</b> from your phone</span>');
+          ('<b>' + pot.stake + ' kr</b> to play · ' + paid + ' paid in<br>Pay on your phone, or to <b>' + escapeHtml(payee) + '</b></span>' +
+          // Swish's official logo, unedited, alone on a white plate (Swish brand guidelines).
+          '<span class="pot-tv-swish"><img src= + LOGO +  alt="Swish" onerror="this.replaceWith(document.createTextNode(\'Swish\'))"></span>');
         el.classList.remove('is-result');
       }
       if (el._html !== html) { el._html = html; el.innerHTML = html; }
