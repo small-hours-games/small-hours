@@ -8,15 +8,14 @@ import {
   parsePotConfig, makePotRoom, setPotPaid, setPaidOut, newPotRound, setBankPaid, potAdminState, isPotHost, hostBankTerms,
 } from '../pot/pot-room.js';
 import { notifyRoomCreated } from '../notifications/discord.js';
+import { rateLimit, clientIp } from './rate-limit.js';
 
 const MAX_HOSTED_POTS = 30;                 // open pot rooms made from the landing page
 const POT_CREATE_INTERVAL_MS = 30 * 1000;   // one new pot room per address per 30 s
 const potCreateByIp = new Map();
 
-function clientIp(req) {
-  const raw = req.ip || req.headers['x-forwarded-for']?.toString().split(',')[0]?.trim() || req.socket?.remoteAddress || 'unknown';
-  return String(raw).replace(/^::ffff:/, '');
-}
+// The host page asks every 3 s; this leaves room for that and stops a loop guessing host keys.
+const HOST_POT_LIMIT = { windowMs: 60 * 1000, max: 120 };
 
 /**
  * Mount the actions that run a pot: tick a payment, mark a payout, open a new round.
@@ -111,9 +110,10 @@ export function setupPotRoutes(app, manager) {
     return false;
   };
 
-  const { roomFor } = mountPotActions(app, '/api/pots', { manager, auth: hostAuth });
+  const hostLimiter = rateLimit(HOST_POT_LIMIT);
+  const { roomFor } = mountPotActions(app, '/api/pots', { manager, auth: hostAuth, before: [hostLimiter] });
 
-  app.get('/api/pots/:code', (req, res) => {
+  app.get('/api/pots/:code', hostLimiter, (req, res) => {
     const room = roomFor(req, res);
     if (!room) return;
     res.json({ pot: potAdminState(room) });

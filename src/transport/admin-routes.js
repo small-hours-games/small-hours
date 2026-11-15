@@ -32,6 +32,7 @@ import {
 import { isGameVisibleInLobby, setGameLobbyVisibility } from '../games/visibility.js';
 import { parsePotConfig, makePotRoom, potAdminState, POT_GAMES } from '../pot/pot-room.js';
 import { mountPotActions } from './pot-routes.js';
+import { rateLimit } from './rate-limit.js';
 import { getPotStore } from '../pot/store.js';
 import { DEFAULT_BANK_PCT, MIN_POT_PLAYERS } from '../pot/payout.js';
 
@@ -163,7 +164,9 @@ function buildTablesSnapshot(manager) {
 }
 
 export function setupAdminRoutes(app, manager = defaultManager) {
-  app.get('/admin', async (req, res) => {
+  const pageLimiter = rateLimit({ windowMs: 60 * 1000, max: 60 });
+
+  app.get('/admin', pageLimiter, async (req, res) => {
     const session = getAdminSession(req);
     if (!session) {
       if (!isOidcConfigured()) {
@@ -174,7 +177,7 @@ export function setupAdminRoutes(app, manager = defaultManager) {
     res.sendFile(path.join(PUBLIC_DIR, 'admin.html'));
   });
 
-  app.get('/dashboard', async (req, res) => {
+  app.get('/dashboard', pageLimiter, async (req, res) => {
     const session = getAdminSession(req);
     if (!session) {
       if (!isOidcConfigured()) {
@@ -185,7 +188,7 @@ export function setupAdminRoutes(app, manager = defaultManager) {
     res.sendFile(path.join(PUBLIC_DIR, 'dashboard.html'));
   });
 
-  app.get('/admin/pots', async (req, res) => {
+  app.get('/admin/pots', pageLimiter, async (req, res) => {
     const session = getAdminSession(req);
     if (!session) {
       if (!isOidcConfigured()) {

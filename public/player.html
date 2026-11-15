@@ -726,11 +726,13 @@
         case 'POT_PAY':
           // Off to Swish. If the browser won't switch app on its own, the panel
           // shows the link to tap.
+          // Only ever a Swish app link; anything else is not followed.
+          if (typeof msg.url !== 'string' || !/^swish:\/\/[a-z]+\?/.test(msg.url)) break;
           state.potPayLink = msg.url;
           state.potMode = msg.mode;
           potMarkPaying();
           renderPotPanel();
-          window.location.href = msg.url;
+          window.location.href = state.potPayLink;
           break;
 
         case 'POT_PAYMENT_STATUS':
