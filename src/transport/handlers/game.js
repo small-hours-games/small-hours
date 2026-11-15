@@ -4,6 +4,7 @@ import { processAction, getView, checkEnd } from '../../engine/engine.js';
 import { handleStartCategoryVote } from './vote.js';
 import { getHostView } from '../host-view.js';
 import { computeSessionPoints } from '../../session/scoring.js';
+import { potStartBlocker, startPotGame, settlePot, isPotSpectator } from '../../pot/pot-room.js';
 
 /**
  * Handle START_VOTED_GAME message — admin starts whichever game the players voted for most.
@@ -30,9 +31,14 @@ export async function handleStartVotedGame(ws, meta, room, msg, ctx) {
 
   if (room.game || room.startingGame) return; // a repeated tap on Start
 
-  const gameType = room.resolveWinningGame();
+  const gameType = room.pot ? room.pot.gameType : room.resolveWinningGame();
   if (!gameType) {
     send(ws, { type: 'ERROR', message: 'No playable game has been voted for yet' });
+    return;
+  }
+  const potBlocked = potStartBlocker(room, gameType);
+  if (potBlocked) {
+    send(ws, { type: 'ERROR', message: potBlocked });
     return;
   }
 
@@ -76,6 +82,12 @@ export async function handleStartMiniGame(ws, meta, room, msg, ctx) {
   // game and restart the countdown on every screen.
   if (room.game || room.startingGame) return;
 
+  const potBlocked = potStartBlocker(room, msg.gameType);
+  if (potBlocked) {
+    send(ws, { type: 'ERROR', message: potBlocked });
+    return;
+  }
+
   let config = msg.config || {};
 
   // Quiz: resolve winning category from votes if no explicit override (per D-12, D-16)
@@ -93,6 +105,8 @@ export async function handleStartMiniGame(ws, meta, room, msg, ctx) {
       send(ws, { type: 'ERROR', message: 'Game was cancelled before it started' });
       return;
     }
+
+    if (room.pot) startPotGame(room);
 
     broadcastToRoom(room.code, {
       type: 'MINI_GAME_STARTING',
@@ -148,6 +162,12 @@ export function handleGameAction(ws, meta, room, msg, ctx) {
 
   if (!msg.action || !msg.action.type) {
     send(ws, { type: 'ERROR', message: 'action with type required' });
+    return;
+  }
+
+  // Only those who paid in play a pot game; the others watch.
+  if (isPotSpectator(room, meta.playerId)) {
+    send(ws, { type: 'ERROR', message: 'You are watching this pot game. Pay in for the next round.' });
     return;
   }
 
@@ -272,6 +292,15 @@ export function finishGame(room, endResult, ctx) {
     sessionPoints,
     playerNames,
   }, { hostsOnly: true });
+
+  // A pot room splits the pot between the top three.
+  if (room.pot) {
+    try {
+      settlePot(room, endResult);
+    } catch (err) {
+      console.error('[pot] failed to settle the pot:', err.message);
+    }
+  }
 
   stopRoomGame(room, ctx);
   broadcastToRoom(room.code, { type: 'LOBBY_UPDATE', state: room.getState() });

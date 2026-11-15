@@ -1,6 +1,8 @@
 // Small Hours - HTTP Routes
 // Express routes for health, room management, and static file serving.
 
+import { setupSwishRoutes } from './swish-routes.js';
+import { setupPotRoutes } from './pot-routes.js';
 import { fileURLToPath } from 'url';
 import path from 'path';
 import fs from 'fs';
@@ -120,6 +122,8 @@ export function setupRoutes(app, manager) {
   app.use('/games/_api-card', express.static(path.join(GAMES_DIR, '_api-card', 'client'), { index: false }));
 
   setupAdminRoutes(app, manager);
+  setupSwishRoutes(app, manager);
+  setupPotRoutes(app, manager);
   setupApiV1Routes(app, manager);
 
   app.get('/api/games', (_req, res) => {
@@ -187,6 +191,7 @@ export function setupRoutes(app, manager) {
     if (req.path.startsWith('/host/')) file = 'host.html';
     else if (req.path.startsWith('/player/')) file = 'player.html';
     else if (req.path === '/tv' || req.path === '/tv/') file = 'tv.html'; // Android TV app entry
+    else if (/^\/pot\/[A-Z0-9]{4}\/?$/i.test(req.path)) file = 'pot-host.html'; // a pot room's host controls
 
     if (file === 'host.html' || file === 'player.html') {
       servePage(res, file);

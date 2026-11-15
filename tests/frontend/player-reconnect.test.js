@@ -16,8 +16,9 @@ describe('Phone refresh identity', () => {
     const refreshed = { name: 'Alice' };
     runInNewContext(restore, { state: refreshed, localStorage, pathParts: ['', 'player', 'abcd'] });
     let sent;
-    runInNewContext(join, { state: refreshed, send: msg => { sent = msg; } });
+    runInNewContext(join, { state: refreshed, send: msg => { sent = msg; }, potKey: () => 'phone-pot-key' });
     expect(sent.reconnectToken).toBe('secret-token');
+    expect(sent.potKey).toBe('phone-pot-key');
     const otherRoom = {};
     runInNewContext(restore, { state: otherRoom, localStorage, pathParts: ['', 'player', 'WXYZ'] });
     expect(otherRoom.reconnectToken).toBeNull();

@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Small Hours — Pot Rooms</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = { theme: { extend: { fontFamily: { sans: ['Plus Jakarta Sans', 'system-ui', 'sans-serif'], mono: ['JetBrains Mono', 'ui-monospace', 'monospace'] } } } };
+  </script>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen antialiased font-sans">
+  <header class="border-b border-slate-800 bg-slate-950">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
+      <a href="/dashboard" class="text-lg font-bold tracking-tight text-white whitespace-nowrap shrink-0 hidden sm:inline">Small Hours Admin</a>
+      <nav class="flex items-center gap-5 text-sm font-medium overflow-x-auto">
+        <a href="/dashboard" class="text-slate-400 hover:text-white transition-colors whitespace-nowrap py-1">Live Tables</a>
+        <a href="/admin/pots" class="text-white border-b-2 border-sky-500 whitespace-nowrap py-1" aria-current="page">Pot Rooms</a>
+        <a href="/admin" class="text-slate-400 hover:text-white transition-colors whitespace-nowrap py-1">API &amp; Games</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="max-w-4xl mx-auto px-4 sm:px-6 py-8 space-y-8">
+    <div class="space-y-1">
+      <h1 class="text-2xl font-bold tracking-tight text-white">Pot Rooms</h1>
+      <p class="text-sm text-slate-400">Everyone pays the stake in with Swish. 1st gets 50 %, 2nd 30 %, 3rd 15 %, and the bank share stays. Players pay from their phone before they get into the room. Tick off each payment as it arrives in Swish (rows marked “Says paid” are waiting for you); the game starts with the players who have paid, at least 4. Full numbers are only shown on this page.</p>
+    </div>
+
+    <section class="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-4">
+      <h2 class="text-lg font-semibold">New pot room</h2>
+      <form id="potForm" class="grid grid-cols-2 sm:grid-cols-4 gap-3 items-end">
+        <label class="text-xs text-slate-400 space-y-1">Game
+          <select id="potGame" class="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-sm text-slate-100">
+            <option value="quiz">🎯 Quiz</option>
+            <option value="music-quiz">🎵 Music Quiz</option>
+          </select>
+        </label>
+        <label class="text-xs text-slate-400 space-y-1">Stake (kr per player)
+          <input id="potStake" type="number" min="1" max="500" value="20" class="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-sm text-slate-100" required>
+        </label>
+        <label class="text-xs text-slate-400 space-y-1">Bank share (%)
+          <input id="potBank" type="number" min="0" max="5" step="0.5" value="5" class="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-sm text-slate-100" required>
+        </label>
+        <label class="text-xs text-slate-400 space-y-1">Pay in to (Swish number)
+          <input id="potPayee" type="text" inputmode="numeric" placeholder="123 456 78 90" class="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-sm text-slate-100" required>
+        </label>
+        <div class="col-span-2 sm:col-span-4 flex items-center justify-between gap-3">
+          <span id="potFormStatus" class="text-xs text-slate-400"></span>
+          <button type="submit" class="px-4 py-2 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 text-sm font-bold">Create pot room</button>
+        </div>
+      </form>
+    </section>
+
+    <div id="potRooms" class="space-y-6"></div>
+
+    <section class="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-3">
+      <h2 class="text-lg font-semibold">Recent pots</h2>
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-sm">
+          <thead class="text-xs text-slate-400 border-b border-slate-800">
+            <tr><th class="py-2 pr-3">When</th><th class="py-2 pr-3">Room</th><th class="py-2 pr-3">Game</th><th class="py-2 pr-3">Stake</th><th class="py-2 pr-3">Pot</th><th class="py-2 pr-3">Bank</th><th class="py-2">Status</th></tr>
+          </thead>
+          <tbody id="potHistory" class="divide-y divide-slate-800/70"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+  <script src="/js/pots.js"></script>
+</body>
+</html>

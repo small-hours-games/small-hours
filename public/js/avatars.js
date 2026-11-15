@@ -241,6 +241,7 @@
   }
 
   if (typeof SH !== 'undefined') {
+    SH.avatarKeys = Object.keys(AVATAR_SPECS);
     SH.avatarMeta = avatarMeta;
     SH.avatarSvg = avatarSvg;
     SH.avatarDataUrl = avatarDataUrl;

@@ -41,6 +41,7 @@
   <link rel="stylesheet" href="/css/smallhours.css">
   <link rel="stylesheet" href="/css/host.css">
   <link rel="stylesheet" href="/css/light-lobby.css">
+  <link rel="stylesheet" href="/css/pot.css">
   <link rel="stylesheet" href="/css/table-cards.css">
   <link rel="stylesheet" href="/css/topbar-show.css">
   <!-- game-styles -->
@@ -192,6 +193,9 @@
   <script src="/js/table-cards.js"></script>
   <script src="/js/table-cards-tv.js"></script>
   <script src="/js/game-api.js"></script>
+  <script src="/js/avatars.js"></script>
+  <script src="/js/avatar-3d.js"></script>
+  <script src="/js/stage-3d.js"></script>
   <!-- game-catalog -->
   <script src="/js/games.js"></script>
   <script src="/js/build-info.js"></script>
@@ -457,6 +461,7 @@
           });
           renderPlayers();
           renderHostVotes();
+          renderPotTv();
           if (state.gameState && state.gameType) renderGameState({ ...state.gameState, playerNames: state.playerNames });
           break;
 
@@ -473,6 +478,7 @@
           break;
 
         case 'MINI_GAME_STARTING':
+          document.getElementById('potTv')?.remove();
           state.gameType = msg.gameType;
           showGameView(msg);
           break;
@@ -609,12 +615,14 @@
           .sort((a, b) => b.count - a.count)
           .slice(0, 8);
       } else {
-        title.textContent = 'Vote for next activity';
-        hint.textContent = 'Wish for a game on your phone. The most picked game is chosen and the next phase begins.';
+        title.textContent = lobby.pot ? 'Tonight\'s pot game' : 'Vote for next activity';
+        hint.textContent = lobby.pot
+          ? 'Pay in on your phone. The game starts when at least ' + lobby.pot.minPlayers + ' have paid.'
+          : 'Wish for a game on your phone. The most picked game is chosen and the next phase begins.';
         const counts = {};
         Object.values(lobby.gameSuggestions || {}).forEach(g => { counts[g] = (counts[g] || 0) + 1; });
         total = Object.values(counts).reduce((s, n) => s + n, 0);
-        rows = SH_GAMES.filter(g => g.hasUi || counts[g.type])
+        rows = SH_GAMES.filter(g => (g.hasUi || counts[g.type]) && (!lobby.pot || g.type === lobby.pot.gameType))
           .map(g => ({ type: g.type, blurb: g.blurb, players: g.players, icon: g.icon, label: g.label, count: counts[g.type] || 0, leader: g.type === lobby.leadingGame }))
           .sort((a, b) => b.leader - a.leader || b.count - a.count);
       }
@@ -664,7 +672,12 @@
       document.body.classList.add('in-game');
 
       const info = shGame(msg.gameType);
-      document.getElementById('gameTitle').textContent = info.title || info.label;
+      // A game named after the brand ("Small Hours Tennis") shows the logo in place of those words.
+      const title = info.title || info.label || '';
+      const branded = /^small ?hours\s+(.+)$/i.exec(title);
+      document.getElementById('gameTitle').innerHTML = branded
+        ? '<img class="game-title-logo" src="/images/smallhours-logo.svg" alt="Smallhours"><span>' + escapeHtml(branded[1]) + '</span>'
+        : escapeHtml(title);
       document.getElementById('roundInfo').textContent = '';
 
       // Narrate the game's story (intro + TTS voice), but not when rejoining a running game
@@ -940,6 +953,42 @@
         document.body.appendChild(piece);
         setTimeout(() => piece.remove(), 5500);
       }
+    }
+
+    // --- Pot room: the pot, and who won what. Never any phone numbers. ---
+    function renderPotTv() {
+      const pot = state.lobby?.pot;
+      let el = document.getElementById('potTv');
+      // Out of the way while the game is on: the questions need the screen.
+      if (!pot || pot.status === 'running') { if (el) el.remove(); return; }
+      if (!el) {
+        el = document.createElement('div');
+        el.id = 'potTv';
+        el.className = 'pot-tv';
+        el.setAttribute('aria-live', 'polite');
+        document.body.appendChild(el);
+      }
+      const p = String(pot.payee || '');
+      const payee = /^123\d{7}$/.test(p) ? p.slice(0, 3) + ' ' + p.slice(3, 6) + ' ' + p.slice(6, 8) + ' ' + p.slice(8)
+        : /^07\d{8}$/.test(p) ? p.slice(0, 3) + '-' + p.slice(3, 6) + ' ' + p.slice(6, 8) + ' ' + p.slice(8) : p;
+      const medals = ['🥇', '🥈', '🥉'];
+      let html;
+      if (pot.status === 'settled' && pot.result) {
+        const wins = pot.result.results.filter(r => r.amount > 0).sort((a, b) => a.place - b.place).map(r =>
+          '<div class="pot-tv-win"><span class="face">' + escapeHtml(r.avatar) + '</span>' +
+          '<div class="name">' + (medals[r.place - 1] || '') + ' ' + escapeHtml(r.username) + '</div>' +
+          '<div class="amount">' + r.amount + ' kr' + (r.paidOut ? ' ✓' : '') + '</div></div>').join('');
+        html = '<div class="pot-tv-text">💰 The <b>' + pot.result.pot + ' kr</b> pot goes to</div><div class="pot-tv-wins">' + wins + '</div>';
+        el.classList.add('is-result');
+      } else {
+        const paid = Object.values(pot.players || {}).filter(p => p.paid).length;
+        html = '<span class="pot-tv-size">💰 ' + pot.potSize + ' kr</span><span class="pot-tv-text">' +
+          ('<b>' + pot.stake + ' kr</b> to play · ' + paid + ' paid in<br>Pay on your phone, or to <b>' + escapeHtml(payee) + '</b></span>' +
+          // Swish's official logo, unedited, alone on a white plate (Swish brand guidelines).
+          '<span class="pot-tv-swish"><img src= + LOGO +  alt="Swish" onerror="this.replaceWith(document.createTextNode(\'Swish\'))"></span>');
+        el.classList.remove('is-result');
+      }
+      if (el._html !== html) { el._html = html; el.innerHTML = html; }
     }
 
     function escapeHtml(text) {

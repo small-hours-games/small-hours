@@ -30,6 +30,11 @@ import {
   bumpCatalogVersion,
 } from '../games/registry.js';
 import { isGameVisibleInLobby, setGameLobbyVisibility } from '../games/visibility.js';
+import { parsePotConfig, makePotRoom, potAdminState, POT_GAMES } from '../pot/pot-room.js';
+import { mountPotActions } from './pot-routes.js';
+import { rateLimit } from './rate-limit.js';
+import { getPotStore } from '../pot/store.js';
+import { DEFAULT_BANK_PCT, MIN_POT_PLAYERS } from '../pot/payout.js';
 
 const PUBLIC_DIR = fileURLToPath(new URL('../../public', import.meta.url));
 
@@ -159,7 +164,9 @@ function buildTablesSnapshot(manager) {
 }
 
 export function setupAdminRoutes(app, manager = defaultManager) {
-  app.get('/admin', async (req, res) => {
+  const pageLimiter = rateLimit({ windowMs: 60 * 1000, max: 60 });
+
+  app.get('/admin', pageLimiter, async (req, res) => {
     const session = getAdminSession(req);
     if (!session) {
       if (!isOidcConfigured()) {
@@ -170,7 +177,7 @@ export function setupAdminRoutes(app, manager = defaultManager) {
     res.sendFile(path.join(PUBLIC_DIR, 'admin.html'));
   });
 
-  app.get('/dashboard', async (req, res) => {
+  app.get('/dashboard', pageLimiter, async (req, res) => {
     const session = getAdminSession(req);
     if (!session) {
       if (!isOidcConfigured()) {
@@ -179,6 +186,17 @@ export function setupAdminRoutes(app, manager = defaultManager) {
       return res.redirect('/admin/login?next=%2Fdashboard');
     }
     res.sendFile(path.join(PUBLIC_DIR, 'dashboard.html'));
+  });
+
+  app.get('/admin/pots', pageLimiter, async (req, res) => {
+    const session = getAdminSession(req);
+    if (!session) {
+      if (!isOidcConfigured()) {
+        return res.status(503).type('html').send(unconfiguredHtml());
+      }
+      return res.redirect('/admin/login?next=%2Fadmin%2Fpots');
+    }
+    res.sendFile(path.join(PUBLIC_DIR, 'pots.html'));
   });
 
   app.get('/admin/login', async (req, res) => {
@@ -329,4 +347,35 @@ export function setupAdminRoutes(app, manager = defaultManager) {
     if (!removed) return res.status(404).json({ error: 'Custom game not found' });
     res.json({ ok: true });
   });
+
+  // --- Pot rooms: play for money (see src/pot/). Full Swish numbers only leave the server here. ---
+
+
+  app.get('/admin/api/pots', requireAdminSession, (_req, res) => {
+    try {
+      const rooms = [...manager.rooms.values()].filter(r => r.pot).map(r => potAdminState(r));
+      res.json({
+        rooms,
+        history: getPotStore().listPots(20),
+        defaults: { payee: process.env.POT_SWISH_NUMBER || '', bankPct: DEFAULT_BANK_PCT, games: POT_GAMES, minPlayers: MIN_POT_PLAYERS },
+      });
+    } catch (err) {
+      res.status(500).json({ error: `Pot store: ${err.message}` });
+    }
+  });
+
+  app.post('/admin/api/pots', requireAdminSession, express.json(), (req, res) => {
+    const parsed = parsePotConfig(req.body || {});
+    if (!parsed.ok) return res.status(400).json({ error: parsed.error });
+    const room = manager.createRoom();
+    try {
+      makePotRoom(room, parsed.config, { createdBy: req.adminUser?.email || req.adminUser?.sub });
+    } catch (err) {
+      manager.removeRoom(room.code);
+      return res.status(500).json({ error: `Pot store: ${err.message}` });
+    }
+    res.status(201).json({ code: room.code, hostUrl: `/host/${room.code}`, pot: potAdminState(room) });
+  });
+
+  mountPotActions(app, '/admin/api/pots', { manager, auth: () => true, before: [requireAdminSession] });
 }

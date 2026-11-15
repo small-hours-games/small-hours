@@ -478,6 +478,9 @@ export function setupWebSocket(server, manager) {
     'START_CATEGORY_VOTE',
     'CATEGORY_VOTE',
     'RTC_SIGNAL',
+    'POT_SET_SWISH',
+    'POT_START_PAYMENT',
+    'POT_CHECK_PAYMENT',
   ]);
 
   function handleMessage(ws, meta, room, msg) {
@@ -509,6 +512,15 @@ export function setupWebSocket(server, manager) {
         break;
       case 'SET_USERNAME':
         lobbyHandlers.handleSetUsername(ws, meta, room, msg, ctx);
+        break;
+      case 'POT_SET_SWISH':
+        lobbyHandlers.handleSetSwish(ws, meta, room, msg, ctx);
+        break;
+      case 'POT_START_PAYMENT':
+        lobbyHandlers.handleStartPotPayment(ws, meta, room, msg, ctx);
+        break;
+      case 'POT_CHECK_PAYMENT':
+        lobbyHandlers.handleCheckPotPayment(ws, meta, room, msg, ctx);
         break;
       case 'START_MINI_GAME':
         gameHandlers.handleStartMiniGame(ws, meta, room, msg, ctx).catch(err => {
@@ -715,7 +727,13 @@ export function setupWebSocket(server, manager) {
     return { ok: true, code: room.code };
   }
 
-  const wsControls = { getRoomConnections, kickPlayer, closeRoom };
+  // The admin portal changed a room (a pot payment ticked off): tell its screens.
+  function broadcastLobby(code) {
+    const room = manager.getRoom(code);
+    if (room) broadcastToRoom(code, { type: 'LOBBY_UPDATE', state: room.getState() });
+  }
+
+  const wsControls = { getRoomConnections, kickPlayer, closeRoom, broadcastLobby };
   manager.wsControls = wsControls;
 
   return { wss, broadcastToRoom, sendToPlayer, hasActiveSockets, ...wsControls };
