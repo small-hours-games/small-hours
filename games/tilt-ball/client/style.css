@@ -2,6 +2,7 @@
 .tb-phone { gap: 10px; }
 .tb-pills { display: flex; gap: 6px; align-items: center; }
 .tb-ctrl-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.tb-ctrl-row .tc-btn { min-height: 44px; font-weight: 800; }
 
 .tb-pad-wrap {
   flex: 1;
@@ -34,13 +35,12 @@
 .tb-pad-hint { font-size: 0.8rem; color: #94a3b8; text-align: center; }
 
 .tb-bottom { display: flex; flex-direction: column; gap: 8px; margin-top: auto; }
-.tb-gyro-pill { display: flex; align-items: center; justify-content: center; font-weight: 700; cursor: pointer; }
-.tb-gyro-pill.is-active { border-color: rgba(74, 222, 128, 0.5); color: #86efac; }
-.tb-ready-btn { background: linear-gradient(135deg, #38bdf8, #2563eb); color: #fff; font-weight: 900; }
-.tb-ready-btn.is-ready { background: linear-gradient(135deg, #22c55e, #15803d); }
-.tb-countdown-btn { background: linear-gradient(135deg, #facc15, #f97316); color: #0f172a; font-weight: 900; animation: tbPulse 1.1s ease-in-out infinite; }
-.tb-boost-btn { background: linear-gradient(135deg, #facc15, #ea580c); color: #0f172a; font-weight: 900; }
-@keyframes tbPulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.02); } }
+.tb-boost-btn { background: linear-gradient(135deg, #facc15, #ea580c); color: #0f172a; font-weight: 900; min-height: 52px; }
+.tb-boost-btn.tb-cooling {
+  background: linear-gradient(90deg, rgba(250, 204, 21, 0.72) var(--cooldown-pct, 0%), rgba(30, 41, 59, 0.92) var(--cooldown-pct, 0%));
+  color: #f8fafc;
+  opacity: 0.95;
+}
 
 /* TV */
 .tb-tv {

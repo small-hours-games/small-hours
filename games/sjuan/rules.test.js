@@ -194,3 +194,23 @@ describe('Sjuan - view', () => {
     }
   });
 });
+
+describe('Sjuan - immutability and forfeit', () => {
+  it('draw does not mutate prior state.deck array', () => {
+    const game = createTestGame(sjuan, ['p1', 'p2']);
+    const originalDeckLen = game.state.deck.length;
+    const { game: g2 } = act(game, 'draw', 'p1', {});
+    expect(game.state.deck).toHaveLength(originalDeckLen);
+    expect(g2.state.deck).toHaveLength(originalDeckLen - 1);
+  });
+
+  it('forfeit skips surrendered player and crowns last standing player', () => {
+    const g = createTestGame(sjuan, ['p1', 'p2', 'p3']);
+    const g2 = act(g, 'forfeit', 'p1', {}).game;
+    expect(g2.state.turn).toBe('p2');
+    expect(g2.state.phase).toBe('play');
+    const g3 = act(g2, 'forfeit', 'p2', {}).game;
+    expect(g3.state.phase).toBe('finished');
+    expect(g3.state.winner).toBe('p3');
+  });
+});

@@ -785,36 +785,51 @@ function tbsHairStep(h, headM, off, dt) {
 
 // The singer: an original Smallhours character, drawn with light from the top left so she
 // reads as round. Feet at (60, 150). Legs, arms and hair are drawn each frame.
-var TBS_SKIN = '#f6cfac';
+var TBS_SKIN = '#f7cfa8';
 var TBS_SINGER_SVG =
   '<svg class="tbs-singer-svg" viewBox="0 0 120 152" aria-hidden="true">' +
   '<defs>' +
-    '<radialGradient id="tbs-g-skin" cx="38%" cy="32%" r="75%"><stop offset="0" stop-color="#ffe6d0"/><stop offset=".55" stop-color="#f6cfac"/><stop offset="1" stop-color="#d99a74"/></radialGradient>' +
-    '<linearGradient id="tbs-g-hair" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#a78bfa"/><stop offset=".45" stop-color="#7c3aed"/><stop offset="1" stop-color="#3b1680"/></linearGradient>' +
-    '<radialGradient id="tbs-g-cap" cx="35%" cy="25%" r="80%"><stop offset="0" stop-color="#c4b5fd"/><stop offset=".35" stop-color="#8b5cf6"/><stop offset="1" stop-color="#3b1680"/></radialGradient>' +
-    '<linearGradient id="tbs-g-top" x1="0" x2="1"><stop offset="0" stop-color="#0b1220"/><stop offset=".35" stop-color="#334155"/><stop offset=".6" stop-color="#1e293b"/><stop offset="1" stop-color="#0b1220"/></linearGradient>' +
-    '<linearGradient id="tbs-g-skirt" x1="0" x2="1"><stop offset="0" stop-color="#be123c"/><stop offset=".35" stop-color="#fda4af"/><stop offset=".6" stop-color="#fb7185"/><stop offset="1" stop-color="#9f1239"/></linearGradient>' +
-    '<radialGradient id="tbs-g-mic" cx="35%" cy="30%" r="70%"><stop offset="0" stop-color="#ffffff"/><stop offset=".4" stop-color="#cbd5e1"/><stop offset="1" stop-color="#475569"/></radialGradient>' +
-    '<radialGradient id="tbs-g-eye" cx="40%" cy="35%" r="70%"><stop offset="0" stop-color="#60a5fa"/><stop offset=".6" stop-color="#1e3a8a"/><stop offset="1" stop-color="#0b1530"/></radialGradient>' +
-    '<linearGradient id="tbs-g-boot" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#38bdf8"/><stop offset="1" stop-color="#0c4a6e"/></linearGradient>' +
+    '<radialGradient id="tbs-g-skin" cx="38%" cy="30%" r="75%"><stop offset="0" stop-color="#fff0e0"/><stop offset=".55" stop-color="#f7cfa8"/><stop offset="1" stop-color="#d48c66"/></radialGradient>' +
+    '<linearGradient id="tbs-g-hair" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#c4b5fd"/><stop offset=".38" stop-color="#8b5cf6"/><stop offset=".75" stop-color="#5b21b6"/><stop offset="1" stop-color="#2e1065"/></linearGradient>' +
+    '<radialGradient id="tbs-g-cap" cx="36%" cy="22%" r="82%"><stop offset="0" stop-color="#ddd6fe"/><stop offset=".35" stop-color="#8b5cf6"/><stop offset=".78" stop-color="#4c1d95"/><stop offset="1" stop-color="#2e1065"/></radialGradient>' +
+    '<linearGradient id="tbs-g-top" x1="0" y1="0" x2="1" y2="0.4"><stop offset="0" stop-color="#0f172a"/><stop offset=".35" stop-color="#334155"/><stop offset=".68" stop-color="#1e293b"/><stop offset="1" stop-color="#0b1220"/></linearGradient>' +
+    '<linearGradient id="tbs-g-skirt" x1="0" y1="0" x2="1" y2="0.2"><stop offset="0" stop-color="#9f1239"/><stop offset=".32" stop-color="#fda4af"/><stop offset=".62" stop-color="#fb7185"/><stop offset="1" stop-color="#881337"/></linearGradient>' +
+    '<radialGradient id="tbs-g-mic" cx="35%" cy="28%" r="72%"><stop offset="0" stop-color="#ffffff"/><stop offset=".42" stop-color="#cbd5e1"/><stop offset="1" stop-color="#475569"/></radialGradient>' +
+    '<radialGradient id="tbs-g-eye" cx="42%" cy="34%" r="70%"><stop offset="0" stop-color="#7dd3fc"/><stop offset=".45" stop-color="#2563eb"/><stop offset=".85" stop-color="#1e1b4b"/><stop offset="1" stop-color="#090d1f"/></radialGradient>' +
+    '<linearGradient id="tbs-g-boot" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7dd3fc"/><stop offset=".45" stop-color="#0ea5e9"/><stop offset="1" stop-color="#0c4a6e"/></linearGradient>' +
   '</defs>' +
   '<ellipse class="tbs-shadow" cx="60" cy="149.5" rx="22" ry="3.5"/>' +
   '<path class="tbs-hair-back" fill="url(#tbs-g-hair)" stroke="#1e0b45" stroke-width="1.6" stroke-linejoin="round"/>' +
-  '<path class="tbs-hair-back-hi" fill="none" stroke="#c4b5fd" stroke-width="1.4" stroke-linecap="round" opacity=".7"/>' +
+  '<path class="tbs-hair-back-hi" fill="none" stroke="#ddd6fe" stroke-width="1.6" stroke-linecap="round" opacity=".78"/>' +
   '<g class="tbs-root">' +
-    // legs: outline, skin, highlight (filled in per frame)
+    // Legs: outline, skin, specular highlight (driven per frame by tbsKnee)
     '<path class="tbs-leg-o" fill="none" stroke="#0b1530" stroke-width="8.6" stroke-linecap="round" stroke-linejoin="round"/>' +
     '<path class="tbs-leg" fill="none" stroke="' + TBS_SKIN + '" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>' +
-    '<path class="tbs-leg-hi" fill="none" stroke="#ffeede" stroke-width="1.6" stroke-linecap="round" opacity=".8"/>' +
-    '<g class="tbs-boot-l"><path d="M-7 -4 h9 a4 4 0 0 1 4 4 v3 h-15 a2 2 0 0 1 -1 -2 z" fill="url(#tbs-g-boot)" stroke="#0b1530" stroke-width="1.6"/><path d="M-5 -2 h5" stroke="#bae6fd" stroke-width="1.2" stroke-linecap="round"/></g>' +
-    '<g class="tbs-boot-r"><path d="M7 -4 h-9 a4 4 0 0 0 -4 4 v3 h15 a2 2 0 0 0 1 -2 z" fill="url(#tbs-g-boot)" stroke="#0b1530" stroke-width="1.6"/><path d="M5 -2 h-5" stroke="#bae6fd" stroke-width="1.2" stroke-linecap="round"/></g>' +
+    '<path class="tbs-leg-hi" fill="none" stroke="#fff3e6" stroke-width="1.6" stroke-linecap="round" opacity=".82"/>' +
+    // Cyber-pop platform boots with ankle cuffs and cyan gloss stripes
+    '<g class="tbs-boot-l">' +
+      '<path d="M-4 -7 h7 v4 h2.5 a4 4 0 0 1 3.5 4 v2.5 h-16 a1.8 1.8 0 0 1 -1 -2.2 l2.5 -4.3 Z" fill="url(#tbs-g-boot)" stroke="#0b1530" stroke-width="1.6" stroke-linejoin="round"/>' +
+      '<path d="M-8 2 h16.5" stroke="#0b1530" stroke-width="1.4" stroke-linecap="round"/>' +
+      '<path d="M-3.5 -5.2 h6 M-5 -1.5 h5" stroke="#e0f2fe" stroke-width="1.1" stroke-linecap="round" opacity=".85"/>' +
+    '</g>' +
+    '<g class="tbs-boot-r">' +
+      '<path d="M4 -7 h-7 v4 h-2.5 a4 4 0 0 0 -3.5 4 v2.5 h16 a1.8 1.8 0 0 0 1 -2.2 l-2.5 -4.3 Z" fill="url(#tbs-g-boot)" stroke="#0b1530" stroke-width="1.6" stroke-linejoin="round"/>' +
+      '<path d="M-8.5 2 h16.5" stroke="#0b1530" stroke-width="1.4" stroke-linecap="round"/>' +
+      '<path d="M3.5 -5.2 h-6 M5 -1.5 h-5" stroke="#e0f2fe" stroke-width="1.1" stroke-linecap="round" opacity=".85"/>' +
+    '</g>' +
     '<g class="tbs-upper">' +
-      '<g class="tbs-skirt"><path d="M44 92 L76 92 L87 117 Q60 125 33 117 Z" fill="url(#tbs-g-skirt)" stroke="#0b1530" stroke-width="2.2" stroke-linejoin="round"/>' +
-        '<path d="M52 95 L48 119 M60 95 V121 M68 95 L72 119" stroke="#9f1239" stroke-width="1.1" opacity=".55"/>' +
-        '<path d="M37 115 Q60 122 83 115" fill="none" stroke="#ffe4e6" stroke-width="1.2" opacity=".6"/></g>' +
-      '<path d="M45 66 Q60 60 75 66 L77 94 L43 94 Z" fill="url(#tbs-g-top)" stroke="#0b1530" stroke-width="2.2" stroke-linejoin="round"/>' +
-      '<path d="M48 70 Q50 82 47 92" stroke="#94a3b8" stroke-width="1.6" fill="none" opacity=".55" stroke-linecap="round"/>' +
-      // The Smallhours mark on her chest: four fanned cards, the front one with the moon.
+      // Pleated stage skirt with waistband belt, crisp fold lines & rose shimmer hem
+      '<g class="tbs-skirt">' +
+        '<path d="M43 91 L77 91 L89 118 Q60 126 31 118 Z" fill="url(#tbs-g-skirt)" stroke="#0b1530" stroke-width="2.1" stroke-linejoin="round"/>' +
+        '<path d="M51 94 L46 120 M60 94 V122 M69 94 L74 120" stroke="#881337" stroke-width="1.15" opacity=".55"/>' +
+        '<path d="M35 116 Q60 123 85 116" fill="none" stroke="#ffe4e6" stroke-width="1.3" opacity=".7"/>' +
+        '<rect x="43" y="90" width="34" height="4" rx="1.8" fill="#1e293b" stroke="#0b1530" stroke-width="1.2"/>' +
+        '<rect x="57.5" y="89.5" width="5" height="5" rx="1" fill="#facc15" stroke="#0b1530" stroke-width=".9"/>' +
+      '</g>' +
+      // Cropped idol stage jacket/top with collar trim & Smallhours fanned-card Moon emblem
+      '<path d="M44 65 Q60 58 76 65 L77.5 92 L42.5 92 Z" fill="url(#tbs-g-top)" stroke="#0b1530" stroke-width="2.1" stroke-linejoin="round"/>' +
+      '<path d="M46 66 L54 74 M74 66 L66 74" stroke="#38bdf8" stroke-width="1.5" stroke-linecap="round" opacity=".85"/>' +
+      '<path d="M47 70 Q49 81 46 90" stroke="#94a3b8" stroke-width="1.5" fill="none" opacity=".5" stroke-linecap="round"/>' +
       '<g class="tbs-mark"><g transform="translate(58.5 95) scale(0.52) translate(-32 -62)">' +
         '<g transform="rotate(-24 32 62)"><rect x="21" y="10" width="22" height="36" rx="5" fill="#38bdf8" stroke="#0b1530" stroke-width="3"/></g>' +
         '<g transform="rotate(-8 32 62)"><rect x="21" y="10" width="22" height="36" rx="5" fill="#a78bfa" stroke="#0b1530" stroke-width="3"/></g>' +
@@ -822,43 +837,62 @@ var TBS_SINGER_SVG =
         '<g transform="rotate(24 32 62)"><rect x="21" y="10" width="22" height="36" rx="5" fill="#facc15" stroke="#0b1530" stroke-width="3"/>' +
           '<circle cx="31" cy="26" r="7" fill="#0b1530"/><circle cx="34.3" cy="23.2" r="5.9" fill="#facc15"/></g>' +
       '</g></g>' +
-      // free arm (drawn per frame)
-      '<path class="tbs-arm-o" fill="none" stroke="#0b1530" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>' +
-      '<path class="tbs-arm" fill="none" stroke="' + TBS_SKIN + '" stroke-width="5.6" stroke-linecap="round" stroke-linejoin="round"/>' +
-      '<path class="tbs-arm-hi" fill="none" stroke="#ffeede" stroke-width="1.4" stroke-linecap="round" opacity=".8"/>' +
-      '<circle class="tbs-hand" r="4.4" fill="url(#tbs-g-skin)" stroke="#0b1530" stroke-width="1.5"/>' +
+      // Free arm (drawn per frame)
+      '<path class="tbs-arm-o" fill="none" stroke="#0b1530" stroke-width="7.8" stroke-linecap="round" stroke-linejoin="round"/>' +
+      '<path class="tbs-arm" fill="none" stroke="' + TBS_SKIN + '" stroke-width="5.4" stroke-linecap="round" stroke-linejoin="round"/>' +
+      '<path class="tbs-arm-hi" fill="none" stroke="#fff3e6" stroke-width="1.4" stroke-linecap="round" opacity=".8"/>' +
+      '<circle class="tbs-hand" r="4.5" fill="url(#tbs-g-skin)" stroke="#0b1530" stroke-width="1.5"/>' +
       '<g class="tbs-head">' +
-        '<rect x="55.5" y="51" width="9" height="12" rx="3.5" fill="#d99a74"/>' +
-        '<ellipse cx="60" cy="58" rx="10" ry="3" fill="#000" opacity=".18"/>' +
-        '<g class="tbs-ears"><ellipse cx="41.5" cy="41" rx="3.2" ry="4.4" fill="url(#tbs-g-skin)" stroke="#0b1530" stroke-width="1.6"/>' +
-          '<ellipse cx="78.5" cy="41" rx="3.2" ry="4.4" fill="url(#tbs-g-skin)" stroke="#0b1530" stroke-width="1.6"/></g>' +
-        '<ellipse cx="60" cy="38" rx="19" ry="20" fill="url(#tbs-g-skin)" stroke="#0b1530" stroke-width="2.2"/>' +
+        '<rect x="55.5" y="51" width="9" height="12" rx="3.5" fill="#d48c66"/>' +
+        '<path d="M54 61 Q60 64 66 61" fill="none" stroke="#facc15" stroke-width="1.6" stroke-linecap="round"/>' +
+        '<ellipse cx="60" cy="57.5" rx="9" ry="2.8" fill="#000" opacity=".2"/>' +
+        '<g class="tbs-ears">' +
+          '<ellipse cx="41.2" cy="40.5" rx="3.3" ry="4.5" fill="url(#tbs-g-skin)" stroke="#0b1530" stroke-width="1.6"/>' +
+          '<circle cx="40.6" cy="44" r="1.3" fill="#facc15" stroke="#0b1530" stroke-width=".7"/>' +
+          '<ellipse cx="78.8" cy="40.5" rx="3.3" ry="4.5" fill="url(#tbs-g-skin)" stroke="#0b1530" stroke-width="1.6"/>' +
+          '<circle cx="79.4" cy="44" r="1.3" fill="#facc15" stroke="#0b1530" stroke-width=".7"/>' +
+        '</g>' +
+        // Soft sculpted cheek-and-chin head contour
+        '<path d="M41.2 37 C41.2 21.5 49.5 16.5 60 16.5 C70.5 16.5 78.8 21.5 78.8 37 C78.8 49.2 70.2 57.5 60 57.8 C49.8 57.5 41.2 49.2 41.2 37 Z" fill="url(#tbs-g-skin)" stroke="#0b1530" stroke-width="2.1" stroke-linejoin="round"/>' +
         '<g class="tbs-face">' +
           '<g class="tbs-eyes">' +
-            '<ellipse cx="52.5" cy="39.5" rx="3.6" ry="4.4" fill="#fff" stroke="#0b1530" stroke-width="1.1"/>' +
-            '<ellipse cx="67.5" cy="39.5" rx="3.6" ry="4.4" fill="#fff" stroke="#0b1530" stroke-width="1.1"/>' +
-            '<circle class="tbs-iris" cx="53" cy="40" r="2.6" fill="url(#tbs-g-eye)"/><circle class="tbs-iris" cx="68" cy="40" r="2.6" fill="url(#tbs-g-eye)"/>' +
-            '<circle cx="52" cy="38.8" r=".95" fill="#fff"/><circle cx="67" cy="38.8" r=".95" fill="#fff"/>' +
+            '<ellipse cx="52.2" cy="39.5" rx="3.8" ry="4.6" fill="#fff" stroke="#0b1530" stroke-width="1.15"/>' +
+            '<ellipse cx="67.8" cy="39.5" rx="3.8" ry="4.6" fill="#fff" stroke="#0b1530" stroke-width="1.15"/>' +
+            '<circle class="tbs-iris" cx="52.8" cy="39.8" r="2.75" fill="url(#tbs-g-eye)"/>' +
+            '<circle class="tbs-iris" cx="68.2" cy="39.8" r="2.75" fill="url(#tbs-g-eye)"/>' +
+            '<circle cx="52.8" cy="40.2" r="1.15" fill="#090d1f"/><circle cx="68.2" cy="40.2" r="1.15" fill="#090d1f"/>' +
+            '<circle cx="51.6" cy="38.3" r="1.05" fill="#fff"/><circle cx="67" cy="38.3" r="1.05" fill="#fff"/>' +
+            '<circle cx="53.9" cy="41.4" r=".48" fill="#e0f2fe"/><circle cx="69.3" cy="41.4" r=".48" fill="#e0f2fe"/>' +
+            '<path d="M47.8 37 Q52.2 34.4 56.2 36.6 M63.8 36.6 Q67.8 34.4 72.2 37" stroke="#0b1530" stroke-width="1.65" fill="none" stroke-linecap="round"/>' +
           '</g>' +
-          '<path d="M48.5 33.5 Q52.5 31.5 56 33.2 M64 33.2 Q67.5 31.5 71.5 33.5" stroke="#3b1680" stroke-width="1.6" fill="none" stroke-linecap="round"/>' +
-          '<path d="M59.5 43 Q61 45.5 59 46" stroke="#c98a66" stroke-width="1.2" fill="none" stroke-linecap="round"/>' +
-          '<ellipse cx="47.5" cy="46.5" rx="3.4" ry="2.2" fill="#fb7185" opacity=".45"/><ellipse cx="72.5" cy="46.5" rx="3.4" ry="2.2" fill="#fb7185" opacity=".45"/>' +
-          '<g class="tbs-mouth"><ellipse cx="60" cy="50.5" rx="4.2" ry="3.4" fill="#7f1d1d" stroke="#0b1530" stroke-width="1.3"/>' +
-            '<ellipse cx="60" cy="52.2" rx="2.4" ry="1.2" fill="#fb7185"/><path d="M57 48.4 h6" stroke="#fff" stroke-width="1.1" stroke-linecap="round"/></g>' +
+          '<path d="M48 33 Q52.2 30.8 56 32.8 M64 32.8 Q67.8 30.8 72 33" stroke="#2e1065" stroke-width="1.6" fill="none" stroke-linecap="round"/>' +
+          '<path d="M59.4 43 Q60.8 45.2 59 45.8" stroke="#c07c58" stroke-width="1.2" fill="none" stroke-linecap="round"/>' +
+          '<ellipse cx="47.2" cy="46.2" rx="3.5" ry="2.1" fill="#fb7185" opacity=".46"/><ellipse cx="72.8" cy="46.2" rx="3.5" ry="2.1" fill="#fb7185" opacity=".46"/>' +
+          '<g class="tbs-mouth">' +
+            '<ellipse cx="60" cy="50.4" rx="4.2" ry="3.4" fill="#881337" stroke="#0b1530" stroke-width="1.3"/>' +
+            '<ellipse cx="60" cy="52" rx="2.5" ry="1.25" fill="#fb7185"/>' +
+            '<path d="M56.8 48.3 h6.4" stroke="#fff" stroke-width="1.15" stroke-linecap="round"/>' +
+          '</g>' +
         '</g>' +
-        // hair cap and fringe, with a shine on top
-        '<path d="M40 41 Q37 15 60 14 Q83 15 80 40 Q77 30 70 27 Q64 33 54 30 Q50 34 44 33 Q41 36 40 41 Z" fill="url(#tbs-g-cap)" stroke="#1e0b45" stroke-width="2" stroke-linejoin="round"/>' +
-        '<path d="M48 19.5 Q57 15.5 66 18" stroke="#ddd6fe" stroke-width="2.2" fill="none" stroke-linecap="round" opacity=".8"/>' +
-        '<g class="tbs-scrunchie"><circle cx="79" cy="30" r="4.2" fill="#38bdf8" stroke="#0b1530" stroke-width="1.6"/><circle cx="77.8" cy="28.7" r="1.2" fill="#e0f2fe"/></g>' +
+        // Layered bangs, temple fringe & glossy violet-lavender hair highlight
+        '<path d="M39.5 41.5 C36.5 18 45.5 12.5 60 12.5 C74.5 12.5 83.5 18 80.5 40.5 Q77 29.5 70.5 27.5 Q65 34.5 59.5 31 Q54 35.5 48 31.5 Q42.5 35.5 39.5 41.5 Z" fill="url(#tbs-g-cap)" stroke="#1e0b45" stroke-width="2" stroke-linejoin="round"/>' +
+        '<path d="M47 19.5 Q57 14.5 67.5 18.5" stroke="#ede9fe" stroke-width="2.3" fill="none" stroke-linecap="round" opacity=".88"/>' +
+        '<path d="M43.5 25.5 Q47 21.5 51 22.5" stroke="#c4b5fd" stroke-width="1.2" fill="none" stroke-linecap="round" opacity=".65"/>' +
+        '<g class="tbs-scrunchie"><circle cx="79.2" cy="29.5" r="4.5" fill="#38bdf8" stroke="#0b1530" stroke-width="1.6"/><circle cx="77.8" cy="28" r="1.4" fill="#e0f2fe"/><circle cx="81" cy="30.8" r="1.2" fill="#facc15"/></g>' +
       '</g>' +
-      // mic arm holding the mic just under her chin
-      '<g class="tbs-arm-mic"><path d="M74 70 L86 82 L79 72" stroke="#0b1530" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" fill="none"/>' +
-        '<path d="M74 70 L86 82 L79 72" stroke="' + TBS_SKIN + '" stroke-width="5.6" stroke-linecap="round" stroke-linejoin="round" fill="none"/>' +
-        '<g transform="rotate(-35 76 66)"><rect x="73.5" y="60" width="5" height="15" rx="2.3" fill="#1e293b" stroke="#0b1530" stroke-width="1.5"/>' +
-          '<rect x="74.3" y="61" width="1.3" height="12" rx=".6" fill="#64748b"/>' +
-          '<circle cx="76" cy="57" r="5.4" fill="url(#tbs-g-mic)" stroke="#0b1530" stroke-width="1.8"/>' +
-          '<path d="M72.6 55.6 h6.8 M72.4 58.4 h7.2" stroke="#64748b" stroke-width=".9"/></g>' +
-        '<circle cx="78.5" cy="71.5" r="4.4" fill="url(#tbs-g-skin)" stroke="#0b1530" stroke-width="1.5"/></g>' +
+      // Mic arm holding a sleek wireless chrome stage microphone
+      '<g class="tbs-arm-mic">' +
+        '<path d="M74 70 L86 82 L79 72" stroke="#0b1530" stroke-width="7.8" stroke-linecap="round" stroke-linejoin="round" fill="none"/>' +
+        '<path d="M74 70 L86 82 L79 72" stroke="' + TBS_SKIN + '" stroke-width="5.4" stroke-linecap="round" stroke-linejoin="round" fill="none"/>' +
+        '<g transform="rotate(-35 76 66)">' +
+          '<rect x="73.5" y="60" width="5.2" height="15" rx="2.4" fill="#1e293b" stroke="#0b1530" stroke-width="1.5"/>' +
+          '<rect x="74.3" y="61" width="1.3" height="11.5" rx=".6" fill="#94a3b8"/>' +
+          '<circle cx="76.1" cy="64" r="1" fill="#38bdf8"/>' +
+          '<circle cx="76.1" cy="56.8" r="5.5" fill="url(#tbs-g-mic)" stroke="#0b1530" stroke-width="1.8"/>' +
+          '<path d="M72.4 55.4 h7.4 M72.2 58.2 h7.8" stroke="#64748b" stroke-width=".95"/>' +
+        '</g>' +
+        '<circle cx="78.5" cy="71.5" r="4.5" fill="url(#tbs-g-skin)" stroke="#0b1530" stroke-width="1.5"/>' +
+      '</g>' +
     '</g>' +
   '</g>' +
   '<path class="tbs-lock-l" fill="url(#tbs-g-hair)" stroke="#1e0b45" stroke-width="1.2" stroke-linejoin="round"/>' +
@@ -1108,7 +1142,7 @@ function createTopbarShow(opts) {
     cache[prop] = value;
     node.style[prop] = value;
   }
-  var svgScale = 0.67;
+  var svgScale = 0.71;
   var eqCtx = null, eqGrad = null, eqW = 0, eqH = 30, eqDpr = 1;
   var remeasureUntil = 0;
   var shakeEls = { options: [], panels: [], invite: null, at: -1 };
@@ -1129,7 +1163,7 @@ function createTopbarShow(opts) {
     if (r - l < 140) { l = hr.width * 0.35; r = hr.width * 0.65; }
     bounds = { left: l, right: r, width: hr.width };
     hdr = { left: hr.left, top: hr.top, h: hr.height };
-    svgScale = (el.singer.offsetHeight || 102) / 152;
+    svgScale = (el.singer.offsetHeight || 108) / 152;
     // Canvas pixels cost fill rate: on 4K TVs and retina screens cap the density.
     eqDpr = Math.min(1.25, window.devicePixelRatio || 1);
     eqW = hr.width;
@@ -1336,10 +1370,10 @@ function createTopbarShow(opts) {
     var pony = tbsHairStep(hair.pony, flipYaw, off, dt);
     var lockL = tbsHairStep(hair.lockL, headM, off, dt);
     var lockR = tbsHairStep(hair.lockR, headM, off, dt);
-    setD(el.hairBack, tbsRibbon(pony, 9.5, 2));
+    setD(el.hairBack, tbsRibbon(pony, 10.8, 2.3));
     setD(el.hairBackHi, 'M' + pony.slice(1, 5).map(pt).join(' L'));
-    setD(el.lockL, tbsRibbon(lockL, 5, 1.6));
-    setD(el.lockR, tbsRibbon(lockR, 5, 1.6));
+    setD(el.lockL, tbsRibbon(lockL, 5.6, 1.7));
+    setD(el.lockR, tbsRibbon(lockR, 5.6, 1.7));
   }
 
   function frame(now) {

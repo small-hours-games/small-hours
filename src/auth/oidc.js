@@ -138,7 +138,7 @@ export async function getOidcDiscovery(issuer = process.env.OIDC_ISSUER) {
 export function resolveRedirectUri(req) {
   if (process.env.OIDC_REDIRECT_URI) return process.env.OIDC_REDIRECT_URI;
   const proto = req.headers['x-forwarded-proto'] || req.protocol || 'http';
-  const host = req.headers['x-forwarded-host'] || req.headers.host || 'localhost:3001';
+  const host = req.headers['x-forwarded-host'] || req.headers.host || 'localhost:3000';
   return `${proto}://${host}/admin/callback`;
 }
 

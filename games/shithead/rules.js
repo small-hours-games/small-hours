@@ -62,12 +62,13 @@ function canPlayOnPile(cardRank, pile) {
 }
 
 function nextPlayerIndex(state) {
-  const { players, currentPlayerIndex, finishOrder } = state;
+  const { players, currentPlayerIndex, finishOrder, surrendered } = state;
   const count = players.length;
   let idx = currentPlayerIndex;
   for (let i = 0; i < count; i++) {
     idx = (idx + 1) % count;
-    if (!finishOrder.includes(players[idx])) {
+    const id = players[idx];
+    if (!finishOrder.includes(id) && !surrendered?.[id]) {
       return idx;
     }
   }
@@ -135,8 +136,8 @@ function checkBurnAndAdvance(state) {
     finishOrder = [...finishOrder, currentPlayerId];
   }
 
-  // Count remaining players
-  const remainingPlayers = state.players.filter(id => !finishOrder.includes(id));
+  // Count remaining non-surrendered players
+  const remainingPlayers = state.players.filter(id => !finishOrder.includes(id) && !state.surrendered?.[id]);
 
   if (remainingPlayers.length <= 1) {
     return {
@@ -221,6 +222,7 @@ function setup({ players, config }) {
     burned: [],
     currentPlayerIndex: 0,
     swapConfirmed,
+    surrendered: {},
     finishOrder: [],
     lastPlayedBy: null,
     lastPlayedCards: [],
@@ -270,13 +272,64 @@ function confirmSwap(state, { playerId }) {
   }
 
   const newConfirmed = { ...state.swapConfirmed, [playerId]: true };
-  const allConfirmed = state.players.every(id => newConfirmed[id]);
+  const allConfirmed = state.players.every(id => newConfirmed[id] || state.surrendered?.[id]);
+
+  let currentPlayerIndex = state.currentPlayerIndex;
+  if (allConfirmed && (state.finishOrder.includes(state.players[currentPlayerIndex]) || state.surrendered?.[state.players[currentPlayerIndex]])) {
+    currentPlayerIndex = nextPlayerIndex(state);
+  }
 
   return {
     ...state,
     swapConfirmed: newConfirmed,
     phase: allConfirmed ? 'play' : 'swap',
+    currentPlayerIndex,
   };
+}
+
+function unconfirmSwap(state, { playerId }) {
+  if (state.phase !== 'swap') {
+    throw new Error('Can only change swap readiness during swap phase');
+  }
+  if (!state.swapConfirmed[playerId]) {
+    return state;
+  }
+  return {
+    ...state,
+    swapConfirmed: { ...state.swapConfirmed, [playerId]: false },
+  };
+}
+
+function forfeit(state, { playerId }) {
+  if (state.phase === 'finished') return state;
+  const surrendered = { ...(state.surrendered || {}), [playerId]: true };
+  const hands = { ...state.hands, [playerId]: [] };
+  const faceUp = { ...state.faceUp, [playerId]: [] };
+  const faceDown = { ...state.faceDown, [playerId]: [] };
+  const swapConfirmed = { ...state.swapConfirmed, [playerId]: true };
+
+  const activeRemaining = state.players.filter(id => !state.finishOrder.includes(id) && !surrendered[id]);
+  let nextPhase = state.phase;
+  if (activeRemaining.length <= 1) {
+    nextPhase = 'finished';
+  } else if (state.phase === 'swap' && state.players.every(id => swapConfirmed[id] || surrendered[id])) {
+    nextPhase = 'play';
+  }
+
+  const next = {
+    ...state,
+    surrendered,
+    hands,
+    faceUp,
+    faceDown,
+    swapConfirmed,
+    phase: nextPhase,
+  };
+
+  if (nextPhase !== 'finished' && state.players[state.currentPlayerIndex] === playerId) {
+    next.currentPlayerIndex = nextPlayerIndex(next);
+  }
+  return next;
 }
 
 function playCards(state, { playerId, cardIds, flick }) {
@@ -413,7 +466,7 @@ function pickUpPile(state, { playerId }) {
 function view(state, playerId) {
   const pileTop = state.pile.length > 0 ? state.pile[state.pile.length - 1] : null;
   const remaining = state.phase === 'finished'
-    ? state.players.filter(id => !state.finishOrder.includes(id))
+    ? state.players.filter(id => !state.finishOrder.includes(id) && !state.surrendered?.[id])
     : [];
 
   // Live standing derived from finishOrder (mirrors endIf scoring):
@@ -446,7 +499,7 @@ function view(state, playerId) {
       handCount: (state.hands[id] || []).length,
       faceUp: state.faceUp[id] || [],
       faceDownCount: (state.faceDown[id] || []).length,
-      isOut: state.finishOrder.includes(id),
+      isOut: state.finishOrder.includes(id) || Boolean(state.surrendered?.[id]),
     })),
     finishOrder: state.finishOrder,
     isMyTurn: state.players[state.currentPlayerIndex] === playerId,
@@ -458,17 +511,17 @@ function view(state, playerId) {
 function endIf(state) {
   if (state.phase !== 'finished') return null;
 
-  const remaining = state.players.filter(id => !state.finishOrder.includes(id));
+  const remaining = state.players.filter(id => !state.finishOrder.includes(id) && !state.surrendered?.[id]);
   const loser = remaining[0];
-  const winner = state.finishOrder[0];
+  const winner = state.finishOrder[0] || (remaining.length === 1 ? remaining[0] : undefined);
 
   // Position-based scores: first out gets highest, shithead gets 0
   const scores = {};
   state.finishOrder.forEach((id, i) => {
     scores[id] = state.players.length - i;
   });
-  if (loser) {
-    scores[loser] = 0;
+  if (loser && scores[loser] === undefined) {
+    scores[loser] = winner === loser ? 1 : 0;
   }
 
   return {
@@ -495,9 +548,11 @@ export default {
   actions: {
     swapCard: wrapAction(swapCard),
     confirmSwap: wrapAction(confirmSwap),
+    unconfirmSwap: wrapAction(unconfirmSwap),
     playCards: wrapAction(playCards),
     playFaceDown: wrapAction(playFaceDown),
     pickUpPile: wrapAction(pickUpPile),
+    forfeit: wrapAction(forfeit),
   },
   view,
   endIf,

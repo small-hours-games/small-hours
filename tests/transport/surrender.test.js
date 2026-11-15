@@ -1,5 +1,8 @@
 import { describe, it, expect, vi } from 'vitest';
-import { handleSurrender } from '../../src/transport/handlers/game.js';
+import { handleSurrender, handleGameAction } from '../../src/transport/handlers/game.js';
+import shithead from '../../games/shithead/rules.js';
+import blackjack from '../../games/blackjack/rules.js';
+import { createGame } from '../../src/engine/engine.js';
 
 function makeMockCtx() {
   const broadcasts = [];
@@ -15,6 +18,8 @@ function makeMockCtx() {
     cancelPhaseTimer: vi.fn(),
     cancelRoundCountdown: vi.fn(),
     cancelBotTurn: vi.fn(),
+    schedulePhaseTimer: vi.fn(),
+    scheduleBotTurn: vi.fn(),
     getPlayerNames: room => Object.fromEntries([...room.players.values()].map(p => [p.id, p.username])),
   };
 }
@@ -81,5 +86,40 @@ describe('handleSurrender', () => {
     expect(room.endGame).toHaveBeenCalledTimes(1);
     const hostEnd = ctx.broadcasts.find(m => m.type === 'GAME_STATE' && m.phase === 'finished');
     expect(hostEnd.winner).toBe('p3');
+  });
+
+  it('dispatches engine forfeit when a turn-holding human surrenders in 3-player Palace', () => {
+    const ctx = makeMockCtx();
+    const room = makeRoom([
+      { id: 'p1', username: 'Alice', isAdmin: true },
+      { id: 'p2', username: 'Bob' },
+      { id: 'p3', username: 'Cy' },
+    ]);
+    let game = createGame(shithead, { players: ['p1', 'p2', 'p3'], config: {} });
+    game = { ...game, state: { ...game.state, phase: 'play', currentPlayerIndex: 0 } };
+    room.game = game;
+
+    handleSurrender({}, { playerId: 'p1' }, room, {}, ctx);
+
+    expect(room.game.state.surrendered?.p1).toBe(true);
+    expect(room.game.state.players[room.game.state.currentPlayerIndex]).toBe('p2');
+  });
+
+  it('requires consensus readyNextRound on Blackjack before advancing unless admin forces nextRound', () => {
+    const ctx = makeMockCtx();
+    ctx.roomGameTypes.set('ABCD', 'blackjack');
+    const room = makeRoom([
+      { id: 'p1', username: 'Alice', isAdmin: true },
+      { id: 'p2', username: 'Bob', isAdmin: false },
+    ]);
+    room.game = createGame(blackjack, { players: ['p1', 'p2'], config: {} });
+    room.game.state = { ...room.game.state, phase: 'settled' };
+
+    handleGameAction({}, { playerId: 'p2' }, room, { action: { type: 'readyNextRound' } }, ctx);
+    expect(room.game.state.round).toBe(1);
+    expect(room.game.state.nextReady?.p2).toBe(true);
+
+    handleGameAction({}, { playerId: 'p1' }, room, { action: { type: 'readyNextRound' } }, ctx);
+    expect(room.game.state.round).toBe(2);
   });
 });

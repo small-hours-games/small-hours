@@ -22,7 +22,11 @@
       let status = 'Round ' + msg.round + ' of ' + msg.maxRounds;
       if (msg.phase === 'betting') status += ' · Place your bets on your phone';
       else if (msg.phase === 'playing') status += ' · ' + (names[msg.turn] || 'Player') + "'s turn";
-      else if (msg.phase === 'settled') status += ' · Round settled';
+      else if (msg.phase === 'settled') {
+        const rc = msg.nextReadyCount != null ? msg.nextReadyCount : 0;
+        const rt = msg.nextReadyTotal != null ? msg.nextReadyTotal : 0;
+        status += ' · Round settled' + (rt ? ' · Ready ' + rc + '/' + rt : '');
+      }
       else if (msg.phase === 'finished') status = (names[msg.winner] || 'Someone') + ' wins the table!';
 
       const d = msg.dealer || { cards: [] };
@@ -36,6 +40,7 @@
       const seatHtml = id => {
         const seat = msg.seats[id];
         const isTurn = msg.phase === 'playing' && msg.turn === id;
+        const isReady = msg.phase === 'settled' && !!(msg.nextReady && msg.nextReady[id]);
         const handsHtml = seat.hands && seat.hands.length
           ? seat.hands.map((h, idx) => {
               const activeH = isTurn && idx === msg.activeHandIndex;
@@ -48,7 +53,8 @@
 
         const av = (state.playerAvatars || {})[id] || '';
         return '<div class="bj-tv-seat' + (isTurn ? ' bj-tv-seat-turn' : '') + '">' +
-          '<div class="bj-tv-seat-head"><div class="bj-tv-seat-who">' + (av ? '<span class="bj-tv-avatar">' + av + '</span>' : '') + '<b>' + escapeHtml(names[id] || id) + '</b></div><span class="tc-mono text-amber-300 font-bold">' + tcNum(seat.chips) + '</span></div>' +
+          '<div class="bj-tv-seat-head"><div class="bj-tv-seat-who">' + (av ? '<span class="bj-tv-avatar">' + av + '</span>' : '') + '<b>' + escapeHtml(names[id] || id) + '</b></div>' +
+          '<div class="flex items-center gap-1.5">' + (isReady ? '<span class="bj-badge bj-badge-win">READY</span>' : '') + '<span class="tc-mono text-amber-300 font-bold">' + tcNum(seat.chips) + '</span></div></div>' +
           handsHtml +
         '</div>';
       };

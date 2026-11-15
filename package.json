@@ -1,12 +1,14 @@
 {
   "name": "small-hours",
-  "version": "2.35.1",
+  "version": "2.35.0",
   "description": "Real-time party games for one TV and a few phones.",
   "type": "module",
   "main": "src/server.js",
   "scripts": {
     "start": "node src/server.js",
     "dev": "node --watch src/server.js",
+    "build": "find src games public/js -name '*.js' -exec node --check {} +",
+    "lint": "find src games public/js -name '*.js' -exec node --check {} +",
     "test": "vitest run",
     "test:watch": "vitest"
   },

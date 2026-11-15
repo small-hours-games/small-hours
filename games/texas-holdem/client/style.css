@@ -9,11 +9,21 @@
 .th-showdown { text-align: center; }
 .th-win-banner { background: rgba(22, 163, 74, 0.28); border: 1px solid rgba(74, 222, 128, 0.5); border-radius: 10px; padding: 6px 10px; font-size: 0.85rem; }
 
-.th-hole-zone { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 6px 0; cursor: pointer; }
-.th-hole-label { font-size: 0.78rem; color: rgba(255, 255, 255, 0.7); }
-.th-hole-cards { display: flex; gap: 10px; justify-content: center; }
-.th-controls { display: flex; flex-direction: column; gap: 10px; margin-top: auto; padding: 8px 0 calc(6px + env(safe-area-inset-bottom)); }
-.th-raise-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.th-hole-zone { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 6px 0; }
+.th-hole-head { display: flex; align-items: center; gap: 10px; }
+.th-hole-label { font-size: 0.78rem; color: rgba(255, 255, 255, 0.75); }
+.th-peek-btn { min-height: 36px; padding: 4px 12px; font-size: 12px; }
+.th-hole-cards { display: flex; gap: 10px; justify-content: center; user-select: none; touch-action: manipulation; }
+.th-controls { display: flex; flex-direction: column; gap: 8px; margin-top: auto; padding: 8px 0 calc(6px + env(safe-area-inset-bottom)); }
+.th-raise-box { display: flex; flex-direction: column; gap: 8px; background: rgba(15, 23, 42, 0.55); border: 1px solid rgba(148, 163, 184, 0.2); border-radius: 14px; padding: 8px; }
+.th-preset-row { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+.th-preset-btn { min-height: 40px; font-size: 12px; font-weight: 800; }
+.th-slider-row { display: flex; align-items: center; gap: 8px; }
+.th-stepper-btn { min-height: 44px; min-width: 52px; font-weight: 800; padding: 0 8px; }
+.th-slider { flex: 1; accent-color: #38bdf8; height: 28px; cursor: pointer; }
+.th-raise-val { min-width: 44px; text-align: right; font-weight: 800; color: #fef08a; font-size: 14px; }
+.th-btn-confirm { background: #dc2626 !important; border-color: #fca5a5 !important; color: #fff !important; animation: th-confirm-pulse 0.9s ease-in-out infinite; }
+@keyframes th-confirm-pulse { 50% { transform: scale(1.02); } }
 .th-btn-fold { background: rgba(220, 38, 38, 0.25); border-color: rgba(248, 113, 113, 0.5); }
 
 /* Oval casino poker table on TV */
@@ -99,6 +109,7 @@
 .th-tag-d { background: #facc15; color: #0f172a; }
 .th-tag-fold { background: #dc2626; color: #fff; }
 .th-tag-allin { background: #ea580c; color: #fff; }
+.th-tag-ready { background: #16a34a; color: #fff; }
 .th-tv-bet { font-size: 0.8rem; color: #fde047; font-weight: 700; }
 .th-tv-cards { display: flex; gap: 6px; justify-content: center; }
 .th-tv-handname { font-size: 0.8rem; color: #86efac; font-weight: 700; }

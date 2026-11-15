@@ -15,9 +15,10 @@ if (fs.existsSync('.env') && typeof process.loadEnvFile === 'function') {
   try { process.loadEnvFile('.env'); } catch { /* ignore malformed .env */ }
 }
 
-const PORT = parseInt(process.env.PORT, 10) || 3001;
+const PORT = parseInt(process.env.PORT, 10) || 3000;
 
 const app = express();
+app.set('trust proxy', 1);
 app.use(express.json());
 
 const server = http.createServer(app);
@@ -32,7 +33,7 @@ const { wss, broadcastToRoom, hasActiveSockets } = setupWebSocket(server, manage
 manager.hasActiveSockets = (code) => hasActiveSockets(code);
 
 // Start listening
-server.listen(PORT, () => {
+server.listen(PORT, '0.0.0.0', () => {
   console.log(`Small Hours server listening on port ${PORT}`);
   console.log(`  Local:   http://localhost:${PORT}`);
   console.log(`  Health:  http://localhost:${PORT}/health`);

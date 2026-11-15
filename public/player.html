@@ -36,19 +36,19 @@
         <img class="brand-symbol" src="/images/smallhours-mark.svg" alt="" width="34" height="34">
         <span class="brand-phone-name hidden sm:inline">Small<span class="brand-accent">hours</span></span>
       </a>
-      <div class="flex items-center gap-1.5 sm:gap-2 min-w-0">
-        <button id="shareBtn" onclick="shareRoom()" aria-label="Share room" class="hidden w-8 h-8 rounded-full bg-sky-50 hover:bg-sky-100 text-sky-700 items-center justify-center shrink-0">
+      <div class="flex items-center gap-1 sm:gap-2 min-w-0">
+        <button id="shareBtn" onclick="shareRoom()" aria-label="Share room" class="hidden w-11 h-11 min-w-[44px] min-h-[44px] rounded-full bg-sky-50 hover:bg-sky-100 text-sky-700 items-center justify-center shrink-0">
           <i class="fa-solid fa-share-nodes text-sm"></i>
         </button>
         <span class="font-mono font-bold text-sky-900 tracking-widest text-xs bg-sky-100 border border-sky-200 px-2 py-0.5 rounded-md shrink-0" id="roomBadge">----</span>
-        <button type="button" id="surrenderBtn" onclick="openSurrenderModal()" hidden aria-label="Surrender game" class="px-2 py-1 rounded-full bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-700 text-[11px] font-bold items-center gap-1 shrink-0">
-          <i class="fa-solid fa-flag text-[10px]" aria-hidden="true"></i>
+        <button type="button" id="surrenderBtn" onclick="openSurrenderModal()" hidden aria-label="Surrender game" class="min-w-[44px] min-h-[44px] px-2.5 py-1.5 rounded-full bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-700 text-[11px] font-bold items-center justify-center gap-1 shrink-0">
+          <i class="fa-solid fa-flag text-xs" aria-hidden="true"></i>
           <span class="hidden sm:inline">Surrender</span>
         </button>
-        <button type="button" id="fullscreenBtn" onclick="toggleFullscreen()" aria-label="Full screen" aria-pressed="false" hidden class="fullscreen-btn w-8 h-8 rounded-full items-center justify-center shrink-0">
+        <button type="button" id="fullscreenBtn" onclick="toggleFullscreen()" aria-label="Full screen" aria-pressed="false" hidden class="fullscreen-btn w-11 h-11 min-w-[44px] min-h-[44px] rounded-full items-center justify-center shrink-0">
           <i class="fa-solid fa-expand text-sm" aria-hidden="true"></i>
         </button>
-        <button type="button" id="myAvatarBtn" onclick="openAvatarPicker()" aria-label="Change your nickname or avatar" class="my-avatar-chip flex items-center gap-1.5 bg-white border border-sky-200 rounded-full pl-1 pr-2.5 py-0.5 min-w-0">
+        <button type="button" id="myAvatarBtn" onclick="openAvatarPicker()" aria-label="Change your nickname or avatar" class="my-avatar-chip min-h-[44px] flex items-center gap-1.5 bg-white border border-sky-200 rounded-full pl-1.5 pr-2.5 py-1 min-w-0">
           <span class="text-lg leading-none shrink-0" id="myAvatar" aria-hidden="true">&#128056;</span>
           <span class="text-xs font-bold text-slate-700 truncate max-w-[7.5rem]" id="myName">Player</span>
         </button>
@@ -170,6 +170,18 @@
     </div>
 
     <!-- game-sections -->
+
+    <div id="gameOverBanner" class="game-over-banner" hidden aria-live="polite">
+      <div class="flex items-center justify-between gap-2">
+        <div>
+          <div class="text-[11px] font-extrabold uppercase tracking-widest text-amber-300">Match Complete</div>
+          <h2 id="gameOverTitle" class="font-display font-bold text-xl text-white">Game Over!</h2>
+        </div>
+        <span class="text-2xl" aria-hidden="true">&#127942;</span>
+      </div>
+      <div id="gameOverStandings" class="game-over-standings"></div>
+      <button type="button" id="backToLobbyBtn" onclick="returnToLobby()" class="w-full min-h-[48px] py-3 px-4 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-extrabold text-sm shadow-lg transition active:scale-[0.98]">Back to Lobby</button>
+    </div>
   </main>
 
   <!-- Avatar picker: the face the TV shows next to your name -->
@@ -737,6 +749,7 @@
         }
 
         case 'MINI_GAME_STARTING':
+          hideGameOverBanner();
           state.gameType = msg.gameType;
           SH.game(msg.gameType)?.onEnter?.();
           showSection(getGameSectionId(msg.gameType));
@@ -816,20 +829,15 @@
         closeSurrenderModal();
         syncSurrenderBtn();
         if (msg.winner) {
-          showToast('Game over! Winner decided!', 'success');
+          const wName = (state.playerNames && state.playerNames[msg.winner]) || 'Winner';
+          showToast(wName + ' wins!', 'success');
         }
-        // Show final state before returning to lobby
+        // Render final state, then hold standings cleanly until player chooses Back to Lobby.
         SH.game(state.gameType)?.render(msg);
-        // Return to lobby after a delay
-        setTimeout(() => {
-          SH.game(state.gameType)?.reset?.();
-          state.gameType = null;
-          state.gamePhase = null;
-          state.ready = false;
-          showSection('lobbySection');
-        }, 3000);
+        showGameOverBanner(msg);
         return;
       }
+      hideGameOverBanner();
 
       // Ensure game section is visible
       if (state.gameType) {
@@ -867,8 +875,40 @@
       modal.hidden = true;
     }
 
+    function showGameOverBanner(msg) {
+      const banner = document.getElementById('gameOverBanner');
+      const title = document.getElementById('gameOverTitle');
+      const list = document.getElementById('gameOverStandings');
+      if (!banner || !title || !list) return;
+      const names = msg.playerNames || state.playerNames || {};
+      const winnerName = msg.winner ? (names[msg.winner] || 'Player') : null;
+      title.textContent = winnerName ? (msg.winner === state.playerId ? 'You win!' : winnerName + ' wins!') : 'Game Over';
+      const scores = msg.scores || {};
+      const pts = msg.sessionPoints || {};
+      const ids = Object.keys(scores).length ? Object.keys(scores) : Object.keys(pts);
+      const sorted = ids.slice().sort((a, b) => (scores[b] ?? pts[b] ?? 0) - (scores[a] ?? pts[a] ?? 0));
+      list.innerHTML = sorted.map((id, i) => {
+        const isWin = id === msg.winner || i === 0;
+        const label = names[id] || id;
+        const isMe = id === state.playerId;
+        const pDelta = pts[id] ? ('+' + pts[id] + ' lobby pts') : '';
+        const val = scores[id] != null ? String(scores[id]) : '';
+        return '<div class="game-over-row' + (isWin ? ' is-winner' : '') + '">' +
+          '<span>' + (i + 1) + '. ' + escapeHtml(label) + (isMe ? ' (You)' : '') + '</span>' +
+          '<span class="text-xs text-amber-200">' + escapeHtml([val, pDelta].filter(Boolean).join(' · ')) + '</span>' +
+        '</div>';
+      }).join('');
+      banner.hidden = false;
+    }
+
+    function hideGameOverBanner() {
+      const banner = document.getElementById('gameOverBanner');
+      if (banner) banner.hidden = true;
+    }
+
     function returnToLobby(toastMsg) {
       closeSurrenderModal();
+      hideGameOverBanner();
       hideRoundCountdownUI();
       SH.game(state.gameType)?.reset?.();
       state.gameType = null;

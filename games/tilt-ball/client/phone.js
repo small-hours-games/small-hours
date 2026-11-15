@@ -9,10 +9,8 @@
 
   const tb = {
     active: false,
-    phase: 'ready',
-    myReady: false,
+    phase: 'playing',
     listening: false,
-    gyroBoundGesture: false,
     rawBeta: 0,
     rawGamma: 0,
     zeroBeta: 0,
@@ -59,10 +57,28 @@
     return tb.sentTimes.length;
   }
 
+  const BOOST_COOLDOWN_MS = 2400;
+
+  function stopBoostTicker() {
+    if (tb.boostTick) { clearInterval(tb.boostTick); tb.boostTick = null; }
+  }
+
+  function startBoostTicker() {
+    stopBoostTicker();
+    tb.boostTick = setInterval(() => {
+      updatePadVisual();
+      if (Date.now() >= tb.boostCooldownUntil) stopBoostTicker();
+    }, 80);
+  }
+
   function updatePadVisual() {
+    const pad = document.getElementById('tbPad');
     const dot = document.getElementById('tbPadDot');
     if (dot) {
-      dot.style.transform = `translate(${(tb.x * 64).toFixed(1)}px, ${(tb.y * 64).toFixed(1)}px)`;
+      const travel = pad && pad.clientWidth
+        ? Math.max(24, pad.clientWidth / 2 - (dot.offsetWidth / 2 || 19) - 2)
+        : 64;
+      dot.style.transform = `translate(${(tb.x * travel).toFixed(1)}px, ${(tb.y * travel).toFixed(1)}px)`;
     }
     const linkPill = document.getElementById('tbLinkPill');
     if (linkPill) {
@@ -72,9 +88,15 @@
     const boostBtn = document.getElementById('tbBoostBtn');
     if (boostBtn) {
       const now = Date.now();
-      const cooling = now < tb.boostCooldownUntil;
+      const remaining = Math.max(0, tb.boostCooldownUntil - now);
+      const cooling = remaining > 0;
+      const pct = cooling ? Math.max(0, Math.min(100, ((BOOST_COOLDOWN_MS - remaining) / BOOST_COOLDOWN_MS) * 100)) : 100;
       boostBtn.disabled = tb.phase !== 'playing' || cooling;
-      boostBtn.textContent = cooling ? '⏳ Recharging…' : '⚡ DASH BOOST';
+      boostBtn.classList.toggle('tb-cooling', cooling);
+      boostBtn.style.setProperty('--cooldown-pct', `${pct.toFixed(1)}%`);
+      boostBtn.textContent = cooling
+        ? `⏳ Recharging (${(remaining / 1000).toFixed(1)}s)`
+        : '⚡ DASH BOOST';
     }
   }
 
@@ -149,28 +171,11 @@
     pad.addEventListener('pointercancel', release);
   }
 
-  function updateGyroPill() {
-    const pill = document.getElementById('tbGyroPill');
-    if (!pill) return;
-    const needsTap = typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function';
-    if (tb.listening) {
-      pill.textContent = 'Gyro: Active ✓';
-      pill.classList.add('is-active');
-    } else if (needsTap) {
-      pill.textContent = 'Gyro: Tap anywhere';
-      pill.classList.remove('is-active');
-    } else {
-      pill.textContent = 'Gyro: Active ✓';
-      pill.classList.add('is-active');
-    }
-  }
-
   function attachGyro() {
     if (tb.listening) return;
     tb.listening = true;
     window.addEventListener('deviceorientation', onOrient);
     if (!tb.timer) tb.timer = setInterval(() => sendTilt(true), 250);
-    updateGyroPill();
   }
 
   function stopRtc() {
@@ -196,10 +201,6 @@
 
   async function handleRtcSignal(msg) {
     if (!msg.signal) return;
-    if (msg.signal.tbBeginRound) {
-      send({ type: 'GAME_ACTION', action: { type: 'beginRound' } });
-      return;
-    }
     if (msg.signal.tbRoundEnd) {
       send({ type: 'GAME_ACTION', action: { type: 'finishRound', ...msg.signal.tbRoundEnd } });
       return;
@@ -215,41 +216,20 @@
     } catch {}
   }
 
-  window.tbEnsureGyro = async function tbEnsureGyro() {
-    if (tb.listening) return;
+  window.tbEnableGyro = async function tbEnableGyro() {
     try {
       if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
         const res = await DeviceOrientationEvent.requestPermission();
         if (res !== 'granted') { showToast('Gyro permission denied — use touch pad', 'info'); return; }
       }
       attachGyro();
+      document.getElementById('tbGyroBtn').textContent = 'Gyro Active ✓';
     } catch {
       attachGyro();
     }
   };
 
-  window.tbToggleReady = function tbToggleReady() {
-    window.tbEnsureGyro();
-    if (tb.phase !== 'ready') return;
-    tb.zeroBeta = tb.rawBeta;
-    tb.zeroGamma = tb.rawGamma;
-    tb.x = 0;
-    tb.y = 0;
-    send({ type: 'GAME_ACTION', action: { type: 'setReady', ready: !tb.myReady } });
-  };
-
-  window.tbStartCountdown = function tbStartCountdown() {
-    window.tbEnsureGyro();
-    if (tb.phase !== 'ready') return;
-    tb.zeroBeta = tb.rawBeta;
-    tb.zeroGamma = tb.rawGamma;
-    tb.x = 0;
-    tb.y = 0;
-    send({ type: 'GAME_ACTION', action: { type: 'startCountdown' } });
-  };
-
   window.tbZero = function tbZero() {
-    window.tbEnsureGyro();
     tb.zeroBeta = tb.rawBeta;
     tb.zeroGamma = tb.rawGamma;
     tb.x = 0;
@@ -259,13 +239,13 @@
   };
 
   window.tbBoost = function tbBoost() {
-    window.tbEnsureGyro();
     const now = Date.now();
     if (tb.phase !== 'playing' || now < tb.boostCooldownUntil) return;
     tb.boostUntil = now + 350;
-    tb.boostCooldownUntil = now + 2400;
+    tb.boostCooldownUntil = now + BOOST_COOLDOWN_MS;
+    if (navigator.vibrate) navigator.vibrate(25);
     sendTilt(true);
-    setTimeout(updatePadVisual, 2450);
+    startBoostTicker();
   };
 
   window.tbNextRound = function tbNextRound() {
@@ -275,48 +255,25 @@
   function renderTiltBallState(msg) {
     tb.active = msg.phase !== 'finished';
     tb.phase = msg.phase;
-    tb.myReady = Boolean(msg.ready?.[state.playerId]);
     attachPadListeners();
     if (tb.active && !tb.pc) startRtc();
 
     const needsTap = typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function';
-    if (!needsTap && !tb.listening) {
-      attachGyro();
-    } else if (needsTap && !tb.gyroBoundGesture) {
-      tb.gyroBoundGesture = true;
-      const sec = document.getElementById('tiltBallSection');
-      sec?.addEventListener('pointerdown', () => window.tbEnsureGyro(), { once: true });
-    }
-    updateGyroPill();
+    if (!needsTap && !tb.listening) attachGyro();
 
     document.getElementById('tbRoundPill').textContent = 'R' + msg.round + '/' + msg.maxRounds;
     document.getElementById('tbScorePill').textContent = tcNum(msg.scores?.[state.playerId] || 0) + ' pts';
-    const readyBtn = document.getElementById('tbReadyBtn');
-    const countdownBtn = document.getElementById('tbCountdownBtn');
     const nextBtn = document.getElementById('tbNextBtn');
     const boostBtn = document.getElementById('tbBoostBtn');
-
-    if (readyBtn) {
-      readyBtn.hidden = msg.phase !== 'ready';
-      readyBtn.classList.toggle('is-ready', tb.myReady);
-      readyBtn.textContent = tb.myReady ? '✅ Ready! (Tap to cancel)' : "✋ I'm Ready!";
-    }
-    if (countdownBtn) {
-      countdownBtn.hidden = !(msg.phase === 'ready' && msg.allReady);
-    }
     if (nextBtn) nextBtn.hidden = msg.phase !== 'round_over';
     if (boostBtn) boostBtn.hidden = msg.phase !== 'playing';
 
     const statusText = msg.phase === 'finished'
       ? 'Game Over!'
-      : msg.phase === 'ready'
-        ? (msg.allReady ? 'Everyone ready — press Start Countdown!' : 'Tap I’m Ready when set!')
-        : msg.phase === 'countdown'
-          ? 'Get ready… 3, 2, 1!'
-          : msg.phase === 'round_over'
-            ? (msg.lastRoundWinner === state.playerId ? '🏆 You won the round!' : (tcName(msg.lastRoundWinner, msg) || 'Round') + ' won!')
-            : 'Tilt to knock rivals off!';
-    tcSetStatus('tb', statusText, msg.phase === 'playing' || msg.phase === 'countdown');
+      : msg.phase === 'round_over'
+        ? (msg.lastRoundWinner === state.playerId ? '🏆 You won the round!' : (tcName(msg.lastRoundWinner, msg) || 'Round') + ' won!')
+        : 'Tilt to knock rivals off!';
+    tcSetStatus('tb', statusText, msg.phase === 'playing');
     document.getElementById('tiltBallSection')?.classList.toggle('tc-my-turn-glow', msg.phase === 'playing');
     updatePadVisual();
   }
@@ -329,10 +286,12 @@
     reset() {
       tb.active = false;
       tb.listening = false;
-      tb.gyroBoundGesture = false;
       tb.dragging = false;
       tb.x = 0;
       tb.y = 0;
+      tb.boostUntil = 0;
+      tb.boostCooldownUntil = 0;
+      stopBoostTicker();
       window.removeEventListener('deviceorientation', onOrient);
       if (tb.timer) { clearInterval(tb.timer); tb.timer = null; }
       stopRtc();

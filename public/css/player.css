@@ -157,16 +157,16 @@
     }
 
     .powerup-btn {
-      padding: 7px 6px;
+      padding: 8px 6px;
       border-radius: 12px;
-      font-size: 0.76rem;
+      font-size: 0.78rem;
       font-weight: 800;
       cursor: pointer;
       border: 1.5px solid #bae6fd;
       background: rgba(255, 255, 255, 0.92);
       color: #0369a1;
       transition: all 0.16s;
-      min-height: 38px;
+      min-height: 44px;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -297,7 +297,8 @@
       line-height: 1.2;
     }
 
-    /* Zone headers {
+    /* Zone headers */
+    .zone-header {
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -311,27 +312,22 @@
       50% { box-shadow: inset 0 0 40px rgba(5, 150, 105, 0.25), 0 0 60px rgba(5, 150, 105, 0.2); }
     }
 
-    @media (max-width: 400px) {
-      .answer-grid { grid-template-columns: 1fr; }
-    }
-  
-/* Keep submitted choices readable, including during the answer reveal. */
-#quizAnswers .answer-btn { position: relative; overflow-wrap: anywhere; }
+/* Keep submitted choices readable, including during the answer reveal, with uniform bottom room to avoid layout shift. */
+#quizAnswers .answer-btn { position: relative; overflow-wrap: anywhere; padding-bottom: 26px; }
 #quizAnswers .answer-btn:disabled { opacity: 1; }
 #quizAnswers .answer-btn.selected {
   border-color: #0f172a;
   box-shadow: 0 0 0 2px white, 0 0 0 4px #0f172a;
-  padding-bottom: 30px;
 }
 #quizAnswers .answer-btn.selected::after {
   content: '\2713  Your choice';
   position: absolute;
-  bottom: 5px;
+  bottom: 4px;
   left: 50%;
   transform: translateX(-50%);
   white-space: nowrap;
-  font-size: 0.7rem;
-  padding: 2px 7px;
+  font-size: 0.68rem;
+  padding: 1px 7px;
   border-radius: 8px;
   background: #0f172a;
   color: white;
@@ -344,15 +340,18 @@
   .section.active { gap: 10px; }
   .device-screen { padding: 14px; border-radius: 22px; gap: 12px; }
   #nameSection .device-screen { min-height: min(460px, 78dvh); }
-  header > div { height: 48px; padding-inline: 10px; }
+  header > div { min-height: 52px; padding-inline: 10px; }
   header .font-display { font-size: 1rem; }
   #myName { max-width: 4rem; }
   #quizSection .card { padding: 12px; }
   .quiz-timer-display { font-size: 1.4rem; margin: 0; }
   .answer-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
-  #quizAnswers .answer-btn { padding: 12px 8px; min-height: 64px; font-size: 0.95rem; }
-  #quizAnswers .answer-btn.selected { padding-bottom: 30px; }
-  .powerup-btn { padding: 8px 12px; }
+  #quizAnswers .answer-btn { padding: 10px 8px 26px; min-height: 68px; font-size: 0.92rem; }
+  .powerup-btn { padding: 8px 10px; min-height: 44px; }
+}
+
+@media (max-width: 355px) {
+  .answer-grid { grid-template-columns: 1fr; }
 }
 
 .lobby-chat .chat-messages {
@@ -379,15 +378,30 @@
 }
 #quizTimerText.quiz-ready-number { font-size: clamp(5rem, 24vw, 8rem); }
 
-/* Larger activity tiles {
-  min-height: 78px;
-  padding: 12px;
-  font-size: 0.9rem;
+/* Game over standings card on mobile */
+.game-over-banner {
+  border-radius: 22px;
+  padding: 16px;
+  background: linear-gradient(160deg, #0b1530 0%, #13234a 100%);
+  border: 2px solid rgba(250, 204, 21, 0.55);
+  color: #ffffff;
+  box-shadow: 0 18px 42px -12px rgba(11, 21, 48, 0.65);
+  display: flex;
   flex-direction: column;
-  align-items: flex-start;
-  justify-content: center;
-  gap: 6px;
-  text-align: left;
+  gap: 10px;
+  margin-top: 8px;
+}
+.game-over-banner[hidden] { display: none; }
+.game-over-standings { display: flex; flex-direction: column; gap: 6px; }
+.game-over-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  padding: 8px 10px; border-radius: 12px;
+  background: rgba(255, 255, 255, 0.08);
+  font-size: 0.88rem; font-weight: 700;
+}
+.game-over-row.is-winner {
+  background: rgba(250, 204, 21, 0.16);
+  border: 1px solid rgba(250, 204, 21, 0.45);
 }
 
 /* Connection state has its own space below the top bar, never over content. */

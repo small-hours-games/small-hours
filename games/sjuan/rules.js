@@ -104,11 +104,12 @@ const sjuan = {
         const nextTurn = state.order[(idxTurn + 1) % state.order.length];
         return { state: { ...state, turn: nextTurn, round: state.round + 1 }, events: [{ type: 'passed', playerId }] };
       }
-      const card = state.deck.pop();
+      const deck = [...state.deck];
+      const card = deck.pop();
       const hands = { ...state.hands, [playerId]: [...state.hands[playerId], card] };
       const idxTurn = state.order.indexOf(playerId);
       const nextTurn = state.order[(idxTurn + 1) % state.order.length];
-      return { state: { ...state, hands, turn: nextTurn, round: state.round + 1, lastResult: { playerId, drew: cardView(card) } }, events: [{ type: 'drew', playerId }] };
+      return { state: { ...state, deck, hands, turn: nextTurn, round: state.round + 1, lastResult: { playerId, drew: cardView(card) } }, events: [{ type: 'drew', playerId }] };
     },
 
     // Host skip (if a player is stuck).
@@ -117,6 +118,25 @@ const sjuan = {
       const idxTurn = state.order.indexOf(state.turn);
       const nextTurn = state.order[(idxTurn + 1) % state.order.length];
       return { state: { ...state, turn: nextTurn, round: state.round + 1 }, events: [{ type: 'skipped', playerId: state.turn }] };
+    },
+
+    // Remove a surrendering/disconnected player cleanly and advance turn/end game if 1 left.
+    forfeit(state, { playerId }) {
+      if (state.phase !== 'play') return { state, events: [] };
+      if (!state.order.includes(playerId)) return { state, events: [] };
+      const nextOrder = state.order.filter(id => id !== playerId);
+      const hands = { ...state.hands, [playerId]: [] };
+      if (nextOrder.length <= 1) {
+        const winner = nextOrder[0] || null;
+        return { state: { ...state, order: nextOrder, hands, phase: 'finished', winner }, events: [{ type: 'forfeited', playerId }] };
+      }
+      let nextTurn = state.turn;
+      if (state.turn === playerId) {
+        const prevIdx = state.order.indexOf(playerId);
+        const wrappedIdx = prevIdx % nextOrder.length;
+        nextTurn = nextOrder[wrappedIdx];
+      }
+      return { state: { ...state, order: nextOrder, hands, turn: nextTurn }, events: [{ type: 'forfeited', playerId }] };
     },
   },
 

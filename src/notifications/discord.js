@@ -2,7 +2,7 @@
 // No-ops silently if DISCORD_WEBHOOK_URL is not set.
 
 const WEBHOOK_URL = process.env.DISCORD_WEBHOOK_URL;
-const DOMAIN = process.env.DOMAIN || 'localhost:3001';
+const DOMAIN = process.env.DOMAIN || 'localhost:3000';
 
 export async function notifyRoomCreated(roomCode) {
   if (!WEBHOOK_URL) return;

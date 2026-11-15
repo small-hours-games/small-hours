@@ -595,6 +595,8 @@ export function setupWebSocket(server, manager) {
             playerId,
             username: leftName,
           });
+        } else if (room.game?.definition?.actions?.forfeit) {
+          gameHandlers.applyGameAction(room, { type: 'forfeit', playerId }, ctx);
         }
         broadcastToRoom(room.code, { type: 'LOBBY_UPDATE', state: room.getState() });
       }

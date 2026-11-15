@@ -104,4 +104,25 @@ describe("Texas Hold'em rules", () => {
     }
     throw new Error('Holdem bot game did not finish');
   });
+
+  it('requires consensus readyNextHand to deal next hand and supports forfeit', () => {
+    let g = createTestGame(holdem, ['p1', 'p2', 'p3'], { hands: 4 });
+    g.state.phase = 'showdown';
+    g = act(g, 'readyNextHand', 'p1').game;
+    expect(g.state.phase).toBe('showdown');
+    expect(viewFor(g, 'p1').nextReadyCount).toBe(1);
+    expect(viewFor(g, 'p1').nextReadyTotal).toBe(3);
+
+    g = act(g, 'readyNextHand', 'p2').game;
+    expect(g.state.phase).toBe('showdown');
+    g = act(g, 'readyNextHand', 'p3').game;
+    expect(g.state.handNumber).toBe(2);
+    expect(g.state.phase).toBe('preflop');
+
+    // Forfeit ends game cleanly if only 1 funded human remains
+    let g2 = createTestGame(holdem, ['p1', 'p2'], { hands: 4 });
+    g2 = act(g2, 'forfeit', 'p1').game;
+    expect(g2.state.phase).toBe('finished');
+    expect(isOver(g2).winner).toBe('p2');
+  });
 });

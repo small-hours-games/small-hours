@@ -1,6 +1,8 @@
 // Sjuan on the phone, built on the card kit in public/js/table-cards*.js.
 
     state.sjSelected = null;
+    state.sjSortMode = 'suit';
+    state.sjOrder = null;
 
     function sjCanPlay(card, msg) {
       const top = msg.stacks[card.suit];
@@ -21,6 +23,15 @@
       return { label: msg.deckCount > 0 ? 'Draw a card' : 'Pass', action: 'draw' };
     }
 
+    function sjExpectedLabel(suit, msg) {
+      const top = msg.stacks[suit];
+      const sym = TC_SUITS[suit] ? TC_SUITS[suit].symbol : suit;
+      const needed = [];
+      if (top > 1) needed.push(tcRankLabel(top - 1) + sym);
+      if (top < 13) needed.push(tcRankLabel(top + 1) + sym);
+      return needed.length ? 'Need ' + needed.join(' or ') : sym + ' complete';
+    }
+
     function renderSjuanState(msg) {
       state.sjLastMsg = msg;
       tcFitScreen('sjuanSection');
@@ -38,14 +49,40 @@
         .map(id => '<span class="tc-pill">' + escapeHtml(tcName(id, msg)) + ' <b class="tc-mono">' + tcNum(msg.handCounts[id]) + '</b></span>')
         .join('');
 
+      const playableCount = hand.filter(c => sjCanPlay(c, msg)).length;
+      const playPill = document.getElementById('sjPlayablePill');
+      if (playPill) {
+        playPill.textContent = playableCount + ' playable';
+        playPill.classList.toggle('tc-pill-turn', myTurn && playableCount > 0);
+      }
+
+      const sortMode = state.sjSortMode || 'suit';
+      const ordered = orderHand(hand, sortMode, state.sjOrder);
       const arrivals = tcTrackArrivals('sj', hand, msg.phase === 'play' ? 'play' : null);
       const handEl = document.getElementById('sjHand');
-      handEl.innerHTML = renderHandRack(orderHand(hand, 'suit'), {
-        layout: tcLayout(), width: tcHandWidth('sjHand'), cardW: tcHandCardW('sjHand'),
-        cardOpts: c => ({ selected: state.sjSelected === c.id, dim: myTurn && !sjCanPlay(c, msg), ...tcArrivalOpts(arrivals, c) }),
+      tcFlipHand(handEl, () => {
+        handEl.innerHTML = renderHandRack(ordered, {
+          layout: tcLayout(), width: tcHandWidth('sjHand'), cardW: tcHandCardW('sjHand'),
+          cardOpts: c => ({ selected: state.sjSelected === c.id, dim: myTurn && !sjCanPlay(c, msg), ...tcArrivalOpts(arrivals, c) }),
+        });
       });
-      attachHandGestures(handEl, { peek: true, onTap: sjTap, onPlay: sjSwipe });
+      attachHandGestures(handEl, {
+        peek: true,
+        onTap: sjTap,
+        onPlay: sjSwipe,
+        onReorder: (id, targetId) => {
+          state.sjOrder = tcMoveId(ordered.map(c => c.id), id, targetId);
+          state.sjSortMode = 'custom';
+          renderSjuanState(state.sjLastMsg);
+        },
+      });
+      const sortBtn = document.getElementById('sjSortBtn');
+      if (sortBtn) sortBtn.textContent = 'Sort: ' + (sortMode === 'custom' ? 'mine ↺' : sortMode);
+      const layoutBtn = document.getElementById('sjLayoutBtn');
+      if (layoutBtn) layoutBtn.textContent = tcLayout() === 'fan' ? 'Fan' : '2-Row';
+      tcSyncColoursBtn('sjColoursBtn');
       tcSetCta('sjCta', sjCtaState(msg, myTurn, hand.find(c => c.id === state.sjSelected)));
+      tcSqueeze('sjuanSection');
       tcLaunchArrivals(arrivals, hand, document.getElementById('sjDeck'), handEl);
     }
 
@@ -54,8 +91,28 @@
     }
 
     function sjTap(id) {
+      const msg = state.sjLastMsg;
+      if (!msg) return;
+      const card = (msg.myHand || []).find(c => c.id === id);
+      if (msg.isMyTurn && card && !sjCanPlay(card, msg)) {
+        tcShake(document.getElementById('sjHand'), id);
+        if (typeof showToast === 'function') showToast(sjExpectedLabel(card.suit, msg), 'info');
+        return;
+      }
       state.sjSelected = state.sjSelected === id ? null : id;
-      renderSjuanState(state.sjLastMsg);
+      renderSjuanState(msg);
+    }
+
+    function sjCycleSort() {
+      state.sjOrder = null;
+      if (state.sjSortMode === 'custom') state.sjSortMode = 'suit';
+      else state.sjSortMode = state.sjSortMode === 'suit' ? 'rank' : 'suit';
+      if (state.sjLastMsg) renderSjuanState(state.sjLastMsg);
+    }
+
+    function sjToggleLayout() {
+      tcSetLayout(tcLayout() === 'fan' ? 'rack' : 'fan');
+      if (state.sjLastMsg) renderSjuanState(state.sjLastMsg);
     }
 
     function sjPlay(id) {
@@ -66,7 +123,11 @@
     function sjSwipe(id, flick) {
       const msg = state.sjLastMsg;
       const card = (msg.myHand || []).find(c => c.id === id);
-      if (!msg.isMyTurn || !card || !sjCanPlay(card, msg)) { tcShake(document.getElementById('sjHand'), id); return; }
+      if (!msg.isMyTurn || !card || !sjCanPlay(card, msg)) {
+        tcShake(document.getElementById('sjHand'), id);
+        if (msg.isMyTurn && card && typeof showToast === 'function') showToast(sjExpectedLabel(card.suit, msg), 'info');
+        return;
+      }
       tcThrowOff(card, flick.rect, flick);
       flick.el.style.visibility = 'hidden';
       sjPlay(id);
@@ -88,6 +149,8 @@
       redraw: sjRedraw,
       reset() {
         state.sjSelected = null;
+        state.sjSortMode = 'suit';
+        state.sjOrder = null;
         document.getElementById('sjuanSection')?.classList.remove('tc-my-turn-glow');
       },
     });

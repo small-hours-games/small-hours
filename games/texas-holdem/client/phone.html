@@ -14,9 +14,14 @@
         <div class="th-board" id="thBoard"></div>
         <div class="th-showdown" id="thShowdown"></div>
       </div>
-      <div class="th-hole-zone" onclick="thTogglePeek()">
-        <div class="th-hole-label" id="thHoleLabel">Your hole cards (tap to hide)</div>
-        <div class="th-hole-cards" id="thHoleCards"></div>
+      <div class="th-hole-zone">
+        <div class="th-hole-head">
+          <div class="th-hole-label" id="thHoleLabel">Your hole cards</div>
+          <button type="button" class="tc-btn th-peek-btn" id="thPeekBtn" onclick="thTogglePin()">Hide</button>
+        </div>
+        <div class="th-hole-cards" id="thHoleCards"
+             onpointerdown="thPeekStart(event)" onpointerup="thPeekEnd()"
+             onpointercancel="thPeekEnd()" onpointerleave="thPeekEnd()"></div>
       </div>
       <div class="th-controls" id="thControls"></div>
     </div>

@@ -87,4 +87,21 @@ describe('Actual quiz page renderers', () => {
     renderMedia({ phase: 'question', question: { ...qWithImg, media: { preview: 'song.mp3' } } });
     expect(phoneEls.quizMedia.innerHTML).not.toContain('quiz-phone-image');
   });
+
+  it('keeps unused powerups enabled when server confirms availability and clears pending on false', () => {
+    const elements = {};
+    const context = {
+      stopQuizReadyCountdown() {}, startQuizReadyCountdown() {}, storyAudio: null, quizNarrator: { sync() {} },
+      document: { getElementById: id => elements[id] ||= { style: {}, textContent: '', innerHTML: '', classList: { remove() {} } } },
+      state: { selectedAnswer: null, powerupsUsed: { double: true, fifty: false, freeze: false }, pendingPowerup: 'double' },
+      escapeHtml, updatePowerupBtns() {}, stopQuizCountdown() {}, renderQuizMedia() {},
+    };
+    const render = loadRenderer('phone.js', 'renderQuizState', 'startQuizCountdown', context);
+    render({ phase: 'question', question, myPowerups: { double: true, fifty: true, freeze: true } });
+    expect(context.state.powerupsUsed.double).toBe(false);
+
+    render({ phase: 'question', question, myPowerups: { double: false, fifty: true, freeze: true } });
+    expect(context.state.powerupsUsed.double).toBe(true);
+    expect(context.state.pendingPowerup).toBeNull();
+  });
 });

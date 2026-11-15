@@ -42,7 +42,10 @@
       if (msg.phase === 'finished') status = (names[msg.winner] || 'Someone') + ' wins the table!';
       else if (msg.phase === 'showdown' && msg.showdown?.winners?.length) {
         const w = msg.showdown.winners[0];
-        status = (names[w.playerId] || w.playerId) + ' wins ' + tcNum(w.amount) + ' (' + w.handName + ')';
+        const rc = msg.nextReadyCount != null ? msg.nextReadyCount : 0;
+        const rt = msg.nextReadyTotal != null ? msg.nextReadyTotal : 0;
+        status = (names[w.playerId] || w.playerId) + ' wins ' + tcNum(w.amount) + ' (' + w.handName + ')' +
+          (rt ? ' · Ready ' + rc + '/' + rt : '');
       } else if (msg.turn) {
         status += ' · ' + (names[msg.turn] || 'Player') + "'s turn";
       }
@@ -60,12 +63,14 @@
         const isTurn = msg.turn === id && msg.phase !== 'showdown' && msg.phase !== 'finished';
         const isFolded = !!msg.folded?.[id];
         const isAllIn = !!msg.allIn?.[id];
+        const isReady = msg.phase === 'showdown' && !!(msg.nextReady && msg.nextReady[id]);
         const badges = [];
         if (msg.dealerId === id) badges.push('<span class="th-tag th-tag-d">D</span>');
         if (msg.sbId === id) badges.push('<span class="th-tag">SB</span>');
         if (msg.bbId === id) badges.push('<span class="th-tag">BB</span>');
         if (isFolded) badges.push('<span class="th-tag th-tag-fold">FOLD</span>');
         if (isAllIn && !isFolded) badges.push('<span class="th-tag th-tag-allin">ALL-IN</span>');
+        if (isReady) badges.push('<span class="th-tag th-tag-ready">✓ READY</span>');
 
         const cards = revealed[id]
           ? revealed[id].map(c => renderTableCard(c, { size: 'sm', dataId: '' })).join('')

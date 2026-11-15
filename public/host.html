@@ -310,8 +310,14 @@
     syncHostFullscreenBtn();
 
     // Init audio on first user interaction (required by browser autoplay policy)
-    document.addEventListener('click', function() { audio.init(); }, { once: true });
-    document.addEventListener('keydown', function() { audio.init(); }, { once: true });
+    function unlockTvAudio() {
+      try { audio.init(); } catch {}
+      lobbyMusic.retry();
+      gameMusic.retry();
+    }
+    document.addEventListener('pointerdown', unlockTvAudio, { once: true });
+    document.addEventListener('click', unlockTvAudio, { once: true });
+    document.addEventListener('keydown', unlockTvAudio, { once: true });
 
     // --- Init ---
     (function init() {

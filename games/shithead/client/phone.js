@@ -118,7 +118,7 @@
       if (msg.phase === 'finished') return { label: 'Game over', disabled: true };
       if (msg.phase === 'swap') {
         const ready = msg.swapConfirmed && msg.swapConfirmed[state.playerId];
-        return ready ? { label: 'Ready ✓ waiting for others', disabled: true } : { label: 'Done swapping', action: 'confirmSwap' };
+        return ready ? { label: 'Ready ✓ — Tap to Change', action: 'unconfirmSwap' } : { label: 'Done swapping', action: 'confirmSwap' };
       }
       if (!msg.isMyTurn) return { label: 'Waiting for ' + tcName(msg.currentPlayer, msg) + '…', disabled: true };
       const zone = shZone(msg);
@@ -250,20 +250,32 @@
         }
         ruleEl.innerHTML = banner + '<div>' + escapeHtml(shStandingsText(msg)) + '</div>';
       } else {
-        ruleEl.textContent = msg.phase === 'swap'
-          ? 'Tap a hand card, then a face-up card, to swap them. 2, 10 and A are strong face-up.'
-          : shRuleBannerText(msg.pileTopRank, pileCount);
+        if (msg.phase === 'swap') {
+          if (msg.swapConfirmed && msg.swapConfirmed[state.playerId]) {
+            ruleEl.textContent = 'Swaps locked in! Waiting for others — tap Ready below to change.';
+          } else if (state.shSwapSelected.hand) {
+            ruleEl.textContent = 'Now tap a glowing face-up card below to complete the swap.';
+          } else if (state.shSwapSelected.faceUp) {
+            ruleEl.textContent = 'Now tap a card in your hand to swap into that slot.';
+          } else {
+            ruleEl.textContent = 'Tap a hand card, then a face-up card, to swap them. 2, 10 and A are strong face-up.';
+          }
+        } else {
+          ruleEl.textContent = shRuleBannerText(msg.pileTopRank, pileCount);
+        }
       }
 
       // My table cards (face-up / face-down) above the hand
       const faceUp = msg.myFaceUp || [];
       const fdIds = msg.myFaceDownIds || [];
+      const swapHighlightFaceUp = msg.phase === 'swap' && !(msg.swapConfirmed || {})[state.playerId] && !!state.shSwapSelected.hand;
       let table = '';
       if (msg.phase === 'swap' || zone === 'hand') {
         table += '<div class="tc-table-group"><span class="tc-group-label">Face up</span><div class="tc-row">' +
           (faceUp.length ? faceUp.map(c => renderTableCard(c, {
             size: 'md',
             selected: msg.phase === 'swap' && state.shSwapSelected.faceUp === c.id,
+            className: swapHighlightFaceUp ? 'tc-swap-target' : '',
             dim: msg.phase !== 'swap',
           })).join('') : '<span class="tc-group-label">none</span>') + '</div></div>';
       }
@@ -326,7 +338,7 @@
       // Thumb button and action bar
       tcSetCta('shCta', shCtaState(msg, state.shSelectedCards));
       document.getElementById('shLayoutBtn').textContent = tcLayout() === 'fan' ? 'Fan' : '2-Row';
-      document.getElementById('shSortBtn').textContent = 'Sort: ' + (sortMode === 'custom' ? 'mine' : sortMode);
+      document.getElementById('shSortBtn').textContent = 'Sort: ' + (sortMode === 'custom' ? 'mine ↺' : sortMode);
       const stackBtn = document.getElementById('shStackBtn');
       stackBtn.hidden = !stackable;
       stackBtn.textContent = state.shSplitStacks ? 'Stack' : 'Split stacks';
@@ -421,6 +433,7 @@
     function shCtaAction() {
       const action = document.getElementById('shCta').dataset.action;
       if (action === 'confirmSwap') confirmShSwap();
+      else if (action === 'unconfirmSwap') unconfirmShSwap();
       else if (action === 'playCards') playSelectedCards();
       else if (action === 'playFaceDown') shPlayFaceDown(state.shSelectedCards[0]);
       else if (action === 'pickUpPile') pickUpPile();
@@ -438,6 +451,7 @@
     }
 
     function shCycleSort() {
+      if (state.shSortMode === 'custom') { shSetSort('rank'); return; }
       shSetSort(state.shSortMode === 'rank' || !state.shSortMode ? 'suit' : 'rank');
     }
 
@@ -453,6 +467,7 @@
     }
 
     function shSwapSelect(source, cardId) {
+      if (state.shLastMsg && state.shLastMsg.swapConfirmed && state.shLastMsg.swapConfirmed[state.playerId]) return;
       if (source === 'hand') {
         state.shSwapSelected.hand = state.shSwapSelected.hand === cardId ? null : cardId;
       } else {
@@ -467,7 +482,14 @@
 
     function confirmShSwap() {
       if (shMovePending()) return;
+      state.shSwapSelected = { hand: null, faceUp: null };
       send({ type: 'GAME_ACTION', action: { type: 'confirmSwap' } });
+      shMoveSent();
+    }
+
+    function unconfirmShSwap() {
+      if (shMovePending()) return;
+      send({ type: 'GAME_ACTION', action: { type: 'unconfirmSwap' } });
       shMoveSent();
     }
 

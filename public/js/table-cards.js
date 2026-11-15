@@ -420,13 +420,39 @@ function attachHandGestures(container, handlers) {
   container._tcBound = true;
   var drag = null;
 
+  var REORDER_HOLD_MS = 260;
+
+  function clearHoldTimer(d) {
+    if (d && d.holdTimer) {
+      clearTimeout(d.holdTimer);
+      d.holdTimer = null;
+    }
+  }
+
+  function clearDropTarget(d) {
+    if (d && d.dropTarget) {
+      d.dropTarget.classList.remove('tc-drop-target');
+      d.dropTarget = null;
+    }
+  }
+
+  function enterReorderMode(d) {
+    if (!d || d.mode === 'throw' || d.mode === 'reorder') return;
+    d.mode = 'reorder';
+    d.reorderOriginEl = d.el;
+    setPeek(d, null);
+    d.el.classList.add('tc-dragging', 'tc-reordering');
+    if (navigator.vibrate) navigator.vibrate(15);
+  }
+
   // Any server update redraws the hand: a card under the finger stays where it is.
   container._tcRedrawn = function () {
     if (!drag || drag.el.isConnected) return;
     var fresh = tcHandCard(container, drag.id);
-    if (!fresh) { drag = null; return; }
-    if (drag.mode === 'throw') {
+    if (!fresh) { clearHoldTimer(drag); clearDropTarget(drag); drag = null; return; }
+    if (drag.mode === 'throw' || drag.mode === 'reorder') {
       fresh.classList.add('tc-dragging');
+      if (drag.mode === 'reorder') fresh.classList.add('tc-reordering');
       fresh.style.transform = drag.el.style.transform;
       drag.el = fresh;
       return;
@@ -458,16 +484,39 @@ function attachHandGestures(container, handlers) {
     if (navigator.vibrate && d.moved && !quiet) navigator.vibrate(8);
   }
 
+  function findDropTarget(d, clientX, clientY) {
+    var bestEl = null;
+    var bestId = null;
+    var bestDist = Infinity;
+    container.querySelectorAll('[data-card-id]').forEach(function (other) {
+      if (other === d.el || !other.dataset.cardId) return;
+      var r = other.getBoundingClientRect();
+      var dist = Math.hypot(r.left + r.width / 2 - clientX, r.top + r.height / 2 - clientY);
+      if (dist < bestDist) { bestDist = dist; bestId = other.dataset.cardId; bestEl = other; }
+    });
+    return { id: bestId, el: bestEl };
+  }
+
   container.addEventListener('pointerdown', function (e) {
     if (e.button) return;
     var el = e.target.closest('[data-card-id]');
     if (!el || !container.contains(el) || !el.dataset.cardId) return;
     var h = container._tcHandlers || {};
-    drag = { el: el, id: el.dataset.cardId, x: e.clientX, y: e.clientY, touch: e.pointerType === 'touch', moved: false, pointerId: e.pointerId,
-      samples: [{ x: e.clientX, y: e.clientY, t: e.timeStamp || Date.now() }], mode: null, peek: null };
+    drag = {
+      el: el, id: el.dataset.cardId, x: e.clientX, y: e.clientY,
+      touch: e.pointerType === 'touch', moved: false, pointerId: e.pointerId,
+      samples: [{ x: e.clientX, y: e.clientY, t: e.timeStamp || Date.now() }],
+      mode: null, peek: null, overNeutral: false, holdTimer: null, dropTarget: null,
+    };
     if (drag.touch && h.peek) {
       drag.snapshot = tcHandSnapshot(container);
       setPeek(drag, drag.snapshot.find(function (c) { return c.el === el; }) || null);
+      if (h.onReorder) {
+        var currentDrag = drag;
+        drag.holdTimer = setTimeout(function () {
+          if (drag === currentDrag && !currentDrag.moved) enterReorderMode(currentDrag);
+        }, REORDER_HOLD_MS);
+      }
     }
     try { container.setPointerCapture(e.pointerId); } catch (_) { /* ignore */ }
   });
@@ -478,13 +527,33 @@ function attachHandGestures(container, handlers) {
     if (drag.samples.length > 24) drag.samples.shift();
     var dx = e.clientX - drag.x;
     var dy = e.clientY - drag.y;
-    if (!drag.moved && Math.hypot(dx, dy) > 8) drag.moved = true;
+    if (!drag.moved && Math.hypot(dx, dy) > 8) {
+      drag.moved = true;
+      clearHoldTimer(drag);
+    }
     if (!drag.moved) return;
+
+    if (drag.mode === 'reorder') {
+      var rtx = e.clientX - drag.x;
+      var rl = drag.touch ? -20 : 0;
+      drag.el.style.transform = 'translate(' + rtx + 'px,' + (dy + rl) + 'px) scale(1.08)';
+      var target = findDropTarget(drag, e.clientX, e.clientY);
+      if (drag.dropTarget !== target.el) {
+        clearDropTarget(drag);
+        if (target.el) {
+          target.el.classList.add('tc-drop-target');
+          drag.dropTarget = target.el;
+        }
+      }
+      return;
+    }
+
     if (drag.snapshot && drag.mode !== 'throw') {
       // Peeking: a clear push upward throws the lifted card, anything else scrubs along the hand.
       if (dy < -28 && Math.abs(dy) > Math.abs(e.clientX - (drag.scrubX != null ? drag.scrubX : drag.x)) * 1.2) {
         drag.mode = 'throw';
         drag.throwX = e.clientX;
+        drag.overNeutral = false;
         drag.peek && drag.peek.el.classList.remove('tc-peek');
         drag.el.classList.add('tc-dragging');
       } else {
@@ -493,9 +562,12 @@ function attachHandGestures(container, handlers) {
         // The finger has to really move on: a trembling thumb on the edge of two cards changes nothing.
         if (drag.peekX == null) drag.peekX = drag.x;
         var hit = tcCardAt(drag.snapshot, e.clientX, e.clientY);
+        drag.overNeutral = !hit;
         if (hit && hit !== drag.peek && Math.abs(e.clientX - drag.peekX) >= TC_SCRUB_STEP_PX) {
           drag.peekX = e.clientX;
           setPeek(drag, hit);
+        } else if (!hit && drag.peek) {
+          setPeek(drag, null, true);
         }
         return;
       }
@@ -513,15 +585,25 @@ function attachHandGestures(container, handlers) {
     if (!drag || e.pointerId !== drag.pointerId) return;
     var d = drag;
     drag = null;
+    clearHoldTimer(d);
+    clearDropTarget(d);
     d.rect = d.el.getBoundingClientRect(); // where the card was let go, for the throw animation
-    var pose = d.mode === 'throw' ? null : tcPose(d.el);
-    d.el.classList.remove('tc-dragging');
+    var pose = (d.mode === 'throw' || d.mode === 'reorder') ? null : tcPose(d.el);
+    d.el.classList.remove('tc-dragging', 'tc-reordering');
     d.el.style.transform = '';
     setPeek(d, null);
     if (cancelled) return;
     var h = container._tcHandlers || {};
+    if (d.mode === 'reorder') {
+      if (h.onReorder) {
+        var drop = findDropTarget(d, e.clientX, e.clientY);
+        if (drop.id) h.onReorder(d.id, drop.id);
+      }
+      return;
+    }
     if (d.snapshot && d.mode !== 'throw') {
-      // Letting go after a peek picks the lifted card, like a tap on it.
+      // Neutral release cancels peeking without toggling a selection accidentally.
+      if (d.overNeutral) return;
       if (h.onTap) h.onTap(d.id);
       tcSettle(container, d.id, pose);
       return;
@@ -542,14 +624,7 @@ function attachHandGestures(container, handlers) {
     }
     if (!h.onReorder) return;
     // Drop target: the card whose centre is nearest to where the finger let go.
-    var best = null;
-    var bestDist = Infinity;
-    container.querySelectorAll('[data-card-id]').forEach(function (other) {
-      if (other === d.el || !other.dataset.cardId) return;
-      var r = other.getBoundingClientRect();
-      var dist = Math.hypot(r.left + r.width / 2 - e.clientX, r.top + r.height / 2 - e.clientY);
-      if (dist < bestDist) { bestDist = dist; best = other.dataset.cardId; }
-    });
+    var best = findDropTarget(d, e.clientX, e.clientY).id;
     if (best) h.onReorder(d.id, best);
   }
   container.addEventListener('pointerup', function (e) { finish(e, false); });

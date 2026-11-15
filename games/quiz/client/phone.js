@@ -46,12 +46,14 @@
         state.eliminatedAnswers = msg.eliminatedAnswers;
       }
 
-      // Sync pending powerup with server powerup state — if the server says a
-      // powerup is no longer available and we haven't marked it locally, sync.
+      // Sync powerup state strictly with server availability
       if (msg.myPowerups) {
         for (const p of ['double', 'fifty', 'freeze']) {
           if (msg.myPowerups[p] === false) {
             state.powerupsUsed[p] = true;
+            if (state.pendingPowerup === p) state.pendingPowerup = null;
+          } else if (msg.myPowerups[p] === true) {
+            state.powerupsUsed[p] = false;
           }
         }
       }
@@ -269,17 +271,25 @@
           '</div>' +
           musicBtnHtml();
       } else {
+        const blocked = typeof state !== 'undefined' && state.musicBlocked;
+        const muted = typeof state !== 'undefined' && state.musicMuted;
+        const audioCue = blocked
+          ? 'Tap button to hear on phone · TV playing'
+          : muted
+            ? 'Phone muted · Playing on TV'
+            : 'Playing on TV & Phone';
         box.innerHTML =
           '<div class="flex-1 min-w-0">' +
             '<div class="flex items-center gap-2">' +
               '<span class="font-extrabold text-sm text-slate-800">&#127911; Listen &amp; Guess</span>' +
               (msg.question.category ? '<span class="px-2 py-0.5 rounded-full bg-sky-100 text-sky-800 text-[11px] font-extrabold truncate">' + escapeHtml(msg.question.category) + '</span>' : '') +
             '</div>' +
-            '<div class="flex items-end gap-1.5 h-7 mt-2">' +
+            '<div class="text-[11px] font-semibold text-sky-700 mt-0.5 truncate">' + audioCue + '</div>' +
+            '<div class="flex items-end gap-1.5 h-6 mt-1.5">' +
               '<span class="w-2 h-3 bg-sky-500 rounded-full animate-bounce"></span>' +
-              '<span class="w-2 h-6 bg-sky-600 rounded-full animate-pulse"></span>' +
+              '<span class="w-2 h-5 bg-sky-600 rounded-full animate-pulse"></span>' +
               '<span class="w-2 h-4 bg-sky-400 rounded-full animate-bounce"></span>' +
-              '<span class="w-2 h-7 bg-sky-700 rounded-full animate-pulse"></span>' +
+              '<span class="w-2 h-6 bg-sky-700 rounded-full animate-pulse"></span>' +
               '<span class="w-2 h-3 bg-sky-500 rounded-full animate-bounce"></span>' +
               '<span class="w-2 h-5 bg-sky-600 rounded-full animate-pulse"></span>' +
             '</div>' +
@@ -323,9 +333,8 @@
         state.powerupsUsed.fifty = true;
         send({ type: 'GAME_ACTION', action: { type: 'useFifty' } });
       } else {
-        // Double / freeze are tracked locally and attached to the answer on submit
-        state.pendingPowerup = type;
-        state.powerupsUsed[type] = true;
+        // Double / freeze arm locally until submitted with an answer and can be toggled off
+        state.pendingPowerup = state.pendingPowerup === type ? null : type;
       }
       updatePowerupBtns();
     }
@@ -334,18 +343,12 @@
       for (const [p, btnId] of Object.entries(QUIZ_POWERUP_BTNS)) {
         const btn = document.getElementById(btnId);
         if (!btn) continue;
-        if (state.powerupsUsed[p]) {
-          btn.disabled = true;
-          btn.classList.add('used');
-        } else {
-          btn.disabled = false;
-          btn.classList.remove('used');
-        }
-        if (state.pendingPowerup === p) {
-          btn.classList.add('selected');
-        } else {
-          btn.classList.remove('selected');
-        }
+        const used = !!state.powerupsUsed[p];
+        const armed = state.pendingPowerup === p && !used;
+        btn.disabled = used;
+        btn.classList.toggle('used', used);
+        btn.classList.toggle('selected', armed);
+        btn.setAttribute('aria-pressed', String(armed));
       }
     }
 

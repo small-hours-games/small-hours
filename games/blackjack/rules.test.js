@@ -107,4 +107,35 @@ describe('Blackjack rules', () => {
     expect(end.winner).toBe('p1');
     expect(end.scores.p1).toBe(800);
   });
+
+  it('advances round only once all humans readyNextRound and supports forfeit', () => {
+    let g = createTestGame(blackjack, ['p1', 'p2'], { rounds: 3 });
+    g.state.phase = 'settled';
+    g = act(g, 'readyNextRound', 'p1').game;
+    expect(g.state.phase).toBe('settled');
+    expect(viewFor(g, 'p1').nextReadyCount).toBe(1);
+    expect(viewFor(g, 'p1').nextReadyTotal).toBe(2);
+
+    // Toggle off
+    g = act(g, 'readyNextRound', 'p1').game;
+    expect(viewFor(g, 'p1').nextReadyCount).toBe(0);
+
+    g = act(g, 'readyNextRound', 'p1').game;
+    g = act(g, 'readyNextRound', 'p2').game;
+    expect(g.state.phase).toBe('betting');
+    expect(g.state.round).toBe(2);
+
+    // Forfeit in settled triggers immediate consensus advance when remaining ready or finishes if 1 left
+    let g2 = createTestGame(blackjack, ['p1', 'p2', 'p3'], { rounds: 3 });
+    g2.state.phase = 'settled';
+    g2 = act(g2, 'forfeit', 'p1').game;
+    g2 = act(g2, 'readyNextRound', 'p2').game;
+    g2 = act(g2, 'readyNextRound', 'p3').game;
+    expect(g2.state.round).toBe(2);
+
+    let g3 = createTestGame(blackjack, ['p1', 'p2'], { rounds: 3 });
+    g3 = act(g3, 'forfeit', 'p1').game;
+    expect(g3.state.phase).toBe('finished');
+    expect(isOver(g3).winner).toBe('p2');
+  });
 });

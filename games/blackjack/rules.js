@@ -162,6 +162,7 @@ function dealRound(state) {
 
   for (let r = 0; r < 2; r++) {
     for (const id of state.players) {
+      if (state.surrendered?.[id]) continue;
       const drawn = drawCard(shoe);
       handsByPlayer[id].push(drawn.card);
       shoe = drawn.shoe;
@@ -176,7 +177,7 @@ function dealRound(state) {
     const seat = state.seats[id];
     nextSeats[id] = {
       ...seat,
-      hands: [makeHand(handsByPlayer[id], seat.pendingBet)],
+      hands: state.surrendered?.[id] ? [] : [makeHand(handsByPlayer[id], seat.pendingBet)],
       pendingBet: 0,
       lastNet: 0,
     };
@@ -187,6 +188,7 @@ function dealRound(state) {
     shoe,
     dealerHand,
     seats: nextSeats,
+    nextReady: {},
   };
 
   if (evalHand(dealerHand).isBlackjack) {
@@ -231,6 +233,32 @@ function updateSeatHand(state, playerId, handIndex, updater, extraSeat = {}) {
   };
 }
 
+function advanceToNextRound(state) {
+  const shoe = ensureShoe(state.shoe);
+  const nextSeats = {};
+  for (const id of state.players) {
+    const seat = state.seats[id];
+    nextSeats[id] = {
+      chips: seat.chips < MIN_BET ? seat.chips + RESCUE_CHIPS : seat.chips,
+      pendingBet: 0,
+      betPlaced: Boolean(state.surrendered?.[id]),
+      hands: [],
+      lastNet: 0,
+    };
+  }
+  return {
+    ...state,
+    shoe,
+    dealerHand: [],
+    seats: nextSeats,
+    nextReady: {},
+    phase: 'betting',
+    round: state.round + 1,
+    turn: null,
+    activeHandIndex: 0,
+  };
+}
+
 export default {
   setup({ players, config = {} }) {
     const maxRounds = Math.max(1, Number(config.rounds) || DEFAULT_ROUNDS);
@@ -247,6 +275,8 @@ export default {
       shoe,
       dealerHand: [],
       seats,
+      surrendered: {},
+      nextReady: {},
       phase: 'betting',
       round: 1,
       maxRounds,
@@ -410,33 +440,57 @@ export default {
 
     nextRound(state, { playerId }) {
       if (state.phase !== 'settled') return error(state, playerId, 'Round is not settled yet.');
+      return { state: advanceToNextRound(state), events: [] };
+    },
 
-      const shoe = ensureShoe(state.shoe);
-      const nextSeats = {};
-      for (const id of state.players) {
-        const seat = state.seats[id];
-        nextSeats[id] = {
-          chips: seat.chips < MIN_BET ? seat.chips + RESCUE_CHIPS : seat.chips,
-          pendingBet: 0,
-          betPlaced: false,
-          hands: [],
-          lastNet: 0,
-        };
+    readyNextRound(state, { playerId }) {
+      if (state.phase !== 'settled') return error(state, playerId, 'Round is not settled yet.');
+      if (!state.seats[playerId]) return error(state, playerId, 'Unknown player.');
+      const nextReady = { ...(state.nextReady || {}), [playerId]: !(state.nextReady?.[playerId]) };
+      const humanIds = state.players.filter(id => !/^bot_\d+$/.test(id) && !state.surrendered?.[id]);
+      const allReady = humanIds.length === 0 || humanIds.every(id => nextReady[id]);
+      if (allReady) {
+        return { state: advanceToNextRound({ ...state, nextReady }), events: [] };
       }
+      return { state: { ...state, nextReady }, events: [] };
+    },
 
-      return {
-        state: {
-          ...state,
-          shoe,
-          dealerHand: [],
-          seats: nextSeats,
-          phase: 'betting',
-          round: state.round + 1,
-          turn: null,
-          activeHandIndex: 0,
-        },
-        events: [],
-      };
+    forfeit(state, { playerId }) {
+      if (state.phase === 'finished') return { state, events: [] };
+      const surrendered = { ...(state.surrendered || {}), [playerId]: true };
+      let nextState = { ...state, surrendered };
+      const seat = state.seats[playerId];
+      if (!seat) return { state: nextState, events: [] };
+
+      if (state.phase === 'betting') {
+        nextState = {
+          ...nextState,
+          seats: { ...nextState.seats, [playerId]: { ...seat, betPlaced: true, pendingBet: 0 } },
+        };
+        const remainingHumans = nextState.players.filter(id => !surrendered[id]);
+        if (remainingHumans.length <= 1) {
+          return { state: { ...nextState, phase: 'finished' }, events: [{ type: 'forfeited', playerId }] };
+        }
+        const allBet = nextState.players.every(id => nextState.seats[id].betPlaced || surrendered[id]);
+        if (allBet) {
+          nextState = dealRound(nextState);
+        }
+      } else if (state.phase === 'playing') {
+        const bustHands = seat.hands.map(h => (h.status === 'active' ? { ...h, status: 'busted' } : h));
+        nextState = {
+          ...nextState,
+          seats: { ...nextState.seats, [playerId]: { ...seat, hands: bustHands } },
+        };
+        if (nextState.turn === playerId) {
+          nextState = advanceAfterHand(nextState, playerId, nextState.activeHandIndex);
+        }
+      } else if (state.phase === 'settled') {
+        const humanIds = nextState.players.filter(id => !/^bot_\d+$/.test(id) && !surrendered[id]);
+        if (humanIds.length > 0 && humanIds.every(id => nextState.nextReady?.[id])) {
+          return { state: advanceToNextRound(nextState), events: [{ type: 'forfeited', playerId }] };
+        }
+      }
+      return { state: nextState, events: [{ type: 'forfeited', playerId }] };
     },
   },
 
@@ -488,8 +542,12 @@ export default {
     let scores = null;
     if (state.phase === 'finished') {
       scores = Object.fromEntries(state.players.map(id => [id, state.seats[id].chips]));
-      winner = [...state.players].sort((a, b) => scores[b] - scores[a])[0] || null;
+      winner = [...state.players].sort((a, b) => (Boolean(state.surrendered?.[a]) - Boolean(state.surrendered?.[b])) || (scores[b] - scores[a]))[0] || null;
     }
+
+    const nextReady = state.nextReady || {};
+    const humanIds = state.players.filter(id => !/^bot_\d+$/.test(id) && !state.surrendered?.[id]);
+    const nextReadyCount = humanIds.filter(id => nextReady[id]).length;
 
     return {
       phase: state.phase,
@@ -509,6 +567,9 @@ export default {
       isMyTurn,
       myCanDouble,
       myCanSplit,
+      nextReady,
+      nextReadyCount,
+      nextReadyTotal: humanIds.length,
       winner,
       scores,
     };
@@ -517,7 +578,7 @@ export default {
   endIf(state) {
     if (state.phase !== 'finished') return null;
     const scores = Object.fromEntries(state.players.map(id => [id, state.seats[id].chips]));
-    const winner = [...state.players].sort((a, b) => scores[b] - scores[a])[0] || null;
+    const winner = [...state.players].sort((a, b) => (Boolean(state.surrendered?.[a]) - Boolean(state.surrendered?.[b])) || (scores[b] - scores[a]))[0] || null;
     return { winner, scores };
   },
 };

@@ -334,10 +334,15 @@ export function handleSurrender(ws, meta, room, _msg, ctx) {
     return;
   }
 
-  // 3+ players (or 2+ humans with AI): announce surrender and keep playing
+  // 3+ players (or 2+ humans with AI): announce surrender, clean up turn/seat in engine if supported, and keep playing
   broadcastToRoom(room.code, {
     type: 'PLAYER_SURRENDERED',
     playerId: meta.playerId,
     username: player.username,
   });
+
+  const activeInEngine = (room.game?.state?.players || []).filter(id => id !== meta.playerId && !room.surrendered.has(id)).length;
+  if (activeInEngine >= 2 && room.game?.definition?.actions?.forfeit) {
+    applyGameAction(room, { type: 'forfeit', playerId: meta.playerId }, ctx);
+  }
 }

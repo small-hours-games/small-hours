@@ -354,6 +354,21 @@ describe('AI robot rigs', () => {
     for (const k of Object.keys(svg)) {
       expect(svg[k]).toContain('data-part="calm"');
       expect(svg[k]).toContain('data-part="worried"');
+      expect(svg[k]).toContain('<defs>');
+    }
+  });
+  it('namespaces <defs> gradient IDs uniquely per mounted robot instance', () => {
+    const a = rk._aiRobotsUniqueSvg(rk.AI_ROBOT_SVG.boot);
+    const b = rk._aiRobotsUniqueSvg(rk.AI_ROBOT_SVG.boot);
+    const idsA = [...a.matchAll(/\bid="([^"]+)"/g)].map(m => m[1]);
+    const idsB = [...b.matchAll(/\bid="([^"]+)"/g)].map(m => m[1]);
+    expect(idsA.length).toBeGreaterThan(2);
+    expect(idsA.some(id => idsB.includes(id))).toBe(false);
+    for (const id of idsA) expect(a).toContain(`url(#${id})`);
+  });
+  it('renders the singing girl SVG with all expected articulated layers', () => {
+    for (const cls of ['tbs-root', 'tbs-upper', 'tbs-head', 'tbs-face', 'tbs-eyes', 'tbs-mouth', 'tbs-skirt', 'tbs-mark', 'tbs-boot-l', 'tbs-boot-r', 'tbs-arm-mic', 'tbs-hair-back', 'tbs-lock-l', 'tbs-lock-r']) {
+      expect(kit.TBS_SINGER_SVG).toContain(cls);
     }
   });
 });

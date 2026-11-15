@@ -212,7 +212,7 @@ function advanceTurn(state) {
 }
 
 function dealNewHand(state) {
-  const activePlayers = state.players.filter(id => state.chips[id] > 0);
+  const activePlayers = state.players.filter(id => state.chips[id] > 0 && !state.surrendered?.[id]);
   if (activePlayers.length <= 1 || state.handNumber > state.maxHands) {
     return { ...state, activePlayers, phase: 'finished', turn: null };
   }
@@ -262,6 +262,7 @@ function dealNewHand(state) {
     folded,
     acted,
     phase: 'preflop',
+    nextReady: {},
     lastAction: null,
     showdown: null,
   };
@@ -284,6 +285,8 @@ export default {
     return dealNewHand({
       players: [...players],
       chips,
+      surrendered: {},
+      nextReady: {},
       handNumber: 1,
       maxHands,
       dealerCursor: 0,
@@ -400,6 +403,65 @@ export default {
         events: [],
       };
     },
+
+    readyNextHand(state, { playerId }) {
+      if (state.phase !== 'showdown') return error(state, playerId, 'Not at showdown.');
+      if (!state.players.includes(playerId)) return error(state, playerId, 'Unknown player.');
+      const nextReady = { ...(state.nextReady || {}), [playerId]: !(state.nextReady?.[playerId]) };
+      const humanIds = state.activePlayers.filter(id => !/^bot_\d+$/.test(id) && !state.surrendered?.[id]);
+      const allReady = humanIds.length === 0 || humanIds.every(id => nextReady[id]);
+      if (allReady) {
+        return {
+          state: dealNewHand({
+            ...state,
+            nextReady,
+            handNumber: state.handNumber + 1,
+            dealerCursor: state.dealerCursor + 1,
+          }),
+          events: [],
+        };
+      }
+      return { state: { ...state, nextReady }, events: [] };
+    },
+
+    forfeit(state, { playerId }) {
+      if (state.phase === 'finished') return { state, events: [] };
+      const surrendered = { ...(state.surrendered || {}), [playerId]: true };
+      const nextReady = { ...(state.nextReady || {}), [playerId]: true };
+      let nextState = { ...state, surrendered, nextReady };
+
+      if (STREETS.includes(state.phase) && state.activePlayers.includes(playerId)) {
+        nextState = {
+          ...nextState,
+          folded: { ...state.folded, [playerId]: true },
+          acted: { ...state.acted, [playerId]: true },
+          lastAction: { playerId, type: 'fold' },
+        };
+        const contenders = nonFoldedPlayers(nextState);
+        if (contenders.length <= 1) {
+          nextState = settleFoldWin(nextState);
+        } else if (state.turn === playerId) {
+          nextState = advanceTurn(nextState);
+        }
+      } else if (state.phase === 'showdown') {
+        const humanIds = nextState.activePlayers.filter(id => !/^bot_\d+$/.test(id) && !surrendered[id]);
+        if (humanIds.length > 0 && humanIds.every(id => nextReady[id])) {
+          return {
+            state: dealNewHand({
+              ...nextState,
+              handNumber: nextState.handNumber + 1,
+              dealerCursor: nextState.dealerCursor + 1,
+            }),
+            events: [{ type: 'forfeited', playerId }],
+          };
+        }
+      }
+      const remainingPlayers = state.players.filter(id => !surrendered[id] && (nextState.chips[id] || 0) > 0);
+      if (remainingPlayers.length <= 1) {
+        return { state: { ...nextState, phase: 'finished' }, events: [{ type: 'forfeited', playerId }] };
+      }
+      return { state: nextState, events: [{ type: 'forfeited', playerId }] };
+    },
   },
 
   view(state, playerId) {
@@ -416,8 +478,12 @@ export default {
     let scores = null;
     if (state.phase === 'finished') {
       scores = { ...state.chips };
-      winner = [...state.players].sort((a, b) => scores[b] - scores[a])[0] || null;
+      winner = [...state.players].sort((a, b) => (Boolean(state.surrendered?.[a]) - Boolean(state.surrendered?.[b])) || (scores[b] - scores[a]))[0] || null;
     }
+
+    const nextReady = state.nextReady || {};
+    const humanIds = (state.activePlayers || []).filter(id => !/^bot_\d+$/.test(id) && !state.surrendered?.[id]);
+    const nextReadyCount = humanIds.filter(id => nextReady[id]).length;
 
     return {
       phase: state.phase,
@@ -445,6 +511,9 @@ export default {
       myMinRaiseTo,
       myMaxBetTo,
       myCanCheck,
+      nextReady,
+      nextReadyCount,
+      nextReadyTotal: humanIds.length,
       winner,
       scores,
     };
@@ -453,7 +522,7 @@ export default {
   endIf(state) {
     if (state.phase !== 'finished') return null;
     const scores = { ...state.chips };
-    const winner = [...state.players].sort((a, b) => scores[b] - scores[a])[0] || null;
+    const winner = [...state.players].sort((a, b) => (Boolean(state.surrendered?.[a]) - Boolean(state.surrendered?.[b])) || (scores[b] - scores[a]))[0] || null;
     return { winner, scores };
   },
 };

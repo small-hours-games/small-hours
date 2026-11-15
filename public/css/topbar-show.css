@@ -101,7 +101,7 @@
 /* The singer. Her feet stand on the equalizer; the bar clips anything above it. */
 .tbs-singer {
   position: absolute; left: 0; bottom: 3px;
-  width: 80px; height: 102px; margin-left: -40px;
+  width: 85px; height: 108px; margin-left: -42.5px;
   opacity: 0; transition: opacity 0.25s ease;
   will-change: transform;
 }

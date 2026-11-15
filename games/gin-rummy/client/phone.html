@@ -34,10 +34,10 @@
             <button type="button" class="tc-btn" id="grLayoutBtn" onclick="grToggleLayout()">2-Row</button>
             <button type="button" class="tc-btn tc-btn-colours" id="grColoursBtn" onclick="tcToggleFourColour()" aria-pressed="false" title="Four-colour suits"><span class="tc-dot-c">♣</span><span class="tc-dot-d">♦</span></button>
           </div>
-          <div>
-            <button type="button" class="tc-btn" id="grDeclineBtn" onclick="grAction('declineUpcard')" hidden>Decline</button>
-            <button type="button" class="tc-btn tc-btn-knock" id="grKnockBtn" onclick="grAction('knock')" hidden>Knock</button>
-          </div>
+        </div>
+        <div class="tc-thumb-actions flex gap-2 mt-2" id="grSecondaryRow" hidden>
+          <button type="button" class="tc-btn tc-btn-lg flex-1 min-h-[44px]" id="grDeclineBtn" onclick="grAction('declineUpcard')" hidden>Decline Upcard</button>
+          <button type="button" class="tc-btn tc-btn-lg tc-btn-knock flex-1 min-h-[44px]" id="grKnockBtn" onclick="grAction('knock')" hidden>Knock</button>
         </div>
         <button type="button" class="tc-cta tc-cta-big" id="grCta" onclick="grCtaAction()">Gin Rummy</button>
       </div>

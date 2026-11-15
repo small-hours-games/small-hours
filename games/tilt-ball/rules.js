@@ -12,54 +12,22 @@ export default {
     const maxRounds = Math.max(1, Math.min(7, Number(config.maxRounds) || 3));
     const scores = {};
     const tilts = {};
-    const ready = {};
     for (const id of ids) {
       scores[id] = 0;
       tilts[id] = { x: 0, y: 0, boost: 0 };
-      ready[id] = String(id).startsWith('bot_');
     }
     return {
-      phase: 'ready', // ready | countdown | playing | round_over | finished
+      phase: 'playing', // playing | round_over | finished
       round: 1,
       maxRounds,
       players: ids,
       scores,
       tilts,
-      ready,
       lastRoundWinner: null,
     };
   },
 
   actions: {
-    setReady(state, { playerId, ready = true }) {
-      if (state.phase !== 'ready') return { state, events: [] };
-      if (!state.players.includes(playerId)) return { state, events: [] };
-      return {
-        state: {
-          ...state,
-          ready: { ...state.ready, [playerId]: Boolean(ready) },
-        },
-        events: [{ type: 'playerReady', playerId, ready: Boolean(ready) }],
-      };
-    },
-
-    startCountdown(state) {
-      if (state.phase !== 'ready') return { state, events: [] };
-      if (!state.players.every(id => state.ready[id])) return { state, events: [] };
-      return {
-        state: { ...state, phase: 'countdown' },
-        events: [{ type: 'countdownStarted', round: state.round }],
-      };
-    },
-
-    beginRound(state) {
-      if (state.phase !== 'countdown') return { state, events: [] };
-      return {
-        state: { ...state, phase: 'playing' },
-        events: [{ type: 'roundStarted', round: state.round }],
-      };
-    },
-
     setTilt(state, { playerId, x, y, boost }) {
       if (state.phase !== 'playing') return { state, events: [] };
       if (!state.players.includes(playerId)) return { state, events: [] };
@@ -110,21 +78,18 @@ export default {
     nextRound(state) {
       if (state.phase !== 'round_over') return { state, events: [] };
       const tilts = {};
-      const ready = {};
       for (const id of state.players) {
         tilts[id] = { x: 0, y: 0, boost: 0 };
-        ready[id] = String(id).startsWith('bot_');
       }
       return {
         state: {
           ...state,
-          phase: 'ready',
+          phase: 'playing',
           round: state.round + 1,
           tilts,
-          ready,
           lastRoundWinner: null,
         },
-        events: [{ type: 'roundReady', round: state.round + 1 }],
+        events: [{ type: 'roundStarted', round: state.round + 1 }],
       };
     },
   },
@@ -137,8 +102,6 @@ export default {
       players: state.players,
       scores: state.scores,
       tilts: state.tilts,
-      ready: state.ready,
-      allReady: state.players.every(id => state.ready[id]),
       lastRoundWinner: state.lastRoundWinner,
     };
   },

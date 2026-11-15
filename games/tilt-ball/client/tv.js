@@ -9,7 +9,7 @@
   const CY = H / 2;
   const START_R = 290;
   const MIN_R = 105;
-  const MARBLE_R = 30;
+  const MARBLE_R = 24;
 
   const peers = new Map();
   const p2pTilts = new Map();
@@ -18,18 +18,6 @@
   let lastMsg = null;
   let roundReported = 0;
   let nextRoundTimer = null;
-  let countdownTimer = null;
-  let countdownValue = 0;
-
-  function getAvatar(id) {
-    if (String(id).startsWith('bot_')) {
-      return (SH.aiPersona(id) || {}).avatar || '🤖';
-    }
-    return (state.playerAvatars || {})[id]
-      || (state.players || []).find(p => p.playerId === id)?.avatar
-      || (lastMsg?.playerAvatars || {})[id]
-      || '👤';
-  }
 
   function initRoundSim(msg) {
     const players = msg.players || [];
@@ -48,11 +36,6 @@
         fallScale: 1,
         boosted: false,
         trail: [],
-        botNextThinkAt: 0,
-        botInput: { x: 0, y: 0, boost: 0 },
-        botBoostUntil: 0,
-        botBoostCooldownUntil: 0,
-        botWander: (Math.random() - 0.5) * 0.5,
       };
     });
     sim = {
@@ -76,62 +59,24 @@
   }
 
   function steerBot(m) {
-    const now = performance.now();
-    if (now < m.botNextThinkAt) {
-      return {
-        x: m.botInput.x,
-        y: m.botInput.y,
-        boost: now < m.botBoostUntil ? 1 : 0,
-      };
-    }
-    m.botNextThinkAt = now + 190 + Math.random() * 120;
-    m.botWander += (Math.random() - 0.5) * 0.35;
-    m.botWander = Math.max(-0.45, Math.min(0.45, m.botWander));
-
     const dxCenter = CX - m.x;
     const dyCenter = CY - m.y;
     const distCenter = Math.hypot(dxCenter, dyCenter) || 1;
-    let tx;
-    let ty;
-    let wantBoost = false;
-
-    if (distCenter > sim.arenaR * 0.76) {
-      // Recover toward center with human-like imperfection.
-      const baseAng = Math.atan2(dyCenter, dxCenter) + m.botWander * 0.6;
-      const power = 0.72;
-      tx = Math.cos(baseAng) * power;
-      ty = Math.sin(baseAng) * power;
-      wantBoost = distCenter > sim.arenaR * 0.9 && Math.random() < 0.4;
-    } else {
-      let nearest = null;
-      let bestD = Infinity;
-      for (const o of sim.marbles) {
-        if (o === m || !o.alive) continue;
-        const d = Math.hypot(o.x - m.x, o.y - m.y);
-        if (d < bestD) { bestD = d; nearest = o; }
-      }
-      if (!nearest) {
-        tx = (dxCenter / distCenter) * 0.45;
-        ty = (dyCenter / distCenter) * 0.45;
-      } else {
-        const baseAng = Math.atan2(nearest.y - m.y, nearest.x - m.x) + m.botWander;
-        const power = 0.65;
-        tx = Math.cos(baseAng) * power + (dxCenter / distCenter) * 0.14;
-        ty = Math.sin(baseAng) * power + (dyCenter / distCenter) * 0.14;
-        wantBoost = bestD < 95 && Math.random() < 0.28;
-      }
+    // Stay safe inside the shrinking ring; otherwise nudge toward nearest rival.
+    if (distCenter > sim.arenaR * 0.62) {
+      return { x: dxCenter / distCenter, y: dyCenter / distCenter, boost: distCenter > sim.arenaR * 0.85 ? 1 : 0 };
     }
-
-    if (wantBoost && now >= m.botBoostCooldownUntil) {
-      m.botBoostUntil = now + 350;
-      m.botBoostCooldownUntil = now + 3200;
+    let nearest = null;
+    let bestD = Infinity;
+    for (const o of sim.marbles) {
+      if (o === m || !o.alive) continue;
+      const d = Math.hypot(o.x - m.x, o.y - m.y);
+      if (d < bestD) { bestD = d; nearest = o; }
     }
-    m.botInput = { x: tx, y: ty };
-    return {
-      x: tx,
-      y: ty,
-      boost: now < m.botBoostUntil ? 1 : 0,
-    };
+    if (!nearest) return { x: dxCenter / distCenter, y: dyCenter / distCenter, boost: 0 };
+    const tx = (nearest.x - m.x) / (bestD || 1);
+    const ty = (nearest.y - m.y) / (bestD || 1);
+    return { x: tx * 0.8 + (dxCenter / distCenter) * 0.2, y: ty * 0.8 + (dyCenter / distCenter) * 0.2, boost: bestD < 120 ? 1 : 0 };
   }
 
   function stepPhysics(dt) {
@@ -286,44 +231,24 @@
       ctx.save();
       ctx.beginPath();
       ctx.arc(m.x, m.y, r, 0, Math.PI * 2);
-      const orbGrad = ctx.createRadialGradient(m.x - r * 0.25, m.y - r * 0.25, r * 0.15, m.x, m.y, r);
-      orbGrad.addColorStop(0, '#334155');
-      orbGrad.addColorStop(0.7, '#0f172a');
-      orbGrad.addColorStop(1, m.color);
-      ctx.fillStyle = orbGrad;
+      ctx.fillStyle = m.color;
       ctx.shadowColor = m.boosted ? '#facc15' : m.color;
-      ctx.shadowBlur = m.boosted ? 28 : 16;
+      ctx.shadowBlur = m.boosted ? 26 : 14;
       ctx.fill();
-      ctx.lineWidth = 4;
-      ctx.strokeStyle = m.boosted ? '#fef08a' : m.color;
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = m.boosted ? '#fef08a' : '#fff';
       ctx.stroke();
       ctx.restore();
 
-      // Render player/bot avatar cleanly centered inside the marble.
-      const av = getAvatar(m.id);
-      const avSize = Math.max(12, Math.round(r * 1.12));
-      ctx.save();
-      ctx.font = `${avSize}px "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif`;
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.shadowColor = 'rgba(0, 0, 0, 0.75)';
-      ctx.shadowBlur = 4;
-      ctx.fillText(av, m.x, m.y + 1);
-      ctx.restore();
-
       if (m.alive) {
-        const label = (names[m.id] || m.id).slice(0, 12);
-        const readyTag = lastMsg?.phase === 'ready' ? (lastMsg.ready?.[m.id] ? ' ✅' : ' ⏳') : '';
-        ctx.save();
-        ctx.font = '700 13px Plus Jakarta Sans, sans-serif';
+        const av = (state.playerAvatars || {})[m.id] || SH.aiPersona(m.id)?.avatar || '🔮';
+        ctx.font = '20px sans-serif';
         ctx.textAlign = 'center';
-        ctx.textBaseline = 'bottom';
-        ctx.lineWidth = 4;
-        ctx.strokeStyle = 'rgba(7, 11, 20, 0.92)';
-        ctx.strokeText(label + readyTag, m.x, m.y - r - 6);
-        ctx.fillStyle = lastMsg?.phase === 'ready' && lastMsg.ready?.[m.id] ? '#86efac' : '#f8fafc';
-        ctx.fillText(label + readyTag, m.x, m.y - r - 6);
-        ctx.restore();
+        ctx.textBaseline = 'middle';
+        ctx.fillText(av, m.x, m.y + 1);
+        ctx.font = '700 13px Plus Jakarta Sans, sans-serif';
+        ctx.fillStyle = '#f8fafc';
+        ctx.fillText((names[m.id] || m.id).slice(0, 12), m.x, m.y - r - 10);
       }
     }
 
@@ -337,38 +262,7 @@
     }
     ctx.globalAlpha = 1;
 
-    if (lastMsg?.phase === 'ready') {
-      const readyCount = (lastMsg.players || []).filter(id => lastMsg.ready?.[id]).length;
-      const total = (lastMsg.players || []).length;
-      const msgText = lastMsg.allReady
-        ? 'Everyone Ready! Press 🚀 Start Countdown on a phone!'
-        : `Round ${lastMsg.round}: Waiting for Ready (${readyCount}/${total})`;
-      ctx.save();
-      ctx.fillStyle = 'rgba(11, 21, 48, 0.88)';
-      ctx.fillRect(CX - 300, CY - 34, 600, 68);
-      ctx.strokeStyle = lastMsg.allReady ? '#facc15' : '#38bdf8';
-      ctx.lineWidth = 2.5;
-      ctx.strokeRect(CX - 300, CY - 34, 600, 68);
-      ctx.font = '800 21px Plus Jakarta Sans, sans-serif';
-      ctx.fillStyle = lastMsg.allReady ? '#fef08a' : '#e0f2fe';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(msgText, CX, CY);
-      ctx.restore();
-    } else if (lastMsg?.phase === 'countdown' && countdownValue > 0) {
-      ctx.save();
-      ctx.font = '900 120px Plus Jakarta Sans, sans-serif';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.shadowColor = '#facc15';
-      ctx.shadowBlur = 32;
-      ctx.lineWidth = 8;
-      ctx.strokeStyle = '#0f172a';
-      ctx.strokeText(String(countdownValue), CX, CY);
-      ctx.fillStyle = '#fef08a';
-      ctx.fillText(String(countdownValue), CX, CY);
-      ctx.restore();
-    } else if (sim.banner) {
+    if (sim.banner) {
       ctx.fillStyle = 'rgba(11, 21, 48, 0.86)';
       ctx.fillRect(CX - 250, CY - 34, 500, 68);
       ctx.strokeStyle = '#facc15';
@@ -441,34 +335,10 @@
     const badge = document.getElementById('tbTvRound');
     if (badge) badge.textContent = msg.phase === 'finished' ? 'Final Results' : `Round ${msg.round}/${msg.maxRounds}`;
 
-    if (!sim || (msg.phase === 'ready' && (prevPhase !== 'ready' || prevRound !== msg.round))) {
+    if (!sim || (msg.phase === 'playing' && (prevPhase !== 'playing' || prevRound !== msg.round))) {
       roundReported = 0;
       clearTimeout(nextRoundTimer);
-      clearInterval(countdownTimer);
-      countdownValue = 0;
       initRoundSim(msg);
-    }
-
-    if (msg.phase === 'countdown' && prevPhase !== 'countdown') {
-      clearInterval(countdownTimer);
-      countdownValue = 3;
-      audio.play('place');
-      countdownTimer = setInterval(() => {
-        countdownValue -= 1;
-        if (countdownValue > 0) {
-          audio.play('place');
-        } else {
-          clearInterval(countdownTimer);
-          countdownTimer = null;
-          audio.play('win');
-          const humanId = (lastMsg?.players || []).find(id => !id.startsWith('bot_'));
-          if (humanId) send({ type: 'RTC_SIGNAL', toPlayerId: humanId, signal: { tbBeginRound: true } });
-        }
-      }, 750);
-    }
-
-    if (msg.phase === 'playing' && prevPhase !== 'playing' && sim) {
-      sim.startedAt = performance.now();
     }
 
     if (msg.phase === 'round_over' && prevPhase !== 'round_over') {
@@ -506,9 +376,6 @@
     onLeave() {
       if (rafId !== null) { cancelAnimationFrame(rafId); rafId = null; }
       clearTimeout(nextRoundTimer);
-      clearInterval(countdownTimer);
-      countdownTimer = null;
-      countdownValue = 0;
       sim = null;
       lastMsg = null;
       roundReported = 0;

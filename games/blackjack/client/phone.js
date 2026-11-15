@@ -1,6 +1,7 @@
 // Blackjack on the phone.
 
     state.bjBetAmount = 50;
+    state.bjLastBet = null;
 
     function bjSend(type, payload) {
       send({ type: 'GAME_ACTION', action: { type, ...(payload || {}) } });
@@ -84,8 +85,18 @@
           '<button type="button" class="bj-chip bj-chip-' + v + (state.bjBetAmount === v ? ' bj-chip-sel' : '') + '" onclick="bjPickBet(' + v + ')">' + v + '</button>'
         ).join('') + '<button type="button" class="bj-chip bj-chip-all' + (state.bjBetAmount === maxBet ? ' bj-chip-sel' : '') + '" onclick="bjPickBet(' + maxBet + ')">All-In</button>';
 
+        const canRepeat = state.bjLastBet && state.bjLastBet >= minBet && state.bjLastBet <= maxBet && state.bjLastBet !== state.bjBetAmount;
+        const adjustRow =
+          '<div class="bj-adjust-row">' +
+            '<button type="button" class="tc-btn bj-adjust-btn" onclick="bjAdjustBet(-10)"' + (state.bjBetAmount <= minBet ? ' disabled' : '') + '>−10</button>' +
+            '<button type="button" class="tc-btn bj-adjust-btn" onclick="bjAdjustBet(10)"' + (state.bjBetAmount >= maxBet ? ' disabled' : '') + '>+10</button>' +
+            '<button type="button" class="tc-btn bj-adjust-btn" onclick="bjAdjustBet(25)"' + (state.bjBetAmount >= maxBet ? ' disabled' : '') + '>+25</button>' +
+            (canRepeat ? '<button type="button" class="tc-btn tc-active bj-adjust-btn" onclick="bjPickBet(' + tcNum(state.bjLastBet) + ')">Repeat ' + tcNum(state.bjLastBet) + '</button>' : '') +
+          '</div>';
+
         el.innerHTML =
           '<div class="bj-bet-row">' + presetBtns + '</div>' +
+          adjustRow +
           '<button type="button" class="tc-cta tc-cta-big" onclick="bjPlaceBet()">Deal Hand · Bet ' + tcNum(state.bjBetAmount) + '</button>';
         return;
       }
@@ -106,7 +117,18 @@
       }
 
       if (msg.phase === 'settled') {
-        el.innerHTML = '<button type="button" class="tc-cta tc-cta-big" onclick="bjSend(\'nextRound\')">Next Round</button>';
+        const amReady = !!(msg.nextReady && msg.nextReady[state.playerId]);
+        const readyCount = msg.nextReadyCount != null ? msg.nextReadyCount : 0;
+        const readyTotal = msg.nextReadyTotal != null ? msg.nextReadyTotal : 1;
+        const readyLabel = amReady
+          ? 'Ready ✓ (' + readyCount + '/' + readyTotal + ') — Tap to Cancel'
+          : 'Ready for Next Round (' + readyCount + '/' + readyTotal + ')';
+        const adminAdvance = state.isAdmin
+          ? '<button type="button" class="tc-btn tc-btn-lg w-full min-h-[44px]" onclick="bjSend(\'nextRound\')">Admin: Advance Now</button>'
+          : '';
+        el.innerHTML =
+          '<button type="button" class="tc-cta tc-cta-big' + (amReady ? ' tc-cta-gin' : '') + '" onclick="bjSend(\'readyNextRound\')">' + readyLabel + '</button>' +
+          adminAdvance;
         return;
       }
 
@@ -118,14 +140,22 @@
       if (state.bjLastMsg) bjRenderControls(state.bjLastMsg);
     }
 
+    function bjAdjustBet(delta) {
+      const maxBet = state.bjLastMsg?.mySeat?.chips ?? state.bjBetAmount;
+      const minBet = Math.min(10, maxBet);
+      state.bjBetAmount = Math.max(minBet, Math.min(maxBet, state.bjBetAmount + delta));
+      if (state.bjLastMsg) bjRenderControls(state.bjLastMsg);
+    }
+
     function bjPlaceBet() {
+      state.bjLastBet = state.bjBetAmount;
       bjSend('placeBet', { amount: state.bjBetAmount });
     }
 
     function renderBlackjackState(msg) {
       state.bjLastMsg = msg;
       tcFitScreen('blackjackSection');
-      const active = (msg.phase === 'betting' && !msg.mySeat?.betPlaced) || !!msg.isMyTurn || msg.phase === 'settled';
+      const active = (msg.phase === 'betting' && !msg.mySeat?.betPlaced) || !!msg.isMyTurn || (msg.phase === 'settled' && !(msg.nextReady && msg.nextReady[state.playerId]));
       document.getElementById('blackjackSection')?.classList.toggle('tc-my-turn-glow', active);
       tcSetStatus('bj', bjStatusText(msg), active);
       tcBuzz('bjWasTurn', !!msg.isMyTurn);
@@ -142,6 +172,7 @@
       redraw() { if (state.bjLastMsg) renderBlackjackState(state.bjLastMsg); },
       reset() {
         state.bjBetAmount = 50;
+        state.bjLastBet = null;
         state.bjLastMsg = null;
         document.getElementById('blackjackSection')?.classList.remove('tc-my-turn-glow');
       },

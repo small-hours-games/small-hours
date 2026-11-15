@@ -165,14 +165,18 @@
         cta.label = 'Next hand (' + Math.ceil(msg.timeLeft) + 's)';
       }
       tcSetCta('grCta', cta);
+      const canDecline = myTurn && msg.phase === 'first_turn';
+      const canKnockBtn = discardPhase && msg.canKnock;
       const knock = document.getElementById('grKnockBtn');
-      knock.hidden = !(discardPhase && msg.canKnock);
+      knock.hidden = !canKnockBtn;
       knock.textContent = dw === 0 ? 'GIN!' : 'Knock (' + dw + ')';
       knock.classList.toggle('tc-btn-gin', dw === 0);
-      document.getElementById('grDeclineBtn').hidden = !(myTurn && msg.phase === 'first_turn');
+      document.getElementById('grDeclineBtn').hidden = !canDecline;
+      const secRow = document.getElementById('grSecondaryRow');
+      if (secRow) secRow.hidden = !(canDecline || canKnockBtn);
       document.getElementById('grActionBar').hidden = !playing;
       document.getElementById('grLayoutBtn').textContent = tcLayout() === 'fan' ? 'Fan' : '2-Row';
-      document.getElementById('grSortBtn').textContent = 'Sort: ' + (sortMode === 'custom' ? 'mine' : sortMode);
+      document.getElementById('grSortBtn').textContent = 'Sort: ' + (sortMode === 'custom' ? 'mine ↺' : sortMode);
       tcSyncColoursBtn('grColoursBtn');
 
       // Result sheet

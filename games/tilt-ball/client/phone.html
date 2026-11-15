@@ -9,8 +9,8 @@
       </div>
 
       <div class="tb-ctrl-row">
-        <span class="tc-pill tb-gyro-pill" id="tbGyroPill" onclick="tbEnsureGyro()">Gyro: Active</span>
-        <button type="button" class="tc-btn" id="tbZeroBtn" onclick="tbZero()">Zero Tilt</button>
+        <button type="button" class="tc-btn" id="tbGyroBtn" onclick="tbEnableGyro()">Enable Gyro</button>
+        <button type="button" class="tc-btn" onclick="tbZero()">Zero Tilt</button>
       </div>
 
       <div class="tb-pad-wrap">
@@ -23,9 +23,7 @@
       </div>
 
       <div class="tb-bottom">
-        <button type="button" class="tc-cta tc-cta-big tb-ready-btn" id="tbReadyBtn" onclick="tbToggleReady()" hidden>✋ I'm Ready!</button>
-        <button type="button" class="tc-cta tc-cta-big tb-countdown-btn" id="tbCountdownBtn" onclick="tbStartCountdown()" hidden>🚀 Start Countdown!</button>
-        <button type="button" class="tc-cta tc-cta-big tb-boost-btn" id="tbBoostBtn" onclick="tbBoost()" hidden>⚡ DASH BOOST</button>
+        <button type="button" class="tc-cta tc-cta-big tb-boost-btn" id="tbBoostBtn" onclick="tbBoost()">⚡ DASH BOOST</button>
         <button type="button" class="tc-cta tc-cta-big" id="tbNextBtn" onclick="tbNextRound()" hidden>Next Round</button>
       </div>
     </div>

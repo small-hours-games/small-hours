@@ -84,13 +84,18 @@ export function setupRoutes(app, manager) {
   });
 
   // Create room
+  function getClientIp(req) {
+    const raw = req.ip || req.headers['x-forwarded-for']?.toString().split(',')[0]?.trim() || req.socket?.remoteAddress || 'unknown';
+    return String(raw).replace(/^::ffff:/, '');
+  }
+
   app.post('/api/rooms', (req, res) => {
     // Basic flood protection: cap total rooms and rate-limit creation.
     if (manager.rooms.size >= MAX_ROOMS) {
       res.status(503).json({ error: 'Server at room capacity' });
       return;
     }
-    const clientIp = req.ip || req.socket?.remoteAddress || 'unknown';
+    const clientIp = getClientIp(req);
     const now = Date.now();
     const lastAt = roomCreateByIp.get(clientIp) || 0;
     if (now - lastAt < ROOM_CREATE_MIN_INTERVAL_MS) {

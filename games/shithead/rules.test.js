@@ -268,3 +268,37 @@ describe('Palace: throw speed', () => {
     expect(junk.lastEvent.flick).toBeUndefined();
   });
 });
+
+describe('Palace: swap unconfirm & forfeit', () => {
+  it('allows unconfirmSwap before play starts and ignores swap edits while confirmed', () => {
+    const game = shithead.setup({ players: ['p1', 'p2'] });
+    const c1 = shithead.actions.confirmSwap(game, { playerId: 'p1' }).state;
+    expect(c1.swapConfirmed.p1).toBe(true);
+
+    const unc = shithead.actions.unconfirmSwap(c1, { playerId: 'p1' });
+    expect(unc.events.some(e => e.type === 'error')).toBe(false);
+    expect(unc.state.swapConfirmed.p1).toBe(false);
+  });
+
+  it('skips forfeited seat in turn order and finishes when 1 active remains', () => {
+    const state = makeState({
+      players: ['alice', 'bob', 'cy'],
+      hands: {
+        alice: [{ id: '5h_0', suit: 'h', rank: 5 }],
+        bob: [{ id: '9c_0', suit: 'c', rank: 9 }],
+        cy: [{ id: '8d_0', suit: 'd', rank: 8 }],
+      },
+      faceUp: { alice: [], bob: [], cy: [] },
+      faceDown: { alice: [], bob: [], cy: [] },
+      currentPlayerIndex: 0,
+    });
+    const afterF1 = shithead.actions.forfeit(state, { playerId: 'alice' }).state;
+    expect(afterF1.surrendered.alice).toBe(true);
+    expect(afterF1.players[afterF1.currentPlayerIndex]).toBe('bob');
+    expect(shithead.endIf(afterF1)).toBeNull();
+
+    const afterF2 = shithead.actions.forfeit(afterF1, { playerId: 'bob' }).state;
+    expect(afterF2.phase).toBe('finished');
+    expect(shithead.endIf(afterF2).winner).toBe('cy');
+  });
+});
