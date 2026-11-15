@@ -151,8 +151,10 @@
                 <i class="fa-solid fa-tv"></i> Create a room
               </a>
               <p class="order-3 text-sm text-[#a9b6d3]">Create the room on the TV or laptop everyone can see. Then everyone scans the code with their phone.</p>
-              <button type="button" onclick="openPotCreate()" class="order-4 btn-ghost w-full min-h-[50px] px-4 rounded-xl font-bold flex items-center justify-center gap-2.5 transition active:scale-[0.98]">
-                <span aria-hidden="true">💰</span> Create a pot room — play for money
+              <button type="button" onclick="openPotCreate()" aria-label="Create a pot room — play for money, pay with Swish" class="order-4 btn-ghost w-full min-h-[50px] px-4 rounded-xl font-bold flex items-center justify-center gap-2.5 transition active:scale-[0.98]">
+                <!-- Swish's official logo, unedited, on a white plate (Swish brand guidelines) -->
+                <span class="bg-white rounded-md px-1.5 py-1 flex items-center shrink-0"><img src="https://images.ctfassets.net/zrqoyh8r449h/5dYSjiUWZq3ITy9acKxDGq/b11b197ae975131489c79311f0f9abeb/Swish_Logo_Secondary_Light_BG_P3.png?w=240" alt="Swish" class="h-5 w-auto block" onerror="this.parentElement.replaceWith(document.createTextNode('💰'))"></span>
+                <span>Create a pot room</span>
               </button>
             </div>
           </section>
