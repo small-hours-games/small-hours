@@ -1,14 +1,14 @@
 <section id="runnerSection" class="game-section hidden">
   <div class="rn-phone-wrap">
     <div class="rn-phone-header">
-      <div class="flex items-center gap-2.5">
-        <span id="rnMyAvatar" class="rn-avatar"></span>
-        <div>
-          <div id="rnMyName" class="font-bold text-white text-sm">Runner</div>
-          <div id="rnMyLives" class="text-xs text-pink-300">❤️❤️❤️ • 💎 0</div>
+      <div class="flex items-center gap-2.5 min-w-0">
+        <span id="rnMyAvatar" class="rn-avatar shrink-0"></span>
+        <div class="min-w-0">
+          <div id="rnMyName" class="font-bold text-white text-sm truncate">Runner</div>
+          <div id="rnMyLives" class="text-xs text-pink-300 truncate">❤️❤️❤️ • 💎 0</div>
         </div>
       </div>
-      <div class="text-right">
+      <div class="text-right shrink-0">
         <div id="rnMyScore" class="text-lg font-black text-cyan-300">0</div>
         <button id="rnMotionToggle" type="button" class="text-[11px] px-2 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700">
           📱 Tilt: Off
@@ -25,9 +25,15 @@
     </div>
 
     <div id="rnSwipePad" class="rn-swipe-pad">
-      <div class="text-3xl mb-1">⚡</div>
-      <div class="font-extrabold text-sm">Swipe Left / Right / Up</div>
-      <div id="rnPadHint" class="text-xs text-slate-400 mt-1">Or tap buttons below</div>
+      <div class="rn-phone-track-bg" aria-hidden="true"></div>
+      <div class="rn-pad-copy">
+        <div class="rn-phone-orb-stage" aria-hidden="true">
+          <div class="rn-css-orb-shadow"></div>
+          <div class="rn-css-orb"></div>
+        </div>
+        <div class="font-extrabold text-sm">Swipe Left / Right / Up</div>
+        <div id="rnPadHint" class="text-xs text-slate-300 mt-1">Or tap buttons below</div>
+      </div>
     </div>
 
     <div class="rn-dpad-row">

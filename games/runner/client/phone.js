@@ -24,6 +24,12 @@
   function sendCmd(cmd) {
     if (!rn.active) return;
     vibrate(14);
+    const pad = document.getElementById('rnSwipePad');
+    if (pad) {
+      pad.classList.remove('pulsing');
+      void pad.offsetWidth;
+      pad.classList.add('pulsing');
+    }
     if (rn.dc && rn.dc.readyState === 'open') {
       try { rn.dc.send(JSON.stringify({ cmd })); return; } catch { /* ignore */ }
     }

@@ -481,12 +481,19 @@
 
     for (const r of Object.values(sim.runners)) {
       const card = document.querySelector(`.rn-runner-card[data-runner-id="${r.id}"]`);
-      if (!card) continue;
-      card.classList.toggle('out', !r.alive);
-      const metaEl = card.querySelector('.rn-rc-meta');
-      if (metaEl) metaEl.textContent = `${'❤️'.repeat(Math.max(0, r.lives)) || '💀'} • 💎${r.gems} • ${WORD.slice(0, r.letters).join('') || '-'}`;
-      const scoreEl = card.querySelector('.rn-rc-score');
-      if (scoreEl) scoreEl.textContent = String(Math.round(r.score));
+      if (card) {
+        card.classList.toggle('out', !r.alive);
+        const metaEl = card.querySelector('.rn-rc-meta');
+        if (metaEl) metaEl.textContent = `${'❤️'.repeat(Math.max(0, r.lives)) || '💀'} • 💎${r.gems} • ${WORD.slice(0, r.letters).join('') || '-'}`;
+        const scoreEl = card.querySelector('.rn-rc-score');
+        if (scoreEl) scoreEl.textContent = String(Math.round(r.score));
+      }
+      const dot = document.querySelector(`.rn-radar-dot[data-runner-id="${r.id}"]`);
+      if (dot) {
+        dot.style.display = r.alive ? 'block' : 'none';
+        dot.style.left = `${(50 + (r.x / (LANE_W * 2.5)) * 42).toFixed(1)}%`;
+        dot.style.bottom = `${(10 + r.y * 12).toFixed(1)}px`;
+      }
     }
   }
 
@@ -522,14 +529,24 @@
         `;
       }).join('');
 
+      const dotsHtml = (msg.players || []).map(id => {
+        const meta = SH.avatarMeta ? SH.avatarMeta(avatarFor(id, msg)) : { rim: '#22d3ee' };
+        return `<span class="rn-radar-dot" data-runner-id="${escapeHtml(id)}" style="background:${meta.rim};color:${meta.rim};left:50%"></span>`;
+      }).join('');
+
       content.innerHTML = `
         <div class="rn-tv">
           <div class="rn-hud-top">
             <div class="rn-runners-row">${cardsHtml}</div>
             <div id="rnSpeedPill" class="rn-speed-pill">84 KM/H • 0m</div>
           </div>
-          <div id="rnStage" class="rn-stage"></div>
-          <div id="rnWinnerBanner" class="rn-winner-banner hidden"></div>
+          <div class="rn-stage-wrap">
+            <div id="rnStage" class="rn-stage"></div>
+            <div class="rn-track-radar" aria-hidden="true">
+              <div class="rn-radar-lanes">${dotsHtml}</div>
+            </div>
+            <div id="rnWinnerBanner" class="rn-winner-banner hidden"></div>
+          </div>
         </div>
       `;
 
