@@ -217,6 +217,17 @@
   }
 
   window.tbEnableGyro = async function tbEnableGyro() {
+    if (typeof SH !== 'undefined' && SH.ensureMotionPermission) {
+      if (SH.motionState === 'denied') SH.motionState = 'prompt';
+      const res = await SH.ensureMotionPermission();
+      if (res !== 'granted' && res !== 'auto') {
+        showToast('Gyro permission denied — use touch pad', 'info');
+        return;
+      }
+      attachGyro();
+      document.getElementById('tbGyroBtn').textContent = 'Gyro Active ✓';
+      return;
+    }
     try {
       if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
         const res = await DeviceOrientationEvent.requestPermission();
@@ -258,8 +269,13 @@
     attachPadListeners();
     if (tb.active && !tb.pc) startRtc();
 
-    const needsTap = typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function';
-    if (!needsTap && !tb.listening) attachGyro();
+    const granted = typeof SH !== 'undefined' && SH.motionGranted ? SH.motionGranted()
+      : !(typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function');
+    if (granted && !tb.listening) {
+      attachGyro();
+      const gyroBtn = document.getElementById('tbGyroBtn');
+      if (gyroBtn) gyroBtn.textContent = 'Gyro Active ✓';
+    }
 
     document.getElementById('tbRoundPill').textContent = 'R' + msg.round + '/' + msg.maxRounds;
     document.getElementById('tbScorePill').textContent = tcNum(msg.scores?.[state.playerId] || 0) + ' pts';

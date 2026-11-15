@@ -1019,6 +1019,7 @@
     }
 
     function suggestGame(game) {
+      SH.ensureMotionPermission();
       state.votedGame = game;
       send({ type: 'SUGGEST_GAME', gameType: game });
     }
@@ -1073,6 +1074,7 @@
 
     // The server resolves the most-voted game (quiz first opens its category vote).
     function startGame() {
+      SH.ensureMotionPermission();
       const config = {};
       Object.assign(config, SH.game(state.leadingGame)?.startConfig?.());
       const leader = shGame(state.leadingGame);

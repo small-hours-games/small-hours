@@ -33,9 +33,8 @@
   position: relative;
   width: 78px; height: 148px;
   transform-style: preserve-3d;
-  transition: transform 65ms linear;
+  will-change: transform;
 }
-.sl-phone-3d.sl-p2p { transition: none; }
 .sl-stage-sm .sl-phone-3d { width: 64px; height: 122px; }
 .sl-face {
   position: absolute;
@@ -59,7 +58,7 @@
   background: radial-gradient(circle at 35% 35%, #86efac, #22c55e);
   border: 2px solid rgba(255, 255, 255, 0.8);
   box-shadow: 0 0 12px rgba(74, 222, 128, 0.7);
-  transition: transform 65ms linear;
+  will-change: transform;
 }
 .sl-back {
   background: #334155;
