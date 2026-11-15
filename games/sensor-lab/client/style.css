@@ -35,6 +35,7 @@
   transform-style: preserve-3d;
   transition: transform 65ms linear;
 }
+.sl-phone-3d.sl-p2p { transition: none; }
 .sl-stage-sm .sl-phone-3d { width: 64px; height: 122px; }
 .sl-face {
   position: absolute;

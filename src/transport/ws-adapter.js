@@ -473,6 +473,7 @@ export function setupWebSocket(server, manager) {
     'RETURN_TO_LOBBY',
     'START_CATEGORY_VOTE',
     'CATEGORY_VOTE',
+    'RTC_SIGNAL',
   ]);
 
   function handleMessage(ws, meta, room, msg) {
@@ -534,6 +535,14 @@ export function setupWebSocket(server, manager) {
         break;
       case 'CATEGORY_VOTE':
         voteHandlers.handleCategoryVote(ws, meta, room, msg, ctx);
+        break;
+      case 'RTC_SIGNAL':
+        if (!msg.signal || typeof msg.signal !== 'object') break;
+        if (meta.role === 'host' && msg.toPlayerId && room.players.has(msg.toPlayerId)) {
+          sendToPlayer(msg.toPlayerId, { type: 'RTC_SIGNAL', fromHost: true, signal: msg.signal });
+        } else if (meta.role === 'player' && meta.playerId) {
+          broadcastToRoom(room.code, { type: 'RTC_SIGNAL', fromPlayerId: meta.playerId, signal: msg.signal }, { hostsOnly: true });
+        }
         break;
       default:
         send(ws, { type: 'ERROR', message: `Unknown message type: ${msg.type}` });

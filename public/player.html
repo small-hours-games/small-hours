@@ -772,6 +772,10 @@
           handleGameState(msg);
           break;
 
+        case 'RTC_SIGNAL':
+          SH.game(state.gameType)?.onRtcSignal?.(msg);
+          break;
+
         case 'ERROR':
           if (/room not found/i.test(msg.message || '')) {
             leaveDeadRoom();

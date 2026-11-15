@@ -1,8 +1,11 @@
 // Sensor Lab on the phone: captures gyro, accel, touch, screen, battery & network
-// and streams throttled 15 Hz snapshots to the server.
+// and streams 60 Hz over WebRTC P2P DataChannel (with 15 Hz WebSocket fallback).
 
 (function () {
-  const SEND_INTERVAL_MS = 66; // ~15 Hz (safely under ws-adapter 30 msg/s rate limit)
+  const WS_INTERVAL_MS = 66;   // ~15 Hz over WebSocket (safely under 30 msg/s limit)
+  const P2P_INTERVAL_MS = 16;  // ~60 Hz direct P2P UDP over RTCDataChannel
+  const WS_KEEPALIVE_MS = 500; // 2 Hz WS state sync while P2P is active
+  const RTC_CFG = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
 
   const sl = {
     active: false,
@@ -19,8 +22,12 @@
     seq: 0,
     sentTimes: [],
     lastSendAt: 0,
+    lastWsAt: 0,
     timer: null,
     simActive: false,
+    pc: null,
+    dc: null,
+    p2pState: 'off', // off | connecting | open | closed
   };
 
   function round1(n) { return Math.round(n * 10) / 10; }
@@ -67,6 +74,10 @@
     return sl.sentTimes.length;
   }
 
+  function isP2pOpen() {
+    return !!(sl.dc && sl.dc.readyState === 'open');
+  }
+
   function updateLocalPreview() {
     const orient = currentOrient();
     const phoneEl = document.getElementById('slPhoneLocal');
@@ -76,8 +87,11 @@
     const permPill = document.getElementById('slPermPill');
     const capsEl = document.getElementById('slLocalCaps');
 
-    if (hzPill) hzPill.textContent = currentHz() + ' Hz';
-    if (permPill) permPill.textContent = sl.permission;
+    if (hzPill) {
+      const mode = isP2pOpen() ? 'P2P' : 'WS';
+      hzPill.textContent = `${mode} · ${currentHz()} Hz`;
+    }
+    if (permPill) permPill.textContent = isP2pOpen() ? `${sl.permission} · P2P` : sl.permission;
 
     if (phoneEl && orient) {
       phoneEl.style.transform = `rotateX(${orient.beta}deg) rotateY(${orient.gamma}deg) rotateZ(${-orient.alpha}deg)`;
@@ -97,6 +111,7 @@
     if (capsEl) {
       const dev = currentDevice();
       const items = [
+        ['P2P', isP2pOpen()],
         ['Gyro', dev.hasGyro],
         ['Accel', dev.hasAccel],
         ['Touch ' + dev.maxTouch, dev.maxTouch > 0],
@@ -109,30 +124,102 @@
     }
   }
 
+  function buildPayload() {
+    return {
+      orient: currentOrient(),
+      accel: sl.accel,
+      accelG: sl.accelG,
+      rotRate: sl.rotRate,
+      device: currentDevice(),
+      hz: currentHz(),
+      seq: sl.seq,
+      clientTs: Date.now(),
+      permission: sl.permission,
+    };
+  }
+
   function sendSnapshot(force) {
     if (!sl.active) return;
     const now = performance.now();
-    if (!force && now - sl.lastSendAt < SEND_INTERVAL_MS) return;
+    const p2p = isP2pOpen();
+    const minInterval = p2p ? P2P_INTERVAL_MS : WS_INTERVAL_MS;
+    if (!force && now - sl.lastSendAt < minInterval) return;
+
     sl.lastSendAt = now;
     sl.seq += 1;
     sl.sentTimes.push(now);
+    const payload = buildPayload();
 
-    send({
-      type: 'GAME_ACTION',
-      action: {
-        type: 'sensorUpdate',
-        orient: currentOrient(),
-        accel: sl.accel,
-        accelG: sl.accelG,
-        rotRate: sl.rotRate,
-        device: currentDevice(),
-        hz: currentHz(),
-        seq: sl.seq,
-        clientTs: Date.now(),
-        permission: sl.permission,
-      },
-    });
+    if (p2p) {
+      try {
+        sl.dc.send(JSON.stringify({ ...payload, transport: 'p2p' }));
+      } catch { /* fallback to WS below */ }
+    }
+
+    if (!p2p || force || now - sl.lastWsAt >= WS_KEEPALIVE_MS) {
+      sl.lastWsAt = now;
+      send({
+        type: 'GAME_ACTION',
+        action: { type: 'sensorUpdate', ...payload },
+      });
+    }
     updateLocalPreview();
+  }
+
+  function stopRtc() {
+    sl.p2pState = 'off';
+    if (sl.dc) {
+      try { sl.dc.close(); } catch {}
+      sl.dc = null;
+    }
+    if (sl.pc) {
+      try { sl.pc.close(); } catch {}
+      sl.pc = null;
+    }
+  }
+
+  async function startRtc() {
+    if (sl.pc || typeof RTCPeerConnection === 'undefined') return;
+    sl.p2pState = 'connecting';
+    try {
+      const pc = new RTCPeerConnection(RTC_CFG);
+      sl.pc = pc;
+      const dc = pc.createDataChannel('sensor', { ordered: false, maxRetransmits: 0 });
+      sl.dc = dc;
+
+      dc.onopen = () => {
+        sl.p2pState = 'open';
+        updateLocalPreview();
+        sendSnapshot(true);
+      };
+      dc.onclose = () => {
+        sl.p2pState = 'closed';
+        updateLocalPreview();
+      };
+
+      pc.onicecandidate = e => {
+        if (e.candidate) {
+          send({ type: 'RTC_SIGNAL', signal: { candidate: e.candidate } });
+        }
+      };
+
+      const offer = await pc.createOffer();
+      await pc.setLocalDescription(offer);
+      send({ type: 'RTC_SIGNAL', signal: { sdp: pc.localDescription } });
+    } catch {
+      stopRtc();
+    }
+  }
+
+  async function handleRtcSignal(msg) {
+    if (!sl.pc || !msg.signal) return;
+    try {
+      if (msg.signal.sdp) {
+        await sl.pc.setRemoteDescription(new RTCSessionDescription(msg.signal.sdp));
+      } else if (msg.signal.candidate) {
+        await sl.pc.addIceCandidate(new RTCIceCandidate(msg.signal.candidate));
+      }
+    } catch { /* ignore late/stale ICE candidates */ }
   }
 
   function onOrient(e) {
@@ -150,25 +237,13 @@
 
   function onMotion(e) {
     if (e.acceleration) {
-      sl.accel = {
-        x: e.acceleration.x ?? 0,
-        y: e.acceleration.y ?? 0,
-        z: e.acceleration.z ?? 0,
-      };
+      sl.accel = { x: e.acceleration.x ?? 0, y: e.acceleration.y ?? 0, z: e.acceleration.z ?? 0 };
     }
     if (e.accelerationIncludingGravity) {
-      sl.accelG = {
-        x: e.accelerationIncludingGravity.x ?? 0,
-        y: e.accelerationIncludingGravity.y ?? 0,
-        z: e.accelerationIncludingGravity.z ?? 0,
-      };
+      sl.accelG = { x: e.accelerationIncludingGravity.x ?? 0, y: e.accelerationIncludingGravity.y ?? 0, z: e.accelerationIncludingGravity.z ?? 0 };
     }
     if (e.rotationRate) {
-      sl.rotRate = {
-        alpha: e.rotationRate.alpha ?? 0,
-        beta: e.rotationRate.beta ?? 0,
-        gamma: e.rotationRate.gamma ?? 0,
-      };
+      sl.rotRate = { alpha: e.rotationRate.alpha ?? 0, beta: e.rotationRate.beta ?? 0, gamma: e.rotationRate.gamma ?? 0 };
     }
     sendSnapshot(false);
   }
@@ -199,7 +274,7 @@
       }).catch(() => {});
     }
     if (!sl.timer) {
-      sl.timer = setInterval(() => sendSnapshot(true), 500);
+      sl.timer = setInterval(() => sendSnapshot(true), WS_KEEPALIVE_MS);
     }
   }
 
@@ -270,8 +345,8 @@
 
   function renderSensorLabState(msg) {
     sl.active = msg.phase === 'live';
+    if (sl.active && !sl.pc) startRtc();
     if (sl.active && !sl.listening) {
-      // Auto-attach on browsers that don't require an explicit iOS tap gesture.
       const needsTap = typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function';
       if (!needsTap) {
         sl.permission = typeof DeviceOrientationEvent === 'undefined' ? 'unsupported' : 'listening';
@@ -287,6 +362,7 @@
   SH.registerGame('sensor-lab', {
     section: 'sensorLabSection',
     render: renderSensorLabState,
+    onRtcSignal: handleRtcSignal,
     redraw() { updateLocalPreview(); },
     reset() {
       sl.active = false;
@@ -297,6 +373,7 @@
       sl.rotRate = null;
       sl.sentTimes = [];
       detachListeners();
+      stopRtc();
     },
   });
 })();

@@ -504,6 +504,10 @@
           state.gameEvents.push(msg.event);
           break;
 
+        case 'RTC_SIGNAL':
+          SH.game(state.gameType)?.onRtcSignal?.(msg);
+          break;
+
         case 'CHAT_MESSAGE':
           addChatMessage(msg.username || msg.name || 'Player', msg.text, msg.avatar);
           break;
