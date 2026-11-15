@@ -1171,8 +1171,8 @@ function createTopbarShow(opts) {
     bounds = { left: l, right: r, width: hr.width };
     hdr = { left: hr.left, top: hr.top, h: hr.height };
     svgScale = (el.singer.offsetHeight || 108) / 152;
-    // Canvas pixels cost fill rate: on 4K TVs and retina screens cap the density.
-    eqDpr = Math.min(1.25, window.devicePixelRatio || 1);
+    // Canvas pixels cost fill rate: soft fire & EQ bars scale smoothly at 0.75x CSS pixels.
+    eqDpr = 0.75;
     eqW = hr.width;
     var ew = Math.round(eqW * eqDpr), eh = Math.round(eqH * eqDpr);
     if (el.eq.width !== ew || el.eq.height !== eh) { el.eq.width = ew; el.eq.height = eh; }
@@ -1188,7 +1188,7 @@ function createTopbarShow(opts) {
     hr = hr || header.getBoundingClientRect();
     var lr = logo.getBoundingClientRect();
     var box = { left: lr.left - hr.left - 30, width: lr.width + 60, height: hr.height, logoTop: lr.top - hr.top, logoH: lr.height };
-    var dpr = Math.min(1.25, window.devicePixelRatio || 1);
+    var dpr = 0.75;
     el.fire.style.left = box.left.toFixed(0) + 'px';
     el.fire.style.width = box.width.toFixed(0) + 'px';
     el.fire.style.height = box.height.toFixed(0) + 'px';
@@ -1436,7 +1436,6 @@ function createTopbarShow(opts) {
     // without repainting the bar.
     css(el.washSpot, 'transform', 'translateX(' + px.toFixed(0) + 'px)');
     css(el.washSpot, 'opacity', (0.5 + 0.5 * live).toFixed(2));
-    css(el.wash, 'filter', loc.kind === 'd' && loc.stage === 'dance' ? 'hue-rotate(' + ((loc.bar % 4) * 32) + 'deg)' : 'none'); // once per bar
     // Strobe on the eighths while a drop builds.
     css(el.wash, 'opacity', (0.35 + 0.5 * live * hit + (loc.riser && !reduced ? 0.35 * riserAmt * (Math.sin(p * Math.PI * 4) > 0 ? 1 : 0.2) : 0)).toFixed(3));
     css(el.washBright, 'opacity', (0.22 * riserAmt).toFixed(3));
@@ -1713,13 +1712,13 @@ function createTopbarShow(opts) {
     var shine = (sh.kick * 0.12).toFixed(3);
     for (var i = 0; i < shakeEls.options.length; i++) {
       var o = shakeEls.options[i], sign = i % 2 ? -1 : 1;
-      css(o, 'transform', 'translate(' + (sh.vx * sign).toFixed(1) + 'px,' + sh.vy.toFixed(1) + 'px) scale(' + sc + ')');
+      css(o, 'transform', 'translate3d(' + (sh.vx * sign).toFixed(1) + 'px,' + sh.vy.toFixed(1) + 'px,0) scale(' + sc + ')');
       if (tier) continue;
       if (!o._tbsShine) { o._tbsShine = document.createElement('span'); o._tbsShine.className = 'tbs-shine'; o.appendChild(o._tbsShine); }
       css(o._tbsShine, 'opacity', shine);
     }
     for (var j = 0; j < shakeEls.panels.length; j++) {
-      css(shakeEls.panels[j], 'transform', 'translate(' + (sh.vx * 0.5).toFixed(1) + 'px,' + (-sh.vy * 0.5).toFixed(1) + 'px) scale(' + (1 + sh.kick * 0.006).toFixed(4) + ')');
+      css(shakeEls.panels[j], 'transform', 'translate3d(' + (sh.vx * 0.5).toFixed(1) + 'px,' + (-sh.vy * 0.5).toFixed(1) + 'px,0) scale(' + (1 + sh.kick * 0.006).toFixed(4) + ')');
     }
     css(shakeEls.invite, 'transform', 'scale(' + (1 + sh.kick * 0.004).toFixed(4) + ')');
   }
