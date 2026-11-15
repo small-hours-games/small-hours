@@ -2,9 +2,10 @@
 // and streams 60 Hz over WebRTC P2P DataChannel (with 15 Hz WebSocket fallback).
 
 (function () {
-  const WS_INTERVAL_MS = 66;   // ~15 Hz over WebSocket (safely under 30 msg/s limit)
-  const P2P_INTERVAL_MS = 16;  // ~60 Hz direct P2P UDP over RTCDataChannel
-  const WS_KEEPALIVE_MS = 500; // 2 Hz WS state sync while P2P is active
+  const WS_INTERVAL_MS = 66;       // ~15 Hz over WebSocket / P2P WAN (safely under 30 msg/s limit)
+  const CELLULAR_INTERVAL_MS = 100; // ~10 Hz on 4G/5G/cellular or high-RTT links
+  const P2P_LAN_INTERVAL_MS = 16;  // ~60 Hz direct LAN P2P UDP over RTCDataChannel
+  const WS_KEEPALIVE_MS = 500;     // 2 Hz WS state sync while P2P is active
   const RTC_CFG = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
 
   const sl = {
@@ -28,6 +29,8 @@
     pc: null,
     dc: null,
     p2pState: 'off', // off | connecting | open | closed
+    p2pIsLan: false,
+    linkCheckAt: 0,
   };
 
   function round1(n) { return Math.round(n * 10) / 10; }
@@ -138,11 +141,54 @@
     };
   }
 
+  function isCellularLink() {
+    const conn = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+    if (!conn) return false;
+    if (conn.type === 'cellular') return true;
+    return conn.effectiveType === '2g' || conn.effectiveType === '3g' || conn.effectiveType === 'slow-2g';
+  }
+
+  async function refreshLinkQuality() {
+    if (!sl.pc || !isP2pOpen()) {
+      sl.p2pIsLan = false;
+      return;
+    }
+    if (isCellularLink()) {
+      sl.p2pIsLan = false;
+      return;
+    }
+    try {
+      const stats = await sl.pc.getStats();
+      let activePair = null;
+      stats.forEach(report => {
+        if (report.type === 'candidate-pair' && (report.nominated || report.state === 'succeeded')) {
+          activePair = report;
+        }
+      });
+      if (!activePair) return;
+      const remote = stats.get(activePair.remoteCandidateId);
+      const rtt = activePair.currentRoundTripTime;
+      const isHost = remote?.candidateType === 'host';
+      sl.p2pIsLan = Boolean(isHost && (rtt == null || rtt <= 0.025));
+    } catch { /* keep conservative rate */ }
+  }
+
+  function targetIntervalMs() {
+    const p2p = isP2pOpen();
+    if (isCellularLink()) return CELLULAR_INTERVAL_MS;
+    if (p2p && sl.p2pIsLan) return P2P_LAN_INTERVAL_MS;
+    return WS_INTERVAL_MS;
+  }
+
   function sendSnapshot(force) {
     if (!sl.active) return;
     const now = performance.now();
     const p2p = isP2pOpen();
-    const minInterval = p2p ? P2P_INTERVAL_MS : WS_INTERVAL_MS;
+    if (p2p && now - sl.linkCheckAt >= 2000) {
+      sl.linkCheckAt = now;
+      refreshLinkQuality();
+    }
+    const minInterval = targetIntervalMs();
     if (!force && now - sl.lastSendAt < minInterval) return;
 
     sl.lastSendAt = now;
@@ -189,6 +235,7 @@
 
       dc.onopen = () => {
         sl.p2pState = 'open';
+        refreshLinkQuality();
         updateLocalPreview();
         sendSnapshot(true);
       };
