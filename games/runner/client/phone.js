@@ -11,9 +11,21 @@
     lastFlickAt: 0,
     pc: null,
     dc: null,
+    pendingIce: [],
+    remoteSet: false,
     bound: false,
     swipeStart: null,
+    swipeFired: false,
   };
+
+  function setLinkBadge(isP2p) {
+    const pill = document.getElementById('rnLinkPill');
+    if (!pill) return;
+    pill.textContent = isP2p ? 'P2P' : 'WS';
+    pill.className = isP2p
+      ? 'text-[10px] px-1.5 py-0.5 rounded bg-emerald-700 text-white font-mono font-bold'
+      : 'text-[10px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 font-mono';
+  }
 
   function vibrate(p) {
     if (typeof navigator !== 'undefined' && navigator.vibrate) {
@@ -23,33 +35,38 @@
 
   function sendCmd(cmd) {
     if (!rn.active) return;
-    vibrate(14);
-    const pad = document.getElementById('rnSwipePad');
-    if (pad) {
-      pad.classList.remove('pulsing');
-      void pad.offsetWidth;
-      pad.classList.add('pulsing');
-    }
-    const orb = document.getElementById('rnCssOrb');
-    const shadow = document.getElementById('rnCssOrbShadow');
-    if (cmd === 'left' || cmd === 'right') {
-      rn.visualLane = Math.max(-2, Math.min(2, (rn.visualLane || 0) + (cmd === 'left' ? -1 : 1)));
-      const pct = `${50 + rn.visualLane * 18}%`;
-      if (orb) orb.style.left = pct;
-      if (shadow) shadow.style.left = pct;
-    } else if (cmd === 'jump' && orb && shadow) {
-      orb.classList.add('jumping');
-      shadow.classList.add('jumping');
-      clearTimeout(rn.jumpTimer);
-      rn.jumpTimer = setTimeout(() => {
-        orb.classList.remove('jumping');
-        shadow.classList.remove('jumping');
-      }, 320);
-    }
     if (rn.dc && rn.dc.readyState === 'open') {
-      try { rn.dc.send(JSON.stringify({ cmd })); return; } catch { /* ignore */ }
+      try { rn.dc.send(JSON.stringify({ cmd })); } catch {
+        send({ type: 'RTC_SIGNAL', signal: { rnCmd: cmd } });
+      }
+    } else {
+      send({ type: 'RTC_SIGNAL', signal: { rnCmd: cmd } });
     }
-    send({ type: 'RTC_SIGNAL', signal: { rnCmd: cmd } });
+
+    requestAnimationFrame(() => {
+      vibrate(12);
+      const pad = document.getElementById('rnSwipePad');
+      if (pad) {
+        pad.classList.remove('pulsing');
+        requestAnimationFrame(() => pad.classList.add('pulsing'));
+      }
+      const orb = document.getElementById('rnCssOrb');
+      const shadow = document.getElementById('rnCssOrbShadow');
+      if (cmd === 'left' || cmd === 'right') {
+        rn.visualLane = Math.max(-2, Math.min(2, (rn.visualLane || 0) + (cmd === 'left' ? -1 : 1)));
+        const pct = `${50 + rn.visualLane * 18}%`;
+        if (orb) orb.style.left = pct;
+        if (shadow) shadow.style.left = pct;
+      } else if (cmd === 'jump' && orb && shadow) {
+        orb.classList.add('jumping');
+        shadow.classList.add('jumping');
+        clearTimeout(rn.jumpTimer);
+        rn.jumpTimer = setTimeout(() => {
+          orb.classList.remove('jumping');
+          shadow.classList.remove('jumping');
+        }, 300);
+      }
+    });
   }
 
   function onDeviceOrientation(e) {
@@ -57,12 +74,12 @@
     const gamma = Number(e.gamma);
     if (!Number.isFinite(gamma)) return;
     const now = performance.now();
-    if (now - rn.lastTiltStepAt < 260) return;
+    if (now - rn.lastTiltStepAt < 170) return;
     const delta = gamma - rn.tiltNeutral;
-    if (delta < -16) {
+    if (delta < -12) {
       rn.lastTiltStepAt = now;
       sendCmd('left');
-    } else if (delta > 16) {
+    } else if (delta > 12) {
       rn.lastTiltStepAt = now;
       sendCmd('right');
     }
@@ -73,8 +90,8 @@
     const acc = e.acceleration;
     if (!acc) return;
     const now = performance.now();
-    if (now - rn.lastFlickAt < 400) return;
-    if (Number(acc.y) > 10 || Number(acc.z) > 12) {
+    if (now - rn.lastFlickAt < 300) return;
+    if (Number(acc.y) > 7.5 || Number(acc.z) > 9.5) {
       rn.lastFlickAt = now;
       sendCmd('jump');
     }
@@ -111,10 +128,14 @@
 
   function startRtc() {
     if (rn.pc) return;
+    rn.pendingIce = [];
+    rn.remoteSet = false;
     const pc = new RTCPeerConnection({ iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] });
     rn.pc = pc;
     pc.ondatachannel = ev => {
       rn.dc = ev.channel;
+      rn.dc.onopen = () => setLinkBadge(true);
+      rn.dc.onclose = () => setLinkBadge(false);
       rn.dc.onmessage = msgEv => {
         try {
           const d = JSON.parse(msgEv.data);
@@ -136,9 +157,9 @@
     if (rn.bound) return;
     rn.bound = true;
 
-    document.getElementById('rnLeftBtn')?.addEventListener('click', () => sendCmd('left'));
-    document.getElementById('rnRightBtn')?.addEventListener('click', () => sendCmd('right'));
-    document.getElementById('rnJumpBtn')?.addEventListener('click', () => sendCmd('jump'));
+    document.getElementById('rnLeftBtn')?.addEventListener('pointerdown', e => { e.preventDefault(); sendCmd('left'); });
+    document.getElementById('rnRightBtn')?.addEventListener('pointerdown', e => { e.preventDefault(); sendCmd('right'); });
+    document.getElementById('rnJumpBtn')?.addEventListener('pointerdown', e => { e.preventDefault(); sendCmd('jump'); });
 
     document.getElementById('rnMotionToggle')?.addEventListener('click', async () => {
       if (rn.motionOn) {
@@ -165,19 +186,34 @@
     const pad = document.getElementById('rnSwipePad');
     if (pad) {
       pad.addEventListener('pointerdown', e => {
+        e.preventDefault();
         rn.swipeStart = { x: e.clientX, y: e.clientY };
+        rn.swipeFired = false;
       });
-      pad.addEventListener('pointerup', e => {
+      pad.addEventListener('pointermove', e => {
         if (!rn.swipeStart) return;
         const dx = e.clientX - rn.swipeStart.x;
         const dy = e.clientY - rn.swipeStart.y;
-        rn.swipeStart = null;
-        if (Math.hypot(dx, dy) < 20) {
+        if (Math.abs(dx) >= 22 && Math.abs(dx) > Math.abs(dy)) {
+          sendCmd(dx < 0 ? 'left' : 'right');
+          rn.swipeStart = { x: e.clientX, y: e.clientY };
+          rn.swipeFired = true;
+        } else if (dy <= -22 && Math.abs(dy) >= Math.abs(dx)) {
           sendCmd('jump');
-          return;
+          rn.swipeStart = { x: e.clientX, y: e.clientY };
+          rn.swipeFired = true;
         }
-        if (Math.abs(dx) > Math.abs(dy)) sendCmd(dx < 0 ? 'left' : 'right');
-        else if (dy < -20) sendCmd('jump');
+      });
+      pad.addEventListener('pointerup', () => {
+        if (!rn.swipeStart) return;
+        const fired = rn.swipeFired;
+        rn.swipeStart = null;
+        rn.swipeFired = false;
+        if (!fired) sendCmd('jump');
+      });
+      pad.addEventListener('pointercancel', () => {
+        rn.swipeStart = null;
+        rn.swipeFired = false;
       });
     }
   }
@@ -209,12 +245,18 @@
       if (!rn.pc) startRtc();
       if (sig.sdp) {
         rn.pc.setRemoteDescription(new RTCSessionDescription(sig.sdp))
-          .then(() => rn.pc.createAnswer())
+          .then(() => {
+            rn.remoteSet = true;
+            for (const c of rn.pendingIce) rn.pc.addIceCandidate(new RTCIceCandidate(c)).catch(() => {});
+            rn.pendingIce = [];
+            return rn.pc.createAnswer();
+          })
           .then(ans => rn.pc.setLocalDescription(ans))
           .then(() => send({ type: 'RTC_SIGNAL', signal: { sdp: rn.pc.localDescription } }))
           .catch(() => {});
       } else if (sig.candidate) {
-        rn.pc.addIceCandidate(new RTCIceCandidate(sig.candidate)).catch(() => {});
+        if (rn.remoteSet) rn.pc.addIceCandidate(new RTCIceCandidate(sig.candidate)).catch(() => {});
+        else rn.pendingIce.push(sig.candidate);
       }
     },
     reset() {

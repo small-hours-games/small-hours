@@ -11,9 +11,19 @@
     lastAimSentAt: 0,
     pc: null,
     dc: null,
+    pendingIce: [],
+    remoteSet: false,
     bound: false,
     padStart: null,
+    padFired: false,
   };
+
+  function setLinkBadge(isP2p) {
+    const pill = document.getElementById('tnLinkPill');
+    if (!pill) return;
+    pill.textContent = isP2p ? 'P2P' : 'WS';
+    pill.classList.toggle('is-p2p', !!isP2p);
+  }
 
   function vibrate(pattern) {
     if (typeof navigator !== 'undefined' && navigator.vibrate) {
@@ -34,21 +44,22 @@
 
   function emitSwing(opts) {
     const now = performance.now();
-    if (now - tn.lastSwingAt < 280) return;
+    if (now - tn.lastSwingAt < 220) return;
     tn.lastSwingAt = now;
-    vibrate(25);
-    const pad = document.getElementById('tnRacketPad');
-    if (pad) {
-      pad.classList.remove('swinging');
-      void pad.offsetWidth;
-      pad.classList.add('swinging');
-    }
     sendInput({
       type: 'swing',
       shotType: opts.shotType || tn.shotType,
       speed: opts.speed || 1.15,
       side: opts.side || null,
       dirX: opts.dirX != null ? opts.dirX : tn.aim,
+    });
+    requestAnimationFrame(() => {
+      vibrate(25);
+      const pad = document.getElementById('tnRacketPad');
+      if (pad) {
+        pad.classList.remove('swinging');
+        requestAnimationFrame(() => pad.classList.add('swinging'));
+      }
     });
   }
 
@@ -79,7 +90,7 @@
     const rotMag = Math.hypot(Number(rot.alpha) || 0, Number(rot.beta) || 0, Number(rot.gamma) || 0);
 
     // Detect crisp racket swing gesture
-    if (mag > 14.5 || rotMag > 260) {
+    if (mag > 12.5 || rotMag > 220) {
       const speed = Math.max(0.85, Math.min(1.6, 0.8 + mag / 26));
       const side = ax > 4 ? 'backhand' : ax < -4 ? 'forehand' : null;
       let shotType = tn.shotType;
@@ -108,10 +119,15 @@
 
   function startRtc() {
     if (tn.pc) return;
+    tn.pendingIce = [];
+    tn.remoteSet = false;
+    setLinkBadge(false);
     const pc = new RTCPeerConnection({ iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] });
     tn.pc = pc;
     pc.ondatachannel = ev => {
       tn.dc = ev.channel;
+      tn.dc.onopen = () => setLinkBadge(true);
+      tn.dc.onclose = () => setLinkBadge(false);
       tn.dc.onmessage = msgEv => {
         try {
           const d = JSON.parse(msgEv.data);
@@ -147,9 +163,10 @@
       }
     });
 
-    document.getElementById('tnTossBtn')?.addEventListener('click', () => {
-      vibrate(15);
+    document.getElementById('tnTossBtn')?.addEventListener('pointerdown', e => {
+      e.preventDefault();
       sendInput({ type: 'toss' });
+      vibrate(15);
     });
 
     document.querySelectorAll('[data-tn-shot]').forEach(btn => {
@@ -162,30 +179,41 @@
     const pad = document.getElementById('tnRacketPad');
     if (pad) {
       pad.addEventListener('pointerdown', e => {
+        e.preventDefault();
+        pad.setPointerCapture?.(e.pointerId);
         tn.padStart = { x: e.clientX, y: e.clientY, t: performance.now() };
+        tn.padFired = false;
       });
-      pad.addEventListener('pointerup', e => {
-        if (!tn.padStart) return;
+      pad.addEventListener('pointermove', e => {
+        if (!tn.padStart || tn.padFired) return;
         const dx = e.clientX - tn.padStart.x;
         const dy = e.clientY - tn.padStart.y;
-        const dt = Math.max(20, performance.now() - tn.padStart.t);
-        tn.padStart = null;
         const dist = Math.hypot(dx, dy);
-        if (dist < 18) {
-          emitSwing({ speed: 1.1 });
+        if (dist < 28) return;
+        tn.padFired = true;
+        if (dy < -40 && Math.abs(dy) > Math.abs(dx) * 1.4) {
+          sendInput({ type: 'toss' });
+          vibrate(15);
           return;
         }
+        const dt = Math.max(16, performance.now() - tn.padStart.t);
         const speed = Math.max(0.85, Math.min(1.55, 0.8 + dist / dt * 0.45));
         const side = dx > 20 ? 'backhand' : dx < -20 ? 'forehand' : null;
         const dirX = Math.max(-1, Math.min(1, dx / 140));
         let shotType = tn.shotType;
-        if (dy < -75 && Math.abs(dy) > Math.abs(dx) * 1.4) {
-          sendInput({ type: 'toss' });
-          return;
-        }
-        if (dy > 45 && speed > 1.25) shotType = 'smash';
+        if (dy > 40 && speed > 1.2) shotType = 'smash';
         emitSwing({ speed, side, dirX, shotType });
       });
+      const finishPad = () => {
+        if (!tn.padStart) return;
+        if (!tn.padFired) {
+          emitSwing({ speed: 1.1 });
+        }
+        tn.padStart = null;
+        tn.padFired = false;
+      };
+      pad.addEventListener('pointerup', finishPad);
+      pad.addEventListener('pointercancel', () => { tn.padStart = null; tn.padFired = false; });
     }
   }
 
@@ -239,12 +267,23 @@
       if (!tn.pc) startRtc();
       if (sig.sdp) {
         tn.pc.setRemoteDescription(new RTCSessionDescription(sig.sdp))
-          .then(() => tn.pc.createAnswer())
-          .then(ans => tn.pc.setLocalDescription(ans))
-          .then(() => send({ type: 'RTC_SIGNAL', signal: { sdp: tn.pc.localDescription } }))
+          .then(async () => {
+            tn.remoteSet = true;
+            const queued = tn.pendingIce.splice(0);
+            for (const cand of queued) {
+              await tn.pc.addIceCandidate(new RTCIceCandidate(cand)).catch(() => {});
+            }
+            const ans = await tn.pc.createAnswer();
+            await tn.pc.setLocalDescription(ans);
+            send({ type: 'RTC_SIGNAL', signal: { sdp: tn.pc.localDescription } });
+          })
           .catch(() => {});
       } else if (sig.candidate) {
-        tn.pc.addIceCandidate(new RTCIceCandidate(sig.candidate)).catch(() => {});
+        if (tn.remoteSet) {
+          tn.pc.addIceCandidate(new RTCIceCandidate(sig.candidate)).catch(() => {});
+        } else {
+          tn.pendingIce.push(sig.candidate);
+        }
       }
     },
     reset() {
@@ -257,6 +296,9 @@
       try { tn.dc?.close(); tn.pc?.close(); } catch { /* ignore */ }
       tn.dc = null;
       tn.pc = null;
+      tn.pendingIce = [];
+      tn.remoteSet = false;
+      setLinkBadge(false);
     },
   });
 })();

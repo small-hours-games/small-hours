@@ -39,7 +39,7 @@
   function setupRtcForPlayer(id) {
     if (rtcPeers.has(id) || String(id).startsWith('bot_')) return;
     const pc = new RTCPeerConnection({ iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] });
-    const entry = { pc, dc: null };
+    const entry = { pc, dc: null, pendingIce: [], remoteSet: false };
     rtcPeers.set(id, entry);
 
     const dc = pc.createDataChannel('runner-input', { ordered: false, maxRetransmits: 0 });
@@ -396,7 +396,7 @@
 
         // Smooth lane X + jump Y
         const targetX = r.lane * LANE_W;
-        r.x += (targetX - r.x) * Math.min(1, dt * 14);
+        r.x += (targetX - r.x) * Math.min(1, dt * 24);
         if (r.jumping) {
           r.y += r.vy * dt;
           r.vy -= 29 * dt;
@@ -600,8 +600,18 @@
       if (sig.rnCmd) { handleRunnerCmd(fromId, sig.rnCmd); return; }
       const entry = rtcPeers.get(fromId);
       if (!entry) return;
-      if (sig.sdp) entry.pc.setRemoteDescription(new RTCSessionDescription(sig.sdp)).catch(() => {});
-      else if (sig.candidate) entry.pc.addIceCandidate(new RTCIceCandidate(sig.candidate)).catch(() => {});
+      if (sig.sdp) {
+        entry.pc.setRemoteDescription(new RTCSessionDescription(sig.sdp))
+          .then(() => {
+            entry.remoteSet = true;
+            for (const c of entry.pendingIce) entry.pc.addIceCandidate(new RTCIceCandidate(c)).catch(() => {});
+            entry.pendingIce = [];
+          })
+          .catch(() => {});
+      } else if (sig.candidate) {
+        if (entry.remoteSet) entry.pc.addIceCandidate(new RTCIceCandidate(sig.candidate)).catch(() => {});
+        else entry.pendingIce.push(sig.candidate);
+      }
     },
     alwaysScoreboard: true,
     scoreboard(msg, { names }) {

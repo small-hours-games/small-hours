@@ -54,7 +54,7 @@
   function setupRtcForPlayer(id) {
     if (rtcPeers.has(id) || String(id).startsWith('bot_')) return;
     const pc = new RTCPeerConnection({ iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] });
-    const entry = { pc, dc: null };
+    const entry = { pc, dc: null, pendingIce: [], remoteSet: false };
     rtcPeers.set(id, entry);
 
     const dc = pc.createDataChannel('tennis-input', { ordered: false, maxRetransmits: 0 });
@@ -103,7 +103,7 @@
 
     actor.char.swingTimer = actor.char.swingDuration;
     actor.char.swingSide = data.side || (actor.pos.x > 0 ? 'backhand' : 'forehand');
-    actor.swingWindow = 0.24;
+    actor.swingWindow = 0.30;
     actor.pendingShot = { speed, shotType, aimX };
 
     if (sim.phase === 'serve_wait' && sim.serverId === playerId) {
@@ -668,9 +668,16 @@
       const entry = rtcPeers.get(fromId);
       if (!entry) return;
       if (sig.sdp) {
-        entry.pc.setRemoteDescription(new RTCSessionDescription(sig.sdp)).catch(() => {});
+        entry.pc.setRemoteDescription(new RTCSessionDescription(sig.sdp))
+          .then(() => {
+            entry.remoteSet = true;
+            for (const c of entry.pendingIce) entry.pc.addIceCandidate(new RTCIceCandidate(c)).catch(() => {});
+            entry.pendingIce = [];
+          })
+          .catch(() => {});
       } else if (sig.candidate) {
-        entry.pc.addIceCandidate(new RTCIceCandidate(sig.candidate)).catch(() => {});
+        if (entry.remoteSet) entry.pc.addIceCandidate(new RTCIceCandidate(sig.candidate)).catch(() => {});
+        else entry.pendingIce.push(sig.candidate);
       }
     },
     alwaysScoreboard: true,
