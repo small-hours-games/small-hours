@@ -1,0 +1,33 @@
+name: small-hours-dev
+
+services:
+  game-dev:
+    container_name: small-hours-dev
+    image: ghcr.io/small-hours-games/small-hours:dev
+    pull_policy: always
+    restart: unless-stopped
+    ports:
+      - "${DEV_PORT:-3002}:3000"
+    environment:
+      NODE_ENV: development
+      PORT: 3000
+    env_file:
+      - path: .env.dev
+        required: false
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://127.0.0.1:3000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    volumes:
+      - small-hours-dev-data:/app/data
+      - /etc/localtime:/etc/localtime:ro
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  small-hours-dev-data:
