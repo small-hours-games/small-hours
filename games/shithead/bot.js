@@ -33,10 +33,10 @@ function chooseSwap(state, botId) {
   return { type: 'confirmSwap' };
 }
 
-/** A small number from the table, so a "random" choice is the same every time for the same table. */
+/** A small number from the table, so a "random" choice varies across turns even if hands repeat. */
 function tableRoll(state, botId, n) {
   let h = 7;
-  const key = botId + ':' + state.pile.length + ':' + (state.hands[botId] || []).map(c => c.id).join(',') + ':' + (state.drawPile || []).length;
+  const key = botId + ':' + (state.eventSeq || 0) + ':' + state.pile.length + ':' + (state.hands[botId] || []).map(c => c.id).join(',') + ':' + (state.drawPile || []).length;
   for (let i = 0; i < key.length; i++) h = (h * 31 + key.charCodeAt(i)) | 0;
   return Math.abs(h) % n;
 }
@@ -59,6 +59,13 @@ function choosePlay(state, botId, style) {
   // Calculating (default): cheapest legal rank first; save 2s and 10s unless nothing else fits.
   const cheapest = [...ranks].sort((a, b) => keepValue(a) - keepValue(b) || a - b)[0];
 
+  // Break rare deterministic stalemate cycles if a game drags on without finishing.
+  if ((state.eventSeq || 0) > 250 && (ranks.length > 1 || ofRank(ranks[0]).length > 1) && tableRoll(state, botId, 3) === 0) {
+    const pick = ofRank(ranks[tableRoll(state, botId, ranks.length)]);
+    const count = tableRoll(state, botId + ':n', 2) === 0 ? 1 : pick.length;
+    return { type: 'playCards', cardIds: pick.slice(0, count) };
+  }
+
   if (style === 'chaotic' && ranks.length > 1 && tableRoll(state, botId, 10) < 4) {
     // Glitch: now and then it plays any legal rank at all, specials included.
     return { type: 'playCards', cardIds: ofRank(ranks[tableRoll(state, botId, ranks.length)]) };
@@ -71,12 +78,17 @@ function choosePlay(state, botId, style) {
     return { type: 'playCards', cardIds: ofRank(bySize[0]) };
   }
   if (style === 'cautious') {
-    // Prof. Byte: one card at a time keeps its hand flexible (a set of four still burns).
+    // Prof. Byte: one card at a time keeps its hand flexible (unless dumping empties the hand or burns).
     const ids = ofRank(cheapest);
     const onPile = state.pile.length ? state.pile.filter((c, i, a) => i >= a.length - 3 && c.rank === cheapest).length : 0;
-    return { type: 'playCards', cardIds: ids.length + onPile >= 4 ? ids : [ids[0]] };
+    return { type: 'playCards', cardIds: (ids.length === source.length || ids.length + onPile >= 4) ? ids : [ids[0]] };
   }
-  return { type: 'playCards', cardIds: ofRank(cheapest) };
+  const ids = ofRank(cheapest);
+  const onPile = state.pile.length ? state.pile.filter((c, i, a) => i >= a.length - 3 && c.rank === cheapest).length : 0;
+  if (cheapest >= 12 && state.pile.length > 0 && ids.length > 1 && ids.length < source.length && ids.length + onPile < 4) {
+    return { type: 'playCards', cardIds: [ids[0]] };
+  }
+  return { type: 'playCards', cardIds: ids };
 }
 
 export function choosePalaceAction(state, botId) {
