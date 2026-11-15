@@ -63,8 +63,9 @@
         </span>
         <span id="headerInfo" class="hidden sm:inline-block ml-1 text-xs font-extrabold px-3 py-1 rounded-full bg-sky-100 text-sky-800 border border-sky-200 shadow-sm"></span>
       </div>
-      <div class="flex items-center gap-3">
+      <div class="flex items-center gap-2">
         <button id="muteBtn" onclick="toggleMute()" class="text-sm font-semibold px-3 py-1.5 rounded-lg text-slate-600 bg-white border border-sky-200 hover:bg-sky-50 transition">🔊 Sound</button>
+        <button type="button" id="hostFullscreenBtn" onclick="toggleHostFullscreen()" aria-label="Full screen" aria-pressed="false" hidden class="text-sm font-semibold px-2.5 py-1.5 rounded-lg text-slate-600 bg-white border border-sky-200 hover:bg-sky-50 transition items-center justify-center"><i class="fa-solid fa-expand"></i></button>
       </div>
     </div>
   </header>
@@ -274,6 +275,39 @@
         audio.play = audio._origPlay;
       }
     }
+
+    function canHostFullscreen() {
+      const el = document.documentElement;
+      const installed = (matchMedia('(display-mode: fullscreen)').matches && !isHostFullscreen()) ||
+        matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+      return !installed && !!(el.requestFullscreen || el.webkitRequestFullscreen) &&
+        document.fullscreenEnabled !== false && document.webkitFullscreenEnabled !== false;
+    }
+    function isHostFullscreen() { return !!(document.fullscreenElement || document.webkitFullscreenElement); }
+    function toggleHostFullscreen() {
+      if (isHostFullscreen()) {
+        const exit = document.exitFullscreen || document.webkitExitFullscreen;
+        if (exit) exit.call(document);
+      } else {
+        const el = document.documentElement;
+        if (el.requestFullscreen) el.requestFullscreen({ navigationUI: 'hide' }).catch(() => {});
+        else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+      }
+    }
+    function syncHostFullscreenBtn() {
+      const btn = document.getElementById('hostFullscreenBtn');
+      if (!btn) return;
+      const show = canHostFullscreen();
+      btn.hidden = !show;
+      btn.classList.toggle('inline-flex', show);
+      const on = isHostFullscreen();
+      btn.setAttribute('aria-pressed', String(on));
+      btn.setAttribute('aria-label', on ? 'Leave full screen' : 'Full screen');
+      btn.querySelector('i').className = 'fa-solid ' + (on ? 'fa-compress' : 'fa-expand');
+    }
+    document.addEventListener('fullscreenchange', syncHostFullscreenBtn);
+    document.addEventListener('webkitfullscreenchange', syncHostFullscreenBtn);
+    syncHostFullscreenBtn();
 
     // Init audio on first user interaction (required by browser autoplay policy)
     document.addEventListener('click', function() { audio.init(); }, { once: true });

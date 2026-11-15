@@ -427,7 +427,17 @@ header > .player-connection-row {
 }
 .avatar-sheet.is-open .avatar-sheet-backdrop { opacity: 1; }
 .avatar-sheet.is-open .avatar-sheet-panel { transform: none; }
+.avatar-sheet-title-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .avatar-sheet-head h2 { font-size: 1.35rem; font-weight: 700; }
+.avatar-sheet-close {
+  width: 36px; height: 36px; border-radius: 9999px; border: 1px solid var(--night-line, #22335f);
+  background: var(--night, #0b1530); color: var(--night-muted, #a9b6d3);
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 0.95rem; font-weight: 700; line-height: 1; flex-shrink: 0;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.avatar-sheet-close:hover { background: var(--night-line, #22335f); color: #fff; }
+.avatar-sheet-close:focus-visible { outline: 3px solid #38bdf8; outline-offset: 2px; }
 .avatar-sheet-head p { margin-top: 2px; font-size: 0.8rem; color: var(--night-muted, #a9b6d3); }
 .nickname-form { display: flex; gap: 8px; margin-top: 12px; }
 .nickname-input {

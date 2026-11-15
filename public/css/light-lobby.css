@@ -227,12 +227,12 @@
   .host-screen .invite-foot p { font-size: .78rem; margin-top: 5px; }
   .host-screen .lobby-footer { font-size: .7rem; margin: 0; }
 
-  /* Keep chat within the scores column instead of over the game or scores. */
+  /* Keep chat within the scores column instead of over the game or scores, and clear of .host-corner-status. */
   .host-screen.in-game { --tv-sidebar-width: 250px; }
   body.host-screen.in-game .host-main { margin-right: var(--tv-sidebar-width); padding: 12px 18px; }
   .host-screen.in-game .scoreboard-panel { width: var(--tv-sidebar-width); padding: 12px; }
-  .host-screen.in-game > .chat-panel { width: calc(var(--tv-sidebar-width) - 16px); right: 8px; bottom: 8px; height: 26dvh; max-height: 26dvh; padding: 10px; }
-  .host-screen.in-game.has-party-chat .scoreboard-panel { bottom: calc(26dvh + 16px); }
+  .host-screen.in-game > .chat-panel { width: calc(var(--tv-sidebar-width) - 16px); right: 8px; bottom: 48px; height: 26dvh; max-height: 26dvh; padding: 10px; }
+  .host-screen.in-game.has-party-chat .scoreboard-panel { bottom: calc(26dvh + 56px); }
   .host-screen.in-game .game-title { font-size: 1.7rem; }
   .host-screen.in-game .quiz-question-text { font-size: clamp(1.3rem,2.2vw,1.8rem); }
   .host-screen.in-game .quiz-answers-display { gap: 8px; }

@@ -177,7 +177,10 @@
     <div class="avatar-sheet-backdrop" onclick="closeAvatarPicker()"></div>
     <div class="avatar-sheet-panel" role="dialog" aria-modal="true" aria-labelledby="avatarSheetTitle">
       <div class="avatar-sheet-head">
-        <h2 id="avatarSheetTitle" class="font-display">Your profile</h2>
+        <div class="avatar-sheet-title-row">
+          <h2 id="avatarSheetTitle" class="font-display">Your profile</h2>
+          <button type="button" class="avatar-sheet-close" onclick="closeAvatarPicker()" aria-label="Close profile">✕</button>
+        </div>
         <p>This is you on the TV. Faces someone else has are greyed out.</p>
       </div>
       <form id="nicknameForm" class="nickname-form" onsubmit="submitNickname(event)">
@@ -194,7 +197,10 @@
     <div class="avatar-sheet-backdrop" onclick="closeSurrenderModal()"></div>
     <div class="avatar-sheet-panel" role="dialog" aria-modal="true" aria-labelledby="surrenderModalTitle">
       <div class="avatar-sheet-head">
-        <h2 id="surrenderModalTitle" class="font-display">Surrender game?</h2>
+        <div class="avatar-sheet-title-row">
+          <h2 id="surrenderModalTitle" class="font-display">Surrender game?</h2>
+          <button type="button" class="avatar-sheet-close" onclick="closeSurrenderModal()" aria-label="Close surrender dialog">✕</button>
+        </div>
         <p>You will forfeit this game. If no other human players remain, the game returns to the lobby.</p>
       </div>
       <div class="grid grid-cols-2 gap-3 mt-4">
@@ -400,7 +406,9 @@
     }
 
     document.addEventListener('keydown', e => {
-      if (e.key === 'Escape' && !document.getElementById('avatarSheet').hidden) closeAvatarPicker();
+      if (e.key !== 'Escape') return;
+      if (!document.getElementById('avatarSheet').hidden) closeAvatarPicker();
+      if (!document.getElementById('surrenderModal').hidden) closeSurrenderModal();
     });
 
     function closeAvatarPicker() {
