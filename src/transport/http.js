@@ -21,7 +21,7 @@ const AUDIO_DIR = path.resolve(__dirname, '../../data/audio');
 // Room-flood protection
 const MAX_ROOMS = 200;
 const ROOM_CREATE_MIN_INTERVAL_MS = 200;
-let lastRoomCreateAt = 0;
+const roomCreateByIp = new Map();
 
 /**
  * Set up HTTP routes on the Express app.
@@ -90,12 +90,15 @@ export function setupRoutes(app, manager) {
       res.status(503).json({ error: 'Server at room capacity' });
       return;
     }
+    const clientIp = req.ip || req.socket?.remoteAddress || 'unknown';
     const now = Date.now();
-    if (now - lastRoomCreateAt < ROOM_CREATE_MIN_INTERVAL_MS) {
+    const lastAt = roomCreateByIp.get(clientIp) || 0;
+    if (now - lastAt < ROOM_CREATE_MIN_INTERVAL_MS) {
       res.status(429).json({ error: 'Too many rooms created, slow down' });
       return;
     }
-    lastRoomCreateAt = now;
+    if (roomCreateByIp.size > 1000) roomCreateByIp.clear();
+    roomCreateByIp.set(clientIp, now);
     try {
       const room = manager.createRoom();
       res.status(201).json({ code: room.code });
@@ -143,7 +146,7 @@ export function setupRoutes(app, manager) {
   });
 
   // Serve generated TTS audio (tts_<id>.wav, or tts_<id>.mp3 from the fallback voice)
-  app.get('/api/audio/tts/:id', (req, res) => {
+  app.get('/api/audio/tts/:id', async (req, res) => {
     const { id } = req.params;
     // Guard against path traversal: id must be a plain base64url/hex slug.
     if (!/^[a-zA-Z0-9_-]+$/.test(id)) {
@@ -155,11 +158,12 @@ export function setupRoutes(app, manager) {
       { file: path.join(AUDIO_DIR, `tts_${id}.mp3`), type: 'audio/mpeg' },
     ];
     for (const candidate of candidates) {
-      if (fs.existsSync(candidate.file)) {
+      try {
+        await fs.promises.access(candidate.file);
         res.setHeader('Content-Type', candidate.type);
         res.sendFile(candidate.file);
         return;
-      }
+      } catch { /* try next candidate */ }
     }
     res.status(404).json({ error: 'Audio not found' });
   });

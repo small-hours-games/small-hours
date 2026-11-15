@@ -49,11 +49,16 @@ export async function loadGames(dir = GAMES_DIR) {
 
 const GAMES = await loadGames();
 const BUILTIN_IDS = new Set(GAMES.keys());
+let catalogVersion = 0;
 
 for (const spec of await loadCustomGames()) {
   if (spec.enabled && !BUILTIN_IDS.has(spec.id)) {
     GAMES.set(spec.id, { ...buildCustomGameDefinition(spec), isCustom: true });
   }
+}
+
+export function getCatalogVersion() {
+  return catalogVersion;
 }
 
 export function isBuiltInGame(id) {
@@ -63,12 +68,15 @@ export function isBuiltInGame(id) {
 export function registerDynamicGame(game) {
   if (!game || !game.id || BUILTIN_IDS.has(game.id)) return false;
   GAMES.set(game.id, { ...game, isCustom: true });
+  catalogVersion += 1;
   return true;
 }
 
 export function unregisterDynamicGame(id) {
   if (BUILTIN_IDS.has(id)) return false;
-  return GAMES.delete(id);
+  const deleted = GAMES.delete(id);
+  if (deleted) catalogVersion += 1;
+  return deleted;
 }
 
 export function getGame(id) {

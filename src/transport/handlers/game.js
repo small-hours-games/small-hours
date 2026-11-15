@@ -220,6 +220,26 @@ export function applyGameAction(room, action, ctx) {
 }
 
 /**
+ * Cancel all active timers for a room's running game and reset its game state.
+ * Safe to call even if some timers or state are already cleared.
+ *
+ * @param {object} room
+ * @param {object} ctx
+ */
+export function stopRoomGame(room, ctx) {
+  if (ctx.stopRoomGame) {
+    ctx.stopRoomGame(room);
+    return;
+  }
+  ctx.cancelPhaseTimer?.(room.code);
+  ctx.cancelRoundCountdown?.(room.code);
+  ctx.cancelBotTurn?.(room.code);
+  ctx.roomGameTypes?.delete(room.code);
+  room.surrendered?.clear();
+  room.endGame();
+}
+
+/**
  * End a finished game: final views, session scores, back to lobby.
  * Shared by player actions (handleGameAction) and phase timers (ws-adapter).
  *
@@ -228,7 +248,7 @@ export function applyGameAction(room, action, ctx) {
  * @param {object} ctx
  */
 export function finishGame(room, endResult, ctx) {
-  const { broadcastToRoom, sendToPlayer, roomGameTypes, cancelPhaseTimer, getPlayerNames } = ctx;
+  const { broadcastToRoom, sendToPlayer, getPlayerNames } = ctx;
   const playerNames = getPlayerNames(room);
 
   // Award standardized session points across all games so every game uses the same scale.
@@ -239,7 +259,6 @@ export function finishGame(room, endResult, ctx) {
   } catch (err) {
     console.error('[score] failed to award session scores:', err.message);
   }
-  room.surrendered?.clear();
 
   // Send final views with end result + session points awarded
   for (const [id] of room.players) {
@@ -254,11 +273,7 @@ export function finishGame(room, endResult, ctx) {
     playerNames,
   }, { hostsOnly: true });
 
-  room.endGame();
-  ctx.cancelRoundCountdown?.(room.code);
-  cancelPhaseTimer(room.code);
-  ctx.cancelBotTurn?.(room.code);
-  roomGameTypes.delete(room.code);
+  stopRoomGame(room, ctx);
   broadcastToRoom(room.code, { type: 'LOBBY_UPDATE', state: room.getState() });
 }
 
@@ -267,7 +282,7 @@ export function finishGame(room, endResult, ctx) {
  * If no other human players remain (only AI bots or solo), returns everyone to lobby.
  */
 export function handleSurrender(ws, meta, room, _msg, ctx) {
-  const { send, broadcastToRoom, cancelPhaseTimer, roomGameTypes } = ctx;
+  const { send, broadcastToRoom } = ctx;
 
   if (!meta.playerId) {
     send(ws, { type: 'ERROR', message: 'Not joined yet' });
@@ -279,11 +294,7 @@ export function handleSurrender(ws, meta, room, _msg, ctx) {
     return;
   }
   if (!room.game) {
-    cancelPhaseTimer(room.code);
-    ctx.cancelRoundCountdown?.(room.code);
-    ctx.cancelBotTurn?.(room.code);
-    roomGameTypes.delete(room.code);
-    room.surrendered?.clear();
+    stopRoomGame(room, ctx);
     broadcastToRoom(room.code, {
       type: 'SURRENDER_LOBBY',
       playerId: meta.playerId,
@@ -303,12 +314,7 @@ export function handleSurrender(ws, meta, room, _msg, ctx) {
 
   // Solo or only AI bots remain: return straight to the lobby
   if (remainingHumanIds.length === 0) {
-    room.surrendered.clear();
-    cancelPhaseTimer(room.code);
-    ctx.cancelRoundCountdown?.(room.code);
-    ctx.cancelBotTurn?.(room.code);
-    roomGameTypes.delete(room.code);
-    room.endGame();
+    stopRoomGame(room, ctx);
     broadcastToRoom(room.code, {
       type: 'SURRENDER_LOBBY',
       playerId: meta.playerId,

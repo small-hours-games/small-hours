@@ -5,13 +5,14 @@
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { listGames, publicGames } from './registry.js';
+import { getCatalogVersion, listGames, publicGames } from './registry.js';
 import { isGameVisibleInLobby } from './visibility.js';
 import { publicPersonas } from '../engine/bots/personas.js';
 
 export const GAMES_DIR = fileURLToPath(new URL('../../games/', import.meta.url));
 
 const clientDir = id => join(GAMES_DIR, id, 'client');
+const fragmentCache = new Map();
 
 function scriptsFor(id, screen) {
   const dir = clientDir(id);
@@ -19,8 +20,11 @@ function scriptsFor(id, screen) {
   return [...lib, `${screen}.js`].filter(f => existsSync(join(dir, f))).map(f => `/games/${id}/${f}`);
 }
 
-/** Fill in the plugin markers of host.html ('tv') or player.html ('phone'). */
-export function renderGamePage(html, screen) {
+function getPageFragments(screen) {
+  const version = getCatalogVersion();
+  const cached = fragmentCache.get(screen);
+  if (cached && cached.version === version) return cached;
+
   const games = listGames().filter(g => isGameVisibleInLobby(g));
   const dynamicAliases = games
     .filter(g => g.isCustom && (g.kind === 'card-rules' || g.kind === 'card-remote' || g.kind === 'quiz'))
@@ -39,6 +43,15 @@ export function renderGamePage(html, screen) {
   const sections = screen === 'phone'
     ? [...games.map(g => join(clientDir(g.id), 'phone.html')).filter(existsSync).map(f => readFileSync(f, 'utf8')), ...apiCardSection].join('\n')
     : '';
+
+  const entry = { version, catalog, styles, sections, scripts };
+  fragmentCache.set(screen, entry);
+  return entry;
+}
+
+/** Fill in the plugin markers of host.html ('tv') or player.html ('phone'). */
+export function renderGamePage(html, screen) {
+  const { catalog, styles, sections, scripts } = getPageFragments(screen);
   return html
     .replace('<!-- game-catalog -->', () => catalog)
     .replace('<!-- game-styles -->', () => styles)

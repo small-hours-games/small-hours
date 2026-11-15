@@ -59,12 +59,13 @@ export function setupWebSocket(server, manager) {
   }
 
   function broadcastToRoom(code, message, { hostsOnly = false } = {}) {
+    const sockets = roomSockets.get(code);
+    if (!sockets || sockets.size === 0) return;
     const payload = JSON.stringify(message);
-    for (const [ws, meta] of socketMeta) {
-      if (meta.roomCode === code && ws.readyState === ws.OPEN) {
-        if (hostsOnly && meta.role !== 'host') continue;
-        ws.send(payload);
-      }
+    for (const ws of sockets) {
+      if (ws.readyState !== ws.OPEN) continue;
+      if (hostsOnly && socketMeta.get(ws)?.role !== 'host') continue;
+      ws.send(payload);
     }
   }
 
@@ -127,9 +128,7 @@ export function setupWebSocket(server, manager) {
       } catch (err) {
         // A throwing timer used to leave the game frozen forever. End it instead.
         console.error(`[timer] ${gameType} ${phase} failed in room ${room.code}:`, err);
-        cancelPhaseTimer(room.code);
-        roomGameTypes.delete(room.code);
-        room.endGame();
+        stopRoomGame(room);
         broadcastToRoom(room.code, { type: 'ERROR', message: 'The game hit a problem and was stopped' });
         broadcastToRoom(room.code, { type: 'LOBBY_UPDATE', state: room.getState() });
       }
@@ -203,6 +202,15 @@ export function setupWebSocket(server, manager) {
       clearTimeout(existing);
       roundCountdowns.delete(roomCode);
     }
+  }
+
+  function stopRoomGame(room) {
+    cancelPhaseTimer(room.code);
+    cancelRoundCountdown(room.code);
+    cancelBotTurn(room.code);
+    roomGameTypes.delete(room.code);
+    room.surrendered?.clear();
+    room.endGame();
   }
 
   function startRoundCountdown(room, gameType, round = 1) {
@@ -317,8 +325,15 @@ export function setupWebSocket(server, manager) {
   // --- Connection handling ---
 
   wss.on('connection', (ws, req) => {
-    const url = new URL(req.url, `http://${req.headers.host}`);
-    const pathParts = url.pathname.split('/').filter(Boolean);
+    let pathname;
+    try {
+      pathname = new URL(req.url || '/', 'http://localhost').pathname;
+    } catch {
+      send(ws, { type: 'ERROR', message: 'Invalid connection path' });
+      ws.close(4000, 'Invalid path');
+      return;
+    }
+    const pathParts = pathname.split('/').filter(Boolean);
     // Expected: /ws/host/:code or /ws/player/:code
     if (pathParts.length < 3 || pathParts[0] !== 'ws') {
       send(ws, { type: 'ERROR', message: 'Invalid connection path' });
@@ -438,6 +453,7 @@ export function setupWebSocket(server, manager) {
       cancelBotTurn,
       startRoundCountdown,
       cancelRoundCountdown,
+      stopRoomGame,
       getPlayerNames,
       checkChatRateLimit,
     };
@@ -564,12 +580,7 @@ export function setupWebSocket(server, manager) {
         room.removePlayer(playerId);
         room.surrendered?.delete(playerId);
         if (room.game && !hasActiveHuman()) {
-          room.surrendered?.clear();
-          cancelPhaseTimer(room.code);
-          cancelRoundCountdown(room.code);
-          cancelBotTurn(room.code);
-          roomGameTypes.delete(room.code);
-          room.endGame();
+          stopRoomGame(room);
           broadcastToRoom(room.code, {
             type: 'SURRENDER_LOBBY',
             playerId,

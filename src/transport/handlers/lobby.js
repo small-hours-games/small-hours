@@ -2,6 +2,7 @@
 
 import { getView } from '../../engine/engine.js';
 import { AVATAR_POOL } from '../../session/room.js';
+import { stopRoomGame } from './game.js';
 
 /**
  * Handle JOIN_LOBBY message — join as a new player or reconnect as existing player.
@@ -122,7 +123,7 @@ export function handleSuggestGame(ws, meta, room, msg, ctx) {
  * @param {object} ctx
  */
 export function handleReturnToLobby(ws, meta, room, msg, ctx) {
-  const { send, broadcastToRoom, cancelPhaseTimer, roomGameTypes } = ctx;
+  const { send, broadcastToRoom } = ctx;
 
   if (!meta.playerId) {
     send(ws, { type: 'ERROR', message: 'Not joined yet' });
@@ -135,11 +136,7 @@ export function handleReturnToLobby(ws, meta, room, msg, ctx) {
     return;
   }
 
-  cancelPhaseTimer(room.code);
-  ctx.cancelRoundCountdown?.(room.code);
-  ctx.cancelBotTurn?.(room.code);
-  roomGameTypes.delete(room.code);
-  room.endGame();
+  stopRoomGame(room, ctx);
   broadcastToRoom(room.code, { type: 'LOBBY_UPDATE', state: room.getState() });
 }
 
