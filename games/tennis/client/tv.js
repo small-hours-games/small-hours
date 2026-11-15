@@ -255,17 +255,136 @@
     sim.aiServeDelay = 1.05;
   }
 
+  function createCourtTexture(THREE) {
+    const c = document.createElement('canvas');
+    c.width = 512;
+    c.height = 1024;
+    const ctx = c.getContext('2d');
+    const grad = ctx.createLinearGradient(0, 0, 0, 1024);
+    grad.addColorStop(0, '#163d9c');
+    grad.addColorStop(0.5, '#1d4ed8');
+    grad.addColorStop(1, '#163d9c');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, 512, 1024);
+    // Subtle acrylic court grain
+    ctx.fillStyle = 'rgba(255,255,255,0.025)';
+    for (let i = 0; i < 1600; i++) {
+      ctx.fillRect((i * 73) % 512, (i * 139) % 1024, 2, 2);
+    }
+    const tex = new THREE.CanvasTexture(c);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    return tex;
+  }
+
+  function drawLogoOnCanvas(ctx, tex, x, y, w, h) {
+    const img = new Image();
+    img.onload = () => {
+      ctx.drawImage(img, x, y, w, h);
+      tex.needsUpdate = true;
+    };
+    img.src = '/images/smallhours-logo-light.svg';
+  }
+
+  function createApronTexture(THREE) {
+    const c = document.createElement('canvas');
+    c.width = 1024;
+    c.height = 1024;
+    const ctx = c.getContext('2d');
+    const grad = ctx.createRadialGradient(512, 512, 120, 512, 512, 680);
+    grad.addColorStop(0, '#0c4a3e');
+    grad.addColorStop(1, '#072428');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, 1024, 1024);
+
+    const tex = new THREE.CanvasTexture(c);
+    tex.colorSpace = THREE.SRGBColorSpace;
+
+    const img = new Image();
+    img.onload = () => {
+      ctx.save();
+      ctx.globalAlpha = 0.88;
+      ctx.drawImage(img, 512 - 140, 120, 280, 64);
+      ctx.translate(512, 872);
+      ctx.rotate(Math.PI);
+      ctx.drawImage(img, -140, -32, 280, 64);
+      ctx.restore();
+      tex.needsUpdate = true;
+    };
+    img.src = '/images/smallhours-logo-light.svg';
+    return tex;
+  }
+
+  function createNetTexture(THREE) {
+    const c = document.createElement('canvas');
+    c.width = 128;
+    c.height = 64;
+    const ctx = c.getContext('2d');
+    ctx.clearRect(0, 0, 128, 64);
+    ctx.strokeStyle = 'rgba(226, 232, 240, 0.72)';
+    ctx.lineWidth = 2;
+    for (let x = 0; x <= 128; x += 8) {
+      ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, 64); ctx.stroke();
+    }
+    for (let y = 0; y <= 64; y += 8) {
+      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(128, y); ctx.stroke();
+    }
+    const tex = new THREE.CanvasTexture(c);
+    tex.wrapS = THREE.RepeatWrapping;
+    tex.wrapT = THREE.RepeatWrapping;
+    tex.repeat.set(16, 3);
+    return tex;
+  }
+
+  function createBannerTexture(THREE) {
+    const c = document.createElement('canvas');
+    c.width = 1024;
+    c.height = 128;
+    const ctx = c.getContext('2d');
+    ctx.fillStyle = '#0b1530';
+    ctx.fillRect(0, 0, 1024, 128);
+    const cols = ['#38bdf8', '#a78bfa', '#fb7185', '#facc15'];
+    cols.forEach((col, i) => {
+      ctx.fillStyle = col;
+      ctx.fillRect(i * 256, 0, 256, 8);
+    });
+
+    const tex = new THREE.CanvasTexture(c);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    drawLogoOnCanvas(ctx, tex, 140, 22, 350, 80);
+    drawLogoOnCanvas(ctx, tex, 540, 22, 350, 80);
+    return tex;
+  }
+
+  function spawnBounceRing(x, z, inBounds) {
+    if (!threeApp) return;
+    const THREE = threeApp.THREE;
+    const ring = new THREE.Mesh(
+      new THREE.RingGeometry(0.14, 0.24, 20),
+      new THREE.MeshBasicMaterial({
+        color: inBounds ? 0xfacc15 : 0xfb7185,
+        transparent: true,
+        opacity: 0.9,
+        side: THREE.DoubleSide,
+      })
+    );
+    ring.rotation.x = -Math.PI / 2;
+    ring.position.set(x, 0.03, z);
+    ring.userData.life = 0.42;
+    threeApp.scene.add(ring);
+    threeApp.bounceRings.push(ring);
+  }
+
   function initThreeScene(THREE, container, msg) {
     const w = container.clientWidth || 1280;
     const h = container.clientHeight || 720;
 
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x0b162c);
-    scene.fog = new THREE.Fog(0x0b162c, 36, 95);
+    scene.background = new THREE.Color(0x0b1530);
+    scene.fog = new THREE.Fog(0x0b1530, 38, 95);
 
-    const camera = new THREE.PerspectiveCamera(48, w / h, 0.1, 140);
-    camera.position.set(0, 8.8, HALF_L + 9.2);
-    camera.lookAt(0, 0.8, 0);
+    const camera = new THREE.PerspectiveCamera(44, w / h, 0.1, 140);
+    camera.position.set(HALF_W + 14.5, 10.2, 0);
+    camera.lookAt(0, 0.7, 0);
 
     const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
     renderer.setSize(w, h);
@@ -274,8 +393,8 @@
     container.innerHTML = '';
     container.appendChild(renderer.domElement);
 
-    // Lighting
-    scene.add(new THREE.AmbientLight(0xdbeafe, 0.85));
+    // Night-stadium lighting
+    scene.add(new THREE.HemisphereLight(0xbae6fd, 0x0b1530, 0.78));
     const sun = new THREE.DirectionalLight(0xfffbeb, 1.35);
     sun.position.set(10, 22, 12);
     sun.castShadow = true;
@@ -286,24 +405,52 @@
     sun.shadow.camera.bottom = -18;
     scene.add(sun);
 
-    // Outer stadium apron
+    const rimLight = new THREE.DirectionalLight(0x38bdf8, 0.45);
+    rimLight.position.set(-14, 12, -16);
+    scene.add(rimLight);
+
+    // Outer stadium apron with Smallhours baseline branding
     const apron = new THREE.Mesh(
       new THREE.PlaneGeometry(34, 46),
-      new THREE.MeshStandardMaterial({ color: 0x0f5132, roughness: 0.88 })
+      new THREE.MeshStandardMaterial({ map: createApronTexture(THREE), roughness: 0.88 })
     );
     apron.rotation.x = -Math.PI / 2;
     apron.receiveShadow = true;
     scene.add(apron);
 
-    // Inner blue hardcourt
+    // Inner blue hardcourt with acrylic sheen
     const court = new THREE.Mesh(
       new THREE.PlaneGeometry(COURT_W, COURT_L),
-      new THREE.MeshStandardMaterial({ color: 0x1d4ed8, roughness: 0.72 })
+      new THREE.MeshStandardMaterial({ map: createCourtTexture(THREE), roughness: 0.65 })
     );
     court.rotation.x = -Math.PI / 2;
     court.position.y = 0.01;
     court.receiveShadow = true;
     scene.add(court);
+
+    // Stadium perimeter Smallhours boards (far sideline + both baselines; near sideline open for broadcast camera)
+    const bannerTex = createBannerTexture(THREE);
+    const boardMat = new THREE.MeshStandardMaterial({ map: bannerTex, emissive: 0x1e293b, emissiveIntensity: 0.35, roughness: 0.5 });
+    const farSideBoard = new THREE.Mesh(new THREE.BoxGeometry(0.25, 1.5, 24), boardMat);
+    farSideBoard.position.set(-(HALF_W + 4.4), 0.75, 0);
+    scene.add(farSideBoard);
+    for (const sz of [-1, 1]) {
+      const endBoard = new THREE.Mesh(new THREE.BoxGeometry(14, 1.4, 0.25), boardMat);
+      endBoard.position.set(0, 0.7, sz * (HALF_L + 4.6));
+      scene.add(endBoard);
+    }
+
+    const poleMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, metalness: 0.6, roughness: 0.4 });
+    const lampMat = new THREE.MeshBasicMaterial({ color: 0xfef9c3 });
+    for (const [tx, tz] of [[-13, -18], [13, -18], [-13, 18], [13, 18]]) {
+      const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.24, 12, 8), poleMat);
+      pole.position.set(tx, 6, tz);
+      scene.add(pole);
+      const lamp = new THREE.Mesh(new THREE.BoxGeometry(2.0, 0.7, 0.35), lampMat);
+      lamp.position.set(tx, 12, tz);
+      lamp.lookAt(0, 0, 0);
+      scene.add(lamp);
+    }
 
     // Court white lines
     const lineMat = new THREE.MeshBasicMaterial({ color: 0xf8fafc });
@@ -321,28 +468,53 @@
     addLine(0, -6.4, COURT_W, 0.1);
     addLine(0, 0, 0.1, 12.8);
 
-    // Net & Posts
+    // Woven Net, Tape, Center Strap & Metallic Posts
     const netMesh = new THREE.Mesh(
-      new THREE.BoxGeometry(COURT_W + 1.2, NET_H, 0.06),
-      new THREE.MeshStandardMaterial({ color: 0xe2e8f0, transparent: true, opacity: 0.55, wireframe: false })
+      new THREE.BoxGeometry(COURT_W + 1.2, NET_H, 0.04),
+      new THREE.MeshStandardMaterial({ map: createNetTexture(THREE), transparent: true, opacity: 0.88 })
     );
     netMesh.position.set(0, NET_H / 2, 0);
     scene.add(netMesh);
     const netTape = new THREE.Mesh(new THREE.BoxGeometry(COURT_W + 1.2, 0.08, 0.09), lineMat);
     netTape.position.set(0, NET_H, 0);
     scene.add(netTape);
+    const centerStrap = new THREE.Mesh(
+      new THREE.BoxGeometry(0.14, NET_H, 0.08),
+      new THREE.MeshBasicMaterial({ color: 0xfacc15 })
+    );
+    centerStrap.position.set(0, NET_H / 2, 0);
+    scene.add(centerStrap);
+    for (const px of [-(HALF_W + 0.6), HALF_W + 0.6]) {
+      const post = new THREE.Mesh(new THREE.CylinderGeometry(0.065, 0.075, NET_H + 0.14, 10), poleMat);
+      post.position.set(px, (NET_H + 0.14) / 2, 0);
+      scene.add(post);
+      const cap = new THREE.Mesh(new THREE.SphereGeometry(0.08, 10, 10), new THREE.MeshBasicMaterial({ color: 0x38bdf8 }));
+      cap.position.set(px, NET_H + 0.14, 0);
+      scene.add(cap);
+    }
 
-    // Ball + shadow
+    // Ball + motion trail + shadow
     const ballMesh = new THREE.Mesh(
       new THREE.SphereGeometry(0.18, 16, 16),
-      new THREE.MeshStandardMaterial({ color: 0xdfff00, emissive: 0x65a30d, emissiveIntensity: 0.25, roughness: 0.4 })
+      new THREE.MeshStandardMaterial({ color: 0xdfff00, emissive: 0x65a30d, emissiveIntensity: 0.3, roughness: 0.35 })
     );
     ballMesh.castShadow = true;
     scene.add(ballMesh);
 
+    const trailMeshes = [];
+    for (let i = 0; i < 5; i++) {
+      const tm = new THREE.Mesh(
+        new THREE.SphereGeometry(0.14 - i * 0.018, 10, 10),
+        new THREE.MeshBasicMaterial({ color: 0xdfff00, transparent: true, opacity: 0.36 - i * 0.065 })
+      );
+      tm.visible = false;
+      scene.add(tm);
+      trailMeshes.push(tm);
+    }
+
     const shadowMesh = new THREE.Mesh(
       new THREE.CircleGeometry(0.24, 16),
-      new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.35 })
+      new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.38 })
     );
     shadowMesh.rotation.x = -Math.PI / 2;
     shadowMesh.position.y = 0.025;
@@ -372,7 +544,7 @@
       };
     });
 
-    threeApp = { THREE, scene, camera, renderer, ballMesh, shadowMesh, sparks: [] };
+    threeApp = { THREE, scene, camera, renderer, ballMesh, trailMeshes, trailHistory: [], shadowMesh, sparks: [], bounceRings: [] };
     sim = {
       phase: 'serve_wait',
       serverId: msg.serverId || players[0],
@@ -412,6 +584,19 @@
       if (s.userData.life <= 0) {
         threeApp.scene.remove(s);
         threeApp.sparks.splice(i, 1);
+      }
+    }
+
+    // Update bounce rings
+    for (let i = threeApp.bounceRings.length - 1; i >= 0; i--) {
+      const r = threeApp.bounceRings[i];
+      r.userData.life -= dt;
+      const p = 1 - Math.max(0, r.userData.life / 0.42);
+      r.scale.setScalar(1 + p * 2.4);
+      r.material.opacity = Math.max(0, (1 - p) * 0.85);
+      if (r.userData.life <= 0) {
+        threeApp.scene.remove(r);
+        threeApp.bounceRings.splice(i, 1);
       }
     }
 
@@ -498,6 +683,7 @@
         window.SH_TENNIS_AUDIO?.bounce();
 
         const inBounds = Math.abs(sim.ball.pos.x) <= HALF_W + 0.18 && Math.abs(sim.ball.pos.z) <= HALF_L + 0.18;
+        spawnBounceRing(sim.ball.pos.x, sim.ball.pos.z, inBounds);
         if (sim.ball.bounces === 1 && !inBounds) {
           const winnerId = sim.ball.lastHitter === p1?.id ? p2?.id : p1?.id;
           if (winnerId) awardPoint(winnerId, 'OUT!');
@@ -519,20 +705,32 @@
     }
 
     threeApp.ballMesh.position.copy(sim.ball.pos);
+    if (sim.phase === 'rally' || sim.phase === 'serve_toss') {
+      threeApp.trailHistory.unshift(sim.ball.pos.clone());
+      if (threeApp.trailHistory.length > threeApp.trailMeshes.length * 2) threeApp.trailHistory.pop();
+      threeApp.trailMeshes.forEach((tm, idx) => {
+        const pt = threeApp.trailHistory[(idx + 1) * 2 - 1];
+        if (pt) { tm.position.copy(pt); tm.visible = true; }
+        else tm.visible = false;
+      });
+    } else {
+      threeApp.trailHistory.length = 0;
+      threeApp.trailMeshes.forEach(tm => { tm.visible = false; });
+    }
     threeApp.shadowMesh.position.set(sim.ball.pos.x, 0.025, sim.ball.pos.z);
     threeApp.shadowMesh.scale.setScalar(Math.max(0.4, 1 - sim.ball.pos.y * 0.15));
 
     const radarBall = document.getElementById('tnRadarBall');
     if (radarBall) {
-      const rx = Math.max(4, Math.min(96, 50 + (sim.ball.pos.x / HALF_W) * 44));
-      const ry = Math.max(4, Math.min(96, 50 + (sim.ball.pos.z / HALF_L) * 44));
+      const rx = Math.max(4, Math.min(96, 50 - (sim.ball.pos.z / HALF_L) * 44));
+      const ry = Math.max(4, Math.min(96, 50 + (sim.ball.pos.x / HALF_W) * 44));
       radarBall.style.left = `${rx.toFixed(1)}%`;
       radarBall.style.top = `${ry.toFixed(1)}%`;
     }
 
-    // Smoothly track rally on camera
-    threeApp.camera.position.x += (sim.ball.pos.x * 0.28 - threeApp.camera.position.x) * 0.08;
-    threeApp.camera.lookAt(sim.ball.pos.x * 0.2, 0.8, 0);
+    // Smoothly track rally along the court length on the broadcast camera
+    threeApp.camera.position.z += (sim.ball.pos.z * 0.22 - threeApp.camera.position.z) * 0.08;
+    threeApp.camera.lookAt(0, 0.7, sim.ball.pos.z * 0.16);
 
     threeApp.renderer.render(threeApp.scene, threeApp.camera);
   }
@@ -595,7 +793,7 @@
               </div>
               <div class="tn-pts" id="tnScoreP1">0</div>
             </div>
-            <div class="tn-vs-badge">SMALL HOURS TENNIS • BEST OF ${msg.bestOf || 3}</div>
+            <div class="tn-vs-badge"><img src="/images/smallhours-logo-light.svg" alt="Smallhours" class="tn-brand-logo" /><span>BEST OF ${msg.bestOf || 3}</span></div>
             <div class="tn-player-pill tn-p2">
               <div class="tn-pts" id="tnScoreP2">0</div>
               <div>

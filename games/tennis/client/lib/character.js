@@ -25,6 +25,27 @@
     collar.position.y = 1.24;
     root.add(collar);
 
+    // Smallhours chest stripe & grounded shadow ring
+    const stripe = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.328, 0.328, 0.09, 16, 1, true),
+      new THREE.MeshStandardMaterial({ color: isNear ? 0x38bdf8 : 0xfb7185, roughness: 0.35, side: THREE.DoubleSide })
+    );
+    stripe.position.y = 0.96;
+    root.add(stripe);
+
+    const groundRing = new THREE.Mesh(
+      new THREE.RingGeometry(0.28, 0.42, 24),
+      new THREE.MeshBasicMaterial({
+        color: isNear ? 0x38bdf8 : 0xfb7185,
+        transparent: true,
+        opacity: 0.45,
+        side: THREE.DoubleSide,
+      })
+    );
+    groundRing.rotation.x = -Math.PI / 2;
+    groundRing.position.y = 0.02;
+    root.add(groundRing);
+
     // Shoes
     const shoeGeo = new THREE.BoxGeometry(0.18, 0.11, 0.3);
     const shoeL = new THREE.Mesh(shoeGeo, shoeMat);

@@ -111,16 +111,50 @@
 }
 
 .tn-vs-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   padding: 7px 16px;
   border-radius: 999px;
-  background: rgba(15, 23, 42, 0.85);
-  border: 1px solid rgba(56, 189, 248, 0.4);
-  color: #bae6fd;
+  background: rgba(11, 21, 48, 0.9);
+  border: 1px solid rgba(56, 189, 248, 0.45);
+  box-shadow: 0 4px 16px rgba(11, 21, 48, 0.45);
+  color: #e0f2fe;
   font-size: 0.76rem;
   font-weight: 800;
   letter-spacing: 0.06em;
   text-align: center;
   white-space: nowrap;
+}
+
+.tn-brand-mark {
+  width: 20px;
+  height: 20px;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+.tn-brand-logo {
+  height: 22px;
+  width: auto;
+  display: block;
+  flex-shrink: 0;
+}
+
+.tn-phone-brand-bar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: rgba(11, 21, 48, 0.88);
+  border: 1px solid rgba(250, 204, 21, 0.35);
+  color: #f8fafc;
+  font-size: 0.68rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  justify-self: center;
 }
 
 .tn-stage-wrap {
@@ -137,16 +171,16 @@
   height: 100%;
 }
 
-/* CSS-Animated Overhead Court Radar */
+/* CSS-Animated Overhead Court Radar (horizontal broadcast orientation) */
 .tn-court-radar {
   position: absolute;
   right: 14px;
   bottom: 14px;
-  width: 96px;
-  height: 148px;
+  width: 148px;
+  height: 88px;
   border-radius: 10px;
-  padding: 8px;
-  background: linear-gradient(180deg, #065f46 0%, #047857 100%);
+  padding: 7px;
+  background: linear-gradient(90deg, #065f46 0%, #047857 100%);
   border: 2px solid rgba(255, 255, 255, 0.55);
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.45);
   pointer-events: none;
@@ -164,34 +198,34 @@
 .tn-radar-court::before {
   content: '';
   position: absolute;
-  left: 0;
-  right: 0;
-  top: 50%;
-  height: 3px;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 3px;
   background: #f8fafc;
-  transform: translateY(-50%);
+  transform: translateX(-50%);
   animation: tnNetShimmer 1.8s ease-in-out infinite;
 }
 
 .tn-radar-court::after {
   content: '';
   position: absolute;
-  left: 50%;
-  top: 22%;
-  bottom: 22%;
-  width: 1.5px;
+  top: 50%;
+  left: 22%;
+  right: 22%;
+  height: 1.5px;
   background: rgba(248, 250, 252, 0.75);
-  transform: translateX(-50%);
+  transform: translateY(-50%);
 }
 
 .tn-radar-service {
   position: absolute;
-  left: 0;
-  right: 0;
-  top: 22%;
-  bottom: 22%;
-  border-top: 1.5px solid rgba(248, 250, 252, 0.75);
-  border-bottom: 1.5px solid rgba(248, 250, 252, 0.75);
+  top: 0;
+  bottom: 0;
+  left: 22%;
+  right: 22%;
+  border-left: 1.5px solid rgba(248, 250, 252, 0.75);
+  border-right: 1.5px solid rgba(248, 250, 252, 0.75);
 }
 
 .tn-radar-ball {
@@ -269,8 +303,8 @@
 /* Phone Racket Responsive Grid UI */
 .tn-phone-wrap {
   display: grid;
-  grid-template-rows: auto auto minmax(190px, 1fr) auto;
-  gap: 10px;
+  grid-template-rows: auto auto auto minmax(190px, 1fr) auto;
+  gap: 8px;
   padding: 4px 0;
 }
 

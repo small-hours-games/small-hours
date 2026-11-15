@@ -112,14 +112,47 @@
 }
 
 .rn-speed-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   padding: 7px 14px;
   border-radius: 999px;
-  background: rgba(15, 7, 36, 0.88);
-  border: 1px solid rgba(34, 211, 238, 0.45);
-  color: #22d3ee;
+  background: rgba(11, 21, 48, 0.9);
+  border: 1px solid rgba(56, 189, 248, 0.45);
+  color: #38bdf8;
   font-weight: 800;
   font-size: 0.82rem;
   white-space: nowrap;
+}
+
+.rn-brand-mark {
+  width: 20px;
+  height: 20px;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+.rn-brand-logo {
+  height: 22px;
+  width: auto;
+  display: block;
+  flex-shrink: 0;
+}
+
+.rn-phone-brand-bar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: rgba(11, 21, 48, 0.88);
+  border: 1px solid rgba(167, 139, 250, 0.4);
+  color: #f8fafc;
+  font-size: 0.68rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  justify-self: center;
 }
 
 .rn-stage-wrap {
@@ -206,8 +239,8 @@
 /* Phone Responsive Grid Controller */
 .rn-phone-wrap {
   display: grid;
-  grid-template-rows: auto auto minmax(175px, 1fr) auto;
-  gap: 10px;
+  grid-template-rows: auto auto auto minmax(175px, 1fr) auto;
+  gap: 8px;
   padding: 4px 0;
 }
 

@@ -5,7 +5,8 @@
   const LANE_W = 2.2;
   const LANES = [-2, -1, 0, 1, 2];
   const WORD = ['H', 'O', 'U', 'R', 'S'];
-  const WORD_COLORS = ['#38bdf8', '#f43f5e', '#facc15', '#22d3ee', '#4ade80'];
+  const WORD_COLORS = ['#38bdf8', '#a78bfa', '#fb7185', '#facc15', '#38bdf8'];
+  const BRAND_HEX = [0x38bdf8, 0xa78bfa, 0xfb7185, 0xfacc15];
 
   let sim = null;
   let lastMsg = null;
@@ -124,15 +125,22 @@
     legR.position.set(0.13, 0.26, 0);
     group.add(legL, legR);
 
+    const armGeo = new THREE.CapsuleGeometry(0.065, 0.24, 4, 8);
+    const armL = new THREE.Mesh(armGeo, rimMat);
+    armL.position.set(-0.34, 0.84, 0);
+    const armR = new THREE.Mesh(armGeo, rimMat);
+    armR.position.set(0.34, 0.84, 0);
+    group.add(armL, armR);
+
     const aura = new THREE.Mesh(
-      new THREE.RingGeometry(0.36, 0.5, 24),
-      new THREE.MeshBasicMaterial({ color: meta.rim, side: THREE.DoubleSide, transparent: true, opacity: 0.75 })
+      new THREE.RingGeometry(0.36, 0.52, 24),
+      new THREE.MeshBasicMaterial({ color: meta.rim, side: THREE.DoubleSide, transparent: true, opacity: 0.78 })
     );
     aura.rotation.x = -Math.PI / 2;
     aura.position.y = 0.04;
     group.add(aura);
 
-    return { group, legL, legR, meta };
+    return { group, legL, legR, armL, armR, aura, meta };
   }
 
   function createLetterTexture(THREE, letter, color) {
@@ -157,13 +165,95 @@
     return tex;
   }
 
+  function createSunTexture(THREE) {
+    const c = document.createElement('canvas');
+    c.width = 512;
+    c.height = 512;
+    const ctx = c.getContext('2d');
+    const grad = ctx.createLinearGradient(0, 40, 0, 472);
+    grad.addColorStop(0, '#facc15');
+    grad.addColorStop(0.48, '#fb7185');
+    grad.addColorStop(1, '#a78bfa');
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.arc(256, 256, 232, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Synthwave horizontal scanline cuts
+    ctx.globalCompositeOperation = 'destination-out';
+    for (let i = 0; i < 6; i++) {
+      const y = 265 + i * 32;
+      const h = 4 + i * 2.4;
+      ctx.fillRect(0, y, 512, h);
+    }
+    ctx.globalCompositeOperation = 'source-over';
+
+    // Smallhours Crescent Moon emblem inside the sun
+    ctx.fillStyle = '#0b1530';
+    ctx.beginPath();
+    ctx.arc(244, 175, 48, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#facc15';
+    ctx.beginPath();
+    ctx.arc(266, 158, 40, 0, Math.PI * 2);
+    ctx.fill();
+
+    const tex = new THREE.CanvasTexture(c);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    return tex;
+  }
+
+  function createArchTexture(THREE) {
+    const c = document.createElement('canvas');
+    c.width = 512;
+    c.height = 96;
+    const ctx = c.getContext('2d');
+    ctx.fillStyle = '#0b1530';
+    ctx.fillRect(0, 0, 512, 96);
+    const cols = ['#38bdf8', '#a78bfa', '#fb7185', '#facc15'];
+    cols.forEach((col, i) => {
+      ctx.fillStyle = col;
+      ctx.fillRect(i * 128, 0, 128, 8);
+      ctx.fillRect(i * 128, 88, 128, 8);
+    });
+    const tex = new THREE.CanvasTexture(c);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    const img = new Image();
+    img.onload = () => {
+      ctx.drawImage(img, 106, 14, 300, 68);
+      tex.needsUpdate = true;
+    };
+    img.src = '/images/smallhours-logo-light.svg';
+    return tex;
+  }
+
+  function spawnRunnerSparks(x, y, z, colorHex) {
+    if (!threeApp) return;
+    const THREE = threeApp.THREE;
+    for (let i = 0; i < 9; i++) {
+      const m = new THREE.Mesh(
+        new THREE.OctahedronGeometry(0.11, 0),
+        new THREE.MeshBasicMaterial({ color: colorHex, transparent: true, opacity: 1 })
+      );
+      m.position.set(x, y, z);
+      m.userData.vel = new THREE.Vector3(
+        (Math.random() - 0.5) * 8,
+        Math.random() * 5 + 2,
+        (Math.random() - 0.5) * 6
+      );
+      m.userData.life = 0.38;
+      threeApp.scene.add(m);
+      threeApp.sparks.push(m);
+    }
+  }
+
   function initThreeScene(THREE, container, msg) {
     const w = container.clientWidth || 1280;
     const h = container.clientHeight || 720;
 
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x090318);
-    scene.fog = new THREE.FogExp2(0x090318, 0.014);
+    scene.background = new THREE.Color(0x0b1530);
+    scene.fog = new THREE.FogExp2(0x0b1530, 0.013);
 
     const camera = new THREE.PerspectiveCamera(60, w / h, 0.1, 160);
     camera.position.set(0, 5.4, 8.2);
@@ -175,41 +265,69 @@
     container.innerHTML = '';
     container.appendChild(renderer.domElement);
 
-    scene.add(new THREE.AmbientLight(0xe0e7ff, 0.9));
-    const dir = new THREE.DirectionalLight(0xf472b6, 1.3);
+    scene.add(new THREE.AmbientLight(0xe0e7ff, 0.95));
+    const dir = new THREE.DirectionalLight(0xfb7185, 1.25);
     dir.position.set(6, 16, 10);
     scene.add(dir);
+    const fill = new THREE.DirectionalLight(0x38bdf8, 0.65);
+    fill.position.set(-8, 10, 6);
+    scene.add(fill);
 
-    // Synthwave Horizon Sun
+    // Smallhours Synthwave Crescent Sun
     const sun = new THREE.Mesh(
-      new THREE.CircleGeometry(14, 32),
-      new THREE.MeshBasicMaterial({ color: 0xec4899, transparent: true, opacity: 0.78 })
+      new THREE.PlaneGeometry(34, 34),
+      new THREE.MeshBasicMaterial({ map: createSunTexture(THREE), transparent: true, depthWrite: false })
     );
-    sun.position.set(0, 10, -95);
+    sun.position.set(0, 12, -105);
     scene.add(sun);
 
     // Highway Floor + Neon Grid
     const floor = new THREE.Mesh(
       new THREE.PlaneGeometry(LANE_W * 5.6, 160),
-      new THREE.MeshStandardMaterial({ color: 0x12062b, roughness: 0.8 })
+      new THREE.MeshStandardMaterial({ color: 0x0b1530, roughness: 0.78 })
     );
     floor.rotation.x = -Math.PI / 2;
     floor.position.set(0, 0, -60);
     scene.add(floor);
 
-    const grid = new THREE.GridHelper(120, 48, 0x22d3ee, 0x6d28d9);
+    const grid = new THREE.GridHelper(120, 48, 0x38bdf8, 0xa78bfa);
     grid.position.set(0, 0.02, -50);
     scene.add(grid);
 
     // Lane divider lines
     for (let i = -2.5; i <= 2.5; i += 1) {
       const strip = new THREE.Mesh(
-        new THREE.PlaneGeometry(0.08, 150),
-        new THREE.MeshBasicMaterial({ color: Math.abs(i) === 2.5 ? 0xec4899 : 0x38bdf8, transparent: true, opacity: 0.55 })
+        new THREE.PlaneGeometry(Math.abs(i) === 2.5 ? 0.14 : 0.08, 150),
+        new THREE.MeshBasicMaterial({ color: Math.abs(i) === 2.5 ? 0xfb7185 : 0x38bdf8, transparent: true, opacity: 0.68 })
       );
       strip.rotation.x = -Math.PI / 2;
       strip.position.set(i * LANE_W, 0.03, -60);
       scene.add(strip);
+    }
+
+    // Trackside Smallhours Neon Pylons & Overhead Gates
+    const pylons = [];
+    const archTex = createArchTexture(THREE);
+    const pylonGeo = new THREE.BoxGeometry(0.28, 3.6, 0.28);
+    for (let i = 0; i < 10; i++) {
+      const z = -i * 12;
+      const col = BRAND_HEX[i % BRAND_HEX.length];
+      const mat = new THREE.MeshBasicMaterial({ color: col });
+      const leftP = new THREE.Mesh(pylonGeo, mat);
+      leftP.position.set(-LANE_W * 2.95, 1.8, z);
+      const rightP = new THREE.Mesh(pylonGeo, mat);
+      rightP.position.set(LANE_W * 2.95, 1.8, z);
+      scene.add(leftP, rightP);
+      let arch = null;
+      if (i % 5 === 0) {
+        arch = new THREE.Mesh(
+          new THREE.BoxGeometry(LANE_W * 6.2, 1.05, 0.28),
+          new THREE.MeshBasicMaterial({ map: archTex })
+        );
+        arch.position.set(0, 4.1, z);
+        scene.add(arch);
+      }
+      pylons.push({ leftP, rightP, arch, z });
     }
 
     // Starfield
@@ -250,7 +368,7 @@
     });
 
     const letterTextures = WORD.map((ch, idx) => createLetterTexture(THREE, ch, WORD_COLORS[idx]));
-    threeApp = { THREE, scene, camera, renderer, grid, letterTextures };
+    threeApp = { THREE, scene, camera, renderer, grid, pylons, sparks: [], letterTextures };
     sim = {
       speed: 21,
       distance: 0,
@@ -284,13 +402,21 @@
     const blocked = new Set(shuffled.slice(0, barrierCount));
 
     for (const lane of blocked) {
-      const mesh = new THREE.Mesh(
-        new THREE.BoxGeometry(LANE_W * 0.78, 1.35, 0.75),
-        new THREE.MeshStandardMaterial({ color: 0xf43f5e, emissive: 0xe11d48, emissiveIntensity: 0.65 })
+      const group = new THREE.Group();
+      const core = new THREE.Mesh(
+        new THREE.BoxGeometry(LANE_W * 0.74, 1.25, 0.55),
+        new THREE.MeshStandardMaterial({ color: 0x0b1530, roughness: 0.4, metalness: 0.3 })
       );
-      mesh.position.set(lane * LANE_W, 0.68, z);
-      threeApp.scene.add(mesh);
-      sim.items.push({ type: 'barrier', lane, z, mesh, active: true });
+      core.position.y = 0.63;
+      const topBar = new THREE.Mesh(
+        new THREE.BoxGeometry(LANE_W * 0.82, 0.22, 0.64),
+        new THREE.MeshBasicMaterial({ color: 0xfb7185 })
+      );
+      topBar.position.y = 1.28;
+      group.add(core, topBar);
+      group.position.set(lane * LANE_W, 0, z);
+      threeApp.scene.add(group);
+      sim.items.push({ type: 'barrier', lane, z, mesh: group, active: true });
     }
 
     // Spawn a gem or H-O-U-R-S letter in an open lane
@@ -351,8 +477,28 @@
       const dz = sim.speed * dt;
       sim.distance += dz;
 
-      // Scroll grid
+      // Scroll grid & trackside Smallhours pylons
       threeApp.grid.position.z = ((threeApp.grid.position.z + dz) % 2.5) - 50;
+      for (const p of threeApp.pylons) {
+        p.z += dz;
+        if (p.z > 10) p.z -= 120;
+        p.leftP.position.z = p.z;
+        p.rightP.position.z = p.z;
+        if (p.arch) p.arch.position.z = p.z;
+      }
+
+      // Update pickup/hit sparks
+      for (let i = threeApp.sparks.length - 1; i >= 0; i--) {
+        const s = threeApp.sparks[i];
+        s.userData.life -= dt;
+        s.position.addScaledVector(s.userData.vel, dt);
+        s.userData.vel.y -= 12 * dt;
+        s.material.opacity = Math.max(0, s.userData.life / 0.38);
+        if (s.userData.life <= 0) {
+          threeApp.scene.remove(s);
+          threeApp.sparks.splice(i, 1);
+        }
+      }
 
       // Spawn rows ahead
       while (sim.spawnZ > -95) {
@@ -394,17 +540,21 @@
           }
         }
 
-        // Smooth lane X + jump Y
+        // Smooth lane X + jump Y + tilt lean + arm/leg stride
         const targetX = r.lane * LANE_W;
-        r.x += (targetX - r.x) * Math.min(1, dt * 24);
+        const dx = targetX - r.x;
+        r.x += dx * Math.min(1, dt * 24);
         if (r.jumping) {
           r.y += r.vy * dt;
           r.vy -= 29 * dt;
           if (r.y <= 0) { r.y = 0; r.vy = 0; r.jumping = false; }
         }
         r.runPhase += dt * (sim.speed * 0.65);
-        r.rig.legL.rotation.x = Math.sin(r.runPhase) * 0.7;
-        r.rig.legR.rotation.x = -Math.sin(r.runPhase) * 0.7;
+        r.rig.legL.rotation.x = Math.sin(r.runPhase) * 0.72;
+        r.rig.legR.rotation.x = -Math.sin(r.runPhase) * 0.72;
+        if (r.rig.armL) r.rig.armL.rotation.x = -Math.sin(r.runPhase) * 0.65;
+        if (r.rig.armR) r.rig.armR.rotation.x = Math.sin(r.runPhase) * 0.65;
+        r.rig.group.rotation.z = Math.max(-0.28, Math.min(0.28, -dx * 0.14));
         r.rig.group.position.set(r.x, r.y, 0);
 
         // Collisions near z = 0
@@ -417,6 +567,7 @@
               it.active = false;
               r.lives -= 1;
               r.invuln = 1.4;
+              spawnRunnerSparks(r.x, r.y + 0.9, 0, 0xfb7185);
               window.SH_RUNNER_AUDIO?.hit();
               sendToPhone(r.id, { type: 'haptic', kind: 'hit' });
               if (r.lives <= 0) {
@@ -428,11 +579,13 @@
             it.active = false;
             r.gems += 1;
             r.score += 100;
+            spawnRunnerSparks(r.x, r.y + 1.0, 0, 0x38bdf8);
             window.SH_RUNNER_AUDIO?.gem();
             sendToPhone(r.id, { type: 'haptic', kind: 'gem' });
           } else if (it.type === 'letter') {
             it.active = false;
             r.score += 250;
+            spawnRunnerSparks(r.x, r.y + 1.1, 0, 0xfacc15);
             if (r.letters < WORD.length) r.letters += 1;
             if (r.letters >= WORD.length) {
               r.score += 1000;
@@ -476,7 +629,7 @@
 
   function updateHudDom() {
     if (!sim) return;
-    const sp = document.getElementById('rnSpeedPill');
+    const sp = document.getElementById('rnSpeedText');
     if (sp) sp.textContent = `${Math.round(sim.speed * 4)} KM/H • ${Math.round(sim.distance)}m`;
 
     for (const r of Object.values(sim.runners)) {
@@ -538,7 +691,7 @@
         <div class="rn-tv">
           <div class="rn-hud-top">
             <div class="rn-runners-row">${cardsHtml}</div>
-            <div id="rnSpeedPill" class="rn-speed-pill">84 KM/H • 0m</div>
+            <div id="rnSpeedPill" class="rn-speed-pill"><img src="/images/smallhours-logo-light.svg" alt="Smallhours" class="rn-brand-logo" /><span id="rnSpeedText">84 KM/H • 0m</span></div>
           </div>
           <div class="rn-stage-wrap">
             <div class="rn-parallax-stars" aria-hidden="true"></div>
