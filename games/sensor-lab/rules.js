@@ -63,13 +63,14 @@ function sanitizeDevice(obj) {
 
 export default {
   setup({ players }) {
+    const ids = players.map(p => (typeof p === 'string' ? p : (p.id ?? p.playerId)));
     const sensors = {};
-    for (const p of players) {
-      sensors[p.id] = null;
+    for (const id of ids) {
+      sensors[id] = null;
     }
     return {
       phase: 'live',
-      players: players.map(p => p.id),
+      players: ids,
       sensors,
     };
   },

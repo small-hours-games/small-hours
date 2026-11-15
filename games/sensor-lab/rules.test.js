@@ -12,8 +12,9 @@ describe('sensor-lab', () => {
   });
 
   it('stores sanitized sensor snapshots per player', () => {
-    const s0 = rules.setup({ players: [{ id: 'p1' }, { id: 'p2' }] });
+    const s0 = rules.setup({ players: ['p1', 'p2'] });
     expect(s0.phase).toBe('live');
+    expect(s0.players).toEqual(['p1', 'p2']);
 
     const { state: s1 } = rules.actions.sensorUpdate(s0, {
       playerId: 'p1',
@@ -36,7 +37,7 @@ describe('sensor-lab', () => {
   });
 
   it('finishes cleanly on finish action', () => {
-    const s0 = rules.setup({ players: [{ id: 'p1' }] });
+    const s0 = rules.setup({ players: ['p1'] });
     expect(rules.endIf(s0)).toBeNull();
     const { state: s1 } = rules.actions.finish(s0);
     expect(s1.phase).toBe('finished');
