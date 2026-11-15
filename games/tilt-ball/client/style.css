@@ -1,0 +1,55 @@
+/* Tilt-Ball Arena — Phone & TV */
+.tb-phone { gap: 10px; }
+.tb-pills { display: flex; gap: 6px; align-items: center; }
+.tb-ctrl-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+
+.tb-pad-wrap {
+  flex: 1;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px;
+  min-height: 210px;
+}
+.tb-pad {
+  position: relative;
+  width: 180px; height: 180px;
+  border-radius: 999px;
+  background: radial-gradient(circle, rgba(56, 189, 248, 0.16) 0%, rgba(15, 23, 42, 0.92) 72%);
+  border: 2px solid rgba(56, 189, 248, 0.45);
+  box-shadow: inset 0 0 28px rgba(56, 189, 248, 0.2);
+  display: flex; align-items: center; justify-content: center;
+  touch-action: none;
+  user-select: none;
+}
+.tb-pad-ring { position: absolute; width: 96px; height: 96px; border-radius: 999px; border: 1px dashed rgba(148, 163, 184, 0.3); pointer-events: none; }
+.tb-pad-cross { position: absolute; inset: 0; pointer-events: none; }
+.tb-pad-cross::before, .tb-pad-cross::after { content: ''; position: absolute; background: rgba(148, 163, 184, 0.2); }
+.tb-pad-cross::before { left: 50%; top: 14px; bottom: 14px; width: 1px; }
+.tb-pad-cross::after { top: 50%; left: 14px; right: 14px; height: 1px; }
+.tb-pad-dot {
+  width: 38px; height: 38px; border-radius: 999px;
+  background: radial-gradient(circle at 35% 35%, #7dd3fc, #0284c7);
+  border: 2px solid #fff;
+  box-shadow: 0 0 18px rgba(56, 189, 248, 0.75);
+  pointer-events: none;
+}
+.tb-pad-hint { font-size: 0.8rem; color: #94a3b8; text-align: center; }
+
+.tb-bottom { display: flex; flex-direction: column; gap: 8px; margin-top: auto; }
+.tb-boost-btn { background: linear-gradient(135deg, #facc15, #ea580c); color: #0f172a; font-weight: 900; }
+
+/* TV */
+.tb-tv {
+  width: 100%;
+  display: flex; flex-direction: column; align-items: center; gap: 10px;
+}
+.tb-tv-bar { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; justify-content: center; }
+.tb-tv-badge { background: rgba(56, 189, 248, 0.2); border: 1px solid #38bdf8; color: #e0f2fe; font-weight: 800; padding: 4px 14px; border-radius: 999px; }
+.tb-tv-hint { color: #94a3b8; font-size: 0.95rem; }
+#tbCanvas {
+  width: min(100%, 900px);
+  max-height: calc(100vh - 170px);
+  aspect-ratio: 900 / 640;
+  border-radius: 24px;
+  border: 2px solid rgba(56, 189, 248, 0.28);
+  box-shadow: 0 24px 50px rgba(0, 0, 0, 0.7);
+  background: #070b14;
+}

@@ -1,0 +1,29 @@
+    <div class="section tc-screen tb-phone" id="tiltBallSection">
+      <div class="tc-topbar">
+        <div class="tc-status" id="tbStatus"><span class="tc-dot tc-dot-live" id="tbStatusDot"></span><span id="tbStatusText">Tilt-Ball Arena</span></div>
+        <div class="tb-pills">
+          <span class="tc-pill tc-mono" id="tbRoundPill">R1/3</span>
+          <span class="tc-pill tc-mono" id="tbScorePill">0 pts</span>
+          <span class="tc-pill tc-mono" id="tbLinkPill">WS</span>
+        </div>
+      </div>
+
+      <div class="tb-ctrl-row">
+        <button type="button" class="tc-btn" id="tbGyroBtn" onclick="tbEnableGyro()">Enable Gyro</button>
+        <button type="button" class="tc-btn" onclick="tbZero()">Zero Tilt</button>
+      </div>
+
+      <div class="tb-pad-wrap">
+        <div class="tb-pad" id="tbPad">
+          <div class="tb-pad-ring"></div>
+          <div class="tb-pad-cross"></div>
+          <div class="tb-pad-dot" id="tbPadDot"></div>
+        </div>
+        <div class="tb-pad-hint" id="tbPadHint">Tilt your phone or drag the pad to steer</div>
+      </div>
+
+      <div class="tb-bottom">
+        <button type="button" class="tc-cta tc-cta-big tb-boost-btn" id="tbBoostBtn" onclick="tbBoost()">⚡ DASH BOOST</button>
+        <button type="button" class="tc-cta tc-cta-big" id="tbNextBtn" onclick="tbNextRound()" hidden>Next Round</button>
+      </div>
+    </div>
