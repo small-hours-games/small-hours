@@ -541,6 +541,7 @@
             <div id="rnSpeedPill" class="rn-speed-pill">84 KM/H • 0m</div>
           </div>
           <div class="rn-stage-wrap">
+            <div class="rn-parallax-stars" aria-hidden="true"></div>
             <div id="rnStage" class="rn-stage"></div>
             <div class="rn-track-radar" aria-hidden="true">
               <div class="rn-radar-lanes">${dotsHtml}</div>

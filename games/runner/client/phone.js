@@ -30,6 +30,22 @@
       void pad.offsetWidth;
       pad.classList.add('pulsing');
     }
+    const orb = document.getElementById('rnCssOrb');
+    const shadow = document.getElementById('rnCssOrbShadow');
+    if (cmd === 'left' || cmd === 'right') {
+      rn.visualLane = Math.max(-2, Math.min(2, (rn.visualLane || 0) + (cmd === 'left' ? -1 : 1)));
+      const pct = `${50 + rn.visualLane * 18}%`;
+      if (orb) orb.style.left = pct;
+      if (shadow) shadow.style.left = pct;
+    } else if (cmd === 'jump' && orb && shadow) {
+      orb.classList.add('jumping');
+      shadow.classList.add('jumping');
+      clearTimeout(rn.jumpTimer);
+      rn.jumpTimer = setTimeout(() => {
+        orb.classList.remove('jumping');
+        shadow.classList.remove('jumping');
+      }, 320);
+    }
     if (rn.dc && rn.dc.readyState === 'open') {
       try { rn.dc.send(JSON.stringify({ cmd })); return; } catch { /* ignore */ }
     }
