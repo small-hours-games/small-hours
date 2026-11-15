@@ -4,6 +4,7 @@
 import { createGame, processAction, getView, checkEnd } from '../engine/engine.js';
 import { AI_PERSONAS } from '../engine/bots/personas.js';
 import { getGame, listGames } from '../games/registry.js';
+import { isGameVisibleInLobby } from '../games/visibility.js';
 import { randomBytes } from 'node:crypto';
 
 const AVATAR_POOL = [
@@ -331,7 +332,7 @@ export class Room {
   availableGames() {
     const count = [...this.players.values()].filter(p => p.connected).length;
     return listGames()
-      .filter(g => !g.hidden && ((count >= g.min && count <= g.max) || (count === 1 && g.ai)))
+      .filter(g => isGameVisibleInLobby(g) && ((count >= g.min && count <= g.max) || (count === 1 && g.ai)))
       .map(g => ({
         type: g.id, label: g.label, minPlayers: g.min, maxPlayers: g.max,
         ...(count === 1 && g.ai && count < g.min ? { vsAi: true } : {}),

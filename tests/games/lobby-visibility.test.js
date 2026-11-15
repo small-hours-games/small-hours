@@ -10,6 +10,7 @@ import {
 } from '../../src/games/visibility.js';
 import { publicGames, getGame } from '../../src/games/registry.js';
 import { renderGamePage } from '../../src/games/client.js';
+import { Room } from '../../src/session/room.js';
 import { setupAdminRoutes } from '../../src/transport/admin-routes.js';
 import { setSessionCookie } from '../../src/auth/oidc.js';
 
@@ -37,6 +38,12 @@ describe('Lobby game visibility overrides', () => {
     await setGameLobbyVisibility('quiz', null, visFile);
     expect(publicGames().some(g => g.type === 'quiz')).toBe(true);
     expect(isGameVisibleInLobby({ id: 'hilow', hidden: true })).toBe(false);
+
+    const room = new Room('TEST');
+    room.addPlayer('P1');
+    expect(room.availableGames().some(g => g.type === 'sensor-lab')).toBe(false);
+    await setGameLobbyVisibility('sensor-lab', true, visFile);
+    expect(room.availableGames().some(g => g.type === 'sensor-lab')).toBe(true);
   });
 
   it('exposes PATCH /admin/api/lobby-visibility/:id behind admin session auth', async () => {
