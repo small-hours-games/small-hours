@@ -33,3 +33,20 @@
 .pot-tv-win .name { font-size: 1.2rem; font-weight: 600; }
 .pot-tv-win .amount { font-size: 1.8rem; font-weight: 700; color: #facc15; }
 .pot-tv-close { margin-top: 4px; font-size: .85rem; opacity: .7; }
+
+/* Pay to enter */
+#lobbySection.pot-locked #adminControls,
+#lobbySection.pot-locked #voteList,
+#lobbySection.pot-locked #lobbyPlayers,
+#lobbySection.pot-locked .lobby-chat,
+#lobbySection.pot-locked #categoryReturn { display: none !important; }
+.pot-gate { margin-top: 10px; font-size: 1rem; }
+button.pot-pay { width: 100%; border: 0; cursor: pointer; }
+.pot-pay.is-secondary { background: #fff; color: #0b1530; border: 2px solid #0b1530; }
+.pot-wait { margin-top: 10px; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 4px; }
+.pot-wait-title { font-weight: 800; font-size: 1rem; }
+.pot-spinner { width: 32px; height: 32px; border-radius: 50%; border: 4px solid #fde68a; border-top-color: #a16207; animation: pot-spin 0.9s linear infinite; }
+@keyframes pot-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .pot-spinner { animation: none; } }
+.pot-manual { margin-top: 8px; font-size: .75rem; }
+.pot-manual summary { cursor: pointer; color: #475569; font-weight: 700; }

@@ -415,7 +415,8 @@ export class Room {
 
     const playerIds = [];
     for (const [id, p] of this.players) {
-      if (p.connected) playerIds.push(id);
+      // In a pot room only those who paid in play; the others watch.
+      if (p.connected && (!this.pot || this.pot.entries.get(id)?.paid)) playerIds.push(id);
     }
     // Each AI seat is a character: its own name, face and way of playing (personas.js).
     const bots = AI_PERSONAS.slice(0, botCount).map((p, i) => ({ playerId: `bot_${i + 1}`, username: p.name, avatar: p.avatar }));

@@ -4,7 +4,7 @@ import { processAction, getView, checkEnd } from '../../engine/engine.js';
 import { handleStartCategoryVote } from './vote.js';
 import { getHostView } from '../host-view.js';
 import { computeSessionPoints } from '../../session/scoring.js';
-import { potStartBlocker, startPotGame, settlePot } from '../../pot/pot-room.js';
+import { potStartBlocker, startPotGame, settlePot, isPotSpectator } from '../../pot/pot-room.js';
 
 /**
  * Handle START_VOTED_GAME message — admin starts whichever game the players voted for most.
@@ -162,6 +162,12 @@ export function handleGameAction(ws, meta, room, msg, ctx) {
 
   if (!msg.action || !msg.action.type) {
     send(ws, { type: 'ERROR', message: 'action with type required' });
+    return;
+  }
+
+  // Only those who paid in play a pot game; the others watch.
+  if (isPotSpectator(room, meta.playerId)) {
+    send(ws, { type: 'ERROR', message: 'You are watching this pot game. Pay in for the next round.' });
     return;
   }
 

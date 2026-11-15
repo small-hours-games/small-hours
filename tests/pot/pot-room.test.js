@@ -78,11 +78,10 @@ describe('pot room', () => {
     expect(registerSwish(room, playerId, KEY(9), '08-123 45 67').ok).toBe(false);
   });
 
-  it('cannot start until four players have paid', () => {
+  it('cannot start until four players have paid in', () => {
     joinAll(3);
-    expect(potStartBlocker(room, 'quiz')).toMatch(/at least 4/);
+    expect(potStartBlocker(room, 'quiz')).toMatch(/4 paid players \(0 so far\)/);
     const { playerId } = room.addPlayer('P4');
-    expect(potStartBlocker(room, 'quiz')).toMatch(/Waiting for payment/);
     expect(setPotPaid(room, playerId, true).ok).toBe(false); // no number yet
     registerSwish(room, playerId, KEY(3), NUMBERS[3]);
     for (const id of [...ids, playerId]) setPotPaid(room, id, true);

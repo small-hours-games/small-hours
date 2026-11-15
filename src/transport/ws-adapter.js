@@ -479,6 +479,8 @@ export function setupWebSocket(server, manager) {
     'CATEGORY_VOTE',
     'RTC_SIGNAL',
     'POT_SET_SWISH',
+    'POT_START_PAYMENT',
+    'POT_CHECK_PAYMENT',
   ]);
 
   function handleMessage(ws, meta, room, msg) {
@@ -513,6 +515,12 @@ export function setupWebSocket(server, manager) {
         break;
       case 'POT_SET_SWISH':
         lobbyHandlers.handleSetSwish(ws, meta, room, msg, ctx);
+        break;
+      case 'POT_START_PAYMENT':
+        lobbyHandlers.handleStartPotPayment(ws, meta, room, msg, ctx);
+        break;
+      case 'POT_CHECK_PAYMENT':
+        lobbyHandlers.handleCheckPotPayment(ws, meta, room, msg, ctx);
         break;
       case 'START_MINI_GAME':
         gameHandlers.handleStartMiniGame(ws, meta, room, msg, ctx).catch(err => {

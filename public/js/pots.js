@@ -51,13 +51,13 @@ function renderRoom(pot) {
 
   const players = pot.players.length
     ? pot.players.map(p => `
-      <tr class="${p.connected ? '' : 'opacity-50'}">
+      <tr class="${p.connected ? '' : 'opacity-50'} ${p.saysPaid ? 'bg-amber-500/10' : ''}">
         <td class="py-2 pr-3 whitespace-nowrap">${esc(p.avatar)} ${esc(p.username)}</td>
         <td class="py-2 pr-3 font-mono text-xs whitespace-nowrap">${p.swish ? esc(p.swish) : '<span class="text-slate-500">no number yet</span>'}</td>
         <td class="py-2 text-right">
           <label class="inline-flex items-center gap-2 text-xs ${pot.status !== 'collecting' || !p.swish ? 'opacity-50' : 'cursor-pointer'}">
             <input type="checkbox" class="w-5 h-5 accent-emerald-500" data-paid="${esc(p.playerId)}" data-code="${esc(pot.code)}" ${p.paid ? 'checked' : ''} ${pot.status !== 'collecting' || !p.swish ? 'disabled' : ''}>
-            ${p.paid ? 'Paid' : 'Not paid'}
+            ${p.paid ? (p.paidBySwish ? 'Paid (Swish)' : 'Paid') : (p.saysPaid ? '<b class="text-amber-300">Says paid — check Swish</b>' : 'Not paid')}
           </label>
         </td>
       </tr>`).join('')

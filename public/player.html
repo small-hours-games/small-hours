@@ -478,6 +478,9 @@
       state.code = pathParts[2]?.toUpperCase();
       try { state.reconnectToken = localStorage.getItem('sh_reconnect_' + state.code); } catch { /* storage unavailable */ }
       const params = new URLSearchParams(window.location.search);
+      // Back from Swish: the payment id lets the server find this player, even in another browser.
+      state.potPayment = /^[0-9A-Fa-f]{32}$/.test(params.get('pot') || '') ? params.get('pot').toUpperCase() : null;
+      if (state.potPayment) potMarkPaying();
       const urlName = params.get('name')?.trim();
       const savedName = (() => { try { return localStorage.getItem('sh_player_name'); } catch { return null; } })();
       state.name = urlName || (savedName || '').trim() || null;
@@ -533,7 +536,7 @@
         state.lastHeard = Date.now();
         setConnectionStatus('connected', 'Connected');
         // Send join message
-        send({ type: 'JOIN_LOBBY', username: state.name, reconnectToken: state.reconnectToken, potKey: potKey() });
+        send({ type: 'JOIN_LOBBY', username: state.name, reconnectToken: state.reconnectToken, potKey: potKey(), potPayment: state.potPayment || undefined });
       };
 
       ws.onmessage = (e) => {
@@ -715,6 +718,27 @@
 
         case 'POT_ERROR':
           showToast(msg.message || 'Could not save the number', 'error');
+          potClearPaying();
+          renderPotPanel();
+          break;
+
+        case 'POT_PAY':
+          // Off to Swish. If the browser won't switch app on its own, the panel
+          // shows the link to tap.
+          state.potPayLink = msg.url;
+          state.potMode = msg.mode;
+          potMarkPaying();
+          renderPotPanel();
+          window.location.href = msg.url;
+          break;
+
+        case 'POT_PAYMENT_STATUS':
+          state.potStatus = msg.status;
+          if (['DECLINED', 'ERROR', 'CANCELLED'].includes(msg.status)) {
+            potClearPaying();
+            showToast(msg.status === 'DECLINED' ? 'Swish declined the payment' : 'The payment was not completed', 'error');
+          }
+          renderPotPanel();
           break;
 
         case 'AVATAR_OK':
@@ -1008,31 +1032,6 @@
       back.classList.toggle('flex', !!state.votingActive);
     }
 
-    function renderVoteList() {
-      const counts = {};
-      Object.values(state.gameSuggestions || {}).forEach(g => { counts[g] = (counts[g] || 0) + 1; });
-      const mine = (state.gameSuggestions || {})[state.playerId];
-      // Keep playable games in a stable order so cards don't jump under the player's thumb
-      const games = [...SH_GAMES].sort((a, b) => (gameBlocker(a) ? 1 : 0) - (gameBlocker(b) ? 1 : 0));
-
-      const html = '<div class="lobby-game-list">' + games.map(g => {
-        const blocker = gameBlocker(g);
-        const count = counts[g.type] || 0;
-        const isMine = g.type === mine;
-        const isLeading = state.leadingGame === g.type && count > 0;
-        const badgeText = isMine ? '✓ Picked' : (isLeading ? '★ Leading' : '');
-        return '<button class="lobby-game-option' + (isMine ? ' is-selected' : '') + '" data-game="' + g.type +
-          '" aria-pressed="' + isMine + '" ' + (blocker ? 'disabled' : 'onclick="suggestGame(this.dataset.game)"') + '>' +
-          '<span class="lobby-game-icon" aria-hidden="true">' + g.icon + '</span>' +
-          '<span class="lobby-game-info"><span class="lobby-game-name">' + escapeHtml(g.label) + '</span>' +
-          '<span class="lobby-game-description">' + escapeHtml(blocker || gameBlurb(g)) + '</span></span>' +
-          '<span class="lobby-vote-side"><span class="lobby-vote-count">' + count + '</span>' +
-          (badgeText ? '<span class="lobby-leading-label">' + badgeText + '</span>' : '') + '</span></button>';
-      }).join('') + '</div>';
-
-      document.getElementById('voteList').innerHTML = html;
-    }
-
     // --- Pot room: play for money ---
     // This phone's pot key: a random secret that lets the server remember its Swish number.
     // The number itself is never stored on the phone, and never shown in full.
@@ -1056,19 +1055,42 @@
     function potPayMessage() {
       // Swish allows letters, digits and a few signs in the message (max 50).
       const name = String(state.name || '').replace(/[^a-zA-Z0-9åäöÅÄÖ ]/g, '').slice(0, 30);
-      return ('SH ' + state.code + ' ' + name).trim();
+      return ('Smallhours ' + state.code + ' ' + name).trim().slice(0, 50);
     }
 
-    function potSwishLink() {
-      const pot = state.pot;
-      const data = {
-        version: 1,
-        payee: { value: pot.payee, editable: false },
-        amount: { value: pot.stake, editable: false },
-        message: { value: potPayMessage(), editable: false },
-      };
-      return 'swish://payment?data=' + encodeURIComponent(JSON.stringify(data));
+    // "Gone to Swish" survives the trip: Swish may reload or reopen this page.
+    function potPayingKey() { return 'sh_pot_paying_' + state.code; }
+    function potMarkPaying() {
+      state.potPaying = Date.now();
+      try { sessionStorage.setItem(potPayingKey(), String(state.potPaying)); } catch { /* memory only */ }
     }
+    function potClearPaying() {
+      state.potPaying = null;
+      state.potPayLink = null;
+      try { sessionStorage.removeItem(potPayingKey()); } catch { /* ignore */ }
+    }
+    function potIsPaying() {
+      if (state.potPaying) return true;
+      try {
+        const t = Number(sessionStorage.getItem(potPayingKey()));
+        if (t && Date.now() - t < 30 * 60 * 1000) { state.potPaying = t; return true; }
+      } catch { /* ignore */ }
+      return false;
+    }
+
+    function startPotPayment() {
+      state.potStatus = null;
+      send({ type: 'POT_START_PAYMENT' });
+    }
+
+    // Back in the browser after Swish: ask how it went, and keep asking for a while.
+    function checkPotPayment() {
+      if (!state.pot || !state.playerId || !potIsPaying()) return;
+      if (state.pot.players?.[state.playerId]?.paid) return;
+      send({ type: 'POT_CHECK_PAYMENT' });
+    }
+    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') setTimeout(checkPotPayment, 300); });
+    setInterval(() => { if (document.visibilityState === 'visible') checkPotPayment(); }, 4000);
 
     function formatPayee(n) {
       const s = String(n || '');
@@ -1093,9 +1115,20 @@
       const panel = document.getElementById('potPanel');
       if (!panel) return;
       const pot = state.pot;
-      if (!pot) { panel.hidden = true; panel.innerHTML = ''; panel._html = ''; return; }
+      const lobby = document.getElementById('lobbySection');
+      if (!pot) { panel.hidden = true; panel.innerHTML = ''; panel._html = ''; lobby.classList.remove('pot-locked'); return; }
       panel.hidden = false;
       const mine = pot.players?.[state.playerId] || {};
+      // Until they have paid, a pot room shows only the way in.
+      lobby.classList.toggle('pot-locked', !mine.paid && pot.status !== 'settled');
+      if (mine.paid && potIsPaying()) {
+        potClearPaying();
+        showToast('Payment received — you are in! 🎉', 'success');
+        if (state.potPayment) {
+          state.potPayment = null;
+          try { history.replaceState(null, '', window.location.pathname); } catch { /* ignore */ }
+        }
+      }
       const game = shGame(pot.gameType);
       const winnersPct = 100 - pot.bankPct;
       const pct = [50, 30, 15].map(p => Math.round(p / 95 * winnersPct * 10) / 10);
@@ -1121,10 +1154,21 @@
           '<div class="pot-row"><input id="potSwishInput" class="pot-input" type="tel" inputmode="tel" autocomplete="tel" placeholder="070-123 45 67" maxlength="20" onkeydown="if(event.key===\'Enter\')saveSwishNumber()">' +
           '<button class="pot-btn" onclick="saveSwishNumber()">Save</button></div>' +
           '<p class="pot-note">Only the admin sees the full number. This phone remembers it for the next pot.</p>';
+      } else if (!mine.paid && potIsPaying()) {
+        const manual = state.potMode === 'manual' || state.potStatus === 'WAITING_FOR_ADMIN';
+        html += '<div class="pot-wait"><span class="pot-spinner" aria-hidden="true"></span>' +
+          '<p class="pot-wait-title">' + (manual ? 'Waiting for the admin to see your Swish' : 'Checking your payment…') + '</p>' +
+          '<p class="pot-note">' + (manual
+            ? 'You get in as soon as the admin confirms your ' + pot.stake + ' kr.'
+            : 'You get in as soon as Swish confirms your ' + pot.stake + ' kr.') + '</p></div>' +
+          (state.potPayLink ? '<a class="pot-pay is-secondary" href="' + escapeHtml(state.potPayLink) + '">Open Swish again</a>' : '') +
+          '<p class="pot-note">Didn\'t pay? <button class="pot-link" onclick="potClearPaying();renderPotPanel()">Start over</button></p>';
       } else if (!mine.paid) {
-        html += '<a class="pot-pay" href="' + potSwishLink() + '">Pay ' + pot.stake + ' kr with Swish</a>' +
-          '<p class="pot-note">Or pay ' + pot.stake + ' kr to <b>' + escapeHtml(formatPayee(pot.payee)) + '</b> with the message <b>' + escapeHtml(potPayMessage()) + '</b>. ' +
-          'The admin ticks you off when it arrives.</p>' +
+        html += '<p class="pot-gate">Pay <b>' + pot.stake + ' kr</b> to join this room.</p>' +
+          '<button class="pot-pay" onclick="startPotPayment()">Pay ' + pot.stake + ' kr with Swish</button>' +
+          '<p class="pot-note">Swish opens with the amount filled in. When you have paid, you come back here and are let in.</p>' +
+          '<details class="pot-manual"><summary>Paying from another phone?</summary><p class="pot-note">Swish ' + pot.stake + ' kr to <b>' + escapeHtml(formatPayee(pot.payee)) + '</b> with the message <b>' + escapeHtml(potPayMessage()) + '</b>, then tap “I have paid”.</p>' +
+          '<button class="pot-link" onclick="state.potMode=\'manual\';potMarkPaying();checkPotPayment();renderPotPanel()">I have paid</button></details>' +
           '<p class="pot-note">Winnings go to Swish •• ' + escapeHtml(state.potLast2) + ' · <button class="pot-link" onclick="editSwishNumber()">change</button></p>';
       } else {
         html += '<p class="pot-paid">✓ You are in. Good luck!</p>' +
@@ -1142,6 +1186,31 @@
       if (typing !== null) { const el = document.getElementById('potSwishInput'); if (el) { el.value = typing; el.focus(); } }
     }
 
+
+    function renderVoteList() {
+      const counts = {};
+      Object.values(state.gameSuggestions || {}).forEach(g => { counts[g] = (counts[g] || 0) + 1; });
+      const mine = (state.gameSuggestions || {})[state.playerId];
+      // Keep playable games in a stable order so cards don't jump under the player's thumb
+      const games = [...SH_GAMES].sort((a, b) => (gameBlocker(a) ? 1 : 0) - (gameBlocker(b) ? 1 : 0));
+
+      const html = '<div class="lobby-game-list">' + games.map(g => {
+        const blocker = gameBlocker(g);
+        const count = counts[g.type] || 0;
+        const isMine = g.type === mine;
+        const isLeading = state.leadingGame === g.type && count > 0;
+        const badgeText = isMine ? '✓ Picked' : (isLeading ? '★ Leading' : '');
+        return '<button class="lobby-game-option' + (isMine ? ' is-selected' : '') + '" data-game="' + g.type +
+          '" aria-pressed="' + isMine + '" ' + (blocker ? 'disabled' : 'onclick="suggestGame(this.dataset.game)"') + '>' +
+          '<span class="lobby-game-icon" aria-hidden="true">' + g.icon + '</span>' +
+          '<span class="lobby-game-info"><span class="lobby-game-name">' + escapeHtml(g.label) + '</span>' +
+          '<span class="lobby-game-description">' + escapeHtml(blocker || gameBlurb(g)) + '</span></span>' +
+          '<span class="lobby-vote-side"><span class="lobby-vote-count">' + count + '</span>' +
+          (badgeText ? '<span class="lobby-leading-label">' + badgeText + '</span>' : '') + '</span></button>';
+      }).join('') + '</div>';
+
+      document.getElementById('voteList').innerHTML = html;
+    }
 
     function suggestGame(game) {
       state.votedGame = game;

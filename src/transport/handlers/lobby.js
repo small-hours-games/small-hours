@@ -3,7 +3,8 @@
 import { getView } from '../../engine/engine.js';
 import { AVATAR_POOL } from '../../session/room.js';
 import { stopRoomGame } from './game.js';
-import { attachPotPlayer, registerSwish, potPrivateState } from '../../pot/pot-room.js';
+import { attachPotPlayer, registerSwish, potPrivateState, startPotPayment, confirmPotPayment, playerForPayment } from '../../pot/pot-room.js';
+import { getSwishClient } from '../../pot/swish.js';
 
 /**
  * Handle JOIN_LOBBY message — join as a new player or reconnect as existing player.
@@ -34,6 +35,9 @@ export function handleJoinLobby(ws, meta, room, msg, ctx) {
       }
     }
   }
+
+  // Back from Swish, maybe in another browser: the payment id finds the player.
+  if (!existingId && room.pot && msg.potPayment) existingId = playerForPayment(room, msg.potPayment);
 
   let playerId, avatar, reconnectToken;
   if (existingId) {
@@ -230,4 +234,51 @@ export function handleSetSwish(ws, meta, room, msg, ctx) {
   }
   send(ws, { type: 'POT_PRIVATE', last2: result.last2 });
   broadcastToRoom(room.code, { type: 'LOBBY_UPDATE', state: room.getState() });
+}
+
+/**
+ * Handle POT_START_PAYMENT message — the player taps "Pay". Answers POT_PAY with
+ * the link that opens Swish (a real payment request with Swish Handel, otherwise
+ * a pre-filled payment the admin confirms).
+ */
+export async function handleStartPotPayment(ws, meta, room, msg, ctx) {
+  const { send } = ctx;
+  if (!meta.playerId) {
+    send(ws, { type: 'ERROR', message: 'Not joined yet' });
+    return;
+  }
+  try {
+    const result = await startPotPayment(room, meta.playerId, { client: getSwishClient() });
+    if (!result.ok) send(ws, { type: 'POT_ERROR', message: result.error });
+    else send(ws, { type: 'POT_PAY', mode: result.mode, url: result.url, paymentId: result.paymentId || null });
+  } catch (err) {
+    console.error('[pot] could not start a payment:', err.message);
+    send(ws, { type: 'POT_ERROR', message: 'Swish could not start the payment. Try again in a moment.' });
+  }
+}
+
+/**
+ * Handle POT_CHECK_PAYMENT message — the phone is back from Swish and asks how
+ * it went (in case Swish's callback is late or never came).
+ */
+export async function handleCheckPotPayment(ws, meta, room, msg, ctx) {
+  const { send, broadcastToRoom } = ctx;
+  if (!meta.playerId || !room.pot) return;
+  const entry = room.pot.entries.get(meta.playerId);
+  const client = getSwishClient();
+  if (!client || !entry?.payment) {
+    // No Swish Handel: the admin confirms. Show them who says they have paid.
+    // The admin page polls, so it shows up there within a few seconds.
+    if (entry && !entry.paid && !entry.claimedAt) entry.claimedAt = Date.now();
+    send(ws, { type: 'POT_PAYMENT_STATUS', status: entry?.paid ? 'PAID' : 'WAITING_FOR_ADMIN' });
+    return;
+  }
+  try {
+    const result = await confirmPotPayment(entry.payment.id, { client, getRoom: () => room });
+    send(ws, { type: 'POT_PAYMENT_STATUS', status: result.status || 'UNKNOWN' });
+    if (result.changed) broadcastToRoom(room.code, { type: 'LOBBY_UPDATE', state: room.getState() });
+  } catch (err) {
+    console.error('[pot] could not check a payment:', err.message);
+    send(ws, { type: 'POT_PAYMENT_STATUS', status: 'UNKNOWN' });
+  }
 }

@@ -1,6 +1,7 @@
 // Small Hours - HTTP Routes
 // Express routes for health, room management, and static file serving.
 
+import { setupSwishRoutes } from './swish-routes.js';
 import { fileURLToPath } from 'url';
 import path from 'path';
 import fs from 'fs';
@@ -120,6 +121,7 @@ export function setupRoutes(app, manager) {
   app.use('/games/_api-card', express.static(path.join(GAMES_DIR, '_api-card', 'client'), { index: false }));
 
   setupAdminRoutes(app, manager);
+  setupSwishRoutes(app, manager);
   setupApiV1Routes(app, manager);
 
   app.get('/api/games', (_req, res) => {
