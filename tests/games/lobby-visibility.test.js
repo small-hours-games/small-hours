@@ -9,6 +9,7 @@ import {
   resetVisibilityCacheForTest,
 } from '../../src/games/visibility.js';
 import { publicGames, getGame } from '../../src/games/registry.js';
+import { renderGamePage } from '../../src/games/client.js';
 import { setupAdminRoutes } from '../../src/transport/admin-routes.js';
 import { setSessionCookie } from '../../src/auth/oidc.js';
 
@@ -64,6 +65,10 @@ describe('Lobby game visibility overrides', () => {
       expect(authRes.status).toBe(200);
       const data = await authRes.json();
       expect(data.visibleInLobby).toBe(false);
+
+      // Toggling visibility must invalidate renderGamePage()'s fragmentCache immediately.
+      const tpl = '<!-- GAME_CATALOG --><!-- GAME_STYLES --><!-- GAME_SECTIONS --><!-- GAME_SCRIPTS -->';
+      expect(renderGamePage(tpl, 'phone')).not.toContain('"type":"quiz"');
     } finally {
       await setGameLobbyVisibility('quiz', null);
       await new Promise(resolve => server.close(resolve));

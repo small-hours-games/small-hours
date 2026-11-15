@@ -24,6 +24,7 @@ import {
   registerDynamicGame,
   unregisterDynamicGame,
   listGames,
+  bumpCatalogVersion,
 } from '../games/registry.js';
 import { isGameVisibleInLobby, setGameLobbyVisibility } from '../games/visibility.js';
 
@@ -138,6 +139,7 @@ export function setupAdminRoutes(app) {
     if (!game) return res.status(404).json({ error: 'Game not found' });
     const visible = req.body?.visible === null ? null : Boolean(req.body?.visible);
     await setGameLobbyVisibility(game.id, visible);
+    bumpCatalogVersion();
     res.json({ id: game.id, visibleInLobby: isGameVisibleInLobby(game) });
   });
 

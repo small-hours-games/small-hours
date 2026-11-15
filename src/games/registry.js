@@ -61,6 +61,11 @@ export function getCatalogVersion() {
   return catalogVersion;
 }
 
+export function bumpCatalogVersion() {
+  catalogVersion += 1;
+  return catalogVersion;
+}
+
 export function isBuiltInGame(id) {
   return BUILTIN_IDS.has(id);
 }
