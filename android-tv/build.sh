@@ -13,9 +13,9 @@ set -euo pipefail
 cd "$(dirname "$0")"
 
 TOOLS=${SMALLHOURS_ANDROID_TOOLS:-$HOME/.cache/smallhours-android}
-TV_URL=${TV_URL:-https://quiz.aldervall.se/tv}
-VERSION_CODE=${VERSION_CODE:-3}
-VERSION_NAME=${VERSION_NAME:-1.2}
+TV_URL=${TV_URL:-https://smallhours.se/tv}
+VERSION_CODE=${VERSION_CODE:-4}
+VERSION_NAME=${VERSION_NAME:-1.3}
 BUILD_TOOLS_VERSION=34.0.0
 PLATFORM_VERSION=android-34
 

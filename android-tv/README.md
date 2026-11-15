@@ -1,7 +1,7 @@
 # Smallhours TV (Android TV app)
 
 A tiny Android app that shows **only the TV host screen** of Smallhours. It opens
-`https://quiz.aldervall.se/tv`, which creates a room and shows `/host/CODE?tv=1`:
+`https://smallhours.se/tv`, which creates a room and shows `/host/CODE?tv=1`:
 the room code, QR and live game screens. Players join from their phones as usual.
 
 - Fullscreen, screen stays on, music and sound play without pressing anything.
@@ -12,12 +12,12 @@ the room code, QR and live game screens. Players join from their phones as usual
 
 ## Install on the TV
 
-The APK is served at **https://quiz.aldervall.se/download/smallhours-tv.apk**.
+The APK is served at **https://smallhours.se/download/smallhours-tv.apk**.
 
 1. On the TV, install the **Downloader** app (by AFTVnews) from the Play Store.
 2. Allow it to install unknown apps: *Settings → Apps → Security & restrictions → Unknown sources → Downloader*
    (the menu names vary a little by TV brand).
-3. In Downloader, enter `https://quiz.aldervall.se/download/smallhours-tv.apk` and install.
+3. In Downloader, enter `https://smallhours.se/download/smallhours-tv.apk` and install.
 4. **Smallhours TV** shows up on the home screen's apps row.
 
 Alternatives: copy the APK to a USB stick and open it with a file manager, or use
