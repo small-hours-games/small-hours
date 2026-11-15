@@ -197,10 +197,29 @@ describe('RoomManager - cleanup', () => {
     const room = manager.createRoom();
     // Override hasActiveSockets to simulate active socket for this room
     manager.hasActiveSockets = (code) => code === room.code;
-    // Advance past empty timeout
+    // Advance past empty timeout (30s) — host display is still waiting for players
     vi.advanceTimersByTime(91_000);
     // Room should NOT be cleaned up because it has active sockets
     expect(manager.getRoom(room.code)).toBe(room);
+    manager.destroy();
+  });
+
+  it('cleanup removes an empty room with active sockets after 30 minutes of inactivity', () => {
+    const manager = makeManager();
+    const room = manager.createRoom();
+    manager.hasActiveSockets = (code) => code === room.code;
+    const closedCodes = [];
+    manager.wsControls = {
+      closeRoom: (code) => {
+        closedCodes.push(code);
+        manager.removeRoom(code);
+        return { ok: true, code };
+      },
+    };
+    // Advance past EMPTY_HOST_TIMEOUT_MS (30m) + one cleanup tick
+    vi.advanceTimersByTime(30 * 60 * 1000 + 61_000);
+    expect(closedCodes).toEqual([room.code]);
+    expect(manager.getRoom(room.code)).toBeNull();
     manager.destroy();
   });
 

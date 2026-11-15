@@ -3,9 +3,10 @@
 
 import { Room, generateRoomCode } from './room.js';
 
-const IDLE_TIMEOUT_MS = 4 * 60 * 60 * 1000; // 4 hours
-const EMPTY_TIMEOUT_MS = 30 * 1000;          // 30 seconds
-const CLEANUP_INTERVAL_MS = 60 * 1000;       // 60 seconds
+const IDLE_TIMEOUT_MS = 4 * 60 * 60 * 1000;  // 4 hours
+const EMPTY_HOST_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes when empty even if a host display is open
+const EMPTY_TIMEOUT_MS = 30 * 1000;           // 30 seconds when empty with no sockets
+const CLEANUP_INTERVAL_MS = 60 * 1000;        // 60 seconds
 
 class RoomManager {
   constructor() {
@@ -54,22 +55,25 @@ class RoomManager {
   /**
    * Clean up stale rooms:
    * - Rooms idle for more than 4 hours
-   * - Rooms with no players for more than 30 seconds
+   * - Rooms with no players for more than 30 minutes (even if a host display is open)
+   * - Rooms with no players and no active sockets for more than 30 seconds
    */
   cleanup() {
     const now = Date.now();
     for (const [code, room] of this.rooms) {
-      // Never clean up rooms that have active WebSocket connections (host display counts)
-      if (this.hasActiveSockets && this.hasActiveSockets(code)) {
-        continue;
-      }
+      const hasSockets = Boolean(this.hasActiveSockets && this.hasActiveSockets(code));
+      const idleMs = now - room.lastActivity;
 
-      const idleTooLong = (now - room.lastActivity) > IDLE_TIMEOUT_MS;
-      const emptyTooLong = room.players.size === 0 &&
-        (now - room.lastActivity) > EMPTY_TIMEOUT_MS;
+      const idleTooLong = idleMs > IDLE_TIMEOUT_MS;
+      const emptyNoSockets = !hasSockets && room.players.size === 0 && idleMs > EMPTY_TIMEOUT_MS;
+      const emptyWithHostTooLong = room.players.size === 0 && idleMs > EMPTY_HOST_TIMEOUT_MS;
 
-      if (idleTooLong || emptyTooLong) {
-        this.rooms.delete(code);
+      if (idleTooLong || emptyNoSockets || emptyWithHostTooLong) {
+        if (this.wsControls?.closeRoom) {
+          this.wsControls.closeRoom(code, { reason: 'Room expired due to inactivity' });
+        } else {
+          this.rooms.delete(code);
+        }
       }
     }
   }

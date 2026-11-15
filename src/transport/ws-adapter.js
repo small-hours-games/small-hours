@@ -612,7 +612,11 @@ export function setupWebSocket(server, manager) {
 
   function hasActiveSockets(code) {
     const sockets = roomSockets.get(code);
-    return sockets ? sockets.size > 0 : false;
+    if (!sockets || sockets.size === 0) return false;
+    for (const ws of sockets) {
+      if (ws.readyState === ws.OPEN) return true;
+    }
+    return false;
   }
 
   function getRoomConnections(code) {
@@ -684,10 +688,11 @@ export function setupWebSocket(server, manager) {
     return { ok: true, code: room.code, playerId, username };
   }
 
-  function closeRoom(code) {
+  function closeRoom(code, { reason } = {}) {
     const roomCode = String(code || '').toUpperCase();
     const room = manager.getRoom(roomCode);
     if (!room) return { ok: false, status: 404, error: 'Table not found' };
+    const closeReason = reason || 'Table closed by administrator';
 
     for (const [playerId] of room.players) {
       if (graceTimers.has(playerId)) {
@@ -698,7 +703,7 @@ export function setupWebSocket(server, manager) {
     }
 
     stopRoomGame(room);
-    broadcastToRoom(room.code, { type: 'ERROR', message: 'Table closed by administrator', roomClosed: true });
+    broadcastToRoom(room.code, { type: 'ERROR', message: closeReason, roomClosed: true });
 
     const sockets = roomSockets.get(room.code);
     if (sockets) {
@@ -706,7 +711,7 @@ export function setupWebSocket(server, manager) {
         const meta = socketMeta.get(ws);
         if (meta) meta.playerId = null;
         try {
-          ws.close(4004, 'Table closed by administrator');
+          ws.close(4004, closeReason);
         } catch { /* ignore close error */ }
       }
     }
