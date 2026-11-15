@@ -65,7 +65,8 @@ class RoomManager {
       }
 
       const idleTooLong = (now - room.lastActivity) > IDLE_TIMEOUT_MS;
-      const emptyTooLong = room.players.size === 0 &&
+      // A pot room waits for its players: the admin creates it before anyone joins.
+      const emptyTooLong = !room.pot && room.players.size === 0 &&
         (now - room.lastActivity) > EMPTY_TIMEOUT_MS;
 
       if (idleTooLong || emptyTooLong) {

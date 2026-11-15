@@ -44,6 +44,7 @@ Before editing, inspect `git status` and the relevant diff. Preserve existing un
 | `public/js/game-api.js` | The contract between the pages and a game's client code |
 | `src/fetcher/` | Trivia, disk caches, Gemini TTS narration, Deezer/music playlists |
 | `src/notifications/discord.js` | Room-created webhook |
+| `src/pot/` | Pot rooms (play for money): payout math, encrypted Swish-number store (SQLite), room rules |
 | `public/host.html` | Shared display shell: lobby, scoreboard, music, story |
 | `public/player.html` | Phone shell: joining, voting, chat, reconnect |
 | `public/tv.html` | TV room creation and recovery entry point |
@@ -116,6 +117,8 @@ Run focused tests for the behavior changed, then `npm test` for changes spanning
 ## Runtime data and integrations
 
 Preserve `.env`, `data/`, local music, generated APKs, and Android signing keys. `data/` holds runtime caches and is mounted into the container. Inspect fetcher code/tests before changing cache formats or fallback behavior. Quiz plays from easy-only buckets (`data/questions/{category}_easy.json`, filled at startup) and uses the mixed `{category}.json` buckets when they run out.
+
+Pot rooms (`src/pot/`, admin page `/admin/pots`): an admin creates a Quiz or Music Quiz room with a stake; players register a Swish number from their phone and pay in with Swish; the admin ticks off payments and pays out 50/30/15 % (bank share 0–5 %, default 5). Money never passes through the server. Swish numbers live in `data/pot/pot.db`, encrypted with AES-256-GCM (key from `POT_SECRET`, or `data/pot/secret.key` made on first use), looked up by a hash of a random key stored on the phone. Never put a full number in `getState()`, a broadcast or a log: phones see `•• 45` for their own number only, and only `/admin/api/pots` shows full numbers. `POT_SWISH_NUMBER` pre-fills the pay-in number on the admin page.
 
 Gemini TTS uses `GEMINI_API_KEY`. Room creation can send a Discord webhook when `DISCORD_WEBHOOK_URL` is set. Tests and manual room creation should account for that external effect. Discord payloads must include both `content` and `embeds` so push notifications contain text.
 

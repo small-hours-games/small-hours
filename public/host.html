@@ -41,6 +41,7 @@
   <link rel="stylesheet" href="/css/smallhours.css">
   <link rel="stylesheet" href="/css/host.css">
   <link rel="stylesheet" href="/css/light-lobby.css">
+  <link rel="stylesheet" href="/css/pot.css">
   <link rel="stylesheet" href="/css/table-cards.css">
   <link rel="stylesheet" href="/css/topbar-show.css">
   <!-- game-styles -->
@@ -457,6 +458,7 @@
           });
           renderPlayers();
           renderHostVotes();
+          renderPotTv();
           if (state.gameState && state.gameType) renderGameState({ ...state.gameState, playerNames: state.playerNames });
           break;
 
@@ -473,6 +475,7 @@
           break;
 
         case 'MINI_GAME_STARTING':
+          document.getElementById('potTv')?.remove();
           state.gameType = msg.gameType;
           showGameView(msg);
           break;
@@ -940,6 +943,38 @@
         document.body.appendChild(piece);
         setTimeout(() => piece.remove(), 5500);
       }
+    }
+
+    // --- Pot room: the pot, and who won what. Never any phone numbers. ---
+    function renderPotTv() {
+      const pot = state.lobby?.pot;
+      let el = document.getElementById('potTv');
+      // Out of the way while the game is on: the questions need the screen.
+      if (!pot || pot.status === 'running') { if (el) el.remove(); return; }
+      if (!el) {
+        el = document.createElement('div');
+        el.id = 'potTv';
+        el.className = 'pot-tv';
+        el.setAttribute('aria-live', 'polite');
+        document.body.appendChild(el);
+      }
+      const payee = /^123\d{7}$/.test(pot.payee) ? pot.payee.slice(0, 3) + ' ' + pot.payee.slice(3, 6) + ' ' + pot.payee.slice(6, 8) + ' ' + pot.payee.slice(8) : pot.payee;
+      const medals = ['🥇', '🥈', '🥉'];
+      let html;
+      if (pot.status === 'settled' && pot.result) {
+        const wins = pot.result.results.filter(r => r.amount > 0).sort((a, b) => a.place - b.place).map(r =>
+          '<div class="pot-tv-win"><span class="face">' + escapeHtml(r.avatar) + '</span>' +
+          '<div class="name">' + (medals[r.place - 1] || '') + ' ' + escapeHtml(r.username) + '</div>' +
+          '<div class="amount">' + r.amount + ' kr' + (r.paidOut ? ' ✓' : '') + '</div></div>').join('');
+        html = '<div class="pot-tv-text">💰 The <b>' + pot.result.pot + ' kr</b> pot goes to</div><div class="pot-tv-wins">' + wins + '</div>';
+        el.classList.add('is-result');
+      } else {
+        const paid = Object.values(pot.players || {}).filter(p => p.paid).length;
+        html = '<span class="pot-tv-size">💰 ' + pot.potSize + ' kr</span><span class="pot-tv-text">' +
+          ('<b>' + pot.stake + ' kr</b> to play · ' + paid + ' paid in<br>Swish to <b>' + escapeHtml(payee) + '</b> from your phone</span>');
+        el.classList.remove('is-result');
+      }
+      if (el._html !== html) { el._html = html; el.innerHTML = html; }
     }
 
     function escapeHtml(text) {

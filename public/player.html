@@ -21,6 +21,7 @@
   <link rel="stylesheet" href="/css/smallhours.css">
   <link rel="stylesheet" href="/css/player.css">
   <link rel="stylesheet" href="/css/light-lobby.css">
+  <link rel="stylesheet" href="/css/pot.css">
   <link rel="stylesheet" href="/css/table-cards.css">
   <!-- game-styles -->
   <link rel="icon" type="image/svg+xml" href="/images/smallhours-icon.svg">
@@ -115,6 +116,8 @@
           <span><i class="fa-solid fa-list-check"></i> Quiz category vote is open &mdash; Tap to choose</span>
           <i class="fa-solid fa-chevron-right text-xs"></i>
         </button>
+
+        <div id="potPanel" class="pot-panel" hidden></div>
 
         <div id="adminControls" class="space-y-2"></div>
 
@@ -530,7 +533,7 @@
         state.lastHeard = Date.now();
         setConnectionStatus('connected', 'Connected');
         // Send join message
-        send({ type: 'JOIN_LOBBY', username: state.name, reconnectToken: state.reconnectToken });
+        send({ type: 'JOIN_LOBBY', username: state.name, reconnectToken: state.reconnectToken, potKey: potKey() });
       };
 
       ws.onmessage = (e) => {
@@ -704,6 +707,16 @@
           state.joinedOnce = true;
           break;
 
+        case 'POT_PRIVATE':
+          state.potLast2 = msg.last2 || null;
+          state.potEditing = false;
+          renderPotPanel();
+          break;
+
+        case 'POT_ERROR':
+          showToast(msg.message || 'Could not save the number', 'error');
+          break;
+
         case 'AVATAR_OK':
           state.avatarRestore = false;
           state.avatarPending = false;
@@ -730,6 +743,7 @@
           state.votingActive = !!lobbyState.votingActive;
           state.availableCategories = lobbyState.availableCategories || [];
           state.voteTallies = lobbyState.voteTallies || {};
+          state.pot = lobbyState.pot || null;
           {
             const me = state.players.find(p => p.playerId === state.playerId);
             if (me && me.username && me.username !== state.name) {
@@ -984,6 +998,7 @@
     }
 
     function renderLobby() {
+      renderPotPanel();
       renderVoteList();
       renderAdminControls();
       renderLobbyPlayers();
@@ -1018,6 +1033,116 @@
       document.getElementById('voteList').innerHTML = html;
     }
 
+    // --- Pot room: play for money ---
+    // This phone's pot key: a random secret that lets the server remember its Swish number.
+    // The number itself is never stored on the phone, and never shown in full.
+    function randomHex() {
+      return Array.from(crypto.getRandomValues(new Uint8Array(24)), b => b.toString(16).padStart(2, '0')).join('');
+    }
+    function potKey() {
+      try {
+        let key = localStorage.getItem('sh_pot_key');
+        if (!key) {
+          key = randomHex();
+          localStorage.setItem('sh_pot_key', key);
+        }
+        return key;
+      } catch {
+        state.potKeyMem = state.potKeyMem || randomHex();
+        return state.potKeyMem;
+      }
+    }
+
+    function potPayMessage() {
+      // Swish allows letters, digits and a few signs in the message (max 50).
+      const name = String(state.name || '').replace(/[^a-zA-Z0-9åäöÅÄÖ ]/g, '').slice(0, 30);
+      return ('SH ' + state.code + ' ' + name).trim();
+    }
+
+    function potSwishLink() {
+      const pot = state.pot;
+      const data = {
+        version: 1,
+        payee: { value: pot.payee, editable: false },
+        amount: { value: pot.stake, editable: false },
+        message: { value: potPayMessage(), editable: false },
+      };
+      return 'swish://payment?data=' + encodeURIComponent(JSON.stringify(data));
+    }
+
+    function formatPayee(n) {
+      const s = String(n || '');
+      return /^123\d{7}$/.test(s) ? s.slice(0, 3) + ' ' + s.slice(3, 6) + ' ' + s.slice(6, 8) + ' ' + s.slice(8) : s;
+    }
+
+    function saveSwishNumber() {
+      const input = document.getElementById('potSwishInput');
+      const number = (input?.value || '').trim();
+      if (!number) { showToast('Enter your Swish number', 'error'); return; }
+      send({ type: 'POT_SET_SWISH', number, potKey: potKey() });
+    }
+
+    function editSwishNumber() {
+      state.potEditing = true;
+      renderPotPanel();
+    }
+
+    const POT_MEDALS = ['🥇', '🥈', '🥉'];
+
+    function renderPotPanel() {
+      const panel = document.getElementById('potPanel');
+      if (!panel) return;
+      const pot = state.pot;
+      if (!pot) { panel.hidden = true; panel.innerHTML = ''; panel._html = ''; return; }
+      panel.hidden = false;
+      const mine = pot.players?.[state.playerId] || {};
+      const game = shGame(pot.gameType);
+      const winnersPct = 100 - pot.bankPct;
+      const pct = [50, 30, 15].map(p => Math.round(p / 95 * winnersPct * 10) / 10);
+      let html = '<div class="pot-head"><span class="pot-title">💰 Pot room</span>' +
+        '<span class="pot-size">' + pot.potSize + ' kr</span></div>' +
+        '<p class="pot-rules">' + game.icon + ' ' + escapeHtml(game.label) + ' · ' + pot.stake + ' kr to play · ' +
+        '1st ' + pct[0] + '% · 2nd ' + pct[1] + '% · 3rd ' + pct[2] + '%</p>';
+
+      if (pot.status === 'settled' && pot.result) {
+        const rows = pot.result.results.filter(r => r.amount > 0).sort((a, b) => a.place - b.place).map(r =>
+          '<li class="pot-win' + (r.playerId === state.playerId ? ' is-me' : '') + '">' +
+          '<span>' + (POT_MEDALS[r.place - 1] || '🏅') + ' ' + escapeHtml(r.avatar) + ' ' + escapeHtml(r.username) + '</span>' +
+          '<span class="pot-win-amount">' + r.amount + ' kr' + (r.paidOut ? ' ✓' : '') + '</span></li>').join('');
+        const me = pot.result.results.find(r => r.playerId === state.playerId);
+        html += '<ul class="pot-wins">' + rows + '</ul>' +
+          '<p class="pot-note">' + (me && me.amount > 0
+            ? (me.paidOut ? 'Your ' + me.amount + ' kr is on its way to Swish •• ' + escapeHtml(state.potLast2 || '') + '.' : 'You won ' + me.amount + ' kr! The admin sends it by Swish.')
+            : 'The admin pays the winners by Swish.') + '</p>';
+      } else if (pot.status === 'running') {
+        html += '<p class="pot-note">Game on — ' + pot.potSize + ' kr in the pot.</p>';
+      } else if (!state.potLast2 || state.potEditing) {
+        html += '<label class="pot-label" for="potSwishInput">Your Swish number — winnings go here</label>' +
+          '<div class="pot-row"><input id="potSwishInput" class="pot-input" type="tel" inputmode="tel" autocomplete="tel" placeholder="070-123 45 67" maxlength="20" onkeydown="if(event.key===\'Enter\')saveSwishNumber()">' +
+          '<button class="pot-btn" onclick="saveSwishNumber()">Save</button></div>' +
+          '<p class="pot-note">Only the admin sees the full number. This phone remembers it for the next pot.</p>';
+      } else if (!mine.paid) {
+        html += '<a class="pot-pay" href="' + potSwishLink() + '">Pay ' + pot.stake + ' kr with Swish</a>' +
+          '<p class="pot-note">Or pay ' + pot.stake + ' kr to <b>' + escapeHtml(formatPayee(pot.payee)) + '</b> with the message <b>' + escapeHtml(potPayMessage()) + '</b>. ' +
+          'The admin ticks you off when it arrives.</p>' +
+          '<p class="pot-note">Winnings go to Swish •• ' + escapeHtml(state.potLast2) + ' · <button class="pot-link" onclick="editSwishNumber()">change</button></p>';
+      } else {
+        html += '<p class="pot-paid">✓ You are in. Good luck!</p>' +
+          '<p class="pot-note">Winnings go to Swish •• ' + escapeHtml(state.potLast2) + '.</p>';
+      }
+      if (pot.status === 'collecting') {
+        const paid = Object.values(pot.players || {}).filter(p => p.paid).length;
+        html += '<p class="pot-count">' + paid + ' paid in · at least ' + pot.minPlayers + ' needed</p>';
+      }
+      if (panel._html === html) return;
+      // Keep what the player is typing when the lobby updates under them.
+      const typing = document.activeElement?.id === 'potSwishInput' ? document.activeElement.value : null;
+      panel._html = html;
+      panel.innerHTML = html;
+      if (typing !== null) { const el = document.getElementById('potSwishInput'); if (el) { el.value = typing; el.focus(); } }
+    }
+
+
     function suggestGame(game) {
       state.votedGame = game;
       send({ type: 'SUGGEST_GAME', gameType: game });
@@ -1025,7 +1150,9 @@
 
     function renderAdminControls() {
       const controls = document.getElementById('adminControls');
-      const leader = state.leadingGame ? shGame(state.leadingGame) : null;
+      // A pot room plays its own game: no vote needed.
+      const leaderType = state.pot ? state.pot.gameType : state.leadingGame;
+      const leader = leaderType ? shGame(leaderType) : null;
       const admin = state.players.find(p => p.isAdmin);
 
       if (!state.isAdmin) {
@@ -1110,7 +1237,10 @@
         const isMe = p.playerId === state.playerId;
         const voted = (state.gameSuggestions || {})[p.playerId];
         const crown = p.isAdmin ? '<i class="fa-solid fa-crown text-amber-500 text-[10px]"></i> ' : '';
-        const vote = voted ? '<span class="text-[11px]" title="Voted ' + escapeHtml(shGame(voted).label) + '">' + shGame(voted).icon + '</span>' : '';
+        const potMark = state.pot && state.pot.status !== 'settled'
+          ? (state.pot.players?.[p.playerId]?.paid ? '<span class="pot-mark" title="Paid in">💰</span>' : '<span class="pot-mark is-waiting" title="Not paid yet">⏳</span>')
+          : '';
+        const vote = potMark + (voted ? '<span class="text-[11px]" title="Voted ' + escapeHtml(shGame(voted).label) + '">' + shGame(voted).icon + '</span>' : '');
         return '<div class="flex justify-between items-center py-1 px-2 rounded-lg ' +
             (isMe ? 'bg-sky-50 text-slate-800 font-medium' : 'bg-slate-50 text-slate-600') + (p.connected === false ? ' opacity-50' : '') + '">' +
           '<span class="flex items-center gap-1.5 min-w-0"><span class="lobby-avatar-glyph">' + escapeHtml(p.avatar || '🎮') + '</span>' + crown +

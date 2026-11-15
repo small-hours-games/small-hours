@@ -3,6 +3,7 @@
 import { getView } from '../../engine/engine.js';
 import { AVATAR_POOL } from '../../session/room.js';
 import { stopRoomGame } from './game.js';
+import { attachPotPlayer, registerSwish, potPrivateState } from '../../pot/pot-room.js';
 
 /**
  * Handle JOIN_LOBBY message — join as a new player or reconnect as existing player.
@@ -61,6 +62,14 @@ export function handleJoinLobby(ws, meta, room, msg, ctx) {
   }
 
   send(ws, { type: 'JOIN_OK', playerId, avatar, reconnectToken, avatarPool: AVATAR_POOL });
+  if (room.pot) {
+    try {
+      attachPotPlayer(room, playerId, msg.potKey);
+    } catch (err) {
+      console.error('[pot] could not look up player:', err.message);
+    }
+    send(ws, { type: 'POT_PRIVATE', ...potPrivateState(room, playerId) });
+  }
   broadcastToRoom(room.code, { type: 'LOBBY_UPDATE', state: room.getState() });
 
   // If a game is running and this player hasn't surrendered, send current game state
@@ -188,5 +197,37 @@ export function handleSetUsername(ws, meta, room, msg, ctx) {
     return;
   }
   send(ws, { type: 'USERNAME_OK', username: result.username });
+  broadcastToRoom(room.code, { type: 'LOBBY_UPDATE', state: room.getState() });
+}
+
+/**
+ * Handle POT_SET_SWISH message — in a pot room, a player gives the Swish number
+ * their winnings go to. The phone also sends its pot key, a random secret kept
+ * on the phone, so the number is remembered for the next pot room.
+ *
+ * @param {import('ws')} ws
+ * @param {object} meta
+ * @param {object} room
+ * @param {object} msg - { number, potKey }
+ * @param {object} ctx
+ */
+export function handleSetSwish(ws, meta, room, msg, ctx) {
+  const { send, broadcastToRoom } = ctx;
+  if (!meta.playerId) {
+    send(ws, { type: 'ERROR', message: 'Not joined yet' });
+    return;
+  }
+  let result;
+  try {
+    result = registerSwish(room, meta.playerId, msg.potKey, msg.number);
+  } catch (err) {
+    console.error('[pot] could not save number:', err.message);
+    result = { ok: false, error: 'Could not save the number, try again' };
+  }
+  if (!result.ok) {
+    send(ws, { type: 'POT_ERROR', message: result.error });
+    return;
+  }
+  send(ws, { type: 'POT_PRIVATE', last2: result.last2 });
   broadcastToRoom(room.code, { type: 'LOBBY_UPDATE', state: room.getState() });
 }

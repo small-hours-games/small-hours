@@ -6,6 +6,7 @@ import { AI_PERSONAS } from '../engine/bots/personas.js';
 import { getGame, listGames } from '../games/registry.js';
 import { isGameVisibleInLobby } from '../games/visibility.js';
 import { randomBytes } from 'node:crypto';
+import { potPublicState, forgetPotPlayer, abortPotGame } from '../pot/pot-room.js';
 
 const AVATAR_POOL = [
   '\u{1F98A}', '\u{1F438}', '\u{1F43C}', '\u{1F981}', '\u{1F42F}',
@@ -93,6 +94,7 @@ export class Room {
     this.stateVersion = 0;
     this.bots = [];                      // AI seats of the running game: [{ playerId, username, avatar }]
     this.startingGame = false;           // a game is being prepared; further starts are ignored
+    this.pot = null;                     // pot rooms only: stake, payments and payouts (src/pot/pot-room.js)
   }
 
   /**
@@ -194,6 +196,7 @@ export class Room {
 
     const wasAdmin = player.isAdmin;
     this.players.delete(playerId);
+    forgetPotPlayer(this, playerId);
     this.gameSuggestions.delete(playerId);
     this.categoryVotes.delete(playerId);
 
@@ -332,7 +335,8 @@ export class Room {
   availableGames() {
     const count = [...this.players.values()].filter(p => p.connected).length;
     return listGames()
-      .filter(g => isGameVisibleInLobby(g) && ((count >= g.min && count <= g.max) || (count === 1 && g.ai)))
+      .filter(g => (!this.pot || g.id === this.pot.gameType))
+      .filter(g => (this.pot || isGameVisibleInLobby(g)) && ((count >= g.min && count <= g.max) || (count === 1 && g.ai)))
       .map(g => ({
         type: g.id, label: g.label, minPlayers: g.min, maxPlayers: g.max,
         ...(count === 1 && g.ai && count < g.min ? { vsAi: true } : {}),
@@ -382,6 +386,7 @@ export class Room {
       language: this.language,
       observerCount: this.observers.size,
     };
+    if (this.pot) state.pot = potPublicState(this);
 
     if (this.votingActive) {
       const tallies = {};
@@ -459,6 +464,7 @@ export class Room {
   }
 
   endGame() {
+    abortPotGame(this);   // a pot game stopped before its end opens the pot again
     this.stateVersion += 1;
     this.lastActivity = Date.now();
     this.game = null;

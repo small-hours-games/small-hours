@@ -1,6 +1,7 @@
 // Small Hours - Category vote message handlers
 
 import { fetchCategories, MAIN_CATEGORY_IDS } from '../../fetcher/cached-fetcher.js';
+import { potStartBlocker } from '../../pot/pot-room.js';
 
 /**
  * Handle START_CATEGORY_VOTE message — admin kicks off a category vote by fetching categories.
@@ -21,6 +22,11 @@ export async function handleStartCategoryVote(ws, meta, room, msg, ctx) {
   const player = room.players.get(meta.playerId);
   if (!player || !player.isAdmin) {
     send(ws, { type: 'ERROR', message: 'Only admin can start voting' });
+    return;
+  }
+  const potBlocked = potStartBlocker(room, 'quiz');
+  if (potBlocked) {
+    send(ws, { type: 'ERROR', message: potBlocked });
     return;
   }
   const result = await fetchCategories();
