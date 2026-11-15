@@ -92,7 +92,7 @@
         <div class="studio-room-code font-mono font-bold text-6xl tracking-[0.2em] text-sky-900 bg-white border-2 border-sky-200 rounded-2xl px-5 py-3 mt-1.5" id="roomCode">----</div>
         <div class="qr-stage-frame mt-3">
           <span class="qr-scan-ribbon">📱 SCAN WITH PHONE</span>
-          <div id="qrContainer" class="bg-white p-2 rounded-2xl border border-sky-200 shadow-sm w-[180px] h-[180px] flex items-center justify-center"></div>
+          <div id="qrContainer" class="bg-white p-1 rounded-2xl border border-sky-200 shadow-sm w-[180px] h-[180px] flex items-center justify-center"></div>
         </div>
         <p class="text-sm font-bold text-sky-900 break-all mt-2" id="joinUrl"></p>
         <div class="join-steps-row" aria-hidden="true">
@@ -200,6 +200,7 @@
   <script src="/js/ai-robots.js"></script>
   <script src="/js/ai-stage.js"></script>
   <script src="/js/topbar-show.js"></script>
+  <script src="/js/branded-qr.js"></script>
   <script>
     // --- State ---
     const AVATARS = ['&#128056;', '&#128049;', '&#129412;', '&#128029;', '&#128025;', '&#129418;', '&#128039;', '&#129409;',
@@ -343,10 +344,12 @@
       const joinUrl = window.location.origin + '/player/' + state.code;
       document.getElementById('joinUrl').textContent = joinUrl;
 
-      // Generate QR code locally
+      // Generate branded QR code locally
       const qrContainer = document.getElementById('qrContainer');
-      if (typeof QRCode !== 'undefined') {
-        new QRCode(qrContainer, { text: joinUrl, width: 164, height: 164, colorDark: '#000000', colorLight: '#ffffff' });
+      if (typeof renderBrandedQr === 'function') {
+        renderBrandedQr(qrContainer, joinUrl);
+      } else if (typeof QRCode !== 'undefined') {
+        new QRCode(qrContainer, { text: joinUrl, width: 164, height: 164, colorDark: '#0b1530', colorLight: '#ffffff' });
       }
 
       if (mascotDuel) mascotDuel.start();

@@ -23,6 +23,7 @@
 .host-screen .invite-panel { min-width: 0; }
 .host-screen #roomCode { width: 100%; max-width: 320px; font-size: clamp(2.2rem,3.3vw,3.5rem); letter-spacing: .18em; padding: 12px; background: linear-gradient(140deg,#f2faff,#fff); border-color: var(--lobby-line); box-shadow: none; }
 .host-screen #qrContainer { width: 192px; height: 192px; border-radius: 19px; }
+.host-screen #qrContainer svg.branded-qr-svg { width: 100%; height: 100%; display: block; border-radius: 12px; }
 .host-screen #joinUrl { margin-top: 12px; padding: 11px; font-size: .8rem; border-radius: 15px; background: #edf8ff; width: 100%; }
 .invite-foot { margin-top: auto; padding-top: 24px; }
 .invite-foot > div { font-size: 2rem; }
@@ -220,7 +221,9 @@
   .host-screen .invite-panel { overflow-y: auto; }
   .host-screen .invite-panel > p { margin-top: 10px; }
   .host-screen #qrContainer { width: 164px; height: 164px; margin-top: 12px; flex-shrink: 0; }
+  .host-screen .qr-stage-frame #qrContainer { margin-top: 0; }
   .host-screen #qrContainer img, .host-screen #qrContainer canvas { width: 146px; height: 146px; }
+  .host-screen #qrContainer svg.branded-qr-svg { width: 100%; height: 100%; }
   .host-screen #joinUrl { padding: 8px; font-size: .72rem; }
   .host-screen .invite-foot { padding-top: 12px; }
   .host-screen .invite-foot > div { font-size: 1.5rem; }
@@ -1312,9 +1315,33 @@ body.in-game .mascot-duel-stage {
   box-shadow: none;
   text-shadow: none;
 }
-.host-screen:not(.in-game) .qr-stage-frame { background: #fff; border-color: #fff; box-shadow: none; }
-.host-screen:not(.in-game) .qr-scan-ribbon { background: var(--night); color: var(--night-sun); box-shadow: none; }
-.host-screen:not(.in-game) .qr-stage-frame #qrContainer { border-color: #fff; }
+.host-screen:not(.in-game) .qr-stage-frame {
+  position: relative;
+  overflow: hidden;
+  padding: 15px 12px 12px;
+  border-radius: 24px;
+  background: linear-gradient(160deg, var(--night-raised) 0%, var(--night) 100%);
+  border: 1.5px solid var(--night-line-strong);
+  box-shadow: 0 16px 32px -16px rgba(0, 0, 0, 0.65);
+}
+.host-screen:not(.in-game) .qr-stage-frame::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, #38bdf8 0 25%, #a78bfa 25% 50%, #fb7185 50% 75%, #facc15 75% 100%);
+}
+.host-screen:not(.in-game) .qr-scan-ribbon {
+  background: var(--night-sun);
+  color: var(--night);
+  margin-bottom: 8px;
+  box-shadow: 0 4px 12px -4px rgba(250, 204, 21, 0.45);
+}
+.host-screen:not(.in-game) .qr-stage-frame #qrContainer {
+  border: 2px solid #ffffff;
+  border-radius: 16px;
+  padding: 4px;
+}
 .host-screen:not(.in-game) #joinUrl { background: var(--night); color: #dce3f2; }
 .host-screen:not(.in-game) .join-step-pill { background: var(--night); border-color: var(--night-line); color: #fff; }
 .host-screen:not(.in-game) .join-step-pill b { color: var(--night); }
