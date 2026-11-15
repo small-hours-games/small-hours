@@ -3,19 +3,19 @@
     <div class="tn-phone-header">
       <div class="tn-phone-me">
         <span id="tnMyAvatar" class="tn-avatar"></span>
-        <div>
-          <div id="tnMyName" class="font-bold text-white text-sm">Player</div>
-          <div id="tnStatusText" class="text-xs text-sky-300">Swing your phone to hit!</div>
+        <div class="min-w-0">
+          <div id="tnMyName" class="font-bold text-white text-sm truncate">Player</div>
+          <div id="tnStatusText" class="text-xs text-sky-300 truncate">Swing your phone to hit!</div>
         </div>
       </div>
-      <div class="text-right">
+      <div class="text-right shrink-0">
         <div id="tnScorePill" class="text-lg font-black text-amber-300">0 – 0</div>
         <div id="tnGamesPill" class="text-[11px] text-slate-400">Games: 0 – 0</div>
       </div>
     </div>
 
-    <div class="flex gap-2">
-      <button id="tnSensorBtn" type="button" class="flex-1 py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs">
+    <div class="tn-action-grid">
+      <button id="tnSensorBtn" type="button" class="py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs">
         📱 Enable Racket Sensors
       </button>
       <button id="tnTossBtn" type="button" class="py-2.5 px-4 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs">
@@ -24,9 +24,15 @@
     </div>
 
     <div id="tnRacketPad" class="tn-racket-pad">
-      <div class="text-3xl mb-1">🎾</div>
-      <div class="font-extrabold text-sm">Swipe or Swing Phone!</div>
-      <div id="tnSensorReadout" class="text-xs text-slate-400 mt-1">Touch swipe always active</div>
+      <div class="tn-phone-court-bg" aria-hidden="true"></div>
+      <div class="tn-pad-copy">
+        <div class="tn-phone-ball-stage" aria-hidden="true">
+          <div class="tn-css-ball-shadow"></div>
+          <div class="tn-css-ball"></div>
+        </div>
+        <div class="font-extrabold text-sm">Swipe or Swing Phone!</div>
+        <div id="tnSensorReadout" class="text-xs text-slate-300 mt-1">Touch swipe always active</div>
+      </div>
     </div>
 
     <div class="tn-shot-row">

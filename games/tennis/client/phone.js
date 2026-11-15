@@ -37,6 +37,12 @@
     if (now - tn.lastSwingAt < 280) return;
     tn.lastSwingAt = now;
     vibrate(25);
+    const pad = document.getElementById('tnRacketPad');
+    if (pad) {
+      pad.classList.remove('swinging');
+      void pad.offsetWidth;
+      pad.classList.add('swinging');
+    }
     sendInput({
       type: 'swing',
       shotType: opts.shotType || tn.shotType,

@@ -522,6 +522,14 @@
     threeApp.shadowMesh.position.set(sim.ball.pos.x, 0.025, sim.ball.pos.z);
     threeApp.shadowMesh.scale.setScalar(Math.max(0.4, 1 - sim.ball.pos.y * 0.15));
 
+    const radarBall = document.getElementById('tnRadarBall');
+    if (radarBall) {
+      const rx = Math.max(4, Math.min(96, 50 + (sim.ball.pos.x / HALF_W) * 44));
+      const ry = Math.max(4, Math.min(96, 50 + (sim.ball.pos.z / HALF_L) * 44));
+      radarBall.style.left = `${rx.toFixed(1)}%`;
+      radarBall.style.top = `${ry.toFixed(1)}%`;
+    }
+
     // Smoothly track rally on camera
     threeApp.camera.position.x += (sim.ball.pos.x * 0.28 - threeApp.camera.position.x) * 0.08;
     threeApp.camera.lookAt(sim.ball.pos.x * 0.2, 0.8, 0);
@@ -552,6 +560,8 @@
     if (el2) el2.textContent = msg.pointLabels?.[p2] || '0';
     if (g1) g1.textContent = `Games: ${msg.games?.[p1] || 0}`;
     if (g2) g2.textContent = `Games: ${msg.games?.[p2] || 0}`;
+    document.querySelector('.tn-p1')?.classList.toggle('serving', msg.serverId === p1);
+    document.querySelector('.tn-p2')?.classList.toggle('serving', msg.serverId === p2);
 
     const banner = document.getElementById('tnWinnerBanner');
     if (banner) {
@@ -595,9 +605,17 @@
               <span class="tn-avatar">${svg2}</span>
             </div>
           </div>
-          <div id="tnStage" class="tn-stage"></div>
-          <div id="tnCallout" class="tn-callout hidden"></div>
-          <div id="tnWinnerBanner" class="tn-winner-banner hidden"></div>
+          <div class="tn-stage-wrap">
+            <div id="tnStage" class="tn-stage"></div>
+            <div class="tn-court-radar" aria-hidden="true">
+              <div class="tn-radar-court">
+                <div class="tn-radar-service"></div>
+                <div id="tnRadarBall" class="tn-radar-ball"></div>
+              </div>
+            </div>
+            <div id="tnCallout" class="tn-callout hidden"></div>
+            <div id="tnWinnerBanner" class="tn-winner-banner hidden"></div>
+          </div>
         </div>
       `;
 
