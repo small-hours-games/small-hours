@@ -10,6 +10,7 @@ import * as voteHandlers from './handlers/vote.js';
 import { getHostView } from './host-view.js';
 import { nextBotAction } from '../engine/bots/index.js';
 import { getGame } from '../games/registry.js';
+import { parseUserAgent } from './device-info.js';
 
 const HEARTBEAT_INTERVAL_MS = 30_000;
 const RATE_LIMIT_MAX = 30;          // messages per second
@@ -357,11 +358,14 @@ export function setupWebSocket(server, manager) {
       return;
     }
 
+    const rawUa = String(req?.headers?.['user-agent'] || '');
     const meta = {
       roomCode: code,
       playerId: null,
       role,
       alive: true,
+      connectedAt: Date.now(),
+      device: parseUserAgent(rawUa),
       messageTimestamps: [],
       chatTimestamps: [],
     };
@@ -611,5 +615,108 @@ export function setupWebSocket(server, manager) {
     return sockets ? sockets.size > 0 : false;
   }
 
-  return { wss, broadcastToRoom, sendToPlayer, hasActiveSockets };
+  function getRoomConnections(code) {
+    const sockets = roomSockets.get(code);
+    const hosts = [];
+    const observers = [];
+    if (!sockets) return { hosts, observers };
+    for (const ws of sockets) {
+      if (ws.readyState !== ws.OPEN) continue;
+      const meta = socketMeta.get(ws);
+      if (!meta) continue;
+      if (meta.role === 'host') {
+        hosts.push({
+          connectedAt: meta.connectedAt || null,
+          device: meta.device || null,
+        });
+      } else if (meta.role === 'observer') {
+        observers.push({
+          observerId: meta.observerId || null,
+          connectedAt: meta.connectedAt || null,
+          device: meta.device || null,
+        });
+      }
+    }
+    return { hosts, observers };
+  }
+
+  function kickPlayer(code, playerId) {
+    const room = manager.getRoom(String(code || '').toUpperCase());
+    if (!room) return { ok: false, status: 404, error: 'Table not found' };
+    const player = room.players.get(playerId);
+    if (!player) return { ok: false, status: 404, error: 'Player not found' };
+
+    const username = player.username;
+    if (graceTimers.has(playerId)) {
+      clearTimeout(graceTimers.get(playerId));
+      graceTimers.delete(playerId);
+    }
+
+    const ws = playerSockets.get(playerId);
+    if (ws) {
+      playerSockets.delete(playerId);
+      const meta = socketMeta.get(ws);
+      if (meta) meta.playerId = null;
+      send(ws, { type: 'ERROR', message: 'Removed by administrator', kicked: true });
+      try {
+        ws.close(4003, 'Removed by administrator');
+      } catch { /* ignore close error */ }
+    }
+
+    room.removePlayer(playerId);
+    room.surrendered?.delete(playerId);
+
+    const hasActiveHuman = [...room.players.entries()].some(
+      ([id, p]) => p.connected && !room.surrendered?.has(id)
+    );
+    if (room.game && !hasActiveHuman) {
+      stopRoomGame(room);
+      broadcastToRoom(room.code, {
+        type: 'SURRENDER_LOBBY',
+        playerId,
+        username,
+      });
+    } else if (room.game?.definition?.actions?.forfeit) {
+      gameHandlers.applyGameAction(room, { type: 'forfeit', playerId }, ctx);
+    }
+
+    broadcastToRoom(room.code, { type: 'LOBBY_UPDATE', state: room.getState() });
+    return { ok: true, code: room.code, playerId, username };
+  }
+
+  function closeRoom(code) {
+    const roomCode = String(code || '').toUpperCase();
+    const room = manager.getRoom(roomCode);
+    if (!room) return { ok: false, status: 404, error: 'Table not found' };
+
+    for (const [playerId] of room.players) {
+      if (graceTimers.has(playerId)) {
+        clearTimeout(graceTimers.get(playerId));
+        graceTimers.delete(playerId);
+      }
+      playerSockets.delete(playerId);
+    }
+
+    stopRoomGame(room);
+    broadcastToRoom(room.code, { type: 'ERROR', message: 'Table closed by administrator', roomClosed: true });
+
+    const sockets = roomSockets.get(room.code);
+    if (sockets) {
+      for (const ws of [...sockets]) {
+        const meta = socketMeta.get(ws);
+        if (meta) meta.playerId = null;
+        try {
+          ws.close(4004, 'Table closed by administrator');
+        } catch { /* ignore close error */ }
+      }
+    }
+
+    manager.removeRoom(room.code);
+    return { ok: true, code: room.code };
+  }
+
+  const wsControls = { getRoomConnections, kickPlayer, closeRoom };
+  manager.wsControls = wsControls;
+
+  return { wss, broadcastToRoom, sendToPlayer, hasActiveSockets, ...wsControls };
 }

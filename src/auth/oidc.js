@@ -142,14 +142,35 @@ export function resolveRedirectUri(req) {
   return `${proto}://${host}/admin/callback`;
 }
 
-export async function buildLoginRedirect(req, res) {
+export function sanitizeReturnTo(next, fallback = '/admin') {
+  if (typeof next !== 'string') return fallback;
+  const trimmed = next.trim();
+  if (!trimmed.startsWith('/') || trimmed.startsWith('//') || trimmed.startsWith('/\\')) {
+    return fallback;
+  }
+  return trimmed;
+}
+
+export function getCallbackReturnTo(req, fallback = '/admin') {
+  return sanitizeReturnTo(req?._oidcReturnTo, fallback);
+}
+
+export async function buildLoginRedirect(req, res, { returnTo } = {}) {
   const doc = await getOidcDiscovery();
   const state = base64url(randomBytes(16));
   const nonce = base64url(randomBytes(16));
   const { verifier, challenge } = createPkcePair();
   const redirectUri = resolveRedirectUri(req);
+  const safeReturnTo = sanitizeReturnTo(returnTo ?? req.query?.next);
 
-  const txToken = signPayload({ state, nonce, verifier, redirectUri, exp: Date.now() + TX_TTL_MS });
+  const txToken = signPayload({
+    state,
+    nonce,
+    verifier,
+    redirectUri,
+    returnTo: safeReturnTo,
+    exp: Date.now() + TX_TTL_MS,
+  });
   res.append('Set-Cookie', `${TX_COOKIE}=${encodeURIComponent(txToken)}; ${cookieFlags(req, TX_TTL_MS)}`);
 
   const url = new URL(doc.authorization_endpoint);
@@ -235,6 +256,7 @@ export async function handleOidcCallback(req, res) {
 
   clearAdminCookies(req, res);
   setSessionCookie(req, res, claims);
+  req._oidcReturnTo = sanitizeReturnTo(tx.returnTo);
   return claims;
 }
 

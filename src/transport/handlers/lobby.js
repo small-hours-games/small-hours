@@ -43,9 +43,12 @@ export function handleJoinLobby(ws, meta, room, msg, ctx) {
     reconnectToken = player.reconnectToken;
     player.connected = true;
     player.lastSeen = Date.now();
+    if (meta.device) player.device = meta.device;
   } else {
     // New player
     ({ playerId, avatar, reconnectToken } = room.addPlayer(msg.username));
+    const player = room.players.get(playerId);
+    if (player && meta.device) player.device = meta.device;
   }
 
   meta.playerId = playerId;

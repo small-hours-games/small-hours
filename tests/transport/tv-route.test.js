@@ -35,8 +35,10 @@ describe('/tv entry page', () => {
     }
   });
 
-  it('leaves other pages alone', async () => {
+  it('leaves other pages alone and returns 404 for missing downloads', async () => {
     expect(await (await fetch(base + '/host/ABCD')).text()).toContain('Smallhours - TV Screen');
     expect(await (await fetch(base + '/tvx')).text()).toContain('Smallhours - Social Party Game Platform');
+    const missingApk = await fetch(base + '/download/does-not-exist.apk');
+    expect(missingApk.status).toBe(404);
   });
 });

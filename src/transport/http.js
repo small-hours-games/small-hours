@@ -119,7 +119,7 @@ export function setupRoutes(app, manager) {
   }
   app.use('/games/_api-card', express.static(path.join(GAMES_DIR, '_api-card', 'client'), { index: false }));
 
-  setupAdminRoutes(app);
+  setupAdminRoutes(app, manager);
   setupApiV1Routes(app, manager);
 
   app.get('/api/games', (_req, res) => {
@@ -178,7 +178,7 @@ export function setupRoutes(app, manager) {
 
   // Route /host/:code to host.html, /player/:code to player.html
   app.use((req, res) => {
-    if (req.path.startsWith('/api/') || req.path.startsWith('/ws/')) {
+    if (req.path.startsWith('/api/') || req.path.startsWith('/ws/') || req.path.startsWith('/download/')) {
       res.status(404).json({ error: 'Not found' });
       return;
     }

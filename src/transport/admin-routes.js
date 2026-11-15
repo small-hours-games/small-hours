@@ -3,12 +3,15 @@
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import express from 'express';
+import defaultManager from '../session/manager.js';
+import { parseUserAgent } from './device-info.js';
 import {
   isOidcConfigured,
   getAdminSession,
   requireAdminSession,
   buildLoginRedirect,
   handleOidcCallback,
+  getCallbackReturnTo,
   clearAdminCookies,
 } from '../auth/oidc.js';
 import { createApiKey, listApiKeys, revokeApiKey } from '../auth/api-keys.js';
@@ -41,21 +44,141 @@ code{background:#0f172a;padding:2px 6px;border-radius:6px;font-size:13px;color:#
 h1{margin-top:0;font-size:20px}</style></head>
 <body><div class="card">
 <h1>OIDC Login Not Configured</h1>
-<p>Set <code>OIDC_ISSUER</code> and <code>OIDC_CLIENT_ID</code> (plus optional <code>OIDC_CLIENT_SECRET</code>, <code>OIDC_ALLOWED_EMAILS</code>, and <code>ADMIN_SESSION_SECRET</code>) in <code>.env</code> to enable <code>/admin</code>.</p>
+<p>Set <code>OIDC_ISSUER</code> and <code>OIDC_CLIENT_ID</code> (plus optional <code>OIDC_CLIENT_SECRET</code>, <code>OIDC_ALLOWED_EMAILS</code>, and <code>ADMIN_SESSION_SECRET</code>) in <code>.env</code> to enable <code>/admin</code> and <code>/dashboard</code>.</p>
 <p style="opacity:.75;font-size:13px">Redirect URI: <code>/admin/callback</code></p>
 </div></body></html>`;
 }
 
-export function setupAdminRoutes(app) {
+function buildTablesSnapshot(manager) {
+  const now = Date.now();
+  const tables = [];
+  let activeGameCount = 0;
+  let lobbyCount = 0;
+  let humanPlayerCount = 0;
+  let connectedPlayerCount = 0;
+  let botCount = 0;
+  let hostDisplayCount = 0;
+  let observerCount = 0;
+
+  for (const [code, room] of manager.rooms) {
+    const conns = manager.wsControls?.getRoomConnections?.(code) || { hosts: [], observers: [] };
+    const gameEntry = room.game && room.gameType ? getGame(room.gameType) : null;
+    const gameState = room.game?.state || null;
+    const status = room.game ? 'in_game' : room.votingActive ? 'voting' : 'lobby';
+
+    if (room.game) activeGameCount += 1;
+    else lobbyCount += 1;
+
+    const players = [];
+    for (const [playerId, p] of room.players) {
+      humanPlayerCount += 1;
+      if (p.connected) connectedPlayerCount += 1;
+      players.push({
+        playerId,
+        username: p.username,
+        avatar: p.avatar,
+        isAdmin: Boolean(p.isAdmin),
+        connected: Boolean(p.connected),
+        ready: Boolean(p.ready),
+        sessionScore: Number(p.sessionScore || 0),
+        lastSeen: p.lastSeen || room.lastActivity,
+        device: p.device || parseUserAgent(''),
+      });
+    }
+
+    players.sort((a, b) => {
+      if (a.isAdmin !== b.isAdmin) return a.isAdmin ? -1 : 1;
+      if (a.connected !== b.connected) return a.connected ? -1 : 1;
+      return a.username.localeCompare(b.username);
+    });
+
+    const bots = (room.bots || []).map(b => ({
+      playerId: b.playerId,
+      username: b.username,
+      avatar: b.avatar,
+    }));
+    botCount += bots.length;
+
+    const hosts = conns.hosts || [];
+    hostDisplayCount += hosts.length;
+
+    const observers = conns.observers?.length
+      ? conns.observers
+      : [...(room.observers?.entries() || [])].map(([observerId, o]) => ({
+        observerId,
+        username: o.username,
+        connectedAt: o.lastSeen || null,
+        device: parseUserAgent(''),
+      }));
+    observerCount += Math.max(observers.length, room.observers?.size || 0);
+
+    tables.push({
+      code,
+      createdAt: room.createdAt,
+      lastActivity: room.lastActivity,
+      idleMs: Math.max(0, now - (room.lastActivity || now)),
+      language: room.language || 'en',
+      status,
+      game: room.game
+        ? {
+          type: room.gameType || 'unknown',
+          label: gameEntry?.label || room.gameType || 'Game',
+          icon: gameEntry?.icon || '🎮',
+          phase: gameState?.phase || null,
+          round: Number.isFinite(gameState?.round) ? gameState.round : null,
+        }
+        : null,
+      hosts,
+      players,
+      bots,
+      observers,
+    });
+  }
+
+  tables.sort((a, b) => {
+    if ((a.status === 'in_game') !== (b.status === 'in_game')) {
+      return a.status === 'in_game' ? -1 : 1;
+    }
+    return (b.lastActivity || 0) - (a.lastActivity || 0);
+  });
+
+  return {
+    summary: {
+      tableCount: tables.length,
+      activeGameCount,
+      lobbyCount,
+      humanPlayerCount,
+      connectedPlayerCount,
+      botCount,
+      hostDisplayCount,
+      observerCount,
+    },
+    tables,
+    generatedAt: now,
+  };
+}
+
+export function setupAdminRoutes(app, manager = defaultManager) {
   app.get('/admin', async (req, res) => {
     const session = getAdminSession(req);
     if (!session) {
       if (!isOidcConfigured()) {
         return res.status(503).type('html').send(unconfiguredHtml());
       }
-      return res.redirect('/admin/login');
+      return res.redirect('/admin/login?next=%2Fadmin');
     }
     res.sendFile(path.join(PUBLIC_DIR, 'admin.html'));
+  });
+
+  app.get('/dashboard', async (req, res) => {
+    const session = getAdminSession(req);
+    if (!session) {
+      if (!isOidcConfigured()) {
+        return res.status(503).type('html').send(unconfiguredHtml());
+      }
+      return res.redirect('/admin/login?next=%2Fdashboard');
+    }
+    res.sendFile(path.join(PUBLIC_DIR, 'dashboard.html'));
   });
 
   app.get('/admin/login', async (req, res) => {
@@ -63,7 +186,7 @@ export function setupAdminRoutes(app) {
       return res.status(503).type('html').send(unconfiguredHtml());
     }
     try {
-      const target = await buildLoginRedirect(req, res);
+      const target = await buildLoginRedirect(req, res, { returnTo: req.query?.next });
       res.redirect(target);
     } catch (err) {
       res.status(502).send(`OIDC login error: ${err.message}`);
@@ -76,7 +199,7 @@ export function setupAdminRoutes(app) {
     }
     try {
       await handleOidcCallback(req, res);
-      res.redirect('/admin');
+      res.redirect(getCallbackReturnTo(req, '/admin'));
     } catch (err) {
       res.status(403).send(`OIDC callback rejected: ${err.message}`);
     }
@@ -89,6 +212,41 @@ export function setupAdminRoutes(app) {
 
   app.get('/admin/api/me', requireAdminSession, (req, res) => {
     res.json({ user: req.adminUser, oidcConfigured: isOidcConfigured() });
+  });
+
+  app.get('/admin/api/tables', requireAdminSession, (_req, res) => {
+    res.json(buildTablesSnapshot(manager));
+  });
+
+  app.post('/admin/api/tables/:code/close', requireAdminSession, (req, res) => {
+    const code = String(req.params.code || '').toUpperCase();
+    if (manager.wsControls?.closeRoom) {
+      const result = manager.wsControls.closeRoom(code);
+      if (!result.ok) return res.status(result.status || 404).json({ error: result.error });
+      return res.json(result);
+    }
+    const room = manager.getRoom(code);
+    if (!room) return res.status(404).json({ error: 'Table not found' });
+    room.endGame?.();
+    manager.removeRoom(code);
+    res.json({ ok: true, code });
+  });
+
+  app.post('/admin/api/tables/:code/players/:playerId/kick', requireAdminSession, (req, res) => {
+    const code = String(req.params.code || '').toUpperCase();
+    const playerId = String(req.params.playerId || '');
+    if (manager.wsControls?.kickPlayer) {
+      const result = manager.wsControls.kickPlayer(code, playerId);
+      if (!result.ok) return res.status(result.status || 404).json({ error: result.error });
+      return res.json(result);
+    }
+    const room = manager.getRoom(code);
+    if (!room) return res.status(404).json({ error: 'Table not found' });
+    const player = room.players.get(playerId);
+    if (!player) return res.status(404).json({ error: 'Player not found' });
+    const username = player.username;
+    room.removePlayer(playerId);
+    res.json({ ok: true, code, playerId, username });
   });
 
   app.get('/admin/api/keys', requireAdminSession, async (_req, res) => {

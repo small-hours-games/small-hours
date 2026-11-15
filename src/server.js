@@ -32,12 +32,20 @@ const { wss, broadcastToRoom, hasActiveSockets } = setupWebSocket(server, manage
 // Tell the manager how to check for active sockets (avoids cleaning up rooms with connected displays)
 manager.hasActiveSockets = (code) => hasActiveSockets(code);
 
-// Start listening
-server.listen(PORT, '0.0.0.0', () => {
+// Start listening (dual-stack IPv4+IPv6 by default; fall back to IPv4 if IPv6 is disabled)
+const onListening = () => {
   console.log(`Small Hours server listening on port ${PORT}`);
   console.log(`  Local:   http://localhost:${PORT}`);
   console.log(`  Health:  http://localhost:${PORT}/health`);
+};
+server.once('error', (err) => {
+  if (err && (err.code === 'EAFNOSUPPORT' || err.code === 'EADDRNOTAVAIL')) {
+    server.listen(PORT, '0.0.0.0', onListening);
+    return;
+  }
+  throw err;
 });
+server.listen(PORT, onListening);
 
 prewarmCache().catch(err => console.warn('[prewarm] startup cache warm failed:', err.message));
 

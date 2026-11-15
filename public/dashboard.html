@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Small Hours — Live Tables Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Plus Jakarta Sans', 'system-ui', 'sans-serif'],
+            mono: ['JetBrains Mono', 'ui-monospace', 'monospace'],
+          },
+        },
+      },
+    };
+  </script>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen antialiased font-sans">
+  <header class="border-b border-slate-800 bg-slate-950">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-8">
+      <a href="/dashboard" class="text-lg font-bold tracking-tight text-white whitespace-nowrap shrink-0">Small Hours Admin</a>
+      <nav class="flex items-center gap-6 text-sm font-medium">
+        <a href="/dashboard" class="text-white border-b-2 border-sky-500 whitespace-nowrap shrink-0 py-1" aria-current="page">Live Tables</a>
+        <a href="/admin" class="text-slate-400 hover:text-white transition-colors whitespace-nowrap shrink-0 py-1">API &amp; Games</a>
+        <a href="/" class="text-slate-400 hover:text-white transition-colors whitespace-nowrap shrink-0 py-1 hidden sm:inline">Home</a>
+      </nav>
+      <div class="flex items-center gap-4 shrink-0">
+        <span id="adminUserLabel" class="text-xs text-slate-400 truncate max-w-[180px] hidden sm:inline">Loading...</span>
+        <button id="logoutBtn" type="button" class="px-3.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-100 whitespace-nowrap shrink-0 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500">Sign out</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 py-8 space-y-6">
+    <section class="flex flex-wrap items-end justify-between gap-4">
+      <div class="space-y-1 max-w-2xl">
+        <h1 class="text-2xl font-bold tracking-tight text-white">Live Tables &amp; Connected Devices</h1>
+        <p class="text-sm text-slate-400">Monitor ongoing rooms, active games, connected players, and phone or TV clients in real time.</p>
+      </div>
+      <div class="flex flex-wrap items-center gap-3 text-xs text-slate-400">
+        <span id="lastUpdatedLabel" class="font-mono tabular-nums">Syncing...</span>
+        <button id="toggleAutoRefreshBtn" type="button" class="px-3 py-2 rounded-lg bg-slate-900 border border-slate-800 hover:border-slate-700 text-slate-200 font-medium whitespace-nowrap shrink-0 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500">Pause live feed</button>
+        <button id="refreshNowBtn" type="button" class="px-4 py-2 rounded-lg bg-sky-600 hover:bg-sky-500 text-white font-semibold whitespace-nowrap shrink-0 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400">Refresh</button>
+      </div>
+    </section>
+
+    <!-- KPI Summary Strip -->
+    <section class="grid grid-cols-2 lg:grid-cols-4 gap-4" aria-label="Live summary metrics">
+      <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-1">
+        <div class="text-xs font-medium text-slate-400">Ongoing Tables</div>
+        <div id="kpiTableCount" class="text-3xl font-bold font-mono tabular-nums text-white">—</div>
+        <div id="kpiTableSub" class="text-xs text-slate-400 tabular-nums">Loading rooms</div>
+      </div>
+      <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-1">
+        <div class="text-xs font-medium text-slate-400">Active Games</div>
+        <div id="kpiActiveGames" class="text-3xl font-bold font-mono tabular-nums text-emerald-400">—</div>
+        <div id="kpiLobbyCount" class="text-xs text-slate-400 tabular-nums">In lobby: —</div>
+      </div>
+      <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-1">
+        <div class="text-xs font-medium text-slate-400">Connected Players</div>
+        <div id="kpiConnectedPlayers" class="text-3xl font-bold font-mono tabular-nums text-white">—</div>
+        <div id="kpiPlayersSub" class="text-xs text-slate-400 tabular-nums">Human seats &amp; AI bots</div>
+      </div>
+      <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-1">
+        <div class="text-xs font-medium text-slate-400">TV Hosts Online</div>
+        <div id="kpiHostDisplays" class="text-3xl font-bold font-mono tabular-nums text-sky-400">—</div>
+        <div id="kpiObserversSub" class="text-xs text-slate-400 tabular-nums">Observers: —</div>
+      </div>
+    </section>
+
+    <!-- Search & Filter Bar -->
+    <section class="flex flex-wrap items-center justify-between gap-3 bg-slate-900 border border-slate-800 rounded-xl p-3">
+      <div class="flex-1 min-w-[240px]">
+        <label for="tableSearchInput" class="sr-only">Filter tables by room code, player name, game, or phone</label>
+        <input id="tableSearchInput" type="search" placeholder="Search room code, player name, game, or phone model..."
+          class="w-full px-3.5 py-2 rounded-lg bg-slate-950 border border-slate-800 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-sky-500">
+      </div>
+      <div class="flex items-center gap-1 p-1 bg-slate-950 border border-slate-800 rounded-lg" role="group" aria-label="Table status filter">
+        <button data-status-filter="all" type="button" class="px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap shrink-0 transition-colors bg-slate-800 text-white">All</button>
+        <button data-status-filter="in_game" type="button" class="px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap shrink-0 transition-colors text-slate-400 hover:text-white">In Game</button>
+        <button data-status-filter="lobby" type="button" class="px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap shrink-0 transition-colors text-slate-400 hover:text-white">Lobby</button>
+      </div>
+    </section>
+
+    <!-- Error Banner -->
+    <div id="dashboardError" class="hidden bg-rose-950/50 border border-rose-800 rounded-xl p-4 flex items-center justify-between gap-4">
+      <span id="dashboardErrorText" class="text-sm text-rose-200"></span>
+      <button id="retryLoadBtn" type="button" class="px-3 py-1.5 rounded-lg bg-rose-900 hover:bg-rose-800 text-xs font-semibold text-white whitespace-nowrap shrink-0">Retry</button>
+    </div>
+
+    <!-- Action Feedback Toast -->
+    <div id="actionBanner" class="hidden bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-sm text-slate-200 flex items-center justify-between gap-4">
+      <span id="actionBannerText"></span>
+      <button id="dismissBannerBtn" type="button" class="text-xs text-slate-400 hover:text-white">Dismiss</button>
+    </div>
+
+    <!-- Tables List -->
+    <section id="tablesContainer" class="space-y-4" aria-live="polite">
+      <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 space-y-4 animate-pulse">
+        <div class="h-5 w-48 bg-slate-800 rounded"></div>
+        <div class="h-10 w-full bg-slate-800/70 rounded"></div>
+        <div class="h-10 w-full bg-slate-800/50 rounded"></div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Confirmation Modal -->
+  <div id="confirmModal" class="hidden fixed inset-0 z-50 bg-slate-950/80 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="confirmModalTitle">
+    <div class="bg-slate-900 border border-slate-800 rounded-xl max-w-md w-full p-6 space-y-4">
+      <div class="space-y-1.5">
+        <h2 id="confirmModalTitle" class="text-lg font-semibold text-white">Confirm Action</h2>
+        <p id="confirmModalBody" class="text-sm text-slate-300"></p>
+      </div>
+      <div class="flex items-center justify-end gap-3 pt-2">
+        <button id="confirmCancelBtn" type="button" class="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-200 transition-colors">Cancel</button>
+        <button id="confirmSubmitBtn" type="button" class="px-4 py-2 rounded-lg bg-rose-600 hover:bg-rose-500 text-xs font-semibold text-white transition-colors">Confirm</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/dashboard.js"></script>
+</body>
+</html>

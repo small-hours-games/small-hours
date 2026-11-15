@@ -163,7 +163,7 @@ Copy `.env.example` to `.env` to customize settings. No external keys are requir
 
 | Setting | Where | Default | What it changes |
 | --- | --- | --- | --- |
-| `PORT` | `.env` | `3000` | HTTP and WebSocket port (Docker Compose healthcheck defaults to `3001` unless `PORT` is set). |
+| `PORT` | `.env` | `3000` | HTTP, WebSocket, and Docker healthcheck port. |
 | `DOMAIN` | `.env` | `localhost:3000` | Base URL included in room-created notifications. |
 | `GEMINI_API_KEY` | `.env` | none | Enables Gemini TTS game-show narration (falls back to browser speech when unset). |
 | `DISCORD_WEBHOOK_URL` | `.env` | none | Sends a Discord notification with push preview text when a room is created. |

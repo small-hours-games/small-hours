@@ -18,4 +18,4 @@ docker compose pull
 docker compose run --rm --no-deps game node scripts/seed-questions.js
 docker compose up -d
 sleep 5
-curl -fsS "http://localhost:${PORT:-3001}/health" && echo
+curl -fsS "http://127.0.0.1:${PORT:-3000}/health" && echo

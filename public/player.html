@@ -545,7 +545,7 @@
       };
 
       ws.onclose = (e) => {
-        if (state.roomNotFound || (e && e.code === 4004)) {
+        if (state.roomNotFound || (e && (e.code === 4004 || e.code === 4003))) {
           leaveDeadRoom();
           return;
         }

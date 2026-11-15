@@ -8,5 +8,5 @@ COPY . .
 RUN mkdir -p /app/data && date -u +%Y-%m-%dT%H:%M:%SZ > /app/.build-time
 ARG GIT_SHA=
 ENV GIT_SHA=$GIT_SHA
-EXPOSE 3001
+EXPOSE 3000
 CMD ["node", "src/server.js"]
