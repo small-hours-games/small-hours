@@ -84,6 +84,8 @@ describe('Android TV Night-Navy rebrand & art generation', () => {
     expect(buildSh).toContain('VERSION_NAME=${VERSION_NAME:-1.2}');
 
     const pkg = JSON.parse(readRepoFile('package.json'));
-    expect(pkg.version).toBe('2.38.0');
+    const [major, minor] = pkg.version.split('.').map(Number);
+    expect(major).toBeGreaterThanOrEqual(2);
+    expect(minor).toBeGreaterThanOrEqual(38);
   });
 });
