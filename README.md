@@ -16,7 +16,7 @@
   <a href="package.json"><img src="https://img.shields.io/github/package-json/v/small-hours-games/small-hours?label=version&labelColor=0b1530&color=facc15" alt="Current version"></a>
   <a href="https://github.com/small-hours-games/small-hours/actions/workflows/docker.yml"><img src="https://img.shields.io/badge/tests-795%20passing-34d399?labelColor=0b1530" alt="Test suite status"></a>
   <img src="https://img.shields.io/badge/node-22%2B-38bdf8?labelColor=0b1530" alt="Node.js 22 or later">
-  <a href="android-tv/README.md"><img src="https://img.shields.io/badge/Android%20TV-v1.2-a78bfa?labelColor=0b1530" alt="Android TV companion app v1.2"></a>
+  <a href="android-tv/README.md"><img src="https://img.shields.io/badge/Android%20TV-v1.3-a78bfa?labelColor=0b1530" alt="Android TV companion app v1.3"></a>
 </p>
 
 <p align="center">

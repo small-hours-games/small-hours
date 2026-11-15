@@ -80,8 +80,8 @@ describe('Android TV Night-Navy rebrand & art generation', () => {
 
   it('bumps Android TV and package versions cleanly', () => {
     const buildSh = readRepoFile('android-tv/build.sh');
-    expect(buildSh).toContain('VERSION_CODE=${VERSION_CODE:-3}');
-    expect(buildSh).toContain('VERSION_NAME=${VERSION_NAME:-1.2}');
+    expect(buildSh).toContain('VERSION_CODE=${VERSION_CODE:-4}');
+    expect(buildSh).toContain('VERSION_NAME=${VERSION_NAME:-1.3}');
 
     const pkg = JSON.parse(readRepoFile('package.json'));
     const [major, minor] = pkg.version.split('.').map(Number);

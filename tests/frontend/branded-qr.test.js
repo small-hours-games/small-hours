@@ -75,13 +75,13 @@ describe('branded-qr renderer', () => {
     };
 
     const brandedEl = makeEl();
-    api.renderBrandedQr(brandedEl, 'https://quiz.aldervall.se/player/WITH_MATRIX');
+    api.renderBrandedQr(brandedEl, 'https://smallhours.se/player/WITH_MATRIX');
     expect(calls[0].correctLevel).toBe(2);
     expect(brandedEl.getAttribute('data-qr-mode')).toBe('branded');
     expect(brandedEl.innerHTML).toContain('branded-qr-svg');
 
     const fallbackEl = makeEl();
-    api.renderBrandedQr(fallbackEl, 'https://quiz.aldervall.se/player/PLAIN');
+    api.renderBrandedQr(fallbackEl, 'https://smallhours.se/player/PLAIN');
     expect(fallbackEl.getAttribute('data-qr-mode')).toBe('fallback');
     expect(calls.length).toBe(3);
   });
