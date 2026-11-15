@@ -228,7 +228,7 @@
     const avEl = document.getElementById('rnMyAvatar');
     if (avEl && SH.avatarSvg) avEl.innerHTML = SH.avatarSvg(myAvatar, { size: 38 });
     const nameEl = document.getElementById('rnMyName');
-    if (nameEl) nameEl.textContent = state.username || 'Runner';
+    if (nameEl) nameEl.textContent = state.name || 'Runner';
     updateMotionBtn();
   }
 

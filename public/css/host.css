@@ -54,8 +54,22 @@
     }
 
     .game-title {
+      display: flex;
+      align-items: center;
+      gap: 0.4em;
       font-size: 1.6rem;
       font-weight: 700;
+    }
+
+    .game-title-logo {
+      height: 1.5em;
+      width: auto;
+      display: block;
+    }
+
+    .game-title-logo + span {
+      font-family: 'Fredoka', sans-serif;
+      color: #facc15;
     }
 
     .round-info {

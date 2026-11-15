@@ -234,7 +234,7 @@
     const avEl = document.getElementById('tnMyAvatar');
     if (avEl && SH.avatarSvg) avEl.innerHTML = SH.avatarSvg(myAvatar, { size: 40 });
     const nameEl = document.getElementById('tnMyName');
-    if (nameEl) nameEl.textContent = state.username || 'Player';
+    if (nameEl) nameEl.textContent = state.name || 'Player';
 
     const scoreEl = document.getElementById('tnScorePill');
     if (scoreEl && p1 && p2) {

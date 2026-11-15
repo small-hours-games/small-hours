@@ -193,6 +193,9 @@
   <script src="/js/table-cards.js"></script>
   <script src="/js/table-cards-tv.js"></script>
   <script src="/js/game-api.js"></script>
+  <script src="/js/avatars.js"></script>
+  <script src="/js/avatar-3d.js"></script>
+  <script src="/js/stage-3d.js"></script>
   <!-- game-catalog -->
   <script src="/js/games.js"></script>
   <script src="/js/build-info.js"></script>
@@ -669,7 +672,12 @@
       document.body.classList.add('in-game');
 
       const info = shGame(msg.gameType);
-      document.getElementById('gameTitle').textContent = info.title || info.label;
+      // A game named after the brand ("Small Hours Tennis") shows the logo in place of those words.
+      const title = info.title || info.label || '';
+      const branded = /^small ?hours\s+(.+)$/i.exec(title);
+      document.getElementById('gameTitle').innerHTML = branded
+        ? '<img class="game-title-logo" src="/images/smallhours-logo.svg" alt="Smallhours"><span>' + escapeHtml(branded[1]) + '</span>'
+        : escapeHtml(title);
       document.getElementById('roundInfo').textContent = '';
 
       // Narrate the game's story (intro + TTS voice), but not when rejoining a running game

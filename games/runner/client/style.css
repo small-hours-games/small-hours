@@ -25,14 +25,9 @@
   50% { transform: translateX(-50%) scale(0.65); opacity: 0.25; }
 }
 
-@keyframes rnStageGlow {
-  0%, 100% { box-shadow: inset 0 0 28px rgba(236, 72, 153, 0.22), 0 10px 28px rgba(2, 6, 23, 0.6); }
-  50% { box-shadow: inset 0 0 42px rgba(34, 211, 238, 0.34), 0 10px 28px rgba(2, 6, 23, 0.6); }
-}
-
 @keyframes rnPulseRing {
-  0% { box-shadow: 0 0 0 0 rgba(34, 211, 238, 0.65); }
-  100% { box-shadow: 0 0 0 22px rgba(34, 211, 238, 0); }
+  0% { box-shadow: 0 0 0 0 rgba(250, 204, 21, 0.65); }
+  100% { box-shadow: 0 0 0 22px rgba(250, 204, 21, 0); }
 }
 
 @keyframes rnWinnerSlide {
@@ -40,7 +35,8 @@
   100% { opacity: 1; transform: translate(-50%, 0) scale(1); }
 }
 
-/* TV Grid Shell */
+/* TV Grid Shell — Night Navy, the four card colours, Fredoka for names and scores.
+   No blur or animated glow around the canvas: both repaint every frame on a TV chip. */
 .rn-tv {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
@@ -50,7 +46,7 @@
   min-height: 440px;
   padding: 10px;
   border-radius: 18px;
-  background: radial-gradient(circle at 50% 10%, #1e0b3b, #090318 80%);
+  background: #0b1530;
   box-sizing: border-box;
 }
 
@@ -64,7 +60,7 @@
 
 .rn-runners-row {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(175px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
   gap: 8px;
 }
 
@@ -72,19 +68,18 @@
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
-  gap: 8px;
-  padding: 6px 12px;
+  gap: 10px;
+  padding: 6px 14px 6px 10px;
   border-radius: 14px;
-  background: rgba(15, 7, 36, 0.86);
-  border: 1px solid rgba(236, 72, 153, 0.42);
+  background: #13234a;
+  border: 2px solid #34467a;
+  border-left: 6px solid var(--rn-c, #38bdf8);
   color: #f8fafc;
-  backdrop-filter: blur(8px);
-  transition: opacity 0.25s ease, filter 0.25s ease;
+  transition: opacity 0.25s ease;
 }
 
 .rn-runner-card.out {
-  opacity: 0.42;
-  filter: grayscale(0.75);
+  opacity: 0.45;
 }
 
 .rn-avatar svg {
@@ -92,67 +87,107 @@
   border-radius: 999px;
 }
 
+.rn-rc-main {
+  min-width: 0;
+}
+
 .rn-rc-name {
-  font-weight: 800;
-  font-size: 0.85rem;
+  font-family: 'Fredoka', sans-serif;
+  font-weight: 700;
+  font-size: 1.05rem;
+  line-height: 1.2;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .rn-rc-meta {
-  font-size: 0.72rem;
-  color: #cbd5e1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.82rem;
+  line-height: 1;
+  white-space: nowrap;
 }
 
+.rn-rc-lives b {
+  color: #fb7185;
+  font-weight: 400;
+  margin-right: 1px;
+}
+
+.rn-rc-lives b.lost {
+  color: #34467a;
+}
+
+.rn-rc-gems {
+  color: #38bdf8;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+
+/* H-O-U-R-S progress as five small logo cards. */
+.rn-rc-word {
+  display: inline-flex;
+  gap: 2px;
+}
+
+.rn-rc-word i {
+  width: 14px;
+  height: 18px;
+  border-radius: 4px;
+  display: grid;
+  place-items: center;
+  font: 700 0.68rem/1 'Fredoka', sans-serif;
+  font-style: normal;
+  color: #5b6b99;
+  background: #0b1530;
+  border: 1px solid #34467a;
+}
+
+.rn-rc-word i.got {
+  color: #0b1530;
+  border-color: #f8fafc;
+}
+
+.rn-rc-word i.got:nth-child(1),
+.rn-rc-word i.got:nth-child(5) { background: #38bdf8; }
+.rn-rc-word i.got:nth-child(2) { background: #a78bfa; }
+.rn-rc-word i.got:nth-child(3) { background: #fb7185; }
+.rn-rc-word i.got:nth-child(4) { background: #facc15; }
+
 .rn-rc-score {
-  font-size: 1.05rem;
-  font-weight: 900;
-  color: #22d3ee;
+  font-family: 'Fredoka', sans-serif;
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: #facc15;
+  min-width: 3.2ch;
+  text-align: right;
 }
 
 .rn-speed-pill {
   display: inline-flex;
+  flex-direction: column;
   align-items: center;
-  gap: 8px;
-  padding: 7px 14px;
-  border-radius: 999px;
-  background: rgba(11, 21, 48, 0.9);
-  border: 1px solid rgba(56, 189, 248, 0.45);
-  color: #38bdf8;
+  gap: 3px;
+  padding: 6px 18px;
+  border-radius: 14px;
+  background: #13234a;
+  border: 2px solid #34467a;
+  color: #facc15;
+  font-family: 'Barlow Condensed', sans-serif;
   font-weight: 800;
-  font-size: 0.82rem;
+  font-size: 0.95rem;
+  letter-spacing: 0.1em;
   white-space: nowrap;
 }
 
-.rn-brand-mark {
-  width: 20px;
-  height: 20px;
-  display: inline-block;
-  flex-shrink: 0;
-}
-
 .rn-brand-logo {
-  height: 22px;
+  height: 26px;
   width: auto;
   display: block;
   flex-shrink: 0;
-}
-
-.rn-phone-brand-bar {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  padding: 4px 12px;
-  border-radius: 999px;
-  background: rgba(11, 21, 48, 0.88);
-  border: 1px solid rgba(167, 139, 250, 0.4);
-  color: #f8fafc;
-  font-size: 0.68rem;
-  font-weight: 900;
-  letter-spacing: 0.08em;
-  justify-self: center;
 }
 
 .rn-stage-wrap {
@@ -160,8 +195,17 @@
   min-height: 0;
   border-radius: 14px;
   overflow: hidden;
-  border: 1px solid rgba(236, 72, 153, 0.24);
-  animation: rnStageGlow 4s ease-in-out infinite;
+  background: #0b1530;
+}
+
+/* The logo's four card colours as a strip along the top of the stage. */
+.rn-stage-wrap::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 5px;
+  background: linear-gradient(90deg, #38bdf8 0 25%, #a78bfa 25% 50%, #fb7185 50% 75%, #facc15 75% 100%);
+  z-index: 3;
 }
 
 .rn-stage {
@@ -169,7 +213,7 @@
   height: 100%;
 }
 
-/* CSS-Animated Track Radar */
+/* Track radar: where each runner is across the five lanes */
 .rn-track-radar {
   position: absolute;
   right: 14px;
@@ -178,8 +222,8 @@
   height: 82px;
   border-radius: 10px;
   padding: 6px;
-  background: rgba(9, 3, 24, 0.88);
-  border: 2px solid rgba(34, 211, 238, 0.55);
+  background: #0b1530;
+  border: 2px solid #f8fafc;
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.5);
   pointer-events: none;
   z-index: 4;
@@ -189,11 +233,9 @@
   position: relative;
   width: 100%;
   height: 100%;
-  background-image:
-    linear-gradient(to right, rgba(34, 211, 238, 0.25) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(236, 72, 153, 0.35) 1px, transparent 1px);
-  background-size: 20% 100%, 100% 16px;
-  animation: rnGridScroll 0.45s linear infinite;
+  background-image: linear-gradient(to right, rgba(56, 189, 248, 0.45) 1px, transparent 1px);
+  background-size: 20% 100%;
+  border-right: 1px solid rgba(56, 189, 248, 0.45);
 }
 
 .rn-radar-dot {
@@ -202,25 +244,39 @@
   width: 10px;
   height: 10px;
   border-radius: 999px;
+  border: 1px solid #f8fafc;
   transform: translateX(-50%);
-  box-shadow: 0 0 8px currentColor;
   transition: left 0.08s linear, bottom 0.08s linear;
 }
 
 .rn-winner-banner {
   position: absolute;
-  bottom: 24px;
+  bottom: 28px;
   left: 50%;
   transform: translateX(-50%);
-  padding: 14px 28px;
-  border-radius: 18px;
-  background: linear-gradient(135deg, #ec4899, #8b5cf6);
-  color: #ffffff;
-  font-weight: 900;
-  font-size: 1.35rem;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 30px 14px 20px;
+  border-radius: 20px;
+  background: #facc15;
+  border: 4px solid #0b1530;
+  color: #0b1530;
+  font-family: 'Fredoka', sans-serif;
+  font-weight: 700;
+  font-size: 1.7rem;
+  white-space: nowrap;
   box-shadow: 0 12px 30px rgba(0, 0, 0, 0.5);
   z-index: 6;
   animation: rnWinnerSlide 0.35s ease-out;
+}
+
+.rn-winner-banner::before {
+  content: '';
+  width: 48px;
+  height: 48px;
+  flex-shrink: 0;
+  background: url('/images/smallhours-mark.svg') center / contain no-repeat;
 }
 
 @media (max-width: 760px) {
@@ -234,9 +290,29 @@
     width: 88px;
     height: 64px;
   }
+  .rn-winner-banner {
+    font-size: 1.1rem;
+    white-space: normal;
+  }
 }
 
 /* Phone Responsive Grid Controller */
+.rn-phone-brand-bar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 6px 16px;
+  border-radius: 999px;
+  background: #0b1530;
+  border-bottom: 3px solid #facc15;
+  color: #facc15;
+  font-family: 'Fredoka', sans-serif;
+  font-size: 1.05rem;
+  font-weight: 700;
+  justify-self: center;
+}
+
 .rn-phone-wrap {
   display: grid;
   grid-template-rows: auto auto auto minmax(175px, 1fr) auto;
@@ -251,8 +327,8 @@
   gap: 10px;
   padding: 10px 14px;
   border-radius: 16px;
-  background: rgba(15, 7, 36, 0.9);
-  border: 1px solid rgba(236, 72, 153, 0.38);
+  background: #13234a;
+  border: 2px solid #34467a;
 }
 
 .rn-letters-bar {
@@ -266,35 +342,40 @@
   border-radius: 10px;
   display: grid;
   place-items: center;
-  font-weight: 900;
-  font-size: 1rem;
-  background: rgba(30, 41, 59, 0.85);
-  color: #64748b;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  font-family: 'Fredoka', sans-serif;
+  font-weight: 700;
+  font-size: 1.15rem;
+  background: #13234a;
+  color: #5b6b99;
+  border: 2px solid #34467a;
   transition: transform 0.18s ease, background 0.2s ease;
 }
 
 .rn-letter-chip.got {
-  background: linear-gradient(135deg, #ec4899, #22d3ee);
-  color: #ffffff;
-  border-color: #ffffff;
+  background: #38bdf8;
+  color: #0b1530;
+  border-color: #f8fafc;
   transform: scale(1.06);
 }
+
+/* Each collected letter is one card of the logo fan. */
+.rn-letter-chip.got:nth-child(2) { background: #a78bfa; }
+.rn-letter-chip.got:nth-child(3) { background: #fb7185; }
+.rn-letter-chip.got:nth-child(4) { background: #facc15; }
 
 .rn-swipe-pad {
   position: relative;
   min-height: 185px;
   border-radius: 22px;
   overflow: hidden;
-  background: linear-gradient(180deg, #1b0636 0%, #090318 100%);
-  border: 2px solid rgba(34, 211, 238, 0.45);
+  background: linear-gradient(180deg, #1c1a55 0%, #0b1530 100%);
+  border: 2px solid #38bdf8;
   display: grid;
   place-items: center;
   touch-action: none;
   user-select: none;
   color: #e2e8f0;
   text-align: center;
-  animation: rnStageGlow 3.5s ease-in-out infinite;
 }
 
 .rn-swipe-pad.pulsing {
@@ -304,11 +385,11 @@
 .rn-phone-track-bg {
   position: absolute;
   inset: 12px 18px;
-  border: 1.5px solid rgba(236, 72, 153, 0.45);
+  border: 1.5px solid rgba(251, 113, 133, 0.6);
   border-radius: 10px;
   background-image:
-    linear-gradient(to right, rgba(34, 211, 238, 0.22) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(236, 72, 153, 0.35) 1.5px, transparent 1.5px);
+    linear-gradient(to right, rgba(56, 189, 248, 0.35) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(167, 139, 250, 0.5) 1.5px, transparent 1.5px);
   background-size: 20% 100%, 100% 32px;
   transform: perspective(320px) rotateX(28deg);
   animation: rnGridScroll 0.45s linear infinite;
@@ -350,8 +431,8 @@
   height: 72px;
   transform: translateX(-50%);
   border-radius: 999px;
-  background: linear-gradient(180deg, rgba(250, 204, 21, 0.45), rgba(236, 72, 153, 0.35));
-  filter: blur(1px);
+  background: linear-gradient(180deg, #facc15, #fb7185);
+  opacity: 0.55;
   pointer-events: none;
 }
 
@@ -370,8 +451,8 @@
   width: 34px;
   height: 34px;
   border-radius: 999px;
-  background: radial-gradient(circle at 32% 30%, #e0f2fe, #22d3ee 55%, #7c3aed 100%);
-  box-shadow: 0 0 18px rgba(34, 211, 238, 0.85);
+  background: radial-gradient(circle at 32% 30%, #fef9c3, #facc15 60%, #fb7185 100%);
+  box-shadow: 0 0 16px rgba(250, 204, 21, 0.7);
   transform: translate(-50%, 0) scale(1);
   transition: transform 0.24s cubic-bezier(0.22, 1, 0.36, 1), left 0.2s cubic-bezier(0.22, 1, 0.36, 1);
   animation: rnOrbHover 1.1s ease-in-out infinite;
@@ -413,11 +494,12 @@
 .rn-ctrl-btn {
   padding: 15px 8px;
   border-radius: 16px;
-  background: #1e1b4b;
-  color: #e0e7ff;
-  font-weight: 900;
-  font-size: 1rem;
-  border: 1px solid rgba(129, 140, 248, 0.35);
+  background: #13234a;
+  color: #f8fafc;
+  font-family: 'Fredoka', sans-serif;
+  font-weight: 700;
+  font-size: 1.05rem;
+  border: 2px solid #34467a;
   touch-action: manipulation;
   transition: transform 0.1s ease;
 }
@@ -427,6 +509,7 @@
 }
 
 .rn-ctrl-btn.jump {
-  background: linear-gradient(135deg, #06b6d4, #3b82f6);
-  color: #ffffff;
+  background: #facc15;
+  border-color: #facc15;
+  color: #0b1530;
 }

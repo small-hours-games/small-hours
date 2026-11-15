@@ -12,16 +12,6 @@
   50% { transform: translateX(-50%) scale(0.55); opacity: 0.2; }
 }
 
-@keyframes tnCourtGlow {
-  0%, 100% { box-shadow: inset 0 0 28px rgba(56, 189, 248, 0.22), 0 10px 28px rgba(2, 6, 23, 0.55); }
-  50% { box-shadow: inset 0 0 42px rgba(56, 189, 248, 0.38), 0 10px 28px rgba(2, 6, 23, 0.55); }
-}
-
-@keyframes tnNetShimmer {
-  0%, 100% { opacity: 0.72; }
-  50% { opacity: 1; }
-}
-
 @keyframes tnCalloutPop {
   0% { opacity: 0; transform: translate(-50%, -40%) scale(0.78); }
   25% { opacity: 1; transform: translate(-50%, -50%) scale(1.06); }
@@ -38,7 +28,8 @@
   100% { box-shadow: 0 0 0 24px rgba(223, 255, 0, 0); }
 }
 
-/* TV Grid Shell */
+/* TV Grid Shell — Night Navy, the four card colours, Fredoka for names and scores.
+   No blur or animated glow around the canvas: both repaint every frame on a TV chip. */
 .tn-tv {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
@@ -48,7 +39,7 @@
   min-height: 440px;
   padding: 10px;
   border-radius: 18px;
-  background: radial-gradient(circle at 50% 15%, #13254a, #081020 78%);
+  background: #0b1530;
   box-sizing: border-box;
 }
 
@@ -64,24 +55,19 @@
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
-  gap: 10px;
-  padding: 8px 14px;
+  gap: 12px;
+  padding: 8px 16px;
   border-radius: 16px;
-  background: rgba(15, 23, 42, 0.85);
-  backdrop-filter: blur(8px);
-  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: #13234a;
+  border: 2px solid #34467a;
+  border-left: 6px solid #38bdf8;
   color: #f8fafc;
-  transition: border-color 0.25s ease, box-shadow 0.25s ease;
 }
 
 .tn-player-pill.tn-p2 {
-  grid-template-columns: auto minmax(0, 1fr) auto;
   text-align: right;
-}
-
-.tn-player-pill.serving {
-  border-color: #dfff00;
-  box-shadow: 0 0 18px rgba(223, 255, 0, 0.28);
+  border-left: 2px solid #34467a;
+  border-right: 6px solid #fb7185;
 }
 
 .tn-avatar svg {
@@ -90,71 +76,69 @@
 }
 
 .tn-pname {
-  font-weight: 800;
-  font-size: 0.95rem;
+  font-family: 'Fredoka', sans-serif;
+  font-weight: 700;
+  font-size: 1.15rem;
+  line-height: 1.15;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
+/* The server gets a tennis ball next to the name. */
+.tn-player-pill.serving .tn-pname::after {
+  content: '';
+  display: inline-block;
+  width: 0.62em;
+  height: 0.62em;
+  margin-left: 0.45em;
+  border-radius: 999px;
+  background: #dfff00;
+  box-shadow: 0 0 8px rgba(223, 255, 0, 0.8);
+}
+
 .tn-pgames {
-  font-size: 0.75rem;
-  color: #94a3b8;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-weight: 700;
+  font-size: 0.9rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #9fb0d8;
 }
 
 .tn-pts {
-  font-size: 1.65rem;
-  font-weight: 900;
+  font-family: 'Fredoka', sans-serif;
+  font-size: 2rem;
+  font-weight: 700;
+  line-height: 1;
   color: #facc15;
-  min-width: 2.2ch;
+  min-width: 2.4ch;
   text-align: center;
 }
 
 .tn-vs-badge {
   display: inline-flex;
+  flex-direction: column;
   align-items: center;
-  gap: 8px;
-  padding: 7px 16px;
-  border-radius: 999px;
-  background: rgba(11, 21, 48, 0.9);
-  border: 1px solid rgba(56, 189, 248, 0.45);
-  box-shadow: 0 4px 16px rgba(11, 21, 48, 0.45);
-  color: #e0f2fe;
-  font-size: 0.76rem;
+  gap: 3px;
+  padding: 6px 18px;
+  border-radius: 14px;
+  background: #13234a;
+  border: 2px solid #34467a;
+  color: #facc15;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 0.9rem;
   font-weight: 800;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.16em;
   text-align: center;
   white-space: nowrap;
 }
 
-.tn-brand-mark {
-  width: 20px;
-  height: 20px;
-  display: inline-block;
-  flex-shrink: 0;
-}
-
 .tn-brand-logo {
-  height: 22px;
+  height: 26px;
   width: auto;
   display: block;
   flex-shrink: 0;
-}
-
-.tn-phone-brand-bar {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  padding: 4px 12px;
-  border-radius: 999px;
-  background: rgba(11, 21, 48, 0.88);
-  border: 1px solid rgba(250, 204, 21, 0.35);
-  color: #f8fafc;
-  font-size: 0.68rem;
-  font-weight: 900;
-  letter-spacing: 0.08em;
-  justify-self: center;
 }
 
 .tn-stage-wrap {
@@ -162,8 +146,17 @@
   min-height: 0;
   border-radius: 14px;
   overflow: hidden;
-  border: 1px solid rgba(148, 163, 184, 0.18);
-  animation: tnCourtGlow 4s ease-in-out infinite;
+  background: #0b1530;
+}
+
+/* The logo's four card colours as a strip along the top of the stage. */
+.tn-stage-wrap::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 5px;
+  background: linear-gradient(90deg, #38bdf8 0 25%, #a78bfa 25% 50%, #fb7185 50% 75%, #facc15 75% 100%);
+  z-index: 3;
 }
 
 .tn-stage {
@@ -171,7 +164,7 @@
   height: 100%;
 }
 
-/* CSS-Animated Overhead Court Radar (horizontal broadcast orientation) */
+/* Overhead court radar (horizontal broadcast orientation) */
 .tn-court-radar {
   position: absolute;
   right: 14px;
@@ -180,8 +173,8 @@
   height: 88px;
   border-radius: 10px;
   padding: 7px;
-  background: linear-gradient(90deg, #065f46 0%, #047857 100%);
-  border: 2px solid rgba(255, 255, 255, 0.55);
+  background: #4338a8;
+  border: 2px solid #f8fafc;
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.45);
   pointer-events: none;
   z-index: 4;
@@ -191,7 +184,7 @@
   position: relative;
   width: 100%;
   height: 100%;
-  background: #1d4ed8;
+  background: #1d86dd;
   border: 2px solid #f8fafc;
 }
 
@@ -202,9 +195,8 @@
   bottom: 0;
   left: 50%;
   width: 3px;
-  background: #f8fafc;
+  background: #facc15;
   transform: translateX(-50%);
-  animation: tnNetShimmer 1.8s ease-in-out infinite;
 }
 
 .tn-radar-court::after {
@@ -235,22 +227,21 @@
   width: 10px;
   height: 10px;
   border-radius: 999px;
-  background: radial-gradient(circle at 35% 35%, #f7fee7, #dfff00 65%, #65a30d);
-  box-shadow: 0 0 8px rgba(223, 255, 0, 0.9);
+  background: #dfff00;
+  box-shadow: 0 0 6px rgba(223, 255, 0, 0.9);
   transform: translate(-50%, -50%);
-  transition: left 0.06s linear, top 0.06s linear;
 }
 
 .tn-callout {
   position: absolute;
-  top: 32%;
+  top: 30%;
   left: 50%;
   transform: translate(-50%, -50%);
   text-align: center;
-  padding: 10px 26px;
-  border-radius: 16px;
-  background: rgba(15, 23, 42, 0.88);
-  border: 2px solid #facc15;
+  padding: 10px 30px 12px;
+  border-radius: 18px;
+  background: #0b1530;
+  border: 3px solid #facc15;
   color: #fff;
   pointer-events: none;
   z-index: 5;
@@ -258,31 +249,50 @@
 }
 
 .tn-call-grade {
-  font-size: 1.65rem;
-  font-weight: 900;
+  font-family: 'Fredoka', sans-serif;
+  font-size: 2rem;
+  font-weight: 700;
+  line-height: 1.1;
   color: #facc15;
 }
 
 .tn-call-detail {
-  font-size: 0.85rem;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
   color: #e2e8f0;
-  font-weight: 600;
 }
 
 .tn-winner-banner {
   position: absolute;
-  bottom: 24px;
+  bottom: 28px;
   left: 50%;
   transform: translateX(-50%);
-  padding: 14px 28px;
-  border-radius: 18px;
-  background: linear-gradient(135deg, #f59e0b, #eab308);
-  color: #0f172a;
-  font-weight: 900;
-  font-size: 1.35rem;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 30px 14px 20px;
+  border-radius: 20px;
+  background: #facc15;
+  border: 4px solid #0b1530;
+  color: #0b1530;
+  font-family: 'Fredoka', sans-serif;
+  font-weight: 700;
+  font-size: 1.7rem;
+  white-space: nowrap;
   box-shadow: 0 12px 30px rgba(0, 0, 0, 0.45);
   z-index: 6;
   animation: tnWinnerSlide 0.35s ease-out;
+}
+
+.tn-winner-banner::before {
+  content: '';
+  width: 48px;
+  height: 48px;
+  flex-shrink: 0;
+  background: url('/images/smallhours-mark.svg') center / contain no-repeat;
 }
 
 /* Responsive TV Breakpoints */
@@ -295,12 +305,32 @@
     order: -1;
   }
   .tn-court-radar {
-    width: 72px;
-    height: 112px;
+    width: 104px;
+    height: 64px;
+  }
+  .tn-winner-banner {
+    font-size: 1.1rem;
+    white-space: normal;
   }
 }
 
 /* Phone Racket Responsive Grid UI */
+.tn-phone-brand-bar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 6px 16px;
+  border-radius: 999px;
+  background: #0b1530;
+  border-bottom: 3px solid #facc15;
+  color: #facc15;
+  font-family: 'Fredoka', sans-serif;
+  font-size: 1.05rem;
+  font-weight: 700;
+  justify-self: center;
+}
+
 .tn-phone-wrap {
   display: grid;
   grid-template-rows: auto auto auto minmax(190px, 1fr) auto;
@@ -315,8 +345,8 @@
   gap: 10px;
   padding: 10px 14px;
   border-radius: 16px;
-  background: rgba(30, 41, 59, 0.88);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: #13234a;
+  border: 2px solid #34467a;
 }
 
 .tn-phone-me {
@@ -337,15 +367,14 @@
   min-height: 210px;
   border-radius: 22px;
   overflow: hidden;
-  background: linear-gradient(180deg, #064e3b 0%, #0f172a 100%);
-  border: 2px solid rgba(56, 189, 248, 0.45);
+  background: linear-gradient(180deg, #4338a8 0%, #0b1530 100%);
+  border: 2px solid #38bdf8;
   display: grid;
   place-items: center;
   touch-action: none;
   user-select: none;
   color: #e2e8f0;
   text-align: center;
-  animation: tnCourtGlow 3.5s ease-in-out infinite;
 }
 
 .tn-racket-pad.swinging {
@@ -358,7 +387,7 @@
   inset: 14px 20px;
   border: 2px solid rgba(255, 255, 255, 0.45);
   border-radius: 8px;
-  background: linear-gradient(180deg, rgba(29, 78, 216, 0.55), rgba(30, 64, 175, 0.72));
+  background: #1d86dd;
   transform: perspective(360px) rotateX(26deg);
   pointer-events: none;
 }
@@ -445,11 +474,12 @@
 .tn-shot-btn {
   padding: 10px 6px;
   border-radius: 12px;
-  background: #1e293b;
-  color: #cbd5e1;
-  font-weight: 700;
-  font-size: 0.78rem;
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: #13234a;
+  color: #dbe4ff;
+  font-family: 'Fredoka', sans-serif;
+  font-weight: 600;
+  font-size: 0.9rem;
+  border: 2px solid #34467a;
   transition: transform 0.12s ease, background-color 0.15s ease;
 }
 
@@ -458,7 +488,7 @@
 }
 
 .tn-shot-btn.active {
-  background: #0284c7;
-  color: #fff;
-  border-color: #38bdf8;
+  background: #facc15;
+  color: #0b1530;
+  border-color: #facc15;
 }
