@@ -5,6 +5,7 @@
 #   TV_URL=https://host/tv ./build.sh   point the app at another server
 #   VERSION_CODE=3 VERSION_NAME=1.2 ./build.sh   bump the version for an update
 #   PUBLISH=1 ./build.sh             also copy the APK to ../public/download/ (served by the web app)
+#   REQUIRE_KEYSTORE=1 ./build.sh    fail instead of creating a new signing key (CI)
 #
 # First run downloads JDK 17 + Android command-line tools (~750 MB) into
 # $SMALLHOURS_ANDROID_TOOLS (default ~/.cache/smallhours-android), outside the repo.
@@ -80,6 +81,10 @@ EOF
 
 # --- Sign (key is created once; keep keystore/ safe — updates must use the same key) ---
 mkdir -p keystore
+if [ ! -f keystore/smallhours-tv.jks ] && [ "${REQUIRE_KEYSTORE:-0}" = "1" ]; then
+  echo "android-tv/keystore/smallhours-tv.jks is missing and REQUIRE_KEYSTORE=1; refusing to create a new key." >&2
+  exit 1
+fi
 if [ ! -f keystore/smallhours-tv.jks ]; then
   echo "Creating signing key in android-tv/keystore/ (back it up!)..."
   head -c 24 /dev/urandom | base64 | tr -d '/+=' > keystore/password
