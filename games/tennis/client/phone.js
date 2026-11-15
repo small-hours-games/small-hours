@@ -132,14 +132,18 @@
     if (tn.bound) return;
     tn.bound = true;
 
-    document.getElementById('tnSensorBtn')?.addEventListener('click', () => {
-      if (typeof SH !== 'undefined' && SH.ensureMotionPermission) {
-        SH.ensureMotionPermission().then(res => {
-          if (res === 'granted' || res === 'auto') attachSensors();
-          else showToast('Motion permission denied — use swipe pad!', 'info');
-        });
-      } else {
+    document.getElementById('tnSensorBtn')?.addEventListener('click', async () => {
+      try {
+        if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
+          const res = await DeviceMotionEvent.requestPermission();
+          if (res !== 'granted') { showToast('Motion permission denied — use swipe pad!', 'info'); return; }
+        }
+        if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+          await DeviceOrientationEvent.requestPermission();
+        }
         attachSensors();
+      } catch {
+        showToast('Motion permission denied — use swipe pad!', 'info');
       }
     });
 
@@ -190,8 +194,9 @@
     tn.active = msg.phase === 'playing';
     if (tn.active && !tn.pc) startRtc();
 
-    const granted = typeof SH !== 'undefined' && SH.motionGranted ? SH.motionGranted() : false;
-    if (granted && !tn.listening) attachSensors();
+    const needsTap = (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') ||
+      (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function');
+    if (!needsTap && !tn.listening) attachSensors();
 
     const p1 = msg.players?.[0];
     const p2 = msg.players?.[1];

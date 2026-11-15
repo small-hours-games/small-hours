@@ -552,11 +552,16 @@
       `;
 
       const stage = document.getElementById('rnStage');
-      SH.loadThree().then(THREE => {
+      const loadThree = (typeof SH !== 'undefined' && SH.loadThree)
+        ? SH.loadThree
+        : () => (window.THREE ? Promise.resolve(window.THREE) : import('/vendor/three/three.module.min.js').then(m => (window.THREE = m)));
+      loadThree().then(THREE => {
         if (!document.getElementById('rnStage')) return;
         initThreeScene(THREE, stage, msg);
         startLoop();
         (msg.players || []).forEach(setupRtcForPlayer);
+      }).catch(err => {
+        if (stage) stage.innerHTML = `<div style="padding:24px;color:#fda4af;font-weight:700">Failed to load 3D track: ${escapeHtml(err?.message || String(err))}</div>`;
       });
     }
 

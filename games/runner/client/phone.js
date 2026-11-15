@@ -140,26 +140,25 @@
     document.getElementById('rnRightBtn')?.addEventListener('click', () => sendCmd('right'));
     document.getElementById('rnJumpBtn')?.addEventListener('click', () => sendCmd('jump'));
 
-    document.getElementById('rnMotionToggle')?.addEventListener('click', () => {
+    document.getElementById('rnMotionToggle')?.addEventListener('click', async () => {
       if (rn.motionOn) {
         rn.motionOn = false;
         updateMotionBtn();
         return;
       }
-      if (typeof SH !== 'undefined' && SH.ensureMotionPermission) {
-        SH.ensureMotionPermission().then(res => {
-          if (res === 'granted' || res === 'auto') {
-            rn.motionOn = true;
-            attachSensors();
-            updateMotionBtn();
-          } else {
-            showToast('Motion permission denied — use swipe/buttons!', 'info');
-          }
-        });
-      } else {
+      try {
+        if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+          const res = await DeviceOrientationEvent.requestPermission();
+          if (res !== 'granted') { showToast('Motion permission denied — use swipe/buttons!', 'info'); return; }
+        }
+        if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
+          await DeviceMotionEvent.requestPermission();
+        }
         rn.motionOn = true;
         attachSensors();
         updateMotionBtn();
+      } catch {
+        showToast('Motion permission denied — use swipe/buttons!', 'info');
       }
     });
 
