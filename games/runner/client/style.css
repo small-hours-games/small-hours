@@ -1,0 +1,179 @@
+/* After Hours Runner — TV & Phone Styling */
+.rn-tv {
+  position: relative;
+  width: 100%;
+  height: calc(100vh - 88px);
+  min-height: 440px;
+  border-radius: 18px;
+  overflow: hidden;
+  background: #090318;
+}
+
+.rn-stage {
+  width: 100%;
+  height: 100%;
+}
+
+.rn-hud-top {
+  position: absolute;
+  top: 12px;
+  left: 14px;
+  right: 14px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  pointer-events: none;
+  z-index: 4;
+}
+
+.rn-runners-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.rn-runner-card {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border-radius: 14px;
+  background: rgba(15, 7, 36, 0.82);
+  border: 1px solid rgba(236, 72, 153, 0.4);
+  color: #f8fafc;
+  backdrop-filter: blur(8px);
+}
+
+.rn-runner-card.out {
+  opacity: 0.45;
+  filter: grayscale(0.7);
+}
+
+.rn-avatar svg {
+  display: block;
+  border-radius: 999px;
+}
+
+.rn-rc-name {
+  font-weight: 800;
+  font-size: 0.85rem;
+}
+
+.rn-rc-meta {
+  font-size: 0.72rem;
+  color: #cbd5e1;
+}
+
+.rn-rc-score {
+  font-size: 1.05rem;
+  font-weight: 900;
+  color: #22d3ee;
+  margin-left: 4px;
+}
+
+.rn-speed-pill {
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: rgba(15, 7, 36, 0.82);
+  border: 1px solid rgba(34, 211, 238, 0.45);
+  color: #22d3ee;
+  font-weight: 800;
+  font-size: 0.82rem;
+}
+
+.rn-winner-banner {
+  position: absolute;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 14px 28px;
+  border-radius: 18px;
+  background: linear-gradient(135deg, #ec4899, #8b5cf6);
+  color: #ffffff;
+  font-weight: 900;
+  font-size: 1.35rem;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.5);
+  z-index: 6;
+}
+
+/* Phone Controller */
+.rn-phone-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 6px 0;
+}
+
+.rn-phone-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  border-radius: 16px;
+  background: rgba(15, 7, 36, 0.88);
+  border: 1px solid rgba(236, 72, 153, 0.35);
+}
+
+.rn-letters-bar {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+}
+
+.rn-letter-chip {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 900;
+  font-size: 1rem;
+  background: rgba(30, 41, 59, 0.8);
+  color: #64748b;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.rn-letter-chip.got {
+  background: linear-gradient(135deg, #ec4899, #22d3ee);
+  color: #ffffff;
+  border-color: #ffffff;
+}
+
+.rn-swipe-pad {
+  height: 170px;
+  border-radius: 22px;
+  background: radial-gradient(circle at 50% 50%, rgba(236, 72, 153, 0.22), rgba(9, 3, 24, 0.94));
+  border: 2px dashed rgba(34, 211, 238, 0.45);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  touch-action: none;
+  user-select: none;
+  color: #e2e8f0;
+}
+
+.rn-dpad-row {
+  display: grid;
+  grid-template-columns: 1fr 1.2fr 1fr;
+  gap: 10px;
+}
+
+.rn-ctrl-btn {
+  padding: 16px 8px;
+  border-radius: 16px;
+  background: #1e1b4b;
+  color: #e0e7ff;
+  font-weight: 900;
+  font-size: 1rem;
+  border: 1px solid rgba(129, 140, 248, 0.35);
+  touch-action: manipulation;
+}
+
+.rn-ctrl-btn.jump {
+  background: linear-gradient(135deg, #06b6d4, #3b82f6);
+  color: #ffffff;
+}

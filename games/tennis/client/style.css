@@ -1,0 +1,178 @@
+/* Small Hours Tennis — TV & Phone Styling */
+.tn-tv {
+  position: relative;
+  width: 100%;
+  height: calc(100vh - 88px);
+  min-height: 440px;
+  border-radius: 18px;
+  overflow: hidden;
+  background: #0b162c;
+}
+
+.tn-stage {
+  width: 100%;
+  height: 100%;
+}
+
+.tn-hud-top {
+  position: absolute;
+  top: 14px;
+  left: 16px;
+  right: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  pointer-events: none;
+  z-index: 4;
+}
+
+.tn-player-pill {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px;
+  border-radius: 16px;
+  background: rgba(15, 23, 42, 0.82);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: #f8fafc;
+}
+
+.tn-avatar svg {
+  display: block;
+  border-radius: 999px;
+}
+
+.tn-pname {
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+
+.tn-pgames {
+  font-size: 0.75rem;
+  color: #94a3b8;
+}
+
+.tn-pts {
+  font-size: 1.55rem;
+  font-weight: 900;
+  color: #facc15;
+  min-width: 2ch;
+  text-align: center;
+}
+
+.tn-vs-badge {
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.78);
+  border: 1px solid rgba(56, 189, 248, 0.35);
+  color: #bae6fd;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+}
+
+.tn-callout {
+  position: absolute;
+  top: 22%;
+  left: 50%;
+  transform: translateX(-50%);
+  text-align: center;
+  padding: 10px 24px;
+  border-radius: 16px;
+  background: rgba(15, 23, 42, 0.85);
+  border: 2px solid #facc15;
+  color: #fff;
+  pointer-events: none;
+  z-index: 5;
+}
+
+.tn-call-grade {
+  font-size: 1.65rem;
+  font-weight: 900;
+  color: #facc15;
+}
+
+.tn-call-detail {
+  font-size: 0.85rem;
+  color: #e2e8f0;
+  font-weight: 600;
+}
+
+.tn-winner-banner {
+  position: absolute;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 14px 28px;
+  border-radius: 18px;
+  background: linear-gradient(135deg, #f59e0b, #eab308);
+  color: #0f172a;
+  font-weight: 900;
+  font-size: 1.35rem;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.45);
+  z-index: 6;
+}
+
+/* Phone Racket UI */
+.tn-phone-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 6px 0;
+}
+
+.tn-phone-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  border-radius: 16px;
+  background: rgba(30, 41, 59, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.tn-phone-me {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.tn-racket-pad {
+  position: relative;
+  height: 220px;
+  border-radius: 22px;
+  background: radial-gradient(circle at 50% 45%, rgba(56, 189, 248, 0.22), rgba(15, 23, 42, 0.92));
+  border: 2px dashed rgba(56, 189, 248, 0.45);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  touch-action: none;
+  user-select: none;
+  color: #e2e8f0;
+  text-align: center;
+}
+
+.tn-shot-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+
+.tn-shot-btn {
+  padding: 10px 6px;
+  border-radius: 12px;
+  background: #1e293b;
+  color: #cbd5e1;
+  font-weight: 700;
+  font-size: 0.78rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.tn-shot-btn.active {
+  background: #0284c7;
+  color: #fff;
+  border-color: #38bdf8;
+}
