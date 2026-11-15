@@ -30,7 +30,8 @@ import {
   bumpCatalogVersion,
 } from '../games/registry.js';
 import { isGameVisibleInLobby, setGameLobbyVisibility } from '../games/visibility.js';
-import { parsePotConfig, makePotRoom, setPotPaid, setPaidOut, newPotRound, potAdminState, POT_GAMES } from '../pot/pot-room.js';
+import { parsePotConfig, makePotRoom, potAdminState, POT_GAMES } from '../pot/pot-room.js';
+import { mountPotActions } from './pot-routes.js';
 import { getPotStore } from '../pot/store.js';
 import { DEFAULT_BANK_PCT, MIN_POT_PLAYERS } from '../pot/payout.js';
 
@@ -346,18 +347,6 @@ export function setupAdminRoutes(app, manager = defaultManager) {
 
   // --- Pot rooms: play for money (see src/pot/). Full Swish numbers only leave the server here. ---
 
-  function potRoomOr404(req, res) {
-    const room = manager.getRoom(String(req.params.code || '').toUpperCase());
-    if (!room || !room.pot) {
-      res.status(404).json({ error: 'Pot room not found' });
-      return null;
-    }
-    return room;
-  }
-
-  function potChanged(room) {
-    manager.wsControls?.broadcastLobby?.(room.code);
-  }
 
   app.get('/admin/api/pots', requireAdminSession, (_req, res) => {
     try {
@@ -385,30 +374,5 @@ export function setupAdminRoutes(app, manager = defaultManager) {
     res.status(201).json({ code: room.code, hostUrl: `/host/${room.code}`, pot: potAdminState(room) });
   });
 
-  app.post('/admin/api/pots/:code/players/:playerId/paid', requireAdminSession, express.json(), (req, res) => {
-    const room = potRoomOr404(req, res);
-    if (!room) return;
-    const result = setPotPaid(room, String(req.params.playerId), Boolean(req.body?.paid));
-    if (!result.ok) return res.status(400).json({ error: result.error });
-    potChanged(room);
-    res.json({ pot: potAdminState(room) });
-  });
-
-  app.post('/admin/api/pots/:code/players/:playerId/paid-out', requireAdminSession, express.json(), (req, res) => {
-    const room = potRoomOr404(req, res);
-    if (!room) return;
-    const result = setPaidOut(room, String(req.params.playerId), Boolean(req.body?.paidOut));
-    if (!result.ok) return res.status(400).json({ error: result.error });
-    potChanged(room);
-    res.json({ pot: potAdminState(room) });
-  });
-
-  app.post('/admin/api/pots/:code/new-round', requireAdminSession, (req, res) => {
-    const room = potRoomOr404(req, res);
-    if (!room) return;
-    const result = newPotRound(room);
-    if (!result.ok) return res.status(400).json({ error: result.error });
-    potChanged(room);
-    res.json({ pot: potAdminState(room) });
-  });
+  mountPotActions(app, '/admin/api/pots', { manager, auth: () => true, before: [requireAdminSession] });
 }

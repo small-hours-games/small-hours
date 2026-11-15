@@ -19,6 +19,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Fredoka:wght@500;600;700&display=swap" rel="stylesheet">
   <script src="/js/tailwind-config.js"></script>
   <script src="/js/build-info.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js" defer></script>
   <link rel="stylesheet" href="/css/light-lobby.css">
   <style>
     /* Late-night landing: navy ground, one colour per game, yellow room-code accent. */
@@ -150,6 +151,9 @@
                 <i class="fa-solid fa-tv"></i> Create a room
               </a>
               <p class="order-3 text-sm text-[#a9b6d3]">Create the room on the TV or laptop everyone can see. Then everyone scans the code with their phone.</p>
+              <button type="button" onclick="openPotCreate()" class="order-4 btn-ghost w-full min-h-[50px] px-4 rounded-xl font-bold flex items-center justify-center gap-2.5 transition active:scale-[0.98]">
+                <span aria-hidden="true">💰</span> Create a pot room — play for money
+              </button>
             </div>
           </section>
 
@@ -190,6 +194,72 @@
                 </div>
               </form>
               <p class="text-sm text-[#a9b6d3]">Your name is remembered on this device.</p>
+            </div>
+          </section>
+
+          <!-- ================= POT ROOM: CREATE ================= -->
+          <section id="screen-pot-create" class="screen-view">
+            <div class="night-card rounded-3xl p-5 sm:p-6 flex flex-col gap-5">
+              <div class="flex items-center gap-3">
+                <button onclick="showScreen('screen-landing')" aria-label="Back" class="w-11 h-11 rounded-full bg-[#0b1530] hover:bg-[#1b2e5c] text-white flex items-center justify-center shrink-0">
+                  <i class="fa-solid fa-arrow-left text-sm"></i>
+                </button>
+                <div class="min-w-0">
+                  <h2 class="font-display font-bold text-2xl leading-tight">💰 Pot room</h2>
+                  <p class="text-sm text-[#a9b6d3]">Everyone pays in with Swish. The top three share the pot.</p>
+                </div>
+              </div>
+
+              <form id="potCreateForm" class="flex flex-col gap-4">
+                <div class="grid grid-cols-2 gap-3">
+                  <div>
+                    <label for="pot-game" class="block text-xs font-bold text-[#a9b6d3] mb-1.5 uppercase tracking-wider">Game</label>
+                    <select id="pot-game" class="night-input w-full px-3 min-h-[50px] rounded-xl font-semibold">
+                      <option value="quiz">🎯 Quiz</option>
+                      <option value="music-quiz">🎵 Music Quiz</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label for="pot-stake" class="block text-xs font-bold text-[#a9b6d3] mb-1.5 uppercase tracking-wider">Stake (kr)</label>
+                    <input id="pot-stake" type="number" inputmode="numeric" min="1" max="500" value="20" class="night-input w-full px-4 min-h-[50px] rounded-xl font-semibold" required />
+                  </div>
+                </div>
+                <div>
+                  <label for="pot-payee" class="block text-xs font-bold text-[#a9b6d3] mb-1.5 uppercase tracking-wider">Your Swish number</label>
+                  <input id="pot-payee" type="tel" inputmode="tel" autocomplete="tel" placeholder="070-123 45 67" maxlength="20" class="night-input w-full px-4 min-h-[50px] rounded-xl font-semibold" required />
+                  <p class="mt-1.5 text-xs text-[#a9b6d3]">Players pay the stake to this number, and it is shown on the TV. You pay the winners from it.</p>
+                </div>
+                <div id="potTerms" class="rounded-xl bg-[#0b1530] border border-[#1e2e58] p-3 text-sm text-[#cbd5e1] leading-relaxed"></div>
+                <label class="flex items-start gap-3 text-sm text-[#cbd5e1]">
+                  <input id="pot-confirm" type="checkbox" class="mt-1 w-5 h-5 shrink-0 accent-[#facc15]" required />
+                  <span>I am 18 or older, everyone playing knows it is for money, and I will pay out the winners.</span>
+                </label>
+                <p id="potCreateError" class="hidden text-sm font-semibold text-[#fda4af]" role="alert"></p>
+                <button type="submit" id="potCreateBtn" class="btn-sun w-full min-h-[54px] px-4 font-extrabold rounded-xl transition">Create pot room</button>
+              </form>
+            </div>
+          </section>
+
+          <!-- ================= POT ROOM: READY ================= -->
+          <section id="screen-pot-ready" class="screen-view">
+            <div class="night-card rounded-3xl p-5 sm:p-6 flex flex-col gap-4">
+              <div>
+                <h2 class="font-display font-bold text-2xl leading-tight">Your pot room is ready</h2>
+                <p class="text-sm text-[#a9b6d3]">Room <span id="potReadyCode" class="font-display font-bold tracking-widest text-[#facc15] text-lg">----</span></p>
+              </div>
+              <a id="potReadyTv" href="#" class="btn-sun w-full min-h-[54px] px-4 rounded-xl font-extrabold flex items-center justify-center gap-2.5"><i class="fa-solid fa-tv"></i> Open the TV screen</a>
+              <div class="rounded-xl bg-[#0b1530] border border-[#1e2e58] p-4 flex flex-col sm:flex-row gap-4 items-center">
+                <div id="potReadyQr" class="bg-white p-2 rounded-lg shrink-0" aria-label="QR code for your host controls"></div>
+                <div class="text-sm text-[#cbd5e1] space-y-2 min-w-0">
+                  <p class="font-bold text-white">Your host controls</p>
+                  <p>Scan with your phone. That's where you tick off payments as they arrive in Swish and see who to pay after the game.</p>
+                  <p class="text-[#fde68a]">This link is the only key to your pot. Keep it and don't share it.</p>
+                  <div class="flex gap-2 flex-wrap">
+                    <a id="potReadyManage" href="#" target="_blank" rel="noopener" class="btn-ghost px-3 min-h-[44px] rounded-lg font-bold inline-flex items-center">Open here</a>
+                    <button type="button" id="potReadyCopy" class="btn-ghost px-3 min-h-[44px] rounded-lg font-bold">Copy link</button>
+                  </div>
+                </div>
+              </div>
             </div>
           </section>
 
@@ -405,6 +475,68 @@
       return name;
     }
 
+
+    // --- Pot room: play for money ---
+    let potTerms = { bankPct: 5, minPlayers: 4 };
+    function renderPotTerms() {
+      const stake = Math.max(1, Math.floor(Number(document.getElementById('pot-stake').value) || 0));
+      const pot = stake * 6;
+      const winners = 100 - potTerms.bankPct;
+      const pct = [50, 30, 15].map(p => Math.round(p / 95 * winners * 10) / 10);
+      const kr = p => Math.floor(pot * p / 100);
+      document.getElementById('potTerms').innerHTML =
+        'With 6 players at ' + stake + ' kr the pot is <b class="text-white">' + pot + ' kr</b>: ' +
+        '1st gets <b class="text-[#facc15]">' + kr(pct[0]) + ' kr</b>, 2nd ' + kr(pct[1]) + ' kr, 3rd ' + kr(pct[2]) + ' kr' +
+        (potTerms.bankPct > 0 ? ', and Smallhours gets ' + potTerms.bankPct + ' % (' + Math.ceil(pot * potTerms.bankPct / 100) + ' kr), which you pay after the game.' : '.') +
+        ' At least ' + potTerms.minPlayers + ' players must pay in.';
+    }
+    function openPotCreate() {
+      showScreen('screen-pot-create');
+      document.getElementById('screen-pot-create').scrollIntoView({ block: 'start', behavior: 'smooth' });
+      renderPotTerms();
+      fetch('/api/pots-terms').then(r => r.json()).then(t => { potTerms = { ...potTerms, ...t }; renderPotTerms(); }).catch(() => {});
+      try { const saved = localStorage.getItem('sh_pot_payee'); if (saved) document.getElementById('pot-payee').value = saved; } catch { /* ignore */ }
+    }
+    document.getElementById('pot-stake').addEventListener('input', renderPotTerms);
+
+    document.getElementById('potCreateForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btn = document.getElementById('potCreateBtn');
+      showError('potCreateError', '');
+      btn.disabled = true;
+      btn.textContent = 'Creating…';
+      try {
+        const payee = document.getElementById('pot-payee').value.trim();
+        const res = await fetch('/api/pots', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ gameType: document.getElementById('pot-game').value, stake: document.getElementById('pot-stake').value, payee }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || 'Could not create the pot room');
+        try {
+          localStorage.setItem('sh_pot_payee', payee);
+          localStorage.setItem('sh_pot_host_' + data.code, data.hostKey);
+        } catch { /* the link still works */ }
+        const manageUrl = location.origin + data.manageUrl;
+        document.getElementById('potReadyCode').textContent = data.code;
+        document.getElementById('potReadyTv').href = data.hostUrl;
+        document.getElementById('potReadyManage').href = manageUrl;
+        document.getElementById('potReadyCopy').onclick = () => {
+          navigator.clipboard?.writeText(manageUrl).then(() => { document.getElementById('potReadyCopy').textContent = 'Copied ✓'; });
+        };
+        const qr = document.getElementById('potReadyQr');
+        qr.innerHTML = '';
+        if (typeof QRCode !== 'undefined') new QRCode(qr, { text: manageUrl, width: 148, height: 148, colorDark: '#0b1530', colorLight: '#ffffff' });
+        showScreen('screen-pot-ready');
+        document.getElementById('screen-pot-ready').scrollIntoView({ block: 'start', behavior: 'smooth' });
+      } catch (err) {
+        showError('potCreateError', err.message);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Create pot room';
+      }
+    });
 
     // Landing: room code (accepts a pasted /player/XXXX link too)
     const codeInput = document.getElementById('room-code-input');

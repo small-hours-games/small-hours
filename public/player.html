@@ -1101,7 +1101,9 @@
 
     function formatPayee(n) {
       const s = String(n || '');
-      return /^123\d{7}$/.test(s) ? s.slice(0, 3) + ' ' + s.slice(3, 6) + ' ' + s.slice(6, 8) + ' ' + s.slice(8) : s;
+      if (/^123\d{7}$/.test(s)) return s.slice(0, 3) + ' ' + s.slice(3, 6) + ' ' + s.slice(6, 8) + ' ' + s.slice(8);
+      if (/^07\d{8}$/.test(s)) return s.slice(0, 3) + '-' + s.slice(3, 6) + ' ' + s.slice(6, 8) + ' ' + s.slice(8);
+      return s;
     }
 
     function saveSwishNumber() {
@@ -1126,6 +1128,7 @@
       if (!pot) { panel.hidden = true; panel.innerHTML = ''; panel._html = ''; lobby.classList.remove('pot-locked'); return; }
       panel.hidden = false;
       const mine = pot.players?.[state.playerId] || {};
+      const runner = pot.hosted ? 'host' : 'admin';   // who confirms payments and pays out
       // Until they have paid, a pot room shows only the way in.
       lobby.classList.toggle('pot-locked', !mine.paid && pot.status !== 'settled');
       if (mine.paid && potIsPaying()) {
@@ -1152,21 +1155,21 @@
         const me = pot.result.results.find(r => r.playerId === state.playerId);
         html += '<ul class="pot-wins">' + rows + '</ul>' +
           '<p class="pot-note">' + (me && me.amount > 0
-            ? (me.paidOut ? 'Your ' + me.amount + ' kr is on its way to Swish •• ' + escapeHtml(state.potLast2 || '') + '.' : 'You won ' + me.amount + ' kr! The admin sends it by Swish.')
-            : 'The admin pays the winners by Swish.') + '</p>';
+            ? (me.paidOut ? 'Your ' + me.amount + ' kr is on its way to Swish •• ' + escapeHtml(state.potLast2 || '') + '.' : 'You won ' + me.amount + ' kr! The ' + runner + ' sends it by Swish.')
+            : 'The ' + runner + ' pays the winners by Swish.') + '</p>';
       } else if (pot.status === 'running') {
         html += '<p class="pot-note">Game on — ' + pot.potSize + ' kr in the pot.</p>';
       } else if (!state.potLast2 || state.potEditing) {
         html += '<label class="pot-label" for="potSwishInput">Your Swish number — winnings go here</label>' +
           '<div class="pot-row"><input id="potSwishInput" class="pot-input" type="tel" inputmode="tel" autocomplete="tel" placeholder="070-123 45 67" maxlength="20" onkeydown="if(event.key===\'Enter\')saveSwishNumber()">' +
           '<button class="pot-btn" onclick="saveSwishNumber()">Save</button></div>' +
-          '<p class="pot-note">Only the admin sees the full number. This phone remembers it for the next pot.</p>';
+          '<p class="pot-note">Only the room\'s ' + runner + ' sees the full number. This phone remembers it for the next pot.</p>';
       } else if (!mine.paid && potIsPaying()) {
         const manual = state.potMode === 'manual' || state.potStatus === 'WAITING_FOR_ADMIN';
         html += '<div class="pot-wait"><span class="pot-spinner" aria-hidden="true"></span>' +
-          '<p class="pot-wait-title">' + (manual ? 'Waiting for the admin to see your Swish' : 'Checking your payment…') + '</p>' +
+          '<p class="pot-wait-title">' + (manual ? 'Waiting for the ' + runner + ' to see your payment' : 'Checking your payment…') + '</p>' +
           '<p class="pot-note">' + (manual
-            ? 'You get in as soon as the admin confirms your ' + pot.stake + ' kr.'
+            ? 'You get in as soon as the ' + runner + ' confirms your ' + pot.stake + ' kr.'
             : 'You get in as soon as Swish confirms your ' + pot.stake + ' kr.') + '</p></div>' +
           (state.potPayLink ? '<a class="pot-pay is-secondary" href="' + escapeHtml(state.potPayLink) + '">Open Swish again</a>' : '') +
           '<p class="pot-note">Didn\'t pay? <button class="pot-link" onclick="potClearPaying();renderPotPanel()">Start over</button></p>';

@@ -6,7 +6,8 @@
 // Money never passes through the server. It only keeps track of who paid and
 // who should get what; the admin pays out with Swish.
 
-import { computePayouts, normalizeSwishNumber, formatSwishNumber, MIN_POT_PLAYERS, DEFAULT_BANK_PCT } from './payout.js';
+import { createHash, randomBytes, timingSafeEqual } from 'node:crypto';
+import { computePayouts, normalizeSwishNumber, normalizePayeeNumber, formatSwishNumber, MIN_POT_PLAYERS, DEFAULT_BANK_PCT } from './payout.js';
 import { getPotStore } from './store.js';
 import { prefilledLink, paymentRequestLink } from './swish.js';
 
@@ -19,28 +20,74 @@ function connectedIds(room) {
   return [...room.players.entries()].filter(([, p]) => p.connected).map(([id]) => id);
 }
 
-/** Validate admin input; returns { ok, config } or { ok: false, error }. */
-export function parsePotConfig(body = {}) {
+/**
+ * Validate the input for a new pot room; returns { ok, config } or { ok: false, error }.
+ * `host: true` is a room made from the landing page: the stakes go to the host's own
+ * Swish number (a mobile or a 123 number) and the bank share defaults to 0.
+ */
+export function parsePotConfig(body = {}, { host = false } = {}) {
   const stake = Math.floor(Number(body.stake));
   if (!Number.isFinite(stake) || stake < 1 || stake > MAX_STAKE) return { ok: false, error: `Stake must be 1–${MAX_STAKE} kr` };
-  const bankPct = body.bankPct === undefined || body.bankPct === '' ? DEFAULT_BANK_PCT : Number(body.bankPct);
+  // A host's room: the bank share is the site's, set on the server, and goes to POT_SWISH_NUMBER.
+  const hostBank = host ? hostBankTerms() : null;
+  const bankPct = hostBank ? hostBank.bankPct
+    : (body.bankPct === undefined || body.bankPct === '' ? DEFAULT_BANK_PCT : Number(body.bankPct));
   if (!Number.isFinite(bankPct) || bankPct < 0 || bankPct > 5) return { ok: false, error: 'Bank share must be 0–5 %' };
   const gameType = String(body.gameType || 'quiz');
   if (!POT_GAMES.includes(gameType)) return { ok: false, error: 'Pot rooms play Quiz or Music Quiz' };
-  // With Swish Handel the stakes must go to the Handel number; otherwise the admin picks one.
-  const payee = String(process.env.SWISH_CERT_PATH && process.env.SWISH_PAYEE
+  // With Swish Handel the admin's rooms are paid to the Handel number. A host's room is
+  // always paid to the host's own number.
+  const raw = !host && process.env.SWISH_CERT_PATH && process.env.SWISH_PAYEE
     ? process.env.SWISH_PAYEE
-    : (body.payee || process.env.POT_SWISH_NUMBER || '')).replace(/[\s-]/g, '');
-  if (!/^\d{8,15}$/.test(payee)) return { ok: false, error: 'Swish number to pay in to is missing' };
-  return { ok: true, config: { stake, bankPct, gameType, payee } };
+    : (body.payee || (host ? '' : process.env.POT_SWISH_NUMBER) || '');
+  const payee = payeeNumber(raw);
+  if (!payee) return { ok: false, error: 'Enter the Swish number the stakes go to (070-… or 123 …)' };
+  return { ok: true, config: { stake, bankPct, gameType, payee, ...(hostBank?.bankPayee ? { bankPayee: hostBank.bankPayee } : {}) } };
 }
 
-/** Turn a fresh room into a pot room. */
-export function makePotRoom(room, config, { createdBy } = {}, store) {
+/**
+ * The bank's terms for rooms made from the landing page: POT_HOST_BANK_PCT (default 5)
+ * of each pot, which the host pays to POT_SWISH_NUMBER after the game. Without a bank
+ * number there is no bank share.
+ */
+export function hostBankTerms(env = process.env) {
+  const bankPayee = payeeNumber(env.POT_SWISH_NUMBER || '');
+  if (!bankPayee) return { bankPct: 0, bankPayee: null };
+  const pct = env.POT_HOST_BANK_PCT === undefined || env.POT_HOST_BANK_PCT === '' ? DEFAULT_BANK_PCT : Number(env.POT_HOST_BANK_PCT);
+  return { bankPct: Number.isFinite(pct) ? Math.min(Math.max(pct, 0), 5) : DEFAULT_BANK_PCT, bankPayee };
+}
+
+/** A number Swish can pay to: a mobile as 07xxxxxxxx, or a 123 number. Null if neither. */
+export function payeeNumber(raw) {
+  const company = normalizePayeeNumber(raw);
+  if (company) return company;
+  const mobile = normalizeSwishNumber(raw);
+  return mobile ? '0' + mobile.slice(2) : null;
+}
+
+function hashHostKey(key) {
+  return createHash('sha256').update(`pot-host:${key}`).digest();
+}
+
+/**
+ * Turn a fresh room into a pot room. With `host: true` the room gets a host key,
+ * returned once: whoever holds it runs the pot from /pot/CODE.
+ */
+export function makePotRoom(room, config, { createdBy, host = false } = {}, store) {
   const id = S(store).createPot({ roomCode: room.code, ...config, createdBy });
-  room.pot = { id, ...config, status: 'collecting', entries: new Map(), result: null, createdBy: createdBy || null };
+  const hostKey = host ? randomBytes(24).toString('base64url') : null;
+  room.pot = {
+    id, ...config, status: 'collecting', entries: new Map(), result: null, createdBy: createdBy || null,
+    hostKeyHash: hostKey ? hashHostKey(hostKey) : null,
+  };
   room.stateVersion += 1;
-  return room.pot;
+  return hostKey ? { ...room.pot, hostKey } : room.pot;
+}
+
+/** Does this key run this room's pot? */
+export function isPotHost(room, key) {
+  if (!room?.pot?.hostKeyHash || !key) return false;
+  return timingSafeEqual(room.pot.hostKeyHash, hashHostKey(String(key)));
 }
 
 function entryFor(room, playerId) {
@@ -187,13 +234,26 @@ export function setPaidOut(room, roomPlayerId, paidOut, store) {
   return { ok: true };
 }
 
+/** The host has paid the bank its share of a settled pot. */
+export function setBankPaid(room, paid, store) {
+  if (!room.pot?.bankPayee) return { ok: false, error: 'This room has no bank share to pay' };
+  if (room.pot.status !== 'settled' || !room.pot.result) return { ok: false, error: 'The pot is not settled yet' };
+  room.pot.result.bankPaid = Boolean(paid);
+  S(store).setBankPaid(room.pot.id, room.pot.result.bankPaid);
+  room.stateVersion += 1;
+  return { ok: true };
+}
+
 /** After a settled pot: a new round with the same stake; everyone pays in again. */
 export function newPotRound(room, store) {
   if (!room.pot) return { ok: false, error: 'This is not a pot room' };
   if (room.pot.status === 'running') return { ok: false, error: 'Wait for the game to end' };
   const { stake, bankPct, gameType, payee, createdBy } = room.pot;
+  if (room.pot.bankPayee && room.pot.result && room.pot.result.bank > 0 && !room.pot.result.bankPaid) {
+    return { ok: false, error: `Pay the bank its ${room.pot.result.bank} kr first` };
+  }
   const entries = room.pot.entries;
-  room.pot.id = S(store).createPot({ roomCode: room.code, stake, bankPct, gameType, payee, createdBy });
+  room.pot.id = S(store).createPot({ roomCode: room.code, stake, bankPct, gameType, payee, bankPayee: room.pot.bankPayee, createdBy });
   room.pot.status = 'collecting';
   room.pot.result = null;
   room.pot.participants = null;
@@ -234,7 +294,8 @@ export async function startPotPayment(room, playerId, { client } = {}) {
   if (room.pot.status === 'settled') return { ok: false, error: 'This pot is paid out; wait for the next round' };
   const message = `Smallhours ${room.code} ${p.username}`;
 
-  if (!client) {
+  // A host's room is paid to the host's own number: no Swish Handel there.
+  if (!client || room.pot.hostKeyHash) {
     return { ok: true, mode: 'manual', url: prefilledLink({ payee: room.pot.payee, amount: room.pot.stake, message }) };
   }
 
@@ -300,6 +361,7 @@ export function potPublicState(room) {
   }
   const potSize = pot.status === 'collecting' ? paidCount * pot.stake : (pot.participants?.length || 0) * pot.stake;
   return {
+    hosted: Boolean(pot.hostKeyHash),
     stake: pot.stake,
     bankPct: pot.bankPct,
     gameType: pot.gameType,
@@ -350,5 +412,9 @@ export function potAdminState(room, store) {
       }),
     }
     : null;
-  return { code: room.code, potId: room.pot.id, ...pub, players, result };
+  return {
+    code: room.code, potId: room.pot.id, ...pub, players,
+    result: result ? { ...result, bankPaid: Boolean(room.pot.result?.bankPaid) } : null,
+    bankPayee: room.pot.bankPayee || null,
+  };
 }

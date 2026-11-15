@@ -960,7 +960,9 @@
         el.setAttribute('aria-live', 'polite');
         document.body.appendChild(el);
       }
-      const payee = /^123\d{7}$/.test(pot.payee) ? pot.payee.slice(0, 3) + ' ' + pot.payee.slice(3, 6) + ' ' + pot.payee.slice(6, 8) + ' ' + pot.payee.slice(8) : pot.payee;
+      const p = String(pot.payee || '');
+      const payee = /^123\d{7}$/.test(p) ? p.slice(0, 3) + ' ' + p.slice(3, 6) + ' ' + p.slice(6, 8) + ' ' + p.slice(8)
+        : /^07\d{8}$/.test(p) ? p.slice(0, 3) + '-' + p.slice(3, 6) + ' ' + p.slice(6, 8) + ' ' + p.slice(8) : p;
       const medals = ['🥇', '🥈', '🥉'];
       let html;
       if (pot.status === 'settled' && pot.result) {

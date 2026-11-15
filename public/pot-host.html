@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex">
+  <meta name="referrer" content="no-referrer">
+  <title>Smallhours — Run your pot room</title>
+  <link rel="icon" href="/images/smallhours-favicon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <script>
+    tailwind.config = { theme: { extend: { fontFamily: { sans: ['Plus Jakarta Sans', 'system-ui', 'sans-serif'], mono: ['JetBrains Mono', 'ui-monospace', 'monospace'] } } } };
+  </script>
+</head>
+<body data-pot-mode="host" class="bg-slate-950 text-slate-100 min-h-screen antialiased font-sans">
+  <header class="border-b border-slate-800 bg-slate-950">
+    <div class="max-w-3xl mx-auto px-4 h-14 flex items-center justify-between gap-4">
+      <a href="/" class="text-base font-bold tracking-tight text-white">Smallhours</a>
+      <span class="text-xs text-slate-400">Host controls</span>
+    </div>
+  </header>
+
+  <main class="max-w-3xl mx-auto px-4 py-6 space-y-6">
+    <div class="space-y-2">
+      <h1 class="text-2xl font-bold tracking-tight text-white">Run your pot room</h1>
+      <p class="text-sm text-slate-400">Players pay the stake to your Swish before they get in. When a payment arrives in your Swish app, tick that player off here and they are let into the room. Rows marked “Says paid” are waiting for you.</p>
+      <p class="text-sm text-slate-400">When the game ends, pay each winner with Swish and mark it paid out. This page is your key to the room: keep it, and don't share the link.</p>
+    </div>
+
+    <div id="potRooms" class="space-y-6"><p class="text-sm text-slate-500">Loading…</p></div>
+
+    <p class="text-xs text-slate-500">Swish is only the payment method; Smallhours has no partnership with Swish.</p>
+  </main>
+  <script src="/js/pots.js"></script>
+</body>
+</html>

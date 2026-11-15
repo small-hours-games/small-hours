@@ -91,6 +91,13 @@ export class PotStore {
         PRIMARY KEY (pot_id, player_id)
       );
     `);
+    PotStore.migrate(db);
+  }
+
+  static migrate(db) {
+    const cols = db.prepare('PRAGMA table_info(pots)').all().map(c => c.name);
+    if (!cols.includes('bank_paid_at')) db.exec('ALTER TABLE pots ADD COLUMN bank_paid_at INTEGER');
+    if (!cols.includes('bank_payee')) db.exec('ALTER TABLE pots ADD COLUMN bank_payee TEXT');
   }
 
   static open({ dir = DEFAULT_DIR, file } = {}) {
@@ -156,11 +163,15 @@ export class PotStore {
     this.db.prepare("UPDATE players SET swish_enc = '', swish_last2 = '', key_hash = ? WHERE id = ?").run(`deleted:${randomUUID()}`, playerId);
   }
 
-  createPot({ roomCode, gameType, stake, bankPct, payee, createdBy }) {
+  createPot({ roomCode, gameType, stake, bankPct, payee, bankPayee, createdBy }) {
     const id = `pot_${randomUUID()}`;
-    this.db.prepare('INSERT INTO pots (id, room_code, game_type, stake, bank_pct, payee, status, created_by, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)')
-      .run(id, roomCode, gameType, stake, bankPct, payee, 'collecting', createdBy || null, Date.now());
+    this.db.prepare('INSERT INTO pots (id, room_code, game_type, stake, bank_pct, payee, bank_payee, status, created_by, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
+      .run(id, roomCode, gameType, stake, bankPct, payee, bankPayee || null, 'collecting', createdBy || null, Date.now());
     return id;
+  }
+
+  setBankPaid(potId, paid) {
+    this.db.prepare('UPDATE pots SET bank_paid_at = ? WHERE id = ?').run(paid ? Date.now() : null, potId);
   }
 
   setPotStatus(potId, status) {
