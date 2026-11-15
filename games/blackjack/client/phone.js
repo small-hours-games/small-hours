@@ -126,6 +126,7 @@
       state.bjLastMsg = msg;
       tcFitScreen('blackjackSection');
       const active = (msg.phase === 'betting' && !msg.mySeat?.betPlaced) || !!msg.isMyTurn || msg.phase === 'settled';
+      document.getElementById('blackjackSection')?.classList.toggle('tc-my-turn-glow', active);
       tcSetStatus('bj', bjStatusText(msg), active);
       tcBuzz('bjWasTurn', !!msg.isMyTurn);
       document.getElementById('bjRoundPill').textContent = 'R' + msg.round + '/' + msg.maxRounds;
@@ -139,5 +140,9 @@
       section: 'blackjackSection',
       render: renderBlackjackState,
       redraw() { if (state.bjLastMsg) renderBlackjackState(state.bjLastMsg); },
-      reset() { state.bjBetAmount = 50; state.bjLastMsg = null; },
+      reset() {
+        state.bjBetAmount = 50;
+        state.bjLastMsg = null;
+        document.getElementById('blackjackSection')?.classList.remove('tc-my-turn-glow');
+      },
     });

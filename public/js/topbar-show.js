@@ -1586,7 +1586,7 @@ function createTopbarShow(opts) {
       var xs = idxs.map(function (i) { var b = bots[i]; return b ? (b.barX != null ? b.barX : bounds.left + wbar * TBS_BOT_SPOTS[i]) : null; })
         .filter(function (x) { return x != null; });
       if (!xs.length) return null;
-      return { x: hdr.left + xs.reduce(function (a, x) { return a + x; }, 0) / xs.length, y: hdr.top + hdr.h + 10, below: true };
+      return { x: hdr.left + xs.reduce(function (a, x) { return a + x; }, 0) / xs.length, y: Math.max(8, hdr.top + hdr.h - 14), below: true };
     };
     var show = function (key, line, at) {
       if (!at) return;

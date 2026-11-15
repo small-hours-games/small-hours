@@ -65,8 +65,8 @@
 .bj-tv-oval {
   grid-area: oval;
   position: relative;
-  width: clamp(540px, 52vw, 760px);
-  max-width: 100%;
+  box-sizing: border-box;
+  width: min(760px, 100%);
   min-height: 310px;
   padding: 32px 48px;
   border-radius: 999px;

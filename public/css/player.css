@@ -508,3 +508,11 @@ header > .player-connection-row {
 /* AI opponents: each seat is a character, so the picker shows their faces and names. */
 .ai-seat-btn { font-size: clamp(0.8rem, 3.6vw, 1rem); letter-spacing: -0.15em; white-space: nowrap; overflow: hidden; }
 .ai-seat-cast { margin-top: 6px; font-size: 0.75rem; color: var(--night-muted, #a9b6d3); text-align: center; }
+
+/* Place mobile toasts below the top bar so they never cover nickname or fullscreen controls. */
+.toast-container {
+  top: calc(env(safe-area-inset-top, 0px) + 64px);
+  right: 12px;
+  left: 12px;
+  align-items: center;
+}

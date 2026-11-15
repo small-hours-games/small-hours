@@ -20,17 +20,18 @@
       let left = Infinity;
       let right = -Infinity;
       for (const part of table.children) {
-        for (const el of part.classList.contains('tc-tv-row') ? part.children : [part]) {
+        const expand = part.classList.contains('tc-tv-row') || part.classList.contains('th-tv-arena') || part.classList.contains('bj-tv-arena');
+        for (const el of expand ? part.children : [part]) {
           const r = el.getBoundingClientRect();
           left = Math.min(left, r.left);
           right = Math.max(right, r.right);
         }
       }
-      const natW = Math.max(right - left + pad, 320);
+      const natW = Math.max(right - left + pad, table.scrollWidth, 320);
       const natH = table.scrollHeight;
       const zoom = Math.max(0.5, Math.min(1.6, availW / natW, availH / natH));
       table.style.zoom = zoom.toFixed(3);
-      table.style.width = (availW / zoom) + 'px';
+      table.style.width = Math.floor(availW / zoom) + 'px';
       table.style.minHeight = Math.floor(availH / zoom) + 'px';
     }
     window.addEventListener('resize', tcFitTv);

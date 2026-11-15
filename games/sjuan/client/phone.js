@@ -26,6 +26,7 @@
       tcFitScreen('sjuanSection');
       const hand = msg.myHand || [];
       const myTurn = msg.phase === 'play' && !!msg.isMyTurn;
+      document.getElementById('sjuanSection')?.classList.toggle('tc-my-turn-glow', myTurn);
       if (!hand.some(c => c.id === state.sjSelected)) state.sjSelected = null;
       tcSetStatus('sj', sjStatusText(msg, myTurn), myTurn);
       tcBuzz('sjWasTurn', myTurn);
@@ -85,5 +86,8 @@
       section: 'sjuanSection',
       render: renderSjuanState,
       redraw: sjRedraw,
-      reset() { state.sjSelected = null; },
+      reset() {
+        state.sjSelected = null;
+        document.getElementById('sjuanSection')?.classList.remove('tc-my-turn-glow');
+      },
     });

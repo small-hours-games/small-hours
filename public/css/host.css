@@ -237,6 +237,7 @@
     body.in-game .game-content {
       flex: 1;
       min-height: 0;
+      overflow-x: hidden;
       overflow-y: auto;
       display: flex;
       flex-direction: column;

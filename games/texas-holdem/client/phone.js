@@ -116,6 +116,7 @@
       state.thLastMsg = msg;
       tcFitScreen('holdemSection');
       const active = !!msg.isMyTurn || msg.phase === 'showdown';
+      document.getElementById('holdemSection')?.classList.toggle('tc-my-turn-glow', active);
       tcSetStatus('th', thStatusText(msg), active);
       tcBuzz('thWasTurn', !!msg.isMyTurn);
       document.getElementById('thHandPill').textContent = 'H' + msg.handNumber + '/' + msg.maxHands;
@@ -132,5 +133,9 @@
       section: 'holdemSection',
       render: renderHoldemState,
       redraw() { if (state.thLastMsg) renderHoldemState(state.thLastMsg); },
-      reset() { state.thHideCards = false; state.thLastMsg = null; },
+      reset() {
+        state.thHideCards = false;
+        state.thLastMsg = null;
+        document.getElementById('holdemSection')?.classList.remove('tc-my-turn-glow');
+      },
     });

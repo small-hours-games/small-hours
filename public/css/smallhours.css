@@ -730,8 +730,8 @@ input::placeholder {
 .score-entry {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 10px 12px;
+  gap: 6px;
+  padding: 8px 10px;
   margin-bottom: 8px;
   transition: opacity 0.2s, filter 0.2s;
 }
@@ -742,10 +742,10 @@ input::placeholder {
 }
 
 .score-rank {
-  min-width: 28px;
+  min-width: 20px;
   text-align: center;
   font-weight: 800;
-  font-size: 1.1rem;
+  font-size: 1rem;
 }
 
 .score-rank.rank-gold { color: #ffd700; text-shadow: 0 0 10px rgba(255, 215, 0, 0.6); }
@@ -754,6 +754,7 @@ input::placeholder {
 
 .score-name {
   flex: 1;
+  min-width: 0;
   font-weight: 600;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -762,8 +763,10 @@ input::placeholder {
 
 .score-value {
   font-weight: 700;
+  font-size: 0.9rem;
   color: var(--neon-blue);
-  min-width: 56px;
+  min-width: 0;
+  white-space: nowrap;
   text-align: right;
 }
 
