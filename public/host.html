@@ -612,12 +612,14 @@
           .sort((a, b) => b.count - a.count)
           .slice(0, 8);
       } else {
-        title.textContent = 'Vote for next activity';
-        hint.textContent = 'Wish for a game on your phone. The most picked game is chosen and the next phase begins.';
+        title.textContent = lobby.pot ? 'Tonight\'s pot game' : 'Vote for next activity';
+        hint.textContent = lobby.pot
+          ? 'Pay in on your phone. The game starts when at least ' + lobby.pot.minPlayers + ' have paid.'
+          : 'Wish for a game on your phone. The most picked game is chosen and the next phase begins.';
         const counts = {};
         Object.values(lobby.gameSuggestions || {}).forEach(g => { counts[g] = (counts[g] || 0) + 1; });
         total = Object.values(counts).reduce((s, n) => s + n, 0);
-        rows = SH_GAMES.filter(g => g.hasUi || counts[g.type])
+        rows = SH_GAMES.filter(g => (g.hasUi || counts[g.type]) && (!lobby.pot || g.type === lobby.pot.gameType))
           .map(g => ({ type: g.type, blurb: g.blurb, players: g.players, icon: g.icon, label: g.label, count: counts[g.type] || 0, leader: g.type === lobby.leadingGame }))
           .sort((a, b) => b.leader - a.leader || b.count - a.count);
       }

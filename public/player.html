@@ -1192,7 +1192,9 @@
       Object.values(state.gameSuggestions || {}).forEach(g => { counts[g] = (counts[g] || 0) + 1; });
       const mine = (state.gameSuggestions || {})[state.playerId];
       // Keep playable games in a stable order so cards don't jump under the player's thumb
-      const games = [...SH_GAMES].sort((a, b) => (gameBlocker(a) ? 1 : 0) - (gameBlocker(b) ? 1 : 0));
+      // A pot room plays only its own game.
+      const games = [...SH_GAMES].filter(g => !state.pot || g.type === state.pot.gameType)
+        .sort((a, b) => (gameBlocker(a) ? 1 : 0) - (gameBlocker(b) ? 1 : 0));
 
       const html = '<div class="lobby-game-list">' + games.map(g => {
         const blocker = gameBlocker(g);
