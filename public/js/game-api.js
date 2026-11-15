@@ -22,39 +22,4 @@ var SH = {
     if (!m || typeof SH_AI === 'undefined' || !SH_AI.length) return null;
     return SH_AI[(Number(m[1]) - 1) % SH_AI.length];
   },
-  // Motion/orientation permission helper (iOS requires a direct user gesture per page session).
-  motionState: (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function')
-    ? 'prompt'
-    : (typeof DeviceOrientationEvent === 'undefined' ? 'unsupported' : 'auto'),
-  motionGranted: function () {
-    return SH.motionState === 'auto' || SH.motionState === 'granted';
-  },
-  ensureMotionPermission: function () {
-    if (SH.motionState !== 'prompt') return Promise.resolve(SH.motionState);
-    SH.motionState = 'prompting';
-    try {
-      var tasks = [];
-      if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
-        tasks.push(DeviceOrientationEvent.requestPermission());
-      }
-      if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
-        tasks.push(DeviceMotionEvent.requestPermission());
-      }
-      if (!tasks.length) {
-        SH.motionState = 'auto';
-        return Promise.resolve('auto');
-      }
-      return Promise.all(tasks).then(function (results) {
-        var ok = results.some(function (r) { return r === 'granted'; });
-        SH.motionState = ok ? 'granted' : 'denied';
-        return SH.motionState;
-      }, function () {
-        SH.motionState = 'denied';
-        return 'denied';
-      });
-    } catch (e) {
-      SH.motionState = 'denied';
-      return Promise.resolve('denied');
-    }
-  },
 };

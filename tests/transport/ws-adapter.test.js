@@ -99,9 +99,9 @@ function makeEnv() {
   const room = manager.createRoom();
   const fakeServer = {}; // adapter just passes this to new WebSocketServer({ server })
 
-  const { wss, broadcastToRoom, sendToPlayer, hasActiveSockets } = setupWebSocket(fakeServer, manager);
+  const { wss, broadcastToRoom, sendToPlayer } = setupWebSocket(fakeServer, manager);
 
-  return { manager, room, wss: fakeWss, broadcastToRoom, sendToPlayer, hasActiveSockets };
+  return { manager, room, wss: fakeWss, broadcastToRoom, sendToPlayer };
 }
 
 /** Simulate a connection + JOIN_LOBBY for a player. Returns { ws, meta-like info }. */
@@ -988,15 +988,5 @@ describe('ws-adapter - AI opponents for a lone player', () => {
     expect(env.room.bots).toEqual([]);
     expect(host._sent.some(m => m.type === 'SURRENDER_LOBBY')).toBe(true);
     expect(a._sent.some(m => m.type === 'SURRENDER_LOBBY')).toBe(true);
-  });
-
-  it('hasActiveSockets ignores sockets that are not OPEN', () => {
-    env = makeEnv();
-    const host = makeFakeWs();
-    env.wss.emit('connection', host, makeFakeReq(`/ws/host/${env.room.code}`));
-    expect(env.hasActiveSockets(env.room.code)).toBe(true);
-
-    host.readyState = 3; // CLOSED without close event yet
-    expect(env.hasActiveSockets(env.room.code)).toBe(false);
   });
 });

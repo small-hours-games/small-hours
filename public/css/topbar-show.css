@@ -62,6 +62,7 @@
    orange glow behind it is its own layer that fades and swells. */
 .studio-header .brand-logo { transform-origin: 50% 70%; }
 .studio-header.tbs-on .brand-logo {
+  filter: drop-shadow(0 2px 2px rgba(11, 21, 48, 0.9));
   will-change: transform;
 }
 .tbs-logo-glow {

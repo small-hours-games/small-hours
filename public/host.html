@@ -188,22 +188,10 @@
     </div>
   </div>
 
-  <!-- TV standby overlay when an idle room expires or is closed -->
-  <div id="tvStandbyOverlay" hidden role="dialog" aria-modal="true" aria-labelledby="tvStandbyTitle"
-       style="position:fixed;inset:0;z-index:1200;display:none;align-items:center;justify-content:center;padding:24px;background:rgba(11,21,48,0.92);backdrop-filter:blur(10px);color:#fff;text-align:center;">
-    <div style="max-width:460px;width:100%;padding:36px 32px;border-radius:28px;background:#13234a;border:1px solid #34467a;box-shadow:0 28px 64px rgba(0,0,0,0.45);">
-      <div style="font-size:44px;margin-bottom:12px;" aria-hidden="true">📺</div>
-      <h1 id="tvStandbyTitle" style="font-size:28px;font-weight:800;margin:0 0 10px;">Room closed</h1>
-      <p style="font-size:16px;color:#cbd5e1;margin:0 0 24px;line-height:1.5;">This table timed out due to inactivity. Press OK or tap below when you're ready to open a new room.</p>
-      <button type="button" id="tvStandbyBtn" class="btn btn-primary" style="width:100%;padding:14px 20px;font-size:17px;font-weight:700;">Start New Room</button>
-    </div>
-  </div>
-
   <script src="/js/card-sounds.js"></script>
   <script src="/js/table-cards.js"></script>
   <script src="/js/table-cards-tv.js"></script>
   <script src="/js/game-api.js"></script>
-  <script src="/js/avatars.js"></script>
   <!-- game-catalog -->
   <script src="/js/games.js"></script>
   <script src="/js/build-info.js"></script>
@@ -410,33 +398,12 @@
         }
       };
 
-      function showTvStandby() {
-        const overlay = document.getElementById('tvStandbyOverlay');
-        const btn = document.getElementById('tvStandbyBtn');
-        if (!overlay || !btn) {
-          location.replace('/tv');
-          return;
-        }
-        overlay.hidden = false;
-        overlay.style.display = 'flex';
-        const reopen = () => location.replace('/tv');
-        btn.onclick = reopen;
-        btn.focus();
-        document.addEventListener('keydown', (ev) => {
-          if (ev.key === 'Enter' || ev.key === ' ') {
-            ev.preventDefault();
-            reopen();
-          }
-        }, { once: true });
-      }
-
       ws.onclose = (e) => {
-        // The room is gone (e.g. server restarted or expired): stop reconnecting and leave.
+        // The room is gone (e.g. server restarted): stop reconnecting and leave.
         if (state.roomNotFound || (e && e.code === 4004)) {
           state.roomNotFound = true;
           clearTimeout(state.reconnectTimer);
-          if (TV_MODE) showTvStandby();
-          else location.replace('/');
+          location.replace(TV_MODE ? '/tv' : '/');
           return;
         }
         setConnectionStatus('disconnected', 'Disconnected');

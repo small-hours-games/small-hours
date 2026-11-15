@@ -154,17 +154,7 @@
         setTimeout(createRoom, wait * 1000);
       }
     }
-    if (document.visibilityState === 'hidden') {
-      document.getElementById('status').textContent = 'Waiting for TV screen…';
-      document.addEventListener('visibilitychange', () => {
-        if (document.visibilityState === 'visible') {
-          document.getElementById('status').textContent = 'Creating a room\u2026';
-          createRoom();
-        }
-      }, { once: true });
-    } else {
-      createRoom();
-    }
+    createRoom();
   </script>
 </body>
 </html>

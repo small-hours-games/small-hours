@@ -236,7 +236,6 @@
   <script src="/js/table-cards.js"></script>
   <script src="/js/table-cards-phone.js"></script>
   <script src="/js/game-api.js"></script>
-  <script src="/js/avatars.js"></script>
   <!-- game-catalog -->
   <script src="/js/games.js"></script>
   <script>
@@ -1020,7 +1019,6 @@
     }
 
     function suggestGame(game) {
-      SH.ensureMotionPermission();
       state.votedGame = game;
       send({ type: 'SUGGEST_GAME', gameType: game });
     }
@@ -1075,7 +1073,6 @@
 
     // The server resolves the most-voted game (quiz first opens its category vote).
     function startGame() {
-      SH.ensureMotionPermission();
       const config = {};
       Object.assign(config, SH.game(state.leadingGame)?.startConfig?.());
       const leader = shGame(state.leadingGame);

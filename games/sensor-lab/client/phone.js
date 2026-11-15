@@ -4,9 +4,8 @@
 (function () {
   const WS_INTERVAL_MS = 66;       // ~15 Hz over WebSocket / P2P WAN (safely under 30 msg/s limit)
   const CELLULAR_INTERVAL_MS = 100; // ~10 Hz on 4G/5G/cellular or high-RTT links
-  const P2P_LAN_INTERVAL_MS = 14;  // ~60 Hz direct LAN P2P UDP over RTCDataChannel (with rAF jitter margin)
+  const P2P_LAN_INTERVAL_MS = 16;  // ~60 Hz direct LAN P2P UDP over RTCDataChannel
   const WS_KEEPALIVE_MS = 500;     // 2 Hz WS state sync while P2P is active
-  const MOTION_SMOOTH_ALPHA = 0.35; // EMA factor for noisy MEMS accel / rotRate
   const RTC_CFG = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
 
   const sl = {
@@ -25,42 +24,16 @@
     sentTimes: [],
     lastSendAt: 0,
     lastWsAt: 0,
-    dirty: false,
-    rafId: null,
     timer: null,
     simActive: false,
     pc: null,
     dc: null,
-    remoteDescSet: false,
-    pendingIce: [],
-    rtcRetryTimer: null,
     p2pState: 'off', // off | connecting | open | closed
     p2pIsLan: false,
     linkCheckAt: 0,
-    lastCapsKey: '',
-    lastHudAt: 0,
   };
 
   function round1(n) { return Math.round(n * 10) / 10; }
-  function round2(n) { return Math.round(n * 100) / 100; }
-
-  function smoothVec3(prev, next, alpha = MOTION_SMOOTH_ALPHA) {
-    if (!prev) return { x: round2(next.x), y: round2(next.y), z: round2(next.z) };
-    return {
-      x: round2(prev.x + (next.x - prev.x) * alpha),
-      y: round2(prev.y + (next.y - prev.y) * alpha),
-      z: round2(prev.z + (next.z - prev.z) * alpha),
-    };
-  }
-
-  function smoothRotRate(prev, next, alpha = MOTION_SMOOTH_ALPHA) {
-    if (!prev) return { alpha: round1(next.alpha), beta: round1(next.beta), gamma: round1(next.gamma) };
-    return {
-      alpha: round1(prev.alpha + (next.alpha - prev.alpha) * alpha),
-      beta: round1(prev.beta + (next.beta - prev.beta) * alpha),
-      gamma: round1(prev.gamma + (next.gamma - prev.gamma) * alpha),
-    };
-  }
 
   function normAngle(deg) {
     let a = deg % 360;
@@ -108,7 +81,7 @@
     return !!(sl.dc && sl.dc.readyState === 'open');
   }
 
-  function updateLocalPreview(forceHud = false) {
+  function updateLocalPreview() {
     const orient = currentOrient();
     const phoneEl = document.getElementById('slPhoneLocal');
     const horizonEl = document.getElementById('slLocalHorizon');
@@ -117,36 +90,25 @@
     const permPill = document.getElementById('slPermPill');
     const capsEl = document.getElementById('slLocalCaps');
 
-    if (phoneEl && orient) {
-      phoneEl.style.transform = `rotateX(${orient.beta}deg) rotateY(${orient.gamma}deg) rotateZ(${-orient.alpha}deg)`;
-    }
-    if (horizonEl && orient) {
-      horizonEl.style.transform = `translate(${Math.max(-24, Math.min(24, orient.gamma * 0.4))}px, ${Math.max(-24, Math.min(24, orient.beta * 0.4))}px)`;
-    }
-
-    const now = performance.now();
-    if (!forceHud && now - sl.lastHudAt < 120) return;
-    sl.lastHudAt = now;
-
     if (hzPill) {
       const mode = isP2pOpen() ? 'P2P' : 'WS';
       hzPill.textContent = `${mode} · ${currentHz()} Hz`;
     }
     if (permPill) permPill.textContent = isP2pOpen() ? `${sl.permission} · P2P` : sl.permission;
 
-    const enableBtn = document.getElementById('slEnableBtn');
-    if (enableBtn) {
-      const showEnable = !sl.listening && (sl.permission === 'tap-enable' || sl.permission === 'denied');
-      enableBtn.hidden = !showEnable;
+    if (phoneEl && orient) {
+      phoneEl.style.transform = `rotateX(${orient.beta}deg) rotateY(${orient.gamma}deg) rotateZ(${-orient.alpha}deg)`;
     }
-
+    if (horizonEl && orient) {
+      horizonEl.style.transform = `translate(${Math.max(-24, Math.min(24, orient.gamma * 0.4))}px, ${Math.max(-24, Math.min(24, orient.beta * 0.4))}px)`;
+    }
     if (readoutEl) {
       if (orient) {
         readoutEl.textContent = `α ${orient.alpha}° · β ${orient.beta}° · γ ${orient.gamma}°`;
       } else {
         readoutEl.textContent = sl.permission === 'denied'
           ? 'Sensor permission denied'
-          : (sl.listening ? 'Waiting for sensor data…' : 'Tap "Enable Sensors" or use sliders below');
+          : 'Tap "Enable Sensors" or use sliders below';
       }
     }
     if (capsEl) {
@@ -159,13 +121,9 @@
         ['Bat ' + (dev.batteryLevel != null ? dev.batteryLevel + '%' : '—'), dev.batteryLevel != null],
         ['Net ' + (dev.netType || '—'), !!dev.netType],
       ];
-      const capsKey = items.map(([l, ok]) => l + ':' + (ok ? 1 : 0)).join('|');
-      if (capsKey !== sl.lastCapsKey) {
-        sl.lastCapsKey = capsKey;
-        capsEl.innerHTML = items.map(([label, ok]) =>
-          '<span class="sl-cap ' + (ok ? 'sl-cap-ok' : 'sl-cap-no') + '">' + (ok ? '✓ ' : '· ') + escapeHtml(label) + '</span>'
-        ).join('');
-      }
+      capsEl.innerHTML = items.map(([label, ok]) =>
+        '<span class="sl-cap ' + (ok ? 'sl-cap-ok' : 'sl-cap-no') + '">' + (ok ? '✓ ' : '· ') + escapeHtml(label) + '</span>'
+      ).join('');
     }
   }
 
@@ -201,18 +159,12 @@
     }
     try {
       const stats = await sl.pc.getStats();
-      let selectedId = null;
-      let nominatedPair = null;
-      let succeededPair = null;
+      let activePair = null;
       stats.forEach(report => {
-        if (report.type === 'transport' && report.selectedCandidatePairId) {
-          selectedId = report.selectedCandidatePairId;
-        } else if (report.type === 'candidate-pair') {
-          if (report.nominated) nominatedPair = report;
-          else if (report.state === 'succeeded') succeededPair = report;
+        if (report.type === 'candidate-pair' && (report.nominated || report.state === 'succeeded')) {
+          activePair = report;
         }
       });
-      const activePair = (selectedId && stats.get(selectedId)) || nominatedPair || succeededPair;
       if (!activePair) return;
       const remote = stats.get(activePair.remoteCandidateId);
       const rtt = activePair.currentRoundTripTime;
@@ -237,9 +189,8 @@
       refreshLinkQuality();
     }
     const minInterval = targetIntervalMs();
-    if (!force && (!sl.dirty || now - sl.lastSendAt < minInterval)) return;
+    if (!force && now - sl.lastSendAt < minInterval) return;
 
-    sl.dirty = false;
     sl.lastSendAt = now;
     sl.seq += 1;
     sl.sentTimes.push(now);
@@ -258,39 +209,11 @@
         action: { type: 'sensorUpdate', ...payload },
       });
     }
-    updateLocalPreview(force);
-  }
-
-  function startSendLoop() {
-    if (sl.rafId != null) return;
-    const tick = () => {
-      if (!sl.active) {
-        sl.rafId = null;
-        return;
-      }
-      sendSnapshot(false);
-      updateLocalPreview(false);
-      sl.rafId = requestAnimationFrame(tick);
-    };
-    sl.rafId = requestAnimationFrame(tick);
-  }
-
-  function stopSendLoop() {
-    if (sl.rafId != null) {
-      cancelAnimationFrame(sl.rafId);
-      sl.rafId = null;
-    }
+    updateLocalPreview();
   }
 
   function stopRtc() {
     sl.p2pState = 'off';
-    sl.p2pIsLan = false;
-    sl.remoteDescSet = false;
-    sl.pendingIce = [];
-    if (sl.rtcRetryTimer) {
-      clearTimeout(sl.rtcRetryTimer);
-      sl.rtcRetryTimer = null;
-    }
     if (sl.dc) {
       try { sl.dc.close(); } catch {}
       sl.dc = null;
@@ -301,19 +224,9 @@
     }
   }
 
-  function scheduleRtcRetry() {
-    if (!sl.active || sl.rtcRetryTimer) return;
-    sl.rtcRetryTimer = setTimeout(() => {
-      sl.rtcRetryTimer = null;
-      if (sl.active && !sl.pc) startRtc();
-    }, 2000);
-  }
-
   async function startRtc() {
     if (sl.pc || typeof RTCPeerConnection === 'undefined') return;
     sl.p2pState = 'connecting';
-    sl.remoteDescSet = false;
-    sl.pendingIce = [];
     try {
       const pc = new RTCPeerConnection(RTC_CFG);
       sl.pc = pc;
@@ -323,21 +236,12 @@
       dc.onopen = () => {
         sl.p2pState = 'open';
         refreshLinkQuality();
-        setTimeout(() => { if (sl.active && !sl.p2pIsLan) refreshLinkQuality(); }, 250);
-        updateLocalPreview(true);
+        updateLocalPreview();
         sendSnapshot(true);
       };
       dc.onclose = () => {
-        stopRtc();
-        updateLocalPreview(true);
-        scheduleRtcRetry();
-      };
-      pc.onconnectionstatechange = () => {
-        if (pc.connectionState === 'failed' || pc.connectionState === 'closed') {
-          stopRtc();
-          updateLocalPreview(true);
-          scheduleRtcRetry();
-        }
+        sl.p2pState = 'closed';
+        updateLocalPreview();
       };
 
       pc.onicecandidate = e => {
@@ -351,7 +255,6 @@
       send({ type: 'RTC_SIGNAL', signal: { sdp: pc.localDescription } });
     } catch {
       stopRtc();
-      scheduleRtcRetry();
     }
   }
 
@@ -360,17 +263,8 @@
     try {
       if (msg.signal.sdp) {
         await sl.pc.setRemoteDescription(new RTCSessionDescription(msg.signal.sdp));
-        sl.remoteDescSet = true;
-        const queued = sl.pendingIce.splice(0);
-        for (const cand of queued) {
-          try { await sl.pc.addIceCandidate(new RTCIceCandidate(cand)); } catch {}
-        }
       } else if (msg.signal.candidate) {
-        if (sl.remoteDescSet) {
-          await sl.pc.addIceCandidate(new RTCIceCandidate(msg.signal.candidate));
-        } else {
-          sl.pendingIce.push(msg.signal.candidate);
-        }
+        await sl.pc.addIceCandidate(new RTCIceCandidate(msg.signal.candidate));
       }
     } catch { /* ignore late/stale ICE candidates */ }
   }
@@ -385,37 +279,25 @@
       gamma: e.gamma ?? 0,
       absolute: !!e.absolute,
     };
-    sl.dirty = true;
+    sendSnapshot(false);
   }
 
   function onMotion(e) {
     if (e.acceleration) {
-      sl.accel = smoothVec3(sl.accel, {
-        x: e.acceleration.x ?? 0,
-        y: e.acceleration.y ?? 0,
-        z: e.acceleration.z ?? 0,
-      });
+      sl.accel = { x: e.acceleration.x ?? 0, y: e.acceleration.y ?? 0, z: e.acceleration.z ?? 0 };
     }
     if (e.accelerationIncludingGravity) {
-      sl.accelG = smoothVec3(sl.accelG, {
-        x: e.accelerationIncludingGravity.x ?? 0,
-        y: e.accelerationIncludingGravity.y ?? 0,
-        z: e.accelerationIncludingGravity.z ?? 0,
-      });
+      sl.accelG = { x: e.accelerationIncludingGravity.x ?? 0, y: e.accelerationIncludingGravity.y ?? 0, z: e.accelerationIncludingGravity.z ?? 0 };
     }
     if (e.rotationRate) {
-      sl.rotRate = smoothRotRate(sl.rotRate, {
-        alpha: e.rotationRate.alpha ?? 0,
-        beta: e.rotationRate.beta ?? 0,
-        gamma: e.rotationRate.gamma ?? 0,
-      });
+      sl.rotRate = { alpha: e.rotationRate.alpha ?? 0, beta: e.rotationRate.beta ?? 0, gamma: e.rotationRate.gamma ?? 0 };
     }
-    sl.dirty = true;
+    sendSnapshot(false);
   }
 
   function onTouch(e) {
     sl.touches = e.touches ? e.touches.length : 0;
-    sl.dirty = true;
+    sendSnapshot(false);
   }
 
   function attachListeners() {
@@ -457,22 +339,6 @@
   }
 
   window.slRequestSensors = async function slRequestSensors() {
-    if (typeof SH !== 'undefined' && SH.ensureMotionPermission) {
-      if (SH.motionState === 'denied') SH.motionState = 'prompt'; // allow explicit retry on tap
-      const res = await SH.ensureMotionPermission();
-      if (res === 'granted' || res === 'auto') {
-        sl.permission = 'granted';
-        attachListeners();
-        sendSnapshot(true);
-      } else if (res === 'unsupported') {
-        sl.permission = 'unsupported';
-        attachListeners();
-      } else {
-        sl.permission = 'denied';
-      }
-      updateLocalPreview(true);
-      return;
-    }
     try {
       let orientPerm = 'granted';
       let motionPerm = 'granted';
@@ -488,12 +354,12 @@
         sendSnapshot(true);
       } else {
         sl.permission = 'denied';
-        updateLocalPreview(true);
+        updateLocalPreview();
       }
     } catch {
       sl.permission = 'unsupported';
       attachListeners();
-      updateLocalPreview(true);
+      updateLocalPreview();
     }
   };
 
@@ -517,7 +383,6 @@
     sl.simActive = true;
     sl.permission = 'manual';
     sl.rawOrient = { alpha: a, beta: b, gamma: g, absolute: false };
-    sl.dirty = true;
     sendSnapshot(false);
   };
 
@@ -527,44 +392,33 @@
 
   function renderSensorLabState(msg) {
     sl.active = msg.phase === 'live';
-    if (sl.active) {
-      startSendLoop();
-      if (!sl.pc) startRtc();
-    } else {
-      stopSendLoop();
-    }
+    if (sl.active && !sl.pc) startRtc();
     if (sl.active && !sl.listening) {
-      const granted = typeof SH !== 'undefined' && SH.motionGranted ? SH.motionGranted()
-        : !(typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function');
-      if (granted) {
+      const needsTap = typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function';
+      if (!needsTap) {
         sl.permission = typeof DeviceOrientationEvent === 'undefined' ? 'unsupported' : 'listening';
         attachListeners();
         sendSnapshot(true);
-      } else if (typeof SH !== 'undefined' && SH.motionState === 'denied') {
-        sl.permission = 'denied';
       } else {
         sl.permission = 'tap-enable';
       }
     }
-    updateLocalPreview(true);
+    updateLocalPreview();
   }
 
   SH.registerGame('sensor-lab', {
     section: 'sensorLabSection',
     render: renderSensorLabState,
     onRtcSignal: handleRtcSignal,
-    redraw() { updateLocalPreview(true); },
+    redraw() { updateLocalPreview(); },
     reset() {
       sl.active = false;
       sl.simActive = false;
-      sl.dirty = false;
       sl.rawOrient = null;
       sl.accel = null;
       sl.accelG = null;
       sl.rotRate = null;
       sl.sentTimes = [];
-      sl.lastCapsKey = '';
-      stopSendLoop();
       detachListeners();
       stopRtc();
     },

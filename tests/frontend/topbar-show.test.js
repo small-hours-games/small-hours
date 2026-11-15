@@ -367,22 +367,9 @@ describe('AI robot rigs', () => {
     for (const id of idsA) expect(a).toContain(`url(#${id})`);
   });
   it('renders the singing girl SVG with all expected articulated layers', () => {
-    for (const cls of ['tbs-root', 'tbs-upper', 'tbs-head', 'tbs-face', 'tbs-eyes', 'tbs-mouth', 'tbs-skirt', 'tbs-mark', 'tbs-boot-l', 'tbs-boot-r', 'tbs-arm-mic', 'tbs-hair-back', 'tbs-lock-l', 'tbs-lock-r', 'tbs-mic-glow', 'tbs-trim-glow']) {
+    for (const cls of ['tbs-root', 'tbs-upper', 'tbs-head', 'tbs-face', 'tbs-eyes', 'tbs-mouth', 'tbs-skirt', 'tbs-mark', 'tbs-boot-l', 'tbs-boot-r', 'tbs-arm-mic', 'tbs-hair-back', 'tbs-lock-l', 'tbs-lock-r']) {
       expect(kit.TBS_SINGER_SVG).toContain(cls);
     }
-    expect(kit.TBS_SINGER_SVG).toMatch(/id="tbs-g-hair"[^>]*>.*?#facc15.*?<\/linearGradient>/);
-    expect(kit.TBS_SINGER_SVG).toMatch(/id="tbs-g-cap"[^>]*>.*?#fde047.*?<\/radialGradient>/);
-    const defsIds = [...kit.TBS_SINGER_SVG.matchAll(/\bid="([^"]+)"/g)].map(m => m[1]);
-    const urlRefs = [...kit.TBS_SINGER_SVG.matchAll(/url\(#([^)]+)\)/g)].map(m => m[1]);
-    expect(urlRefs.length).toBeGreaterThan(0);
-    for (const ref of urlRefs) expect(defsIds).toContain(ref);
-  });
-  it('wires beat-reactive micGlow and trimGlow into drawSinger', () => {
-    const src = readFileSync(new URL('../../public/js/topbar-show.js', import.meta.url), 'utf8');
-    expect(src).toContain("micGlow: q('.tbs-mic-glow')");
-    expect(src).toContain("trimGlow: q('.tbs-trim-glow')");
-    expect(src).toMatch(/function drawSinger\([^)]*hit/);
-    expect(src).toMatch(/drawSinger\([^)]*hit\)/);
   });
 });
 
