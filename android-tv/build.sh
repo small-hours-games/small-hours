@@ -3,7 +3,7 @@
 #
 #   ./build.sh                       -> dist/smallhours-tv.apk
 #   TV_URL=https://host/tv ./build.sh   point the app at another server
-#   VERSION_CODE=2 VERSION_NAME=1.1 ./build.sh   bump the version for an update
+#   VERSION_CODE=3 VERSION_NAME=1.2 ./build.sh   bump the version for an update
 #   PUBLISH=1 ./build.sh             also copy the APK to ../public/download/ (served by the web app)
 #
 # First run downloads JDK 17 + Android command-line tools (~750 MB) into
@@ -13,8 +13,8 @@ cd "$(dirname "$0")"
 
 TOOLS=${SMALLHOURS_ANDROID_TOOLS:-$HOME/.cache/smallhours-android}
 TV_URL=${TV_URL:-https://quiz.aldervall.se/tv}
-VERSION_CODE=${VERSION_CODE:-2}
-VERSION_NAME=${VERSION_NAME:-1.1}
+VERSION_CODE=${VERSION_CODE:-3}
+VERSION_NAME=${VERSION_NAME:-1.2}
 BUILD_TOOLS_VERSION=34.0.0
 PLATFORM_VERSION=android-34
 

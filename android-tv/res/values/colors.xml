@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="ic_launcher_background">#0b1530</color>
+    <color name="night_navy">#0b1530</color>
+    <color name="splash_title">#f8fafc</color>
+    <color name="splash_accent">#facc15</color>
+    <color name="splash_muted">#94a3b8</color>
+</resources>

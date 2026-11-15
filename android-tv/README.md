@@ -29,12 +29,13 @@ Alternatives: copy the APK to a USB stick and open it with a file manager, or us
 ./build.sh              # -> dist/smallhours-tv.apk
 PUBLISH=1 ./build.sh    # also copy to ../public/download/ (then rebuild the server image to serve it)
 TV_URL=https://other.host/tv ./build.sh   # point at another server
-VERSION_CODE=2 VERSION_NAME=1.1 ./build.sh   # bump the version for an update
+VERSION_CODE=3 VERSION_NAME=1.2 ./build.sh   # bump the version for an update
 ```
 
 There's no Gradle. The script uses the plain SDK tools (aapt2, javac, d8, zipalign,
 apksigner). The first run downloads JDK 17 and the Android command-line tools (~750 MB)
-into `~/.cache/smallhours-android/`. The icon and TV banner are resized from the approved web logo in
+into `~/.cache/smallhours-android/`. Launcher icons, adaptive foregrounds, the splash mark,
+and the Night-Navy TV banner are generated from the canonical SVG brand art in
 `../public/images/` by `tools/GenArt.java` at build time.
 
 ## Signing key — back it up
