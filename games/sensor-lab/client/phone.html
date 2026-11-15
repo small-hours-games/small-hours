@@ -1,0 +1,51 @@
+    <div class="section tc-screen sl-phone" id="sensorLabSection">
+      <div class="tc-topbar">
+        <div class="tc-status" id="slStatus"><span class="tc-dot tc-dot-live" id="slStatusDot"></span><span id="slStatusText">Sensor Lab</span></div>
+        <div class="sl-pills">
+          <span class="tc-pill tc-mono" id="slHzPill">0 Hz</span>
+          <span class="tc-pill" id="slPermPill">Idle</span>
+        </div>
+      </div>
+
+      <div class="sl-actions">
+        <button type="button" class="tc-cta tc-cta-big" id="slEnableBtn" onclick="slRequestSensors()">Enable Sensors</button>
+        <button type="button" class="tc-btn" id="slZeroBtn" onclick="slZero()">Zero / Calibrate</button>
+      </div>
+
+      <div class="sl-preview-card">
+        <div class="sl-stage sl-stage-sm">
+          <div class="sl-phone-3d" id="slPhoneLocal">
+            <div class="sl-face sl-front">
+              <div class="sl-notch"></div>
+              <div class="sl-screen-label">YOU</div>
+              <div class="sl-horizon" id="slLocalHorizon"></div>
+            </div>
+            <div class="sl-face sl-back"><div class="sl-cam"></div></div>
+            <div class="sl-face sl-left"></div>
+            <div class="sl-face sl-right"></div>
+            <div class="sl-face sl-top"></div>
+            <div class="sl-face sl-bottom"></div>
+          </div>
+        </div>
+        <div class="sl-readout tc-mono" id="slLocalReadout">Tap "Enable Sensors" or use sliders below</div>
+      </div>
+
+      <div class="sl-caps" id="slLocalCaps"></div>
+
+      <details class="sl-sim">
+        <summary>Desktop / Manual Tilt Sliders</summary>
+        <div class="sl-sim-grid">
+          <label>Pitch (β) <span class="tc-mono" id="slSimBetaVal">0°</span>
+            <input type="range" id="slSimBeta" min="-90" max="90" value="0" oninput="slSimInput()">
+          </label>
+          <label>Roll (γ) <span class="tc-mono" id="slSimGammaVal">0°</span>
+            <input type="range" id="slSimGamma" min="-90" max="90" value="0" oninput="slSimInput()">
+          </label>
+          <label>Yaw (α) <span class="tc-mono" id="slSimAlphaVal">0°</span>
+            <input type="range" id="slSimAlpha" min="0" max="360" value="0" oninput="slSimInput()">
+          </label>
+        </div>
+      </details>
+
+      <button type="button" class="tc-btn tc-btn-warn" onclick="slFinish()">End Sensor Lab</button>
+    </div>

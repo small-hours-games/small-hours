@@ -1,0 +1,111 @@
+/* Sensor Lab — Phone & TV 3D orientation visualizer */
+.sl-phone { gap: 10px; }
+.sl-pills { display: flex; gap: 6px; align-items: center; }
+.sl-actions { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
+.sl-preview-card {
+  background: rgba(15, 23, 42, 0.72);
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  border-radius: 18px;
+  padding: 12px;
+  display: flex; flex-direction: column; align-items: center; gap: 10px;
+}
+.sl-readout { font-size: 0.85rem; color: #7dd3fc; text-align: center; }
+.sl-sim {
+  background: rgba(15, 23, 42, 0.55);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 14px;
+  padding: 10px 12px;
+  font-size: 0.85rem;
+}
+.sl-sim summary { cursor: pointer; font-weight: 700; color: #cbd5e1; }
+.sl-sim-grid { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+.sl-sim-grid label { display: flex; flex-direction: column; gap: 4px; font-size: 0.8rem; color: #e2e8f0; }
+
+/* 3D Phone Model */
+.sl-stage {
+  width: 140px; height: 190px;
+  perspective: 900px;
+  display: flex; align-items: center; justify-content: center;
+  margin: 4px auto;
+}
+.sl-stage-sm { width: 110px; height: 150px; }
+.sl-phone-3d {
+  position: relative;
+  width: 78px; height: 148px;
+  transform-style: preserve-3d;
+  transition: transform 65ms linear;
+}
+.sl-stage-sm .sl-phone-3d { width: 64px; height: 122px; }
+.sl-face {
+  position: absolute;
+  inset: 0;
+  backface-visibility: hidden;
+  border-radius: 14px;
+}
+.sl-front {
+  background: linear-gradient(160deg, #0f172a 0%, #1e293b 100%);
+  border: 3px solid #64748b;
+  box-shadow: inset 0 0 18px rgba(56, 189, 248, 0.22);
+  transform: translateZ(6px);
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;
+  padding: 10px 6px;
+  overflow: hidden;
+}
+.sl-notch { width: 26px; height: 5px; border-radius: 999px; background: #475569; position: absolute; top: 7px; }
+.sl-screen-label { font-size: 0.68rem; font-weight: 800; color: #f8fafc; text-align: center; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sl-horizon {
+  width: 24px; height: 24px; border-radius: 999px;
+  background: radial-gradient(circle at 35% 35%, #86efac, #22c55e);
+  border: 2px solid rgba(255, 255, 255, 0.8);
+  box-shadow: 0 0 12px rgba(74, 222, 128, 0.7);
+  transition: transform 65ms linear;
+}
+.sl-back {
+  background: #334155;
+  border: 3px solid #475569;
+  transform: rotateY(180deg) translateZ(6px);
+}
+.sl-cam { position: absolute; top: 10px; left: 10px; width: 18px; height: 18px; border-radius: 5px; background: #0f172a; border: 2px solid #64748b; }
+.sl-left, .sl-right { width: 12px; left: 33px; background: #475569; border-radius: 2px; }
+.sl-left { transform: rotateY(-90deg) translateZ(39px); }
+.sl-right { transform: rotateY(90deg) translateZ(39px); }
+.sl-top, .sl-bottom { height: 12px; top: 68px; background: #475569; border-radius: 2px; }
+.sl-top { transform: rotateX(90deg) translateZ(74px); }
+.sl-bottom { transform: rotateX(-90deg) translateZ(74px); }
+
+/* Capability badges & freshness */
+.sl-caps { display: flex; flex-wrap: wrap; gap: 5px; justify-content: center; }
+.sl-cap { font-size: 0.7rem; font-weight: 700; padding: 2px 7px; border-radius: 999px; }
+.sl-cap-ok { background: rgba(34, 197, 94, 0.2); border: 1px solid rgba(74, 222, 128, 0.45); color: #86efac; }
+.sl-cap-no { background: rgba(148, 163, 184, 0.12); border: 1px solid rgba(148, 163, 184, 0.2); color: #94a3b8; }
+
+.sl-fresh { font-size: 0.72rem; font-weight: 800; padding: 3px 8px; border-radius: 999px; font-family: ui-monospace, monospace; }
+.sl-fresh-live { background: rgba(22, 163, 74, 0.25); border: 1px solid #4ade80; color: #86efac; }
+.sl-fresh-slow { background: rgba(217, 119, 6, 0.25); border: 1px solid #fbbf24; color: #fde68a; }
+.sl-fresh-stale { background: rgba(220, 38, 38, 0.22); border: 1px solid #f87171; color: #fecaca; }
+
+/* TV layout */
+.sl-tv {
+  width: 100%;
+  display: flex; flex-direction: column; gap: 16px;
+  padding: 14px 18px;
+}
+.sl-tv-header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+.sl-tv-title { font-size: 1.25rem; font-weight: 800; color: #fff; }
+.sl-tv-hint { font-size: 0.9rem; color: #94a3b8; }
+.sl-tv-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 16px;
+}
+.sl-tv-card {
+  background: rgba(15, 23, 42, 0.88);
+  border: 1.5px solid rgba(148, 163, 184, 0.25);
+  border-radius: 22px;
+  padding: 14px;
+  display: flex; flex-direction: column; align-items: center; gap: 10px;
+}
+.sl-tv-card-head { width: 100%; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.sl-tv-who { display: flex; align-items: center; gap: 6px; font-size: 1rem; color: #fff; }
+.sl-tv-metrics { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; font-size: 0.82rem; color: #7dd3fc; }
+.sl-tv-sub { font-size: 0.72rem; color: #94a3b8; }
